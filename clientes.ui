@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Clientes</class>
+ <widget class="QDialog" name="Clientes">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1055</width>
+    <height>551</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Clientes</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QWidget" name="Principal" native="true">
+     <layout class="QGridLayout" name="General">
+      <item row="0" column="1">
+       <widget class="QLabel" name="labelNombre">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>C&amp;ódigo:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="lineEditCod">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>N.I.F.:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QLineEdit" name="lineEditNIF"/>
+      </item>
+      <item row="2" column="1">
+       <spacer name="verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>No&amp;mbre:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="lineEditNombre"/>
+      </item>
+      <item row="3" column="2">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Apellidos:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="3">
+       <widget class="QLineEdit" name="lineEditApellidos"/>
+      </item>
+      <item row="4" column="1">
+       <spacer name="verticalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Dirección:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QLineEdit" name="lineEditDireccion"/>
+      </item>
+      <item row="5" column="2">
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>C.P.:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="3">
+       <widget class="QLineEdit" name="lineEditCP"/>
+      </item>
+      <item row="6" column="1">
+       <spacer name="verticalSpacer_3">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="7" column="0">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>Localidad:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="1">
+       <widget class="QLineEdit" name="lineEditLocalidad"/>
+      </item>
+      <item row="7" column="2">
+       <widget class="QLabel" name="label_8">
+        <property name="text">
+         <string>Provincia:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="3">
+       <widget class="QLineEdit" name="lineEditProvincia"/>
+      </item>
+      <item row="8" column="1">
+       <spacer name="verticalSpacer_4">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="9" column="0">
+       <widget class="QLabel" name="label_9">
+        <property name="text">
+         <string>Teléfono &amp;1:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="9" column="1">
+       <widget class="QLineEdit" name="lineEditTlfn1"/>
+      </item>
+      <item row="9" column="2">
+       <widget class="QLabel" name="label_10">
+        <property name="text">
+         <string>Teléfono &amp;2:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="9" column="3">
+       <widget class="QLineEdit" name="lineEditTlfn2"/>
+      </item>
+      <item row="10" column="1">
+       <spacer name="verticalSpacer_5">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="11" column="0">
+       <widget class="QLabel" name="label_11">
+        <property name="text">
+         <string>E-mail:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="11" column="1">
+       <widget class="QLineEdit" name="lineEditMail"/>
+      </item>
+      <item row="12" column="1">
+       <spacer name="verticalSpacer_6">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="13" column="0">
+       <widget class="QLabel" name="label_12">
+        <property name="text">
+         <string>Descuento</string>
+        </property>
+       </widget>
+      </item>
+      <item row="13" column="1">
+       <widget class="QLineEdit" name="lineEditDescuento"/>
+      </item>
+      <item row="13" column="2">
+       <widget class="QLabel" name="label_13">
+        <property name="text">
+         <string>Fecha alta:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="13" column="3">
+       <widget class="QDateEdit" name="dateEdit">
+        <property name="displayFormat">
+         <string>yyyy/MM/dd</string>
+        </property>
+       </widget>
+      </item>
+      <item row="14" column="0">
+       <widget class="QLabel" name="label_14">
+        <property name="text">
+         <string>Notas:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="15" column="0" colspan="4">
+       <widget class="QPlainTextEdit" name="plainTextEdit">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="pushButtonNuevo">
+       <property name="text">
+        <string>Nuevo</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonBorrar">
+       <property name="text">
+        <string>Borrar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonModificar">
+       <property name="text">
+        <string>Modificar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonReffrescar">
+       <property name="text">
+        <string>Refrescar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonAnterior">
+       <property name="text">
+        <string>Anterior</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonSiguiente">
+       <property name="text">
+        <string>Siguiente</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonCerrar">
+       <property name="text">
+        <string>Cerrar</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>lineEditCod</tabstop>
+  <tabstop>lineEditNIF</tabstop>
+  <tabstop>lineEditNombre</tabstop>
+  <tabstop>lineEditApellidos</tabstop>
+  <tabstop>lineEditDireccion</tabstop>
+  <tabstop>lineEditCP</tabstop>
+  <tabstop>lineEditLocalidad</tabstop>
+  <tabstop>lineEditProvincia</tabstop>
+  <tabstop>lineEditTlfn1</tabstop>
+  <tabstop>lineEditTlfn2</tabstop>
+  <tabstop>lineEditMail</tabstop>
+  <tabstop>lineEditDescuento</tabstop>
+  <tabstop>dateEdit</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pushButtonCerrar</sender>
+   <signal>clicked()</signal>
+   <receiver>Clientes</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>950</x>
+     <y>561</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>878</x>
+     <y>575</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

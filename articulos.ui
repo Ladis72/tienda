@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Articulos</class>
+ <widget class="QDialog" name="Articulos">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1039</width>
+    <height>545</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Productos</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QWidget" name="General" native="true">
+     <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,0,0,0,0,0">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetDefaultConstraint</enum>
+      </property>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label_10">
+        <property name="text">
+         <string>Ultima venta</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="3">
+       <widget class="QDateEdit" name="dateEditUltimoPedido">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
+        <property name="displayFormat">
+         <string>yyyy-MM-dd</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="4">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>P.V.P.</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="4">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>Maximo</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="3">
+       <widget class="QLineEdit" name="lineEditEncargados"/>
+      </item>
+      <item row="8" column="0" colspan="8">
+       <widget class="QPlainTextEdit" name="plainTextEdit"/>
+      </item>
+      <item row="3" column="2">
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>Minimo</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="lineEditCod"/>
+      </item>
+      <item row="5" column="1">
+       <widget class="QDateEdit" name="dateEditUltimaVenta">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
+        <property name="correctionMode">
+         <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+        </property>
+        <property name="displayFormat">
+         <string>yyyy-MM-dd</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="2">
+       <widget class="QLabel" name="label_9">
+        <property name="text">
+         <string>Encargados</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <widget class="QLabel" name="label_16">
+        <property name="text">
+         <string>Fabricante</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="2">
+       <widget class="QLabel" name="label_11">
+        <property name="text">
+         <string>Ultimo pedido</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="label_15">
+        <property name="text">
+         <string>Familia</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>IVA</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_8">
+        <property name="text">
+         <string>Pendientes pedido</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Codigo</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>Descripcion</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="3">
+       <widget class="QLabel" name="labelFamilia">
+        <property name="text">
+         <string>Sin famila asignada</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLineEdit" name="lineEditPendientes"/>
+      </item>
+      <item row="3" column="3">
+       <widget class="QLineEdit" name="lineEditMinimo"/>
+      </item>
+      <item row="3" column="5">
+       <widget class="QLineEdit" name="lineEditMaximo"/>
+      </item>
+      <item row="7" column="4">
+       <widget class="QLabel" name="label_12">
+        <property name="text">
+         <string>Foto</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="lineEditIva"/>
+      </item>
+      <item row="6" column="1">
+       <widget class="QLineEdit" name="lineEditCodFamila"/>
+      </item>
+      <item row="1" column="1" colspan="5">
+       <widget class="QLineEdit" name="lineEditDesc"/>
+      </item>
+      <item row="1" column="6" rowspan="6" colspan="2">
+       <widget class="QLabel" name="labelFoto">
+        <property name="maximumSize">
+         <size>
+          <width>300</width>
+          <height>300</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Sin foto</string>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Stock</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="2">
+       <widget class="QLabel" name="label_14">
+        <property name="text">
+         <string>Costo</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="lineEditStock">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="3">
+       <widget class="QLineEdit" name="lineEditCosto"/>
+      </item>
+      <item row="7" column="7">
+       <widget class="QPushButton" name="pushButtonBorrarFoto">
+        <property name="text">
+         <string>Borrar foto</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="1">
+       <widget class="QLineEdit" name="lineEditCodFabricante"/>
+      </item>
+      <item row="2" column="5">
+       <widget class="QLineEdit" name="lineEditPvp"/>
+      </item>
+      <item row="7" column="5">
+       <widget class="QLineEdit" name="lineEditFoto">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>11</height>
+         </size>
+        </property>
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="6">
+       <widget class="QPushButton" name="pushButtonPonerFoto">
+        <property name="text">
+         <string>Añadir Foto</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="2">
+       <widget class="QPushButton" name="pushButton_2">
+        <property name="maximumSize">
+         <size>
+          <width>40</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="3">
+       <widget class="QLabel" name="labelFabricante">
+        <property name="text">
+         <string>Fabricante desconocido</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="2">
+       <widget class="QPushButton" name="pushButtonBuscarFamilia">
+        <property name="maximumSize">
+         <size>
+          <width>40</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2" colspan="6">
+       <widget class="QLabel" name="labelNombrePrecio">
+        <property name="font">
+         <font>
+          <family>Utopia</family>
+          <pointsize>18</pointsize>
+          <weight>75</weight>
+          <italic>true</italic>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">
+color: rgb(255, 25, 5);</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="pushButtonNuevo">
+       <property name="text">
+        <string>Nuevo</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonBorrar">
+       <property name="text">
+        <string>Borrar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonModificar">
+       <property name="text">
+        <string>Modificar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonRefrescar">
+       <property name="text">
+        <string>Refrescar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonAnterior">
+       <property name="text">
+        <string>Anterior</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonSiguiente">
+       <property name="text">
+        <string>Siguiente</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonCerrar">
+       <property name="text">
+        <string>Cerrar</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>lineEditCod</tabstop>
+  <tabstop>lineEditDesc</tabstop>
+  <tabstop>lineEditIva</tabstop>
+  <tabstop>lineEditCosto</tabstop>
+  <tabstop>lineEditPvp</tabstop>
+  <tabstop>lineEditMinimo</tabstop>
+  <tabstop>lineEditMaximo</tabstop>
+  <tabstop>lineEditPendientes</tabstop>
+  <tabstop>lineEditEncargados</tabstop>
+  <tabstop>lineEditCodFamila</tabstop>
+  <tabstop>plainTextEdit</tabstop>
+  <tabstop>pushButtonNuevo</tabstop>
+  <tabstop>pushButtonBorrar</tabstop>
+  <tabstop>pushButtonModificar</tabstop>
+  <tabstop>pushButtonRefrescar</tabstop>
+  <tabstop>pushButtonAnterior</tabstop>
+  <tabstop>pushButtonSiguiente</tabstop>
+  <tabstop>pushButtonCerrar</tabstop>
+  <tabstop>lineEditStock</tabstop>
+  <tabstop>dateEditUltimaVenta</tabstop>
+  <tabstop>dateEditUltimoPedido</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pushButtonCerrar</sender>
+   <signal>clicked()</signal>
+   <receiver>Articulos</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1028</x>
+     <y>534</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>788</x>
+     <y>488</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

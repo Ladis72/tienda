@@ -1,0 +1,501 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Tpv</class>
+ <widget class="QWidget" name="Tpv">
+  <property name="windowModality">
+   <enum>Qt::ApplicationModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>822</width>
+    <height>551</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>TPV</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0,0,0,0,0,0,0,0">
+   <item row="5" column="0" colspan="10">
+    <widget class="QTableWidget" name="parrilla_ventas">
+     <property name="focusPolicy">
+      <enum>Qt::ClickFocus</enum>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
+     <property name="selectionMode">
+      <enum>QAbstractItemView::SingleSelection</enum>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <attribute name="horizontalHeaderCascadingSectionResizes">
+      <bool>false</bool>
+     </attribute>
+     <attribute name="horizontalHeaderDefaultSectionSize">
+      <number>150</number>
+     </attribute>
+     <attribute name="horizontalHeaderHighlightSections">
+      <bool>true</bool>
+     </attribute>
+     <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+      <bool>false</bool>
+     </attribute>
+     <attribute name="horizontalHeaderStretchLastSection">
+      <bool>false</bool>
+     </attribute>
+     <attribute name="verticalHeaderVisible">
+      <bool>false</bool>
+     </attribute>
+     <column>
+      <property name="text">
+       <string>Cod</string>
+      </property>
+      <property name="font">
+       <font>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>DESCRIPCION</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>UDS</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>PVP</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>DESC%</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>TOTAL</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QLineEdit" name="lineEdit_cod">
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="8" colspan="2">
+    <widget class="QComboBox" name="comboBox_vendedor"/>
+   </item>
+   <item row="7" column="9">
+    <widget class="QLineEdit" name="lineEdit_6">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1" colspan="6">
+    <widget class="QGroupBox" name="groupBox_cliente">
+     <property name="title">
+      <string>Datos del cliente</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_cod_cliente">
+        <property name="text">
+         <string>Cod.</string>
+        </property>
+        <property name="buddy">
+         <cstring>lineEdit_cod_cliente</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLineEdit" name="lineEdit_nobre_cliente"/>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QLineEdit" name="lineEdit_cod_cliente"/>
+      </item>
+      <item row="0" column="2">
+       <widget class="QLabel" name="label_nombr_cliente">
+        <property name="text">
+         <string>No&amp;mbre</string>
+        </property>
+        <property name="buddy">
+         <cstring>lineEdit_nobre_cliente</cstring>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="7" column="6">
+    <widget class="QLineEdit" name="lineEdit_Uds">
+     <property name="inputMethodHints">
+      <set>Qt::ImhDigitsOnly</set>
+     </property>
+     <property name="text">
+      <string>1</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="8">
+    <widget class="QLineEdit" name="lineEdit_descuento">
+     <property name="text">
+      <string>0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Codigo</string>
+     </property>
+     <property name="buddy">
+      <cstring>lineEdit_cod</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="6">
+    <widget class="QLabel" name="label_vendedor">
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="text">
+      <string>&amp;Vendedor</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+     <property name="buddy">
+      <cstring>comboBox_vendedor</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Descripcion</string>
+     </property>
+     <property name="buddy">
+      <cstring>lineEdit_desc</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1" colspan="6">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="focusPolicy">
+      <enum>Qt::ClickFocus</enum>
+     </property>
+     <property name="title">
+      <string>Datos del producto</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="6">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>Cantidad</string>
+     </property>
+     <property name="buddy">
+      <cstring>lineEdit_Uds</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="1" colspan="5">
+    <widget class="QLineEdit" name="lineEdit_desc"/>
+   </item>
+   <item row="2" column="0" rowspan="2">
+    <widget class="QTableWidget" name="table_tickets"/>
+   </item>
+   <item row="6" column="9">
+    <widget class="QLabel" name="label_5">
+     <property name="text">
+      <string>Total &amp;linea</string>
+     </property>
+     <property name="buddy">
+      <cstring>lineEdit_6</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="8">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>Descuento</string>
+     </property>
+     <property name="buddy">
+      <cstring>lineEdit_descuento</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="8">
+    <widget class="QLabel" name="label_6">
+     <property name="text">
+      <string>Total productos</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="9">
+    <widget class="QLCDNumber" name="lcdProductos">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: rgb(0, 0, 255);</string>
+     </property>
+     <property name="inputMethodHints">
+      <set>Qt::ImhNone</set>
+     </property>
+     <property name="digitCount">
+      <number>3</number>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="8" rowspan="2" colspan="2">
+    <widget class="QLCDNumber" name="lcdNumber_total">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+      </font>
+     </property>
+     <property name="cursor">
+      <cursorShape>ArrowCursor</cursorShape>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color: rgb(255, 16, 16);</string>
+     </property>
+     <property name="inputMethodHints">
+      <set>Qt::ImhNone</set>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <property name="lineWidth">
+      <number>1</number>
+     </property>
+     <property name="midLineWidth">
+      <number>0</number>
+     </property>
+     <property name="smallDecimalPoint">
+      <bool>false</bool>
+     </property>
+     <property name="digitCount">
+      <number>6</number>
+     </property>
+     <property name="segmentStyle">
+      <enum>QLCDNumber::Filled</enum>
+     </property>
+     <property name="value" stdset="0">
+      <double>0.000000000000000</double>
+     </property>
+     <property name="intValue" stdset="0">
+      <number>0</number>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0" colspan="10">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="btn_anadir">
+       <property name="text">
+        <string>Añadir</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_borrar">
+       <property name="text">
+        <string>Borrar</string>
+       </property>
+       <property name="shortcut">
+        <string>Del</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_modificar">
+       <property name="text">
+        <string>Modificar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonBorrarTodo">
+       <property name="text">
+        <string>Borrar todo</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_cobrar">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Cobrar (F8)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Cobrar</string>
+       </property>
+       <property name="shortcut">
+        <string>F8</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_cerrar">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Cerrar Esc&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Cerrar</string>
+       </property>
+       <property name="shortcut">
+        <string>Esc</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="7" column="7">
+    <widget class="QLineEdit" name="lineEdit_precio"/>
+   </item>
+   <item row="6" column="7">
+    <widget class="QLabel" name="label_7">
+     <property name="text">
+      <string>Precio</string>
+     </property>
+     <property name="buddy">
+      <cstring>lineEdit_precio</cstring>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>lineEdit_cod</tabstop>
+  <tabstop>lineEdit_desc</tabstop>
+  <tabstop>lineEdit_Uds</tabstop>
+  <tabstop>lineEdit_descuento</tabstop>
+  <tabstop>table_tickets</tabstop>
+  <tabstop>comboBox_vendedor</tabstop>
+  <tabstop>lineEdit_6</tabstop>
+  <tabstop>lineEdit_nobre_cliente</tabstop>
+  <tabstop>lineEdit_cod_cliente</tabstop>
+  <tabstop>parrilla_ventas</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>btn_cerrar</sender>
+   <signal>clicked()</signal>
+   <receiver>Tpv</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>811</x>
+     <y>540</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>713</x>
+     <y>550</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEdit_Uds</sender>
+   <signal>returnPressed()</signal>
+   <receiver>lineEdit_cod</receiver>
+   <slot>setFocus()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>472</x>
+     <y>509</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>218</x>
+     <y>509</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEdit_Uds</sender>
+   <signal>returnPressed()</signal>
+   <receiver>lineEdit_cod</receiver>
+   <slot>selectAll()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>472</x>
+     <y>509</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>145</x>
+     <y>509</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEdit_descuento</sender>
+   <signal>returnPressed()</signal>
+   <receiver>lineEdit_cod</receiver>
+   <slot>setFocus()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>699</x>
+     <y>509</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>158</x>
+     <y>509</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEdit_descuento</sender>
+   <signal>returnPressed()</signal>
+   <receiver>lineEdit_cod</receiver>
+   <slot>selectAll()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>699</x>
+     <y>509</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>153</x>
+     <y>509</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>buscar_producto()</slot>
+ </slots>
+</ui>
