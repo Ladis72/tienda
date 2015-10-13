@@ -113,6 +113,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
                 cdProducto->exec();
                 descripcion = cdProducto->nombre;
                 pvp = cdProducto->pvp.toDouble();
+                tipoActualizacion = cdProducto->tipoActualizacion;
             }
         default:
             break;
