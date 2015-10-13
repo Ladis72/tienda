@@ -15,9 +15,16 @@ class FormasPago : public QDialog
 public:
     explicit FormasPago(QWidget *parent = 0);
     ~FormasPago();
+    QString resultado;
 
 private slots:
     void on_pushButtonModificar_clicked();
+
+    void on_pushButtonAnadir_clicked();
+
+    void on_pushButtonBorrar_clicked();
+
+    void on_tableView_clicked(const QModelIndex &index);
 
 private:
     Ui::FormasPago *ui;

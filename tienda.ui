@@ -17,10 +17,10 @@
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout">
-      <item row="0" column="0">
-       <widget class="QTabWidget" name="tabWidget">
+      <item row="1" column="0">
+       <widget class="QTabWidget" name="tab">
         <property name="currentIndex">
-         <number>1</number>
+         <number>3</number>
         </property>
         <property name="iconSize">
          <size>
@@ -28,7 +28,7 @@
           <height>16</height>
          </size>
         </property>
-        <widget class="QWidget" name="tab">
+        <widget class="QWidget" name="tabVentas">
          <attribute name="title">
           <string>Ventas</string>
          </attribute>
@@ -73,7 +73,7 @@
           </item>
          </layout>
         </widget>
-        <widget class="QWidget" name="tab_2">
+        <widget class="QWidget" name="tabFicheros">
          <attribute name="title">
           <string>Ficheros</string>
          </attribute>
@@ -95,7 +95,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_2">
+             <widget class="QPushButton" name="pushButtonProveedores">
               <property name="text">
                <string>Proveedores</string>
               </property>
@@ -129,6 +129,13 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonEntradaSalida">
+              <property name="text">
+               <string>Tipos E/S</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
           <item>
@@ -146,17 +153,88 @@
           </item>
          </layout>
         </widget>
-        <widget class="QWidget" name="tab_4">
+        <widget class="QWidget" name="TabPedidos">
+         <attribute name="title">
+          <string>Pedidos</string>
+         </attribute>
+         <widget class="QPushButton" name="pushButtonGestionar">
+          <property name="geometry">
+           <rect>
+            <x>40</x>
+            <y>50</y>
+            <width>82</width>
+            <height>61</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Gestionar</string>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="pushButtonAceptar">
+          <property name="geometry">
+           <rect>
+            <x>170</x>
+            <y>50</y>
+            <width>82</width>
+            <height>61</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Aceptar</string>
+          </property>
+         </widget>
+        </widget>
+        <widget class="QWidget" name="tabOperaciones">
          <attribute name="title">
           <string>Operaciones</string>
          </attribute>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout_3">
+            <item>
+             <widget class="QPushButton" name="pushButtonTickets">
+              <property name="text">
+               <string>Tickets</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonAlbaranes">
+              <property name="text">
+               <string>Albaranes</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonFacturas">
+              <property name="text">
+               <string>Facturas</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="0">
+           <spacer name="verticalSpacer_3">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>616</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
         </widget>
-        <widget class="QWidget" name="tab_3">
+        <widget class="QWidget" name="tabConfig">
          <attribute name="title">
-          <string>Config</string>
+          <string>Configuración</string>
          </attribute>
         </widget>
-        <widget class="QWidget" name="tab_5">
+        <widget class="QWidget" name="tabSalir">
          <attribute name="title">
           <string>Salir</string>
          </attribute>

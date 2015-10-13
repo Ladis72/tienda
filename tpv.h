@@ -4,9 +4,11 @@
 #include <QWidget>
 #include <QMessageBox>
 #include <QKeyEvent>
+#include <QStandardItemModel>
 #include "base_datos.h"
 #include "buscarproducto.h"
 #include "totalizar.h"
+#include "clientes.h"
 
 namespace Ui {
 class Tpv;
@@ -36,9 +38,23 @@ private slots:
 
     void on_btn_cobrar_clicked();
 
+    void on_tableViewTicketsPendientes_clicked(const QModelIndex &index);
+
+    void on_pushButtonBorrarTodo_clicked();
+
+    void on_btn_modificar_clicked();
+
+    void on_lineEdit_cod_cliente_editingFinished();
+
+    void on_lineEdit_nobre_cliente_returnPressed();
+
+    void on_lineEdit_precio_returnPressed();
+
 private:
-    double ticket;
+    int ticket;
     int ticketActual;
+    int usuario;
+    int cliente;
 
     Ui::Tpv *ui;
     QSqlDatabase db;
@@ -46,14 +62,25 @@ private:
     QSqlQuery consulta;
     BuscarProducto *buscar;
     totalizar *totalizacion;
+    QSqlTableModel *modeloTicket;
+    QStandardItemModel *modeloTicketPendiente;
+    Clientes *clien;
+
 
     void keyPressEvent(QKeyEvent *e);
     bool llenar_usuarios(QSqlDatabase db);
     double calcularPrecioTotal();
     double redondear(double num, int dec);
-    int calcularNumProductos();
+    void calcularNumProductos();
     bool actualizarLineaTicket(QList<QString> lista);
     void recuperarTicketsPendientes();
+    void actualizarParrillaVentas();
+    void cambiarTicket(int i);
+    void ticketNuevo(int ticketnuevo);
+    int ticketActualizado();
+    QStringList recopilarDatosTicket();
+    QStringList recopilarBasesIvas();
+
 
 
 signals:

@@ -52,7 +52,7 @@
       <item row="5" column="2">
        <widget class="QLabel" name="label_11">
         <property name="text">
-         <string>Clave</string>
+         <string>Cla&amp;ve</string>
         </property>
         <property name="buddy">
          <cstring>lineEditClave</cstring>
@@ -62,7 +62,7 @@
       <item row="5" column="0">
        <widget class="QLabel" name="label_10">
         <property name="text">
-         <string>Usuario</string>
+         <string>&amp;Usuario</string>
         </property>
         <property name="buddy">
          <cstring>lineEditUsusario</cstring>
@@ -72,7 +72,7 @@
       <item row="0" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
-         <string>Nombre</string>
+         <string>&amp;Nombre</string>
         </property>
         <property name="buddy">
          <cstring>lineEditNombre</cstring>
@@ -119,7 +119,7 @@
       <item row="6" column="0">
        <widget class="QLabel" name="label_14">
         <property name="text">
-         <string>Permisos</string>
+         <string>Per&amp;misos</string>
         </property>
         <property name="buddy">
          <cstring>lineEditPermisos</cstring>
@@ -149,7 +149,7 @@
       <item row="1" column="2">
        <widget class="QLabel" name="label_4">
         <property name="text">
-         <string>Localidad</string>
+         <string>&amp;Localidad</string>
         </property>
         <property name="buddy">
          <cstring>lineEditLocalidad</cstring>
@@ -227,10 +227,16 @@
       </item>
       <item row="0" column="4" rowspan="7" colspan="2">
        <widget class="QLabel" name="labelFoto">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="maximumSize">
          <size>
-          <width>300</width>
-          <height>300</height>
+          <width>200</width>
+          <height>200</height>
          </size>
         </property>
         <property name="text">
@@ -275,8 +281,9 @@
        <widget class="QLabel" name="labelNombre">
         <property name="font">
          <font>
-          <family>Embargo</family>
+          <family>Bitstream Charter</family>
           <pointsize>14</pointsize>
+          <italic>true</italic>
          </font>
         </property>
         <property name="text">

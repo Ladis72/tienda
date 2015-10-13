@@ -67,8 +67,12 @@ QStringList Ususarios::recogerDatosFormulario()
     listaDatosFormulario.append(ui->lineEditClave->text());
     listaDatosFormulario.append(ui->plainTextEdit->toPlainText());
     listaDatosFormulario.append(ui->lineEditPermisos->text());
+    if (ui->lineEditArchivoFoto->text() == "") {
+        listaDatosFormulario.append("imagenes/anonimo.jpg");
+    }else{
     listaDatosFormulario.append(ui->lineEditArchivoFoto->text());
-    qDebug() << listaDatosFormulario;
+    }
+    //qDebug() << listaDatosFormulario;
 
 
     return listaDatosFormulario;
@@ -199,7 +203,7 @@ void Ususarios::on_lineEditNombre_returnPressed()
     qDebug() << consulta.lastError().text();
     BuscarProducto *buscar = new BuscarProducto(this,consulta);
     buscar->exec();
-    qDebug() << buscar->resultado;
+    //qDebug() << buscar->resultado;
     for (int i = 0; i < modeloTabla->rowCount(); i++){
         if (modeloTabla->record(i).value("id").toInt() == buscar->resultado.toInt()) {
             mapper.setCurrentIndex(i);
@@ -216,10 +220,10 @@ void Ususarios::on_pushButtonCargarImagen_clicked()
     int curr = mapper.currentIndex();
     QString dir = QDir::currentPath();
     int i = dir.length();
-    QString fichero = QFileDialog::getOpenFileName(this,"Elige el archivo",dir);
+    QString fichero = QFileDialog::getOpenFileName(this,"Elige el archivo",dir+"/imagenes");
     fichero.remove(0,i+1);//Quita i caracteres desde la posicion 0 de la cadena fichero i=longitud del path
-    qDebug() << fichero;
-    qDebug() << ui->lineEditCod->text().toInt();
+    //qDebug() << fichero;
+    //qDebug() << ui->lineEditCod->text().toInt();
     base.modificarFotoUsusario(fichero,ui->lineEditCod->text().toInt());
     recargarTabla();
 

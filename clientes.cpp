@@ -32,6 +32,38 @@ Clientes::Clientes(QWidget *parent) :
     ui->lineEditCod->installEventFilter(this);
 }
 
+Clientes::Clientes(QWidget *parent , QString codigo) :
+    QDialog(parent),
+    ui(new Ui::Clientes)
+{
+    ui->setupUi(this);
+    modeloTabla = new QSqlQueryModel;
+    recargarTabla();
+
+    mapper.setCurrentIndex(0);
+    mapper.addMapping(ui->lineEditCod,0);
+    mapper.addMapping(ui->lineEditNombre,1);
+    mapper.addMapping(ui->lineEditApellidos,2);
+    mapper.addMapping(ui->lineEditDireccion,3);
+    mapper.addMapping(ui->lineEditCP,4);
+    mapper.addMapping(ui->lineEditLocalidad,5);
+    mapper.addMapping(ui->lineEditProvincia,6);
+    mapper.addMapping(ui->lineEditNIF,7);
+    mapper.addMapping(ui->lineEditTlfn1,8);
+    mapper.addMapping(ui->lineEditTlfn2,9);
+    mapper.addMapping(ui->lineEditMail,10);
+    mapper.addMapping(ui->lineEditDescuento,11);
+    mapper.addMapping(ui->dateEdit,12);
+    mapper.addMapping(ui->plainTextEdit,13);
+    mapper.toFirst();
+    refrescarBotones(mapper.currentIndex());
+
+    ui->lineEditCod->installEventFilter(this);
+    borrarFormulario();
+    ui->lineEditCod->setText(codigo);
+    ui->lineEditCod->setEnabled(false);
+}
+
 Clientes::~Clientes()
 {
     delete ui;
@@ -50,7 +82,7 @@ void Clientes::borrarFormulario()
     }
     ui->dateEdit->setDate(QDate::currentDate());
     ui->plainTextEdit->clear();
-    ui->labelNombre->clear();
+    ui->labelNombreCliente->clear();
 }
 
 QStringList Clientes::recogerDatosFormulario()
@@ -89,7 +121,7 @@ void Clientes::refrescarBotones(int i)
 {
     ui->pushButtonAnterior->setEnabled(i > 0);
     ui->pushButtonSiguiente->setEnabled(i < modeloTabla->rowCount() -1);
-    ui->labelNombre->setText(ui->lineEditNombre->text()+" "+ui->lineEditApellidos->text());
+    ui->labelNombreCliente->setText(ui->lineEditNombre->text()+" "+ui->lineEditApellidos->text());
 }
 
 
@@ -107,7 +139,21 @@ void Clientes::on_pushButtonSiguiente_clicked()
 
 void Clientes::on_pushButtonNuevo_clicked()
 {
-    borrarFormulario();
+    if(base.existeDatoEnTabla(QSqlDatabase::database("DB"),"clientes","idProveedor",ui->lineEditCod->text())){
+        QMessageBox::warning(this, "ATENCION",
+                              "El registro ya existe");
+        return;
+    }
+
+
+    QStringList datos = recogerDatosFormulario();
+    if (base.crearCliente(QSqlDatabase::database("DB"),datos)) {
+        QMessageBox::about(this,"Atención", "Artículo creado con éxito");
+    } else {
+        QMessageBox::warning(this,"Error","No se ha podido crear el Cliente");
+    }
+    recargarTabla();
+
 }
 
 void Clientes::on_pushButtonModificar_clicked()
@@ -165,3 +211,21 @@ void Clientes::on_pushButtonBorrar_clicked()
 }
 
 
+
+void Clientes::on_lineEditNombre_returnPressed()
+{
+    consulta = base.buscarEnTabla(QSqlDatabase::database("DB"),"clientes","nombre", ui->lineEditNombre->text());
+    consulta.first();
+    qDebug() << consulta.lastError().text();
+    BuscarProducto *buscar = new BuscarProducto(this,consulta);
+    buscar->exec();
+    qDebug() << buscar->resultado;
+    for (int i = 0; i < modeloTabla->rowCount(); i++){
+        if (modeloTabla->record(i).value("idCliente").toString() == buscar->resultado) {
+            mapper.setCurrentIndex(i);
+            refrescarBotones(i);
+            break;
+        }
+    }
+    delete buscar;
+}

@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 
+#include "configuracion.h"
 #include "tpv.h"
 #include "tabwidget.h"
 #include "articulos.h"
@@ -10,7 +11,14 @@
 #include "fabricantes.h"
 #include "formaspago.h"
 #include "clientes.h"
+#include "proveedores.h"
+#include "gestionpedidos.h"
+#include "cajas.h"
+#include "tiposentradassalidas.h"
+#include "entradasalida.h"
+#include "historicotickets.h"
 
+extern Configuracion *conf;
 namespace Ui {
 class Tienda;
 }
@@ -43,6 +51,18 @@ private slots:
 
     void on_pushButton_3_clicked();
 
+    void on_pushButtonProveedores_clicked();
+
+    void on_pushButtonGestionar_clicked();
+
+    void on_cajasButton_clicked();
+
+    void on_pushButtonEntradaSalida_clicked();
+
+    void on_movimientosButton_clicked();
+
+    void on_pushButtonTickets_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -52,6 +72,12 @@ private:
     Fabricantes *Fab;
     FormasPago *FPago;
     Clientes * Cli;
+    Proveedores *Prov;
+    GestionPedidos *GestPed;
+    Cajas *caja;
+    TiposEntradasSalidas *TiposEntSal;
+    EntradaSalida *ES;
+    HistoricoTickets *HT;
     //QSqlDatabase db;
 };
 

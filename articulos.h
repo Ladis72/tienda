@@ -21,7 +21,8 @@ class Articulos : public QDialog
 public:
     explicit Articulos(QWidget *parent = 0);
     ~Articulos();
-    
+    void borrarFormulario();
+
 private slots:
     void on_pushButtonAnterior_clicked();
 
@@ -64,7 +65,6 @@ private:
     QStringList recogerDatosFormulario();
     void recargarTabla();
     bool eventFilter(QObject *obj, QEvent *event);
-    void borrarFormulario();
 };
 
 #endif // ARTICULOS_H

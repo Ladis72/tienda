@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Proveedores</class>
+ <widget class="QDialog" name="Proveedores">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1128</width>
+    <height>518</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Proveedores</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="1" column="1">
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab">
+      <attribute name="title">
+       <string>General</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="General">
+         <item row="7" column="0">
+          <widget class="QLabel" name="label_13">
+           <property name="text">
+            <string>Notas</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="5">
+          <widget class="QLabel" name="label_11">
+           <property name="text">
+            <string>E-mail</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditMailR</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="1">
+          <widget class="QLineEdit" name="lineEditDescuento"/>
+         </item>
+         <item row="5" column="2">
+          <widget class="QLabel" name="label_9">
+           <property name="text">
+            <string>E-&amp;mail</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditMail</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>Direcci&amp;ón</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditDireccion</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>&amp;Nombre</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditNombre</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>C&amp;ódigo</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditCod</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QLineEdit" name="lineEditTelefono"/>
+         </item>
+         <item row="4" column="6">
+          <widget class="QLineEdit" name="lineEditMailR"/>
+         </item>
+         <item row="6" column="0">
+          <widget class="QLabel" name="label_12">
+           <property name="text">
+            <string>Descuento</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditDescuento</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QLineEdit" name="lineEditRepresentante"/>
+         </item>
+         <item row="4" column="2">
+          <widget class="QLabel" name="label_10">
+           <property name="text">
+            <string>Te&amp;lefono</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditTelefono</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="label_8">
+           <property name="text">
+            <string>Telefono</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditTelefonoR</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="6">
+          <widget class="QLabel" name="labelFPago">
+           <property name="text">
+            <string>Forma de pago</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="label_7">
+           <property name="text">
+            <string>Representante</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditRepresentante</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="8" column="0" colspan="7">
+          <widget class="QPlainTextEdit" name="plainTextEdit"/>
+         </item>
+         <item row="6" column="2">
+          <widget class="QLabel" name="label_15">
+           <property name="text">
+            <string>Forma de pago</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditFormaPago</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="2">
+          <widget class="QLabel" name="label_14">
+           <property name="text">
+            <string>Fecha ultima compra</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="4" colspan="3">
+          <widget class="QLabel" name="labelNombre">
+           <property name="font">
+            <font>
+             <pointsize>15</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Nombre proveedor</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1" colspan="2">
+          <widget class="QLineEdit" name="lineEditProvincia"/>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label_5">
+           <property name="text">
+            <string>Pro&amp;vincia</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditProvincia</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1" colspan="2">
+          <widget class="QLineEdit" name="lineEditDireccion"/>
+         </item>
+         <item row="2" column="3">
+          <widget class="QLabel" name="label_4">
+           <property name="text">
+            <string>&amp;Localidad</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditLocalidad</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="3">
+          <widget class="QLineEdit" name="lineEditTelefonoR"/>
+         </item>
+         <item row="5" column="3">
+          <widget class="QLineEdit" name="lineEditMail"/>
+         </item>
+         <item row="7" column="3">
+          <widget class="QLineEdit" name="lineEditFechaUltimaCompra">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="lineEditCod"/>
+         </item>
+         <item row="1" column="1" colspan="2">
+          <widget class="QLineEdit" name="lineEditNombre"/>
+         </item>
+         <item row="3" column="3">
+          <widget class="QLabel" name="label_6">
+           <property name="text">
+            <string>C.P.</string>
+           </property>
+           <property name="buddy">
+            <cstring>lineEditCP</cstring>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="5">
+          <widget class="QLineEdit" name="lineEditLocalidad"/>
+         </item>
+         <item row="3" column="5">
+          <widget class="QLineEdit" name="lineEditCP"/>
+         </item>
+         <item row="6" column="3">
+          <widget class="QLineEdit" name="lineEditFormaPago"/>
+         </item>
+         <item row="6" column="5">
+          <widget class="QPushButton" name="pushButtonFPago">
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="3">
+          <widget class="QLabel" name="label_16">
+           <property name="text">
+            <string>N.I.F.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="5">
+          <widget class="QLineEdit" name="lineEditNIF"/>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QPushButton" name="pushButtonNuevo">
+           <property name="text">
+            <string>Nuevo</string>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonModificar">
+           <property name="text">
+            <string>Modificar</string>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonBorrar">
+           <property name="text">
+            <string>Borrar</string>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonRefrescar">
+           <property name="text">
+            <string>Refescar</string>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonAnterior">
+           <property name="text">
+            <string>Anterior</string>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonSiguiente">
+           <property name="text">
+            <string>Siguente</string>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonCerrar">
+           <property name="text">
+            <string>Cerrar</string>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>lineEditCod</tabstop>
+  <tabstop>lineEditNombre</tabstop>
+  <tabstop>lineEditNIF</tabstop>
+  <tabstop>lineEditDireccion</tabstop>
+  <tabstop>lineEditLocalidad</tabstop>
+  <tabstop>lineEditProvincia</tabstop>
+  <tabstop>lineEditCP</tabstop>
+  <tabstop>lineEditRepresentante</tabstop>
+  <tabstop>lineEditTelefonoR</tabstop>
+  <tabstop>lineEditMailR</tabstop>
+  <tabstop>lineEditTelefono</tabstop>
+  <tabstop>lineEditMail</tabstop>
+  <tabstop>lineEditDescuento</tabstop>
+  <tabstop>lineEditFormaPago</tabstop>
+  <tabstop>pushButtonFPago</tabstop>
+  <tabstop>plainTextEdit</tabstop>
+  <tabstop>pushButtonNuevo</tabstop>
+  <tabstop>pushButtonModificar</tabstop>
+  <tabstop>pushButtonBorrar</tabstop>
+  <tabstop>pushButtonRefrescar</tabstop>
+  <tabstop>pushButtonAnterior</tabstop>
+  <tabstop>pushButtonSiguiente</tabstop>
+  <tabstop>pushButtonCerrar</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>lineEditFechaUltimaCompra</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pushButtonCerrar</sender>
+   <signal>clicked()</signal>
+   <receiver>Proveedores</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>916</x>
+     <y>495</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>961</x>
+     <y>268</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

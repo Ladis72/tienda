@@ -23,7 +23,19 @@ SOURCES += main.cpp\
     fabricantes.cpp \
     totalizar.cpp \
     formaspago.cpp \
-    clientes.cpp
+    clientes.cpp \
+    proveedores.cpp \
+    gestionpedidos.cpp \
+    pedidonuevo.cpp \
+    buscarproveedor.cpp \
+    pedidos.cpp \
+    cajas.cpp \
+    tiposentradassalidas.cpp \
+    entradasalida.cpp \
+    aceptarpedido.cpp \
+    configuracion.cpp \
+    cambiodatosproducto.cpp \
+    historicotickets.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -36,7 +48,19 @@ HEADERS  += tienda.h \
     fabricantes.h \
     totalizar.h \
     formaspago.h \
-    clientes.h
+    clientes.h \
+    proveedores.h \
+    gestionpedidos.h \
+    pedidonuevo.h \
+    buscarproveedor.h \
+    pedidos.h \
+    cajas.h \
+    tiposentradassalidas.h \
+    entradasalida.h \
+    aceptarpedido.h \
+    configuracion.h \
+    cambiodatosproducto.h \
+    historicotickets.h
 
 FORMS    += tienda.ui \
     tpv.ui \
@@ -47,4 +71,15 @@ FORMS    += tienda.ui \
     fabricantes.ui \
     totalizar.ui \
     formaspago.ui \
-    clientes.ui
+    clientes.ui \
+    proveedores.ui \
+    gestionpedidos.ui \
+    pedidonuevo.ui \
+    buscarproveedor.ui \
+    pedidos.ui \
+    cajas.ui \
+    tiposentradassalidas.ui \
+    entradasalida.ui \
+    aceptarpedido.ui \
+    cambiodatosproducto.ui \
+    historicotickets.ui

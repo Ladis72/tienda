@@ -34,6 +34,7 @@ Articulos::Articulos(QWidget *parent) :
     refrescarBotones(mapper.currentIndex());
 
     ui->lineEditCod->installEventFilter(this);
+    borrarFormulario();
 }
 
 Articulos::~Articulos()
@@ -54,7 +55,7 @@ void Articulos::refrescarBotones(int i)
 QStringList Articulos::recogerDatosFormulario()
 {
     QStringList listaDatosFormulario;
-
+    listaDatosFormulario.clear();
     listaDatosFormulario.append(ui->lineEditCod->text());
     listaDatosFormulario.append(ui->lineEditDesc->text());
     listaDatosFormulario.append(ui->lineEditPvp->text());
@@ -69,7 +70,12 @@ QStringList Articulos::recogerDatosFormulario()
     listaDatosFormulario.append(ui->lineEditCodFamila->text());
     listaDatosFormulario.append(ui->lineEditCosto->text());
     listaDatosFormulario.append(ui->lineEditCodFabricante->text());
+    if (ui->lineEditFoto->text() == "") {
+        listaDatosFormulario.append("imagenes/1.jpg");
+    }else{
     listaDatosFormulario.append(ui->lineEditFoto->text());
+    }
+    listaDatosFormulario.append(ui->plainTextEdit->toPlainText());
 
 
 
@@ -274,6 +280,14 @@ void Articulos::on_pushButton_2_clicked()
 
 void Articulos::on_pushButtonNuevo_clicked()
 {
+    consulta = base.consulta_producto(QSqlDatabase::database("DB"), ui->lineEditCod->text());
+    if(consulta.numRowsAffected() > 0){
+        QMessageBox::warning(this, "ATENCION",
+                              "El registro ya existe");
+        return;
+    }
+
+
     QStringList datos = recogerDatosFormulario();
     if (base.insertarArticulo(QSqlDatabase::database("DB"),datos)) {
         QMessageBox::about(this,"Atención", "Artículo creado con éxito");
@@ -283,3 +297,4 @@ void Articulos::on_pushButtonNuevo_clicked()
     recargarTabla();
 
 }
+

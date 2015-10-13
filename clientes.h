@@ -1,6 +1,8 @@
 #ifndef CLIENTES_H
 #define CLIENTES_H
 #include "base_datos.h"
+#include "buscarproducto.h"
+
 #include <QDialog>
 
 namespace Ui {
@@ -13,6 +15,7 @@ class Clientes : public QDialog
 
 public:
     explicit Clientes(QWidget *parent = 0);
+    explicit Clientes(QWidget *parent , QString codigo );
     ~Clientes();
 
 private slots:
@@ -26,6 +29,8 @@ private slots:
 
     void on_pushButtonSiguiente_clicked();
 
+    void on_lineEditNombre_returnPressed();
+
 private:
     Ui::Clientes *ui;
 
@@ -33,6 +38,7 @@ private:
     QSqlQueryModel *modeloTabla;
     QDataWidgetMapper mapper;
     QSqlQuery consulta;
+
 
     void recargarTabla();
     void borrarFormulario();

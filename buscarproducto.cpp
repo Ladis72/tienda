@@ -12,7 +12,7 @@ BuscarProducto::BuscarProducto(QWidget *parent, QSqlQuery query) :
     modelo.setQuery(query);
     ui->tableView->setModel(&modelo);
     ui->tableView->hideColumn(3);
-    for (int i = 5; i <14; ++i) ui->tableView->hideColumn(i);
+    for (int i = 5; i < 14; ++i) ui->tableView->hideColumn(i);
     ui->tableView->setColumnWidth(1,600);
 }
 
@@ -42,5 +42,4 @@ void BuscarProducto::on_tableView_activated(const QModelIndex &index)
     QVariant dato=modelo.data(indice,Qt::EditRole);
 
     resultado = dato.toString();
-    qDebug() << resultado;
 }

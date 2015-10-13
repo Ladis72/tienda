@@ -15,6 +15,7 @@ Fabricantes::Fabricantes(QWidget *parent) :
     modelo->select();
     ui->tableView->setModel(modelo);
     ui->tableView->resizeColumnsToContents();
+    ui->tableView->hideColumn(0);
 
 }
 
@@ -55,6 +56,6 @@ void Fabricantes::on_tableView_clicked(const QModelIndex &index)
 
 void Fabricantes::on_lineEdit_textChanged(const QString &arg1)
 {
-    modelo->setFilter("nombre LIKE '%"+ui->lineEdit->text()+"%'");
+    modelo->setFilter("nombre LIKE '%"+arg1+"%'");
 
 }

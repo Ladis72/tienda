@@ -121,6 +121,9 @@
      </item>
      <item row="4" column="2">
       <widget class="QLineEdit" name="lineEditCambio">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="font">
         <font>
          <pointsize>18</pointsize>
@@ -188,12 +191,18 @@
        <property name="text">
         <string>Cobrar</string>
        </property>
+       <property name="shortcut">
+        <string>F8</string>
+       </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="pushButtonTicket">
        <property name="text">
         <string>Ticket</string>
+       </property>
+       <property name="shortcut">
+        <string>F9</string>
        </property>
       </widget>
      </item>
@@ -215,6 +224,18 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>lineEditEntrega</tabstop>
+  <tabstop>pushButtonCobrar</tabstop>
+  <tabstop>pushButtonTicket</tabstop>
+  <tabstop>pushButtonFactura</tabstop>
+  <tabstop>pushButtonSalir</tabstop>
+  <tabstop>lineEditCambio</tabstop>
+  <tabstop>lineEditDescuento</tabstop>
+  <tabstop>lineEditImporte</tabstop>
+  <tabstop>lineEditTotal</tabstop>
+  <tabstop>comboBox</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

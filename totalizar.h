@@ -13,10 +13,12 @@ class totalizar : public QDialog
     Q_OBJECT
     
 public:
-    explicit totalizar(QStringList datos, QWidget *parent = 0);
+    explicit totalizar(QString datos, QWidget *parent = 0);
     ~totalizar();
 
     QString efectivo;
+    float descuento,total;
+    int formaPago;
     
 private slots:
     void on_pushButtonTicket_clicked();
@@ -27,6 +29,8 @@ private slots:
 
 
     void on_comboBox_currentTextChanged(const QString &arg1);
+
+    void on_comboBox_currentIndexChanged(int index);
 
 private:
     Ui::totalizar *ui;

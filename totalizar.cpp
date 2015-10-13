@@ -1,15 +1,15 @@
 #include "totalizar.h"
 #include "ui_totalizar.h"
 
-totalizar::totalizar(QStringList datos, QWidget *parent) :
+totalizar::totalizar(QString datos, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::totalizar)
 {
     ui->setupUi(this);
-    ui->lineEditImporte->setText(datos.at(0));
-    float total = ui->lineEditImporte->text().toFloat()*(100-ui->lineEditDescuento->text().toFloat())/100;
+    ui->lineEditImporte->setText(datos);
+    total = ui->lineEditImporte->text().toFloat()*(100-ui->lineEditDescuento->text().toFloat())/100;
     ui->lineEditTotal->setText(QString::number(total));
-
+    descuento = 0;
     fpago = base->fpago(QSqlDatabase::database("DB"));
 
     while (fpago.next()) {
@@ -33,8 +33,9 @@ void totalizar::on_pushButtonTicket_clicked()
 
 void totalizar::on_lineEditDescuento_textChanged(const QString &arg1)
 {
-    float total = ui->lineEditImporte->text().toFloat()*(100-arg1.toFloat())/100;
+    total = ui->lineEditImporte->text().toFloat()*(100-arg1.toFloat())/100;
     ui->lineEditTotal->setText(QString::number(total));
+    descuento = ui->lineEditDescuento->text().toFloat();
 }
 
 void totalizar::on_lineEditEntrega_textChanged(const QString &arg1)
@@ -49,4 +50,9 @@ void totalizar::on_comboBox_currentTextChanged(const QString &arg1)
 {
     efectivo = arg1;
     qDebug() << efectivo;
+}
+
+void totalizar::on_comboBox_currentIndexChanged(int index)
+{
+    qDebug() << index;
 }

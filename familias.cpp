@@ -14,6 +14,7 @@ Familias::Familias(QWidget *parent) :
     modelo->select();
     ui->tableView->setModel(modelo);
     ui->tableView->resizeColumnsToContents();
+    ui->tableView->hideColumn(0);
 
 
 }
