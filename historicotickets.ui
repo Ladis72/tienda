@@ -15,8 +15,8 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
-    <layout class="QGridLayout" name="gridLayout_2">
-     <item row="0" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
       <widget class="QLabel" name="label">
        <property name="text">
         <string>Desde</string>
@@ -26,24 +26,7 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>Hasta</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QPushButton" name="pushButtonConsultar">
-       <property name="text">
-        <string>Consultar</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
+     <item>
       <widget class="QDateTimeEdit" name="dateTimeEditDesde">
        <property name="displayFormat">
         <string>yyyy/MM/dd HH:mm</string>
@@ -53,7 +36,17 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="1">
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Hasta</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QDateTimeEdit" name="dateTimeEditHasta">
        <property name="displayFormat">
         <string>yyyy/MM/dd HH:mm</string>
@@ -63,50 +56,16 @@
        </property>
       </widget>
      </item>
-    </layout>
-   </item>
-   <item row="0" column="2">
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <property name="spacing">
-      <number>0</number>
-     </property>
-     <property name="sizeConstraint">
-      <enum>QLayout::SetDefaultConstraint</enum>
-     </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
      <item>
-      <widget class="QLabel" name="label_3">
+      <widget class="QPushButton" name="pushButtonConsultar">
        <property name="text">
-        <string>TextLabel</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_4">
-       <property name="text">
-        <string>TextLabel</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_6">
-       <property name="text">
-        <string>TextLabel</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_5">
-       <property name="text">
-        <string>TextLabel</string>
+        <string>Consultar</string>
        </property>
       </widget>
      </item>
     </layout>
    </item>
-   <item row="1" column="0" colspan="4">
+   <item row="1" column="0" colspan="3">
     <widget class="QTableView" name="tableViewTickets">
      <property name="maximumSize">
       <size>
@@ -123,6 +82,9 @@
      <property name="alternatingRowColors">
       <bool>true</bool>
      </property>
+     <property name="sortingEnabled">
+      <bool>false</bool>
+     </property>
      <attribute name="horizontalHeaderMinimumSectionSize">
       <number>20</number>
      </attribute>
@@ -131,7 +93,7 @@
      </attribute>
     </widget>
    </item>
-   <item row="2" column="0" colspan="4">
+   <item row="2" column="0" colspan="3">
     <widget class="QTableView" name="tableViewLineasTicket">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">

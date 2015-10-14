@@ -57,6 +57,10 @@ void HistoricoTickets::mostrarTickets()
         vistaTickets->setItem(i,14,itemPagado);
 
     }
+    QStringList etiquetas;
+    etiquetas << "Ticket" << "Vendedor" << "Cliente" << "Fecha" << "Hora" << "" << "" << "" << "" << "" << "" << "Dto" << "Total" << "F. Pago" << "Pagado";
+    qDebug() << etiquetas;
+    vistaTickets->setHorizontalHeaderLabels(etiquetas);
     ui->tableViewTickets->setModel(vistaTickets);
     for (int i = 5; i < 11; ++i) {
         ui->tableViewTickets->hideColumn(i);
