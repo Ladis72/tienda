@@ -498,7 +498,7 @@ bool baseDatos::modificarProveedor(QSqlDatabase db, QStringList datos, QString d
 {
     QSqlQuery consulta(db);
     qDebug() << datos;
-    consulta.prepare("UPDATE proveedores SET nombre = ?, direccion = ?, cp = ?, localidad= ?, provincia = ?, representante = ?, telefonor = ?, mailr = ?, telefono = ?, mail = ?, descuento = ?, formapago = ?, notas = ? WHERE idProveedor = ?");
+    consulta.prepare("UPDATE proveedores SET nombre = ?, nif = ? , direccion = ?, cp = ?, localidad= ?, provincia = ?, representante = ?, telefonor = ?, mailr = ?, telefono = ?, mail = ?, descuento = ?, formapago = ?, notas = ? WHERE idProveedor = ?");
     //consulta.bindValue(0,datos.at(0).toInt());
     consulta.bindValue(0,datos.at(1));
     consulta.bindValue(1,datos.at(2));
@@ -510,11 +510,11 @@ bool baseDatos::modificarProveedor(QSqlDatabase db, QStringList datos, QString d
     consulta.bindValue(7,datos.at(8));
     consulta.bindValue(8,datos.at(9));
     consulta.bindValue(9,datos.at(10));
-    consulta.bindValue(10,datos.at(11).toFloat());
-    //consulta.bindValue(12,datos.at(12));
-    consulta.bindValue(11,datos.at(13).toInt());
-    consulta.bindValue(12,datos.at(14));
-    consulta.bindValue(13,dato.toInt());
+    consulta.bindValue(10,datos.at(11));
+    consulta.bindValue(11,datos.at(12).toDouble());
+    consulta.bindValue(12,datos.at(14).toInt());
+    consulta.bindValue(13,datos.at(15));
+    consulta.bindValue(14,dato.toInt());
     if (!consulta.exec()) {
         db.rollback();
         qDebug() << consulta.lastError();
