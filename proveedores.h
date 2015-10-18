@@ -33,6 +33,8 @@ private slots:
 
     void on_pushButtonFPago_clicked();
 
+    void on_lineEditCod_editingFinished();
+
 private:
     Ui::Proveedores *ui;
 
