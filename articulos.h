@@ -52,13 +52,23 @@ private slots:
 
     void on_pushButtonNuevo_clicked();
 
+    void on_tabWidget_tabBarClicked(int index);
+
+    void on_radioButton_clicked();
+
+    void on_radioButton_2_clicked();
+
+    void on_radioButton_3_clicked();
+
 private:
     Ui::Articulos *ui;
 
     baseDatos base;
     QSqlQueryModel *modeloTabla;
+    QSqlQueryModel modeloVentas;
     QDataWidgetMapper mapper;
     QSqlQuery consulta;
+
     //Familias *F;
 
     void refrescarBotones(int i);

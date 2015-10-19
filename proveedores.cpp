@@ -179,3 +179,14 @@ void Proveedores::on_pushButtonFPago_clicked()
         ui->lineEditFormaPago->setText(fpago->resultado);
     }
 }
+
+void Proveedores::on_lineEditCod_editingFinished()
+{
+    for (int i = 0; i < modeloTabla->rowCount(); ++i) {
+        if (modeloTabla->record(i).value("idProveedor").toString() == ui->lineEditCod->text()) {
+            mapper.setCurrentIndex(i);
+            refrescarBotones(i);
+            break;
+        }
+    }
+}
