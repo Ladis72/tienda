@@ -298,3 +298,51 @@ void Articulos::on_pushButtonNuevo_clicked()
 
 }
 
+
+void Articulos::on_tabWidget_tabBarClicked(int index)
+{
+    modeloVentas.clear();
+    modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) , MONTH(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = "
+                          +ui->lineEditCod->text()+" group by year(`tickets`.`fecha`) desc, month(`tickets`.`fecha`) desc ",QSqlDatabase::database("DB"));
+    qDebug() << modeloVentas.lastError();
+    modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
+    modeloVentas.setHeaderData(1,Qt::Horizontal,"Año");
+    modeloVentas.setHeaderData(2,Qt::Horizontal,"Mes");
+    modeloVentas.setHeaderData(3,Qt::Horizontal,"Cantidad");
+
+    ui->tableViewVentas->setModel(&modeloVentas);
+    ui->tableViewVentas->resizeColumnsToContents();
+}
+
+void Articulos::on_radioButton_clicked()
+{
+    modeloVentas.clear();
+    modeloVentas.setQuery("SELECT `descripcion`, `tickets`.`fecha` ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = "
+                          +ui->lineEditCod->text()+" group by `tickets`.`fecha` desc ",QSqlDatabase::database("DB"));
+    qDebug() << modeloVentas.lastError();
+    modeloVentas.setHeaderData(0,Qt::Horizontal,"Artículo");
+    modeloVentas.setHeaderData(1,Qt::Horizontal,"Fecha");
+    modeloVentas.setHeaderData(2,Qt::Horizontal,"Cantidad");
+
+    ui->tableViewVentas->setModel(&modeloVentas);
+    ui->tableViewVentas->resizeColumnsToContents();
+}
+
+void Articulos::on_radioButton_2_clicked()
+{
+    emit on_tabWidget_tabBarClicked(1);
+}
+
+void Articulos::on_radioButton_3_clicked()
+{
+    modeloVentas.clear();
+    modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = "
+                          +ui->lineEditCod->text()+" group by year(`tickets`.`fecha`) desc",QSqlDatabase::database("DB"));
+    qDebug() << modeloVentas.lastError();
+    modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
+    modeloVentas.setHeaderData(1,Qt::Horizontal,"Año");
+    modeloVentas.setHeaderData(2,Qt::Horizontal,"Cantidad");
+
+    ui->tableViewVentas->setModel(&modeloVentas);
+    ui->tableViewVentas->resizeColumnsToContents();
+}
