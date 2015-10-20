@@ -21,6 +21,26 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
+    <widget class="QLabel" name="labelNombrePrecio">
+     <property name="font">
+      <font>
+       <family>Utopia</family>
+       <pointsize>16</pointsize>
+       <weight>75</weight>
+       <italic>true</italic>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">
+color: rgb(255, 25, 5);</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
       <number>1</number>
@@ -199,26 +219,6 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="5" colspan="6">
-           <widget class="QLabel" name="labelNombrePrecio">
-            <property name="font">
-             <font>
-              <family>Utopia</family>
-              <pointsize>16</pointsize>
-              <weight>75</weight>
-              <italic>true</italic>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="styleSheet">
-             <string notr="true">
-color: rgb(255, 25, 5);</string>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-           </widget>
-          </item>
           <item row="4" column="5">
            <widget class="QLabel" name="label_6">
             <property name="text">
@@ -379,14 +379,14 @@ color: rgb(255, 25, 5);</string>
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
-           <widget class="QRadioButton" name="radioButton">
+           <widget class="QRadioButton" name="radioButtonVentasDia">
             <property name="text">
              <string>Dia</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QRadioButton" name="radioButton_2">
+           <widget class="QRadioButton" name="radioButtonVentasMes">
             <property name="text">
              <string>Mes</string>
             </property>
@@ -396,7 +396,7 @@ color: rgb(255, 25, 5);</string>
            </widget>
           </item>
           <item>
-           <widget class="QRadioButton" name="radioButton_3">
+           <widget class="QRadioButton" name="radioButtonVentasAno">
             <property name="text">
              <string>Año</string>
             </property>
@@ -407,6 +407,46 @@ color: rgb(255, 25, 5);</string>
        </item>
        <item row="1" column="0">
         <widget class="QTableView" name="tableViewVentas"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="title">
+       <string>Compras</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_4">
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="groupBox_2">
+         <property name="title">
+          <string>Ver por:</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <item>
+           <widget class="QRadioButton" name="radioButtonFacturas">
+            <property name="text">
+             <string>Facturas</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radioButtonMeses">
+            <property name="text">
+             <string>Meses</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radioButtonAnos">
+            <property name="text">
+             <string>Años</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QTableView" name="tableView"/>
        </item>
       </layout>
      </widget>
