@@ -702,7 +702,7 @@ bool baseDatos::crearCliente(QSqlDatabase db, QStringList datos)
 bool baseDatos::existeDatoEnTabla(QSqlDatabase db, QString tabla,QString columna, QString dato)
 {
     QSqlQuery consulta(db);
-    consulta.exec("SELECT * FROM "+tabla+" WHERE "+columna+" LIKE "+dato);
+    consulta.exec("SELECT * FROM "+tabla+" WHERE "+columna+" LIKE '"+dato+"'");
     if(consulta.numRowsAffected() > 0 ){
         return true;
     }else{
