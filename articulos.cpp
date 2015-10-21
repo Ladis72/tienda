@@ -49,8 +49,9 @@ void Articulos::refrescarBotones(int i)
     QString fichero = QDir::currentPath() + "/" + ui->lineEditFoto->text();
     QImage foto(fichero);
     ui->labelFoto->setPixmap(QPixmap::fromImage(foto));
-    ui->labelNombrePrecio->setText(ui->lineEditDesc->text()+ "     "+ui->lineEditPvp->text());
+    ui->labelNombrePrecio->setText(ui->lineEditDesc->text()+ "        "+ui->lineEditPvp->text());
     cargarVentas();
+    cargarCompras();
 }
 
 QStringList Articulos::recogerDatosFormulario()
@@ -88,6 +89,17 @@ void Articulos::recargarTabla()
 {
     modeloTabla->setQuery("SELECT * FROM articulos",QSqlDatabase::database("DB"));
     mapper.setModel(modeloTabla);
+}
+
+void Articulos::cargarCompras(){
+    modeloCompras.clear();
+    if (ui->radioButtonFacturas->isChecked()) {
+        modeloCompras.setQuery("SELECT `nDocumento` , `cantidad` , `bonificacion` , `costo` , `descuento1`, `pedidos`.`fechaPedido` FROM `lineaspedido` JOIN `pedidos` on `nDocumento` = `pedidos`.`npedido` WHERE `cod` = '"
+                               +ui->lineEditCod->text()+"'",QSqlDatabase::database("DB"));
+        qDebug() << modeloCompras.lastError();
+        ui->tableViewCompras->setModel(&modeloCompras);
+        ui->tableViewCompras->resizeColumnsToContents();
+    }
 }
 
 void Articulos::cargarVentas()

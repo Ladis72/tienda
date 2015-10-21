@@ -43,7 +43,7 @@ color: rgb(255, 25, 5);</string>
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -446,7 +446,7 @@ color: rgb(255, 25, 5);</string>
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QTableView" name="tableView"/>
+        <widget class="QTableView" name="tableViewCompras"/>
        </item>
       </layout>
      </widget>

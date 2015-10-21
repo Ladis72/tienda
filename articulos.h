@@ -65,6 +65,7 @@ private:
     baseDatos base;
     QSqlQueryModel *modeloTabla;
     QSqlQueryModel modeloVentas;
+    QSqlQueryModel modeloCompras;
     QDataWidgetMapper mapper;
     QSqlQuery consulta;
 
@@ -75,6 +76,7 @@ private:
     void recargarTabla();
     void cargarVentas();
     bool eventFilter(QObject *obj, QEvent *event);
+    void cargarCompras();
 };
 
 #endif // ARTICULOS_H
