@@ -52,13 +52,12 @@ private slots:
 
     void on_pushButtonNuevo_clicked();
 
-    void on_tabWidget_tabBarClicked(int index);
 
-    void on_radioButton_clicked();
+    void on_radioButtonVentasDia_clicked();
 
-    void on_radioButton_2_clicked();
+    void on_radioButtonVentasMes_clicked();
 
-    void on_radioButton_3_clicked();
+    void on_radioButtonVentasAno_clicked();
 
 private:
     Ui::Articulos *ui;
@@ -66,6 +65,7 @@ private:
     baseDatos base;
     QSqlQueryModel *modeloTabla;
     QSqlQueryModel modeloVentas;
+    QSqlQueryModel modeloCompras;
     QDataWidgetMapper mapper;
     QSqlQuery consulta;
 
@@ -74,7 +74,9 @@ private:
     void refrescarBotones(int i);
     QStringList recogerDatosFormulario();
     void recargarTabla();
+    void cargarVentas();
     bool eventFilter(QObject *obj, QEvent *event);
+    void cargarCompras();
 };
 
 #endif // ARTICULOS_H

@@ -49,7 +49,9 @@ void Articulos::refrescarBotones(int i)
     QString fichero = QDir::currentPath() + "/" + ui->lineEditFoto->text();
     QImage foto(fichero);
     ui->labelFoto->setPixmap(QPixmap::fromImage(foto));
-    ui->labelNombrePrecio->setText(ui->lineEditDesc->text()+ "     "+ui->lineEditPvp->text());
+    ui->labelNombrePrecio->setText(ui->lineEditDesc->text()+ "        "+ui->lineEditPvp->text());
+    cargarVentas();
+    cargarCompras();
 }
 
 QStringList Articulos::recogerDatosFormulario()
@@ -87,6 +89,57 @@ void Articulos::recargarTabla()
 {
     modeloTabla->setQuery("SELECT * FROM articulos",QSqlDatabase::database("DB"));
     mapper.setModel(modeloTabla);
+}
+
+void Articulos::cargarCompras(){
+    modeloCompras.clear();
+    if (ui->radioButtonFacturas->isChecked()) {
+        modeloCompras.setQuery("SELECT `nDocumento` , `cantidad` , `bonificacion` , `costo` , `descuento1`, `pedidos`.`fechaPedido` FROM `lineaspedido` JOIN `pedidos` on `nDocumento` = `pedidos`.`npedido` WHERE `cod` = '"
+                               +ui->lineEditCod->text()+"'",QSqlDatabase::database("DB"));
+        qDebug() << modeloCompras.lastError();
+        ui->tableViewCompras->setModel(&modeloCompras);
+        ui->tableViewCompras->resizeColumnsToContents();
+    }
+}
+
+void Articulos::cargarVentas()
+{
+    modeloVentas.clear();
+    if(ui->radioButtonVentasMes->isChecked()){
+        modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) , MONTH(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
+                              +ui->lineEditCod->text()+"' group by year(`tickets`.`fecha`) desc, month(`tickets`.`fecha`) desc ",QSqlDatabase::database("DB"));
+        qDebug() << modeloVentas.lastError();
+        modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
+        modeloVentas.setHeaderData(1,Qt::Horizontal,"Año");
+        modeloVentas.setHeaderData(2,Qt::Horizontal,"Mes");
+        modeloVentas.setHeaderData(3,Qt::Horizontal,"Cantidad");
+
+        ui->tableViewVentas->setModel(&modeloVentas);
+        ui->tableViewVentas->resizeColumnsToContents();
+    }
+    if(ui->radioButtonVentasDia->isChecked()){
+        modeloVentas.setQuery("SELECT `descripcion`, `tickets`.`fecha` ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
+                              +ui->lineEditCod->text()+"' group by `tickets`.`fecha` desc ",QSqlDatabase::database("DB"));
+        qDebug() << modeloVentas.lastError();
+        modeloVentas.setHeaderData(0,Qt::Horizontal,"Artículo");
+        modeloVentas.setHeaderData(1,Qt::Horizontal,"Fecha");
+        modeloVentas.setHeaderData(2,Qt::Horizontal,"Cantidad");
+
+        ui->tableViewVentas->setModel(&modeloVentas);
+        ui->tableViewVentas->resizeColumnsToContents();
+    }
+    if(ui->radioButtonVentasAno->isChecked()){
+        modeloVentas.clear();
+        modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
+                              +ui->lineEditCod->text()+"' group by year(`tickets`.`fecha`) desc",QSqlDatabase::database("DB"));
+        qDebug() << modeloVentas.lastError();
+        modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
+        modeloVentas.setHeaderData(1,Qt::Horizontal,"Año");
+        modeloVentas.setHeaderData(2,Qt::Horizontal,"Cantidad");
+
+        ui->tableViewVentas->setModel(&modeloVentas);
+        ui->tableViewVentas->resizeColumnsToContents();
+    }
 }
 
 bool Articulos::eventFilter(QObject *obj, QEvent *event)
@@ -299,50 +352,18 @@ void Articulos::on_pushButtonNuevo_clicked()
 }
 
 
-void Articulos::on_tabWidget_tabBarClicked(int index)
-{
-    modeloVentas.clear();
-    modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) , MONTH(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = "
-                          +ui->lineEditCod->text()+" group by year(`tickets`.`fecha`) desc, month(`tickets`.`fecha`) desc ",QSqlDatabase::database("DB"));
-    qDebug() << modeloVentas.lastError();
-    modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
-    modeloVentas.setHeaderData(1,Qt::Horizontal,"Año");
-    modeloVentas.setHeaderData(2,Qt::Horizontal,"Mes");
-    modeloVentas.setHeaderData(3,Qt::Horizontal,"Cantidad");
 
-    ui->tableViewVentas->setModel(&modeloVentas);
-    ui->tableViewVentas->resizeColumnsToContents();
+void Articulos::on_radioButtonVentasDia_clicked()
+{
+    cargarVentas();
 }
 
-void Articulos::on_radioButton_clicked()
+void Articulos::on_radioButtonVentasMes_clicked()
 {
-    modeloVentas.clear();
-    modeloVentas.setQuery("SELECT `descripcion`, `tickets`.`fecha` ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = "
-                          +ui->lineEditCod->text()+" group by `tickets`.`fecha` desc ",QSqlDatabase::database("DB"));
-    qDebug() << modeloVentas.lastError();
-    modeloVentas.setHeaderData(0,Qt::Horizontal,"Artículo");
-    modeloVentas.setHeaderData(1,Qt::Horizontal,"Fecha");
-    modeloVentas.setHeaderData(2,Qt::Horizontal,"Cantidad");
-
-    ui->tableViewVentas->setModel(&modeloVentas);
-    ui->tableViewVentas->resizeColumnsToContents();
+    cargarVentas();
 }
 
-void Articulos::on_radioButton_2_clicked()
+void Articulos::on_radioButtonVentasAno_clicked()
 {
-    emit on_tabWidget_tabBarClicked(1);
-}
-
-void Articulos::on_radioButton_3_clicked()
-{
-    modeloVentas.clear();
-    modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = "
-                          +ui->lineEditCod->text()+" group by year(`tickets`.`fecha`) desc",QSqlDatabase::database("DB"));
-    qDebug() << modeloVentas.lastError();
-    modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
-    modeloVentas.setHeaderData(1,Qt::Horizontal,"Año");
-    modeloVentas.setHeaderData(2,Qt::Horizontal,"Cantidad");
-
-    ui->tableViewVentas->setModel(&modeloVentas);
-    ui->tableViewVentas->resizeColumnsToContents();
+    cargarVentas();
 }
