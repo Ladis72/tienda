@@ -16,7 +16,7 @@ AceptarPedido::AceptarPedido(QString pedido, QString proveedor, QString nDoc, QS
     descuentoReal=0;
     fecha = fechaPedido;
     ui->lineEditNDoc->setText(nDoc);
-    ui->dateEditDocumento->setDate(QDate::fromString(fecha));
+    ui->dateEditDocumento->setDate(QDate::fromString(fecha,"yyyy-MM-dd"));
     llenarTabla(idPedido,descuento);
     modeloPedido = new QSqlQueryModel(this);
     modeloPedido->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = %1").arg(idPedido),QSqlDatabase::database("DB"));
@@ -250,6 +250,7 @@ void AceptarPedido::on_comboBox_currentTextChanged(const QString &arg1)
 {
     if (arg1 == "Factura") {
         ui->dateEditVencimiento->setEnabled(true);
+        ui->dateEditVencimiento->setDate(QDate::currentDate());
     }else{
         ui->dateEditVencimiento->setEnabled(false);
     }

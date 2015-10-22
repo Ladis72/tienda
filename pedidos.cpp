@@ -232,7 +232,7 @@ void pedidos::on_tableView_doubleClicked(const QModelIndex &index)
     ui->leUds->setText(modeloPedido->data(modeloPedido->index(fila,4)).toString());
     ui->leBon->setText(modeloPedido->data(modeloPedido->index(fila,5)).toString());
     ui->leLote->setText(modeloPedido->data(modeloPedido->index(fila,6)).toString());
-    ui->dateEdit->setDate(QDate::fromString(modeloPedido->data(modeloPedido->index(fila,7)).toString()));
+    ui->dateEdit->setDate(QDate::fromString(modeloPedido->data(modeloPedido->index(fila,7)).toString(),"yyyy-MM-dd"));
     ui->lePvt->setText(modeloPedido->data(modeloPedido->index(fila,8)).toString());
     ui->leIva->setText(modeloPedido->data(modeloPedido->index(fila,11)).toString());
     ui->lePvp->setText(modeloPedido->data(modeloPedido->index(fila,15)).toString());

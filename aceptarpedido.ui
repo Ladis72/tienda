@@ -66,6 +66,9 @@
        <property name="displayFormat">
         <string>yyyy/MM/dd</string>
        </property>
+       <property name="calendarPopup">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
      <item row="2" column="7">
@@ -103,6 +106,9 @@
       <widget class="QDateEdit" name="dateEditDocumento">
        <property name="displayFormat">
         <string>yyyy/MM/dd</string>
+       </property>
+       <property name="calendarPopup">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
