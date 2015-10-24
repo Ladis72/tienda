@@ -55,6 +55,7 @@ public:
     bool modificarCliente(QSqlDatabase db, QStringList datos, QString dato);
     bool borrarCliente(QSqlDatabase db, int idCliente);
     bool crearCliente(QSqlDatabase db, QStringList datos);
+    double descuentoCliente(QString idCliente);
     bool existeDatoEnTabla(QSqlDatabase db, QString tabla, QString columna, QString dato);
     bool crearProveedor(QSqlDatabase db, QStringList datos);
     double sumarColumna(QString tabla, QString campo, QString campoCondicion = NULL, QString condicion ="%%");

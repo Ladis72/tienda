@@ -150,11 +150,18 @@ void Tpv::recuperarTicketsPendientes()
         modeloTicketPendiente->setItem(i,1,itemCliente);
         QStandardItem *itemVendedor = new QStandardItem(base.nombreUsusario(listaTicketsPendientes.value(2).toString()));
         modeloTicketPendiente->setItem(i,2,itemVendedor);
+        QStandardItem *itemCodCliente = new QStandardItem(listaTicketsPendientes.value(1).toString());
+        modeloTicketPendiente->setItem(i,3,itemCodCliente);
+        QStandardItem *itemCodVendedor = new QStandardItem(listaTicketsPendientes.value(2).toString());
+        modeloTicketPendiente->setItem(i,4,itemCodVendedor);
         listaTicketsPendientes.next();
 
     }
     ui->tableViewTicketsPendientes->setModel(modeloTicketPendiente);
     ui->tableViewTicketsPendientes->hideColumn(0);
+    ui->tableViewTicketsPendientes->hideColumn(3);
+    ui->tableViewTicketsPendientes->hideColumn(4);
+
 
 
 
@@ -261,7 +268,13 @@ void Tpv::on_lineEdit_cod_returnPressed(){
             }else{
            linea << ui->lineEdit_precio->text();
        }
-       linea << ui->lineEdit_descuento->text();
+       if(ui->lineEdit_descuento->text() == "0"){
+           qDebug() << "Descuento en line 0";
+           linea << QString::number(descuentoCliente);
+
+           }else{
+            linea << ui->lineEdit_descuento->text();
+       }
        double totalLinea = linea.at(4).toDouble()*linea.at(2).toDouble()*(1-linea.at(5).toDouble()/100);
        totalLinea = redondear(totalLinea,2);
        linea << QString::number(totalLinea);
@@ -270,6 +283,7 @@ void Tpv::on_lineEdit_cod_returnPressed(){
            ticketNuevo(base.maxTicketPendiente(QSqlDatabase::database("DB"))+1);
        }
        actualizarLineaTicket(linea);
+       qDebug() << linea;
        actualizarParrillaVentas();
 
        ui->lineEdit_Uds->setText("1");
@@ -388,6 +402,13 @@ void Tpv::on_tableViewTicketsPendientes_clicked(const QModelIndex &index)
     QModelIndex indice = modeloTicketPendiente->index(index.row(),0);
     QString dato = modeloTicketPendiente->data(indice,Qt::EditRole).toString();
     cambiarTicket(dato.toInt());
+
+    indice = modeloTicketPendiente->index(index.row(),3);
+    ui->lineEdit_cod_cliente->setText(modeloTicketPendiente->data(indice,Qt::EditRole).toString());
+    emit on_lineEdit_cod_cliente_editingFinished();
+
+    indice = modeloTicketPendiente->index(indice.row(),4);
+    ui->comboBox_vendedor->setCurrentIndex(modeloTicketPendiente->data(indice,Qt::EditRole).toInt()-1);
     ui->lineEdit_cod->setFocus();
 }
 
@@ -434,7 +455,9 @@ void Tpv::on_lineEdit_cod_cliente_editingFinished()
         }
     }else{
     ui->lineEdit_nobre_cliente->setText(nombreCliente);
-    }
+        }
+    descuentoCliente = base.descuentoCliente(ui->lineEdit_cod_cliente->text());
+    qDebug() << descuentoCliente;
 }
 
 void Tpv::on_lineEdit_nobre_cliente_returnPressed()

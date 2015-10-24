@@ -55,6 +55,7 @@ private:
     int ticketActual;
     int usuario;
     int cliente;
+    double descuentoCliente;
 
     Ui::Tpv *ui;
     QSqlDatabase db;

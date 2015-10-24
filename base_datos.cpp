@@ -445,6 +445,8 @@ QString baseDatos::nombreCliente(QString id)
     return "Sin asignar";
 }
 
+
+
 QString baseDatos::nombreFormaPago(QString id)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
@@ -697,6 +699,17 @@ bool baseDatos::crearCliente(QSqlDatabase db, QStringList datos)
         qDebug() << "Articulo insertado";
         return true;
     }
+}
+
+double baseDatos::descuentoCliente(QString idCliente)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT descuento FROM clientes WHERE idCliente = '"+idCliente+"'");
+    consulta.first();
+    if(consulta.isValid()){
+        return consulta.record().value("descuento").toDouble();
+    }
+    return 0;
 }
 
 bool baseDatos::existeDatoEnTabla(QSqlDatabase db, QString tabla,QString columna, QString dato)
