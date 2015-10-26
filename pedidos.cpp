@@ -44,6 +44,13 @@ void pedidos::llenarTablaPedido(QString idPedido)
 {
     modeloPedido->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = '%1'").arg(idPedido),QSqlDatabase::database("DB"));
     ui->tableView->setModel(modeloPedido);
+    ui->tableView->hideColumn(0);
+    ui->tableView->hideColumn(1);
+    ui->tableView->hideColumn(10);
+    ui->tableView->hideColumn(13);
+    ui->tableView->hideColumn(14);
+    ui->tableView->resizeColumnsToContents();
+
     contarArticulos();
     contarLineas();
     ui->leIva10->setText(QString::number(base.sumarIvasPedido(idPedido,"10")));

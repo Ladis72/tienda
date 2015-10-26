@@ -59,6 +59,13 @@ private slots:
 
     void on_radioButtonVentasAno_clicked();
 
+
+    void on_radioButtonFacturas_clicked();
+
+    void on_radioButtonMeses_clicked();
+
+    void on_radioButtonAnos_clicked();
+
 private:
     Ui::Articulos *ui;
 

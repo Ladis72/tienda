@@ -110,3 +110,8 @@ void Tienda::on_pushButtonTickets_clicked()
     HT = new HistoricoTickets;
     HT->exec();
 }
+
+void Tienda::on_pushButtonFacturas_clicked()
+{
+
+}

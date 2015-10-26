@@ -48,7 +48,10 @@ void Articulos::refrescarBotones(int i)
     ui->pushButtonSiguiente->setEnabled(i < modeloTabla->rowCount() -1);
     QString fichero = QDir::currentPath() + "/" + ui->lineEditFoto->text();
     QImage foto(fichero);
-    ui->labelFoto->setPixmap(QPixmap::fromImage(foto));
+    QPixmap imagen =QPixmap::fromImage(foto);
+    QPixmap imagenAjustada = imagen.scaled(200,200,Qt::KeepAspectRatio);
+
+    ui->labelFoto->setPixmap(imagenAjustada);
     ui->labelNombrePrecio->setText(ui->lineEditDesc->text()+ "        "+ui->lineEditPvp->text());
     cargarVentas();
     cargarCompras();
@@ -97,6 +100,19 @@ void Articulos::cargarCompras(){
         modeloCompras.setQuery("SELECT `nDocumento` , `cantidad` , `bonificacion` , `costo` , `descuento1`, `pedidos`.`fechaPedido` FROM `lineaspedido` JOIN `pedidos` on `nDocumento` = `pedidos`.`npedido` WHERE `cod` = '"
                                +ui->lineEditCod->text()+"'",QSqlDatabase::database("DB"));
         qDebug() << modeloCompras.lastError();
+        ui->tableViewCompras->setModel(&modeloCompras);
+        ui->tableViewCompras->resizeColumnsToContents();
+    }
+    if (ui->radioButtonMeses->isChecked()) {
+        modeloCompras.setQuery("SELECT YEAR(pedidos.fechaPedido) , MONTH(pedidos.fechaPedido) , sum(cantidad) , sum(bonificacion) FROM lineaspedido JOIN pedidos ON nDocumento = pedidos.npedido WHERE cod = '"
+                               +ui->lineEditCod->text()+"' GROUP BY YEAR(pedidos.fechaPedido) DESC , MONTH(pedidos.fechaPedido) DESC ",QSqlDatabase::database("DB"));
+        qDebug() << modeloCompras.lastError();
+        ui->tableViewCompras->setModel(&modeloCompras);
+        ui->tableViewCompras->resizeColumnsToContents();
+    }
+    if (ui->radioButtonAnos->isChecked()) {
+        modeloCompras.setQuery("SELECT YEAR(pedidos.fechaPedido) , sum(cantidad) , sum(bonificacion) FROM lineaspedido JOIN pedidos ON nDocumento = pedidos.npedido WHERE cod = '"
+                +ui->lineEditCod->text()+"' GROUP BY YEAR(pedidos.fechaPedido) DESC",QSqlDatabase::database("DB"));
         ui->tableViewCompras->setModel(&modeloCompras);
         ui->tableViewCompras->resizeColumnsToContents();
     }
@@ -366,4 +382,23 @@ void Articulos::on_radioButtonVentasMes_clicked()
 void Articulos::on_radioButtonVentasAno_clicked()
 {
     cargarVentas();
+}
+
+
+
+void Articulos::on_radioButtonFacturas_clicked()
+{
+    cargarCompras();
+}
+
+void Articulos::on_radioButtonMeses_clicked()
+{
+    cargarCompras();
+
+}
+
+void Articulos::on_radioButtonAnos_clicked()
+{
+    cargarCompras();
+
 }

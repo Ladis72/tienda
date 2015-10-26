@@ -63,6 +63,8 @@ private slots:
 
     void on_pushButtonTickets_clicked();
 
+    void on_pushButtonFacturas_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
