@@ -113,5 +113,6 @@ void Tienda::on_pushButtonTickets_clicked()
 
 void Tienda::on_pushButtonFacturas_clicked()
 {
-
+    VFact = new VerFacturas;
+    VFact->exec();
 }

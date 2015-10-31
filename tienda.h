@@ -17,6 +17,7 @@
 #include "tiposentradassalidas.h"
 #include "entradasalida.h"
 #include "historicotickets.h"
+#include "verfacturas.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -80,6 +81,7 @@ private:
     TiposEntradasSalidas *TiposEntSal;
     EntradaSalida *ES;
     HistoricoTickets *HT;
+    VerFacturas *VFact;
     //QSqlDatabase db;
 };
 

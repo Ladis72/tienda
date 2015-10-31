@@ -41,10 +41,12 @@ public:
     QString nombreCliente(QString id);
     QString nombreFormaPago(QString id);
     QString idFormaPago(QString fpago);
+//Funciones PROVEEDORES
     QString nombreProveedor(QString id);
     QString idProveedor(QString nombre);
     bool modificarProveedor(QSqlDatabase db, QStringList datos, QString dato);
     QString descuentoProveedor(QString proveedor);
+    QStringList listadoProveedores();
     double obtenerNumeroUltimoTicket(QSqlDatabase db);
     QSqlQuery tcketsPendientes(QSqlDatabase db);
     int maxTicketPendiente(QSqlDatabase db);

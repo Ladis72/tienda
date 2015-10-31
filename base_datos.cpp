@@ -540,6 +540,17 @@ QString baseDatos::descuentoProveedor(QString proveedor)
     return 0;
 }
 
+QStringList baseDatos::listadoProveedores()
+{
+    QStringList proveedores;
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT nombre FROM proveedores ORDER BY nombre ASC");
+    while (consulta.next()) {
+        proveedores << consulta.value("nombre").toString();
+    }
+    return proveedores;
+}
+
 double baseDatos::obtenerNumeroUltimoTicket(QSqlDatabase db)
 {
     QSqlQuery consulta(db);
