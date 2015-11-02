@@ -2,6 +2,7 @@
 #define VERFACTURAS_H
 
 #include <QDialog>
+#include <QDate>
 #include "base_datos.h"
 
 
@@ -20,14 +21,17 @@ public:
 private slots:
     void on_checkBoxTodosProveedores_clicked(bool checked);
 
+    void on_pushButtonVer_clicked();
+
 private:
     void llenarProveedores();
+    void llenarTabla();
 
 
     Ui::VerFacturas *ui;
-    baseDatos base;
-    int idProveedor;
-    //QDate fechaInicial, fechaFinal;
+    baseDatos *base;
+    QString idProveedor , fechaInicial , fechaFinal;
+    QSqlTableModel *tabla;
 };
 
 #endif // VERFACTURAS_H

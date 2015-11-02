@@ -47,6 +47,7 @@ public:
     bool modificarProveedor(QSqlDatabase db, QStringList datos, QString dato);
     QString descuentoProveedor(QString proveedor);
     QStringList listadoProveedores();
+
     double obtenerNumeroUltimoTicket(QSqlDatabase db);
     QSqlQuery tcketsPendientes(QSqlDatabase db);
     int maxTicketPendiente(QSqlDatabase db);
@@ -85,7 +86,7 @@ public:
     bool grabarArqueo(QStringList datos);
 //Funciones GENERALISTAS
     QSqlQuery devolverTablaCompleta(QString nombreTabla);
-
+    QSqlQuery ejecutarSentencia(QString sentencia);
     double ESdesdeFecha(QString fecha, QString hora);
 
 //Funciones LOTES

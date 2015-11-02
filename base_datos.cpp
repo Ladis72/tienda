@@ -979,6 +979,13 @@ QSqlQuery baseDatos::devolverTablaCompleta(QString nombreTabla)
     return consulta;
 }
 
+QSqlQuery baseDatos::ejecutarSentencia(QString sentencia)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec(sentencia);
+    return consulta;
+}
+
 QSqlQuery baseDatos::recuperarPedidos()
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
