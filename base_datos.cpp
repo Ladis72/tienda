@@ -944,6 +944,7 @@ QSqlQuery baseDatos::ventas(QString fecha)
     return consulta;
 }
 
+
 QSqlQuery baseDatos::ventasDesdeUltimoArqueo(QString fechaI, QString horaI)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
@@ -970,6 +971,17 @@ bool baseDatos::grabarArqueo(QStringList datos)
     }
     qDebug() << consulta.lastError().text();
     return false;
+}
+
+QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("SELECT fecha , SUM(total) FROM tickets WHERE fecha >= ? AND fecha <= ? GROUP BY fecha");
+    consulta.bindValue(0,fechaI);
+    consulta.bindValue(1,FechaF);
+    consulta.exec();
+    qDebug() << consulta.lastError();
+    return consulta;
 }
 
 QSqlQuery baseDatos::devolverTablaCompleta(QString nombreTabla)

@@ -36,7 +36,8 @@ SOURCES += main.cpp\
     configuracion.cpp \
     cambiodatosproducto.cpp \
     historicotickets.cpp \
-    verfacturas.cpp
+    verfacturas.cpp \
+    listadoventas.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -62,7 +63,8 @@ HEADERS  += tienda.h \
     configuracion.h \
     cambiodatosproducto.h \
     historicotickets.h \
-    verfacturas.h
+    verfacturas.h \
+    listadoventas.h
 
 FORMS    += tienda.ui \
     tpv.ui \
@@ -85,4 +87,5 @@ FORMS    += tienda.ui \
     aceptarpedido.ui \
     cambiodatosproducto.ui \
     historicotickets.ui \
-    verfacturas.ui
+    verfacturas.ui \
+    listadoventas.ui

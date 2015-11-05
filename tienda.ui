@@ -20,7 +20,7 @@
       <item row="1" column="0">
        <widget class="QTabWidget" name="tab">
         <property name="currentIndex">
-         <number>3</number>
+         <number>0</number>
         </property>
         <property name="iconSize">
          <size>
@@ -43,9 +43,16 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="cajasButton">
+             <widget class="QPushButton" name="listadoVentasButton">
               <property name="text">
                <string>Cajas</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="cajasButton">
+              <property name="text">
+               <string>Arqueo</string>
               </property>
              </widget>
             </item>

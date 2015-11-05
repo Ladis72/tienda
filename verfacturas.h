@@ -3,6 +3,8 @@
 
 #include <QDialog>
 #include <QDate>
+#include <QStandardItemModel>
+
 #include "base_datos.h"
 
 
@@ -23,6 +25,11 @@ private slots:
 
     void on_pushButtonVer_clicked();
 
+
+    void on_tableView_doubleClicked(const QModelIndex &index);
+
+    void on_tableView_clicked(const QModelIndex &index);
+
 private:
     void llenarProveedores();
     void llenarTabla();
@@ -30,8 +37,8 @@ private:
 
     Ui::VerFacturas *ui;
     baseDatos *base;
-    QString idProveedor , fechaInicial , fechaFinal;
-    QSqlTableModel *tabla;
+    QString idProveedor , fechaInicial , fechaFinal , idFactura;
+    QStandardItemModel *modeloTabla;
 };
 
 #endif // VERFACTURAS_H

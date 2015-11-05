@@ -18,6 +18,7 @@
 #include "entradasalida.h"
 #include "historicotickets.h"
 #include "verfacturas.h"
+#include "listadoventas.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -66,6 +67,8 @@ private slots:
 
     void on_pushButtonFacturas_clicked();
 
+    void on_listadoVentasButton_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -82,6 +85,7 @@ private:
     EntradaSalida *ES;
     HistoricoTickets *HT;
     VerFacturas *VFact;
+    ListadoVentas *ListVent;
     //QSqlDatabase db;
 };
 

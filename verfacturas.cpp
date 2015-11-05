@@ -39,9 +39,9 @@ void VerFacturas::llenarTabla()
         sentenciaSql = "SELECT * FROM facturas WHERE fechaFactura >= '"+fechaInicial+"' AND fechaFactura <= '"+fechaFinal+"'";
     }else{
         idProveedor = base->idProveedor(ui->comboBoxProceedores->currentText());
-        sentenciaSql = "SELECT * FROM facturas WHERE idProveedor = '"+idProveedor+"' fechaFactura >= '"+fechaInicial+"' AND fechaFactura <= '"+fechaFinal+"'";
+        sentenciaSql = "SELECT * FROM facturas WHERE idProveedor = '"+idProveedor+"' AND fechaFactura >= '"+fechaInicial+"' AND fechaFactura <= '"+fechaFinal+"'";
     }
-    QStandardItemModel *modeloTabla = new QStandardItemModel(this);
+    modeloTabla = new QStandardItemModel(this);
     QSqlQuery resultado = base->ejecutarSentencia(sentenciaSql);
     qDebug() << resultado.lastError() << resultado.numRowsAffected();
     resultado.first();
@@ -67,9 +67,12 @@ void VerFacturas::llenarTabla()
 
         resultado.next();
     }
-
+    QStringList etiquetas;
+    etiquetas << "Nº Factura" << "Fecha" << "Proveedor" << "Base" << "I.V.A" << "R.E." << "Total" << "Fecha vencimiento" << "Pagada";
+    modeloTabla->setHorizontalHeaderLabels(etiquetas);
     ui->tableView->setModel(modeloTabla);
     ui->tableView->resizeColumnsToContents();
+
 }
 
 
@@ -84,4 +87,20 @@ void VerFacturas::on_checkBoxTodosProveedores_clicked(bool checked)
 void VerFacturas::on_pushButtonVer_clicked()
 {
     llenarTabla();
+}
+
+
+
+void VerFacturas::on_tableView_doubleClicked(const QModelIndex &index)
+{
+//    QModelIndex indice = modeloTabla->index(index.row(),0);
+//    idFactura = modeloTabla->data(indice,Qt::EditRole).toString();
+//    qDebug() << idFactura;
+}
+
+void VerFacturas::on_tableView_clicked(const QModelIndex &index)
+{
+    QModelIndex indice = modeloTabla->index(index.row(),0);
+    idFactura = modeloTabla->data(indice,Qt::EditRole).toString();
+    qDebug() << idFactura;
 }

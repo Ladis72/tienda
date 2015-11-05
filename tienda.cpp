@@ -116,3 +116,9 @@ void Tienda::on_pushButtonFacturas_clicked()
     VFact = new VerFacturas;
     VFact->exec();
 }
+
+void Tienda::on_listadoVentasButton_clicked()
+{
+    ListVent = new ListadoVentas;
+    ListVent->exec();
+}
