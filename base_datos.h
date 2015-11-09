@@ -81,6 +81,7 @@ public:
 
 //Funciones CAJAS
     QSqlQuery ventas(QString fecha);
+    QSqlQuery ventasPorUsusario(QString fecha);
     QSqlQuery ventasDesdeUltimoArqueo(QString fechaI, QString horaI);
     QSqlQuery recuperarDatosUltimoArqueo();
     bool grabarArqueo(QStringList datos);

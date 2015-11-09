@@ -2,6 +2,7 @@
 #define LISTADOVENTAS_H
 
 #include <QDialog>
+#include <QVBoxLayout>
 #include "base_datos.h"
 
 namespace Ui {
@@ -18,6 +19,8 @@ public:
 
 private slots:
     void on_pushButtonVer_clicked();
+
+    void on_tableView_activated(const QModelIndex &index);
 
 private:
     Ui::ListadoVentas *ui;

@@ -940,7 +940,13 @@ QSqlQuery baseDatos::ventas(QString fecha)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.exec("SELECT sum(total) , fpago FROM tickets WHERE fecha = '"+fecha+"' group by fecha , fpago");
-    consulta.first();
+    return consulta;
+}
+
+QSqlQuery baseDatos::ventasPorUsusario(QString fecha)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT sum(total) , usuario FROM tickets WHERE fecha = '"+fecha+"' group by fecha , usuario");
     return consulta;
 }
 
