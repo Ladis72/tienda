@@ -283,7 +283,6 @@ void Tpv::on_lineEdit_cod_returnPressed(){
            ticketNuevo(base.maxTicketPendiente(QSqlDatabase::database("DB"))+1);
        }
        actualizarLineaTicket(linea);
-       qDebug() << linea;
        actualizarParrillaVentas();
 
        ui->lineEdit_Uds->setText("1");
@@ -475,5 +474,19 @@ void Tpv::on_lineEdit_nobre_cliente_returnPressed()
 
 void Tpv::on_lineEdit_precio_returnPressed()
 {
+
+}
+
+void Tpv::on_tableView_doubleClicked(const QModelIndex &index)
+{
+    QModelIndex indice = modeloTicket->index(index.row(),0);
+    int idModeloTicket = indice.row();
+    ui->lineEdit_cod->setText(modeloTicket->data(modeloTicket->index(idModeloTicket,2)).toString());
+    ui->lineEdit_desc->setText(modeloTicket->data(modeloTicket->index(idModeloTicket,3)).toString());
+    ui->lineEdit_Uds->setText(modeloTicket->data(modeloTicket->index(idModeloTicket,4)).toString());
+    ui->lineEdit_precio->setText(modeloTicket->data(modeloTicket->index(idModeloTicket,6)).toString());
+    ui->lineEdit_descuento->setText(modeloTicket->data(modeloTicket->index(idModeloTicket,7)).toString());
+    ui->lineEdit_6->setText(modeloTicket->data(modeloTicket->index(idModeloTicket,8)).toString());
+    modeloTicket->removeRow(ui->tableView->currentIndex().row());
 
 }
