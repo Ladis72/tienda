@@ -1,5 +1,7 @@
 #include "tpv.h"
 #include "ui_tpv.h"
+#include "dialogfecha.h"
+
 #include <QItemDelegate>
 #include <QDebug>
 #include <QDate>
@@ -379,7 +381,23 @@ void Tpv::on_btn_cobrar_clicked()
                 lineaTicket.append(modeloTicket->record(i).value(x).toString());
             }
             base.grabarLineaTicket(lineaTicket);
-            base.descontarArticulo(lineaTicket.at(1),lineaTicket.at(3).toInt());
+            if (lineaTicket.at(3).toInt() < 0) {
+                DialogFecha *fechaCaducidad = new DialogFecha(lineaTicket.at(2));
+                fechaCaducidad->exec();
+                QString fecha = fechaCaducidad->fecha.toString("yyyy-MM-dd");
+                QString lote = fechaCaducidad->lote;
+                QString idLote = base.idLote(lineaTicket.at(1),lote,fecha);
+                qDebug() << lote;
+                if (idLote != "0") {
+                    base.aumentarLote(idLote,abs(lineaTicket.at(3).toInt()));
+                    qDebug() << "Aumentar lote";
+                } else {
+                    base.crearLote(lineaTicket.at(1),lote,fecha,QString::number(abs(lineaTicket.at(3).toInt())));
+                    qDebug() << "Crear lote";
+                }
+            }else{
+                base.descontarArticulo(lineaTicket.at(1),lineaTicket.at(3).toInt());
+            }
             base.actualizarFechaVentaArticulo(lineaTicket.at(1),QDate::currentDate().toString("yyyy-MM-dd"));
         }
         totalTicket.append(recopilarDatosTicket());
