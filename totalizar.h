@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <base_datos.h>
+#include <QKeyEvent>
 
 namespace Ui {
 class totalizar;
@@ -19,6 +20,7 @@ public:
     QString efectivo;
     float descuento,total;
     int formaPago;
+    QString facturacion;
     
 private slots:
     void on_pushButtonTicket_clicked();
@@ -36,6 +38,8 @@ private:
     Ui::totalizar *ui;
     QSqlQuery fpago;
     baseDatos *base;
+
+    void keyPressEvent(QKeyEvent *e);
 
 };
 

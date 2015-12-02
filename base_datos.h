@@ -47,12 +47,13 @@ public:
     bool modificarProveedor(QSqlDatabase db, QStringList datos, QString dato);
     QString descuentoProveedor(QString proveedor);
     QStringList listadoProveedores();
+    QString codigoParaNuevoProveedor();
 
     double obtenerNumeroUltimoTicket(QSqlDatabase db);
     QSqlQuery tcketsPendientes(QSqlDatabase db);
     int maxTicketPendiente(QSqlDatabase db);
     bool nuevoTicketTmp (int orden, int cliente, int vendedor);
-    bool grabarTicket(QStringList datos);
+    bool grabarTicket(QString serie, QStringList datos);
     bool grabarLineaTicket(QStringList datos);
     bool borrarTicketTmp(int ticket);
     bool modificarCliente(QSqlDatabase db, QStringList datos, QString dato);
@@ -82,7 +83,7 @@ public:
 //Funciones CAJAS
     QSqlQuery ventas(QString fecha);
     QSqlQuery ventasPorUsusario(QString fecha);
-    QSqlQuery ventasDesdeUltimoArqueo(QString fechaI, QString horaI);
+    QSqlQuery ventasDesdeUltimoArqueo(QString fechaI, QString horaI, QString tabla);
     QSqlQuery recuperarDatosUltimoArqueo();
     bool grabarArqueo(QStringList datos);
     QSqlQuery ventasEntreFechas(QString fechaI , QString FechaF);

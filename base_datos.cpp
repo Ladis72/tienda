@@ -551,6 +551,15 @@ QStringList baseDatos::listadoProveedores()
     return proveedores;
 }
 
+QString baseDatos::codigoParaNuevoProveedor()
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT max(idProveedor) FROM proveedores");
+    consulta.first();
+    int id = consulta.value(0).toInt()+1;
+    return QString::number(id);
+}
+
 double baseDatos::obtenerNumeroUltimoTicket(QSqlDatabase db)
 {
     QSqlQuery consulta(db);
@@ -598,10 +607,11 @@ bool baseDatos::nuevoTicketTmp(int orden, int cliente, int vendedor)
     }
 }
 
-bool baseDatos::grabarTicket(QStringList datos)
+bool baseDatos::grabarTicket(QString serie , QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("INSERT INTO tickets VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    consulta.prepare("INSERT INTO "+serie+" VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    //consulta.bindValue(0,serie);
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i,datos.at(i));
     }
@@ -622,7 +632,7 @@ bool baseDatos::grabarLineaTicket(QStringList datos)
     if(consulta.exec()){
         return true;
     }
-    qDebug() << consulta.lastError().text();
+    qDebug() << consulta.lastError().text() << "en grabarlineaticket";
     return false;
 }
 
@@ -951,10 +961,10 @@ QSqlQuery baseDatos::ventasPorUsusario(QString fecha)
 }
 
 
-QSqlQuery baseDatos::ventasDesdeUltimoArqueo(QString fechaI, QString horaI)
+QSqlQuery baseDatos::ventasDesdeUltimoArqueo(QString fechaI, QString horaI, QString tabla)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.exec("SELECT sum(total) , fpago FROM tickets WHERE concat_ws('/',fecha , hora) >= '"+fechaI+"/"+horaI+"' group by fpago");
+    consulta.exec("SELECT sum(total) , fpago FROM "+tabla+" WHERE concat_ws('/',fecha , hora) >= '"+fechaI+"/"+horaI+"' group by fpago");
     consulta.first();
     return consulta;
 }

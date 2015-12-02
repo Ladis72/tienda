@@ -35,6 +35,8 @@ private slots:
 
     void on_lineEditCod_editingFinished();
 
+    void on_pushButton_clicked();
+
 private:
     Ui::Proveedores *ui;
 

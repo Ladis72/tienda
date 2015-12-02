@@ -376,7 +376,12 @@ void Tpv::on_btn_cobrar_clicked()
     if (totalizacion->exec() == totalizacion->Accepted){
         for(int i = 0; i < modeloTicket->rowCount(); i++){
             lineaTicket.clear();
+            if (totalizacion->facturacion == "1") {
+                qDebug() << "Serie" << totalizacion->facturacion;
+                lineaTicket.append(QString::number(ticket)+"B");
+            }else{
             lineaTicket.append(QString::number(ticket));
+            }
             for (int x = 2; x < modeloTicket->columnCount(); ++x) {
                 lineaTicket.append(modeloTicket->record(i).value(x).toString());
             }
@@ -406,10 +411,18 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(base.idFormaPago(totalizacion->efectivo));
         totalTicket.append("1");
 
-        base.grabarTicket(totalTicket);
+        QString serie;
+        serie = "ticketss";
+        if (totalizacion->facturacion == "0") {
+            serie = "tickets";
+            ticket +=1;
+        }
+        base.grabarTicket(serie,totalTicket);
+        qDebug() << totalTicket;
+        qDebug() << serie;
 
         emit on_pushButtonBorrarTodo_clicked();
-        ticket +=1;
+
     }
 
 }

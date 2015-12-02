@@ -182,15 +182,20 @@ bool Cajas::recuperarDatosUltimoArqueo()
 
 void Cajas::ventas()
 {
-    QSqlQuery resultado = base->ventasDesdeUltimoArqueo(fechaUltimoArqueo,horaUltimoArqueo);
+    QSqlQuery resultado = base->ventasDesdeUltimoArqueo(fechaUltimoArqueo,horaUltimoArqueo,"tickets");
     resultado.first();
     ventasEfectivo = resultado.value(0).toDouble();
-    ui->label_ventasEfectivo->setText(QString::number(ventasEfectivo));
     resultado.next();
     ventasTarjeta = resultado.value(0).toDouble();
     ui->label_ventasTarjeta->setText(QString::number(ventasTarjeta));
     nTarjetas = base->contarLineas("tickets","fpago","2");
     ui->labelNumeroTarjetas->setText(QString::number(nTarjetas));
+    resultado = base->ventasDesdeUltimoArqueo(fechaUltimoArqueo,horaUltimoArqueo,"ticketss");
+    resultado.first();
+    ui->label_ventasB->setText(resultado.value(0).toString());
+    ventasEfectivo += resultado.value(0).toDouble();
+    ui->label_ventasEfectivo->setText(QString::number(ventasEfectivo));
+
 }
 
 void Cajas::ES()

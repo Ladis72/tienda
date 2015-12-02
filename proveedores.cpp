@@ -60,7 +60,6 @@ bool Proveedores::eventFilter(QObject *obj, QEvent *event)
     if (obj == ui->lineEditCod) {
         if (event->type() == QEvent::MouseButtonPress) {
             borrarFormulario();
-            qDebug() << "event";
             return true;
         }
     }
@@ -189,4 +188,10 @@ void Proveedores::on_lineEditCod_editingFinished()
             break;
         }
     }
+}
+
+void Proveedores::on_pushButton_clicked()
+{
+    borrarFormulario();
+    ui->lineEditCod->setText(base.codigoParaNuevoProveedor());
 }

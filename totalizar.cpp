@@ -17,7 +17,7 @@ totalizar::totalizar(QString datos, QWidget *parent) :
         ui->comboBox->update();
         }
     efectivo = ui->comboBox->currentText();
-
+    facturacion = "0";
 
 }
 
@@ -55,4 +55,24 @@ void totalizar::on_comboBox_currentTextChanged(const QString &arg1)
 void totalizar::on_comboBox_currentIndexChanged(int index)
 {
     qDebug() << index;
+}
+
+void totalizar::keyPressEvent(QKeyEvent *e)
+{
+
+
+    switch ( e->key()) {
+    case Qt::Key_F1:
+        facturacion = "0";
+        qDebug() << "F1 pulsada";
+        this->setStyleSheet("background-color:#DEDEDE;");
+        break;
+    case Qt::Key_F2:
+        facturacion = "1";
+        qDebug() << "F2 pulsada";
+        this->setStyleSheet("background-color:#D1AEAB;");
+    default:
+        qDebug() << "Otra tecla pulsada";
+        break;
+    }
 }
