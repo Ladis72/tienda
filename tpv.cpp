@@ -449,6 +449,8 @@ void Tpv::on_pushButtonBorrarTodo_clicked()
     }
     base.borrarTicketTmp(ticketActual);
     recuperarTicketsPendientes();
+    ui->lineEdit_cod_cliente->setText("1");
+    emit on_lineEdit_cod_cliente_editingFinished();
     cambiarTicket(ticketActualizado());
 
     actualizarParrillaVentas();

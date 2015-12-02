@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QVBoxLayout>
+#include <QStandardItemModel>
 #include "base_datos.h"
 
 namespace Ui {
@@ -26,7 +27,7 @@ private:
     Ui::ListadoVentas *ui;
 
     baseDatos *base;
-    QSqlQueryModel *modeloTabla;
+    QStandardItemModel *modeloTabla;
 };
 
 #endif // LISTADOVENTAS_H

@@ -989,10 +989,10 @@ bool baseDatos::grabarArqueo(QStringList datos)
     return false;
 }
 
-QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF)
+QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF, QString tabla)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("SELECT fecha , SUM(total) FROM tickets WHERE fecha >= ? AND fecha <= ? GROUP BY fecha");
+    consulta.prepare("SELECT fecha , SUM(total) FROM "+tabla+" WHERE fecha >= ? AND fecha <= ? GROUP BY fecha");
     consulta.bindValue(0,fechaI);
     consulta.bindValue(1,FechaF);
     consulta.exec();

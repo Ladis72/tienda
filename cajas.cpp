@@ -195,6 +195,7 @@ void Cajas::ventas()
     ui->label_ventasB->setText(resultado.value(0).toString());
     ventasEfectivo += resultado.value(0).toDouble();
     ui->label_ventasEfectivo->setText(QString::number(ventasEfectivo));
+    ui->label_ventasTotales->setText(QString::number(ventasEfectivo+ventasTarjeta));
 
 }
 

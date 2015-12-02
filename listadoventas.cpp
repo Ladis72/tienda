@@ -22,8 +22,26 @@ void ListadoVentas::on_pushButtonVer_clicked()
     QString fechaI,fechaF;
     fechaF = ui->dateEditHasta->text();
     fechaI = ui->dateEditDesde->text();
-    modeloTabla = new QSqlQueryModel(this);
-    modeloTabla->setQuery(base->ventasEntreFechas(fechaI,fechaF));
+    modeloTabla = new QStandardItemModel(this);
+    //modeloTabla->setQuery(base->ventasEntreFechas(fechaI,fechaF));
+    QSqlQuery ventasA = base->ventasEntreFechas(fechaI,fechaF,"tickets");
+    int i = 0;
+    while (ventasA.next()) {
+        QStandardItem *itemFecha = new QStandardItem(ventasA.value(0).toString());
+        QStandardItem *itemVentas = new QStandardItem(ventasA.value(1).toString());
+        modeloTabla->setItem(i,0,itemFecha);
+        modeloTabla->setItem(i,1,itemVentas);
+        ++i;
+    }
+    QSqlQuery ventasB = base->ventasEntreFechas(fechaI,fechaF,"ticketss");
+    i = 0;
+    while (ventasB.next()) {
+        //QStandardItem *itemFecha = new QStandardItem(ventasB.value(0).toString());
+        QStandardItem *itemVentas = new QStandardItem(ventasB.value(1).toString());
+        //modeloTabla->setItem(i,2,itemFecha);
+        modeloTabla->setItem(i,2,itemVentas);
+        ++i;
+    }
     modeloTabla->setHeaderData(0,Qt::Horizontal,"FECHA");
     modeloTabla->setHeaderData(1,Qt::Horizontal,"VENTAS");
     ui->tableView->setModel(modeloTabla);
