@@ -83,6 +83,7 @@ private:
     int ticketActualizado();
     QStringList recopilarDatosTicket();
     QStringList recopilarBasesIvas();
+    QString formatearCadena(QString cadena, int tamano);
 
 
 

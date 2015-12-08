@@ -5,6 +5,7 @@
 #include <QItemDelegate>
 #include <QDebug>
 #include <QDate>
+#include <QString>
 
 Tpv::Tpv(QWidget *parent) :
     QWidget(parent),
@@ -255,6 +256,19 @@ QStringList Tpv::recopilarBasesIvas()
 
 }
 
+QString Tpv::formatearCadena(QString cadena, int tamano)
+{
+    if (cadena.length() >= tamano) {
+        cadena.resize(tamano);
+       return cadena;
+    }
+    int diferencia = tamano-cadena.length();
+    for (int i = 0; i < diferencia; ++i) {
+        cadena += " ";
+    }
+    return cadena;
+}
+
 void Tpv::on_lineEdit_cod_returnPressed(){
 
    consulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->lineEdit_cod->text());
@@ -374,6 +388,21 @@ void Tpv::on_btn_cobrar_clicked()
     totalTicket.clear();
 
     if (totalizacion->exec() == totalizacion->Accepted){
+        QFile impresora("/dev/usb/lp0");
+        //QFile impresora("ticket.txt");
+
+        impresora.open(QIODevice::WriteOnly);
+            QTextStream texto(&impresora);
+            texto << "\n";
+            texto << "HERBOLARIO EMEICJAC\n";
+            texto << "C/Perines 14 bajo\n";
+            texto << "Tlfn: 942-37-20-27\n";
+            texto << "N.I.F.: 20196639-V\n";
+            texto << "E-mail: emeicjac@emeicjac.com\n";
+            texto << "Web: emeicjac.com\n\n";
+            texto << "UDS | Producto            |Prec.|Dto|Total\n";
+            texto << "------------------------------------------\n";
+            texto << "\n";
         for(int i = 0; i < modeloTicket->rowCount(); i++){
             lineaTicket.clear();
             if (totalizacion->facturacion == "1") {
@@ -381,10 +410,38 @@ void Tpv::on_btn_cobrar_clicked()
                 lineaTicket.append(QString::number(ticket)+"B");
             }else{
             lineaTicket.append(QString::number(ticket));
+
             }
             for (int x = 2; x < modeloTicket->columnCount(); ++x) {
                 lineaTicket.append(modeloTicket->record(i).value(x).toString());
-            }
+                }
+            QString dato;
+            dato = lineaTicket.at(3);
+            dato = formatearCadena(dato,3);
+            qDebug() << dato;
+            texto << dato;
+            //texto << " ";
+            dato = lineaTicket.at(2);
+            dato = formatearCadena(dato,23);
+            qDebug() << dato;
+            texto << dato;
+            texto << " ";
+            dato = lineaTicket.at(5);
+            dato = formatearCadena(dato,6);
+            texto << dato;
+            //texto << " ";
+            dato.clear();
+            dato = lineaTicket.at(6);
+            dato = formatearCadena(dato,2);
+            texto << dato;
+            texto << " ";
+            dato.clear();
+            dato = lineaTicket.at(7);
+            dato = formatearCadena(dato,6);
+            texto << dato;
+            texto << "\n";
+            dato.clear();
+            qDebug() << lineaTicket;
             base.grabarLineaTicket(lineaTicket);
             if (lineaTicket.at(3).toInt() < 0) {
                 DialogFecha *fechaCaducidad = new DialogFecha(lineaTicket.at(2));
@@ -411,6 +468,9 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(base.idFormaPago(totalizacion->efectivo));
         totalTicket.append("1");
 
+        texto << "\n\n Total:";
+        texto << QString::number(totalizacion->total);
+        texto << "\nGRACIAS POR SU VISITA\N";
         QString serie;
         serie = "ticketss";
         if (totalizacion->facturacion == "0") {
@@ -422,7 +482,7 @@ void Tpv::on_btn_cobrar_clicked()
         qDebug() << serie;
 
         emit on_pushButtonBorrarTodo_clicked();
-
+        impresora.close();
     }
 
 }

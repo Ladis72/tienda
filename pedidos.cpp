@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <QInputDialog>
+#include <QtMath>
 
 pedidos::pedidos(QString idPed, QString proveedor, QString ndoc, QWidget *parent) :
     QDialog(parent),
@@ -36,6 +37,9 @@ void pedidos::on_leCod_editingFinished()
 QString pedidos::calcularTotalLinea()
 {
     double total = ui->lePvt->text().toDouble()*ui->leUds->text().toDouble()*((100-ui->leDescuento->text().toDouble())/100);
+    double costo = ui->leTotalLinea->text().toDouble()/(ui->leUds->text().toDouble()+ui->leBon->text().toDouble())*(1+ui->leIva->text().toDouble()/100);
+    int margen = qFloor(1-(costo/ui->lePvp->text().toDouble())*100);
+    ui->leMargen->setText(QString::number(margen));
     return QString::number(total);
 
 }
