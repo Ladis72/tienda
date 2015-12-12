@@ -18,7 +18,7 @@ totalizar::totalizar(QString datos, QWidget *parent) :
         }
     efectivo = ui->comboBox->currentText();
     facturacion = "0";
-
+    ticket = false;
 }
 
 totalizar::~totalizar()
@@ -28,6 +28,7 @@ totalizar::~totalizar()
 
 void totalizar::on_pushButtonTicket_clicked()
 {
+    ticket = true;
     emit accept();
 }
 

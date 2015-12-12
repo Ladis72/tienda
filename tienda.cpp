@@ -122,3 +122,9 @@ void Tienda::on_listadoVentasButton_clicked()
     ListVent = new ListadoVentas;
     ListVent->exec();
 }
+
+void Tienda::on_pushButton_2_clicked()
+{
+    VentaArticulos = new ListadoVentaArticulos(this);
+    VentaArticulos->exec();
+}

@@ -98,6 +98,8 @@ public:
     void crearLote(QString ean,QString lote,QString fecha,QString uds);
 
 //Funciones LISTADOS
+    QString ticketCercanoFecha(QString tabla, QString fecha, QString cuando);
+    QSqlQuery estadisticasVentaProductos(QString tabla, QString nPrimerTicket,QString nUltimoTicket);
 
 private:
 

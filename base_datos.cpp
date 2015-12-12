@@ -1060,6 +1060,32 @@ void baseDatos::crearLote(QString ean, QString lote, QString fecha, QString uds)
 
 }
 
+QString baseDatos::ticketCercanoFecha(QString tabla, QString fecha, QString cuando)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    if (cuando == "mino") {
+        consulta.exec("SELECT min(ticket) FROM "+tabla+" WHERE concat_ws('/',fecha,hora) >= '"+fecha+"'");
+    }else{ consulta.prepare("SELECT max(ticket) FROM "+tabla+" WHERE concat_ws('/',fecha,hora) <= '"+fecha+"'");
+    }
+    //consulta.bindValue(0,tabla);
+    //consulta.bindValue(1,fecha);
+    if(consulta.exec()){
+        consulta.first();
+        return consulta.value(0).toString();
+    }
+    qDebug() << consulta.lastError();
+    return 0;
+}
+
+QSqlQuery baseDatos::estadisticasVentaProductos(QString tabla, QString nPrimerTicket, QString nUltimoTicket)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT descripcion , cantidad FROM "+tabla+" WHERE nticket >= '"+nPrimerTicket+"' and nticket <= '"+nUltimoTicket+"' group by cod order by descripcion asc");
+    consulta.first();
+    qDebug() << consulta.lastError();
+    return consulta;
+}
+
 
 
 

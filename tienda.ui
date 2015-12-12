@@ -14,8 +14,8 @@
    <string>Tienda</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QGridLayout" name="gridLayout_2">
-    <item row="0" column="0">
+   <layout class="QHBoxLayout" name="horizontalLayout_4">
+    <item>
      <layout class="QGridLayout" name="gridLayout">
       <item row="1" column="0">
        <widget class="QTabWidget" name="tab">
@@ -157,6 +157,20 @@
              </size>
             </property>
            </spacer>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tabListados">
+         <attribute name="title">
+          <string>Listados</string>
+         </attribute>
+         <layout class="QFormLayout" name="formLayout">
+          <item row="0" column="0">
+           <widget class="QPushButton" name="pushButton_2">
+            <property name="text">
+             <string>Venta artículos</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

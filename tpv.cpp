@@ -382,14 +382,19 @@ void Tpv::on_lineEdit_desc_returnPressed()
 
 void Tpv::on_btn_cobrar_clicked()
 {
+    QFile cajon("/dev/lp1");
+    cajon.open(QIODevice::WriteOnly);
+    QTextStream codigoApertura(&cajon);
+    codigoApertura << char(0x1B) << char(0x70) << char(0x30);
+    cajon.close();
     totalizacion = new totalizar(QString::number(calcularPrecioTotal()),this);
 
     QStringList lineaTicket,totalTicket;
     totalTicket.clear();
 
     if (totalizacion->exec() == totalizacion->Accepted){
-        QFile impresora("/dev/usb/lp0");
-        //QFile impresora("ticket.txt");
+        //QFile impresora("/dev/lp0");
+        QFile impresora("ticket.txt");
 
         impresora.open(QIODevice::WriteOnly);
             QTextStream texto(&impresora);
@@ -400,9 +405,11 @@ void Tpv::on_btn_cobrar_clicked()
             texto << "N.I.F.: 20196639-V\n";
             texto << "E-mail: emeicjac@emeicjac.com\n";
             texto << "Web: emeicjac.com\n\n";
+            texto << QDateTime::currentDateTime().toString("dd-MMM-yyyy  HH:mm:ss");
+            texto << "    Ticket:" << QString::number(ticket);
+            texto <<"\n";
             texto << "UDS | Producto            |Prec.|Dto|Total\n";
             texto << "------------------------------------------\n";
-            texto << "\n";
         for(int i = 0; i < modeloTicket->rowCount(); i++){
             lineaTicket.clear();
             if (totalizacion->facturacion == "1") {
@@ -468,21 +475,27 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(base.idFormaPago(totalizacion->efectivo));
         totalTicket.append("1");
 
-        texto << "\n\n Total:";
+        texto << "\n\nTotal:";
         texto << QString::number(totalizacion->total);
-        texto << "\nGRACIAS POR SU VISITA\N";
+        texto << "\n\n\n     GRACIAS POR SU VISITA\n";
+        texto << "\n\n\n\n";
+        texto << char(0x1D) << char(0x56) << char(0x30);
         QString serie;
         serie = "ticketss";
         if (totalizacion->facturacion == "0") {
             serie = "tickets";
             ticket +=1;
         }
+
         base.grabarTicket(serie,totalTicket);
         qDebug() << totalTicket;
         qDebug() << serie;
 
         emit on_pushButtonBorrarTodo_clicked();
         impresora.close();
+        if (totalizacion->ticket == true) {
+            system("less ./ticket.txt >> /dev/lp0");
+        }
     }
 
 }

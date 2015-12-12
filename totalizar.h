@@ -21,6 +21,7 @@ public:
     float descuento,total;
     int formaPago;
     QString facturacion;
+    bool ticket;
     
 private slots:
     void on_pushButtonTicket_clicked();
