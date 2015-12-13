@@ -1077,10 +1077,10 @@ QString baseDatos::ticketCercanoFecha(QString tabla, QString fecha, QString cuan
     return 0;
 }
 
-QSqlQuery baseDatos::estadisticasVentaProductos(QString nPrimerTicket, QString nUltimoTicket , QString nPrimerTicketB , QString nUltimoTicketB)
+QSqlQuery baseDatos::estadisticasVentaProductos(QString nUltimoTicket , QString ultimoTicket, QString nPrimerTicketB , QString nUltimoTicketB)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.exec("SELECT descripcion , sum(cantidad) FROM lineasticket WHERE nticket between '"+nPrimerTicket+"' and '"+nUltimoTicket+"' or nticket between '"+nPrimerTicketB+"' and '"+nUltimoTicketB+"' group by cod order by descripcion asc");
+    consulta.exec("SELECT descripcion , sum(cantidad) FROM lineasticket WHERE nticket between '"+ultimoTicket+"' and '"+nUltimoTicket+"' or nticket between '"+nPrimerTicketB+"' and '"+nUltimoTicketB+"' group by cod order by descripcion asc");
     consulta.first();
     qDebug() << consulta.lastError();
     return consulta;
