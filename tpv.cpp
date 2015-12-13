@@ -414,7 +414,7 @@ void Tpv::on_btn_cobrar_clicked()
             lineaTicket.clear();
             if (totalizacion->facturacion == "1") {
                 qDebug() << "Serie" << totalizacion->facturacion;
-                lineaTicket.append(QString::number(ticket)+"B");
+                lineaTicket.append("B"+QString::number(ticket));
             }else{
             lineaTicket.append(QString::number(ticket));
 

@@ -1,5 +1,6 @@
 #include "listadoventaarticulos.h"
 #include "ui_listadoventaarticulos.h"
+#include <QSortFilterProxyModel>
 
 ListadoVentaArticulos::ListadoVentaArticulos(QWidget *parent) :
     QDialog(parent),
@@ -22,14 +23,17 @@ void ListadoVentaArticulos::on_pushButtonVer_clicked()
     QString primerTicket,ultimoTicket,primerTicketB,ultimoTicketB;
     primerTicket = base.ticketCercanoFecha("tickets",ui->dateTimeEditDesde->dateTime().toString("yyyy-MM-dd'/'HH:mm:ss"),"minimo");
     ultimoTicket = base.ticketCercanoFecha("tickets",ui->dateTimeEditHasta->dateTime().toString("yyyy-MM-dd'/'HH:mm:ss"),"maximo");
-    primerTicketB = base.ticketCercanoFecha("ticketss",ui->dateTimeEditDesde->dateTime().toString("yyyy-MM-dd'/'HH:mm:ss"),"minimo");
-    ultimoTicketB = base.ticketCercanoFecha("ticketss",ui->dateTimeEditHasta->dateTime().toString("yyyy-MM-dd'/'HH:mm:ss"),"maximo");
+    primerTicketB = "B"+base.ticketCercanoFecha("ticketss",ui->dateTimeEditDesde->dateTime().toString("yyyy-MM-dd'/'HH:mm:ss"),"minimo");
+    ultimoTicketB = "B"+base.ticketCercanoFecha("ticketss",ui->dateTimeEditHasta->dateTime().toString("yyyy-MM-dd'/'HH:mm:ss"),"maximo");
     qDebug() << "1ªA " << primerTicket << "UltimoA " << ultimoTicket;
     qDebug() << "1ªB " << primerTicketB << "UltimoB " << ultimoTicketB;
-    QSqlQuery consulta = base.estadisticasVentaProductos("lineasticket",primerTicket,ultimoTicket);
+    QSqlQuery consulta = base.estadisticasVentaProductos(primerTicket,ultimoTicket,primerTicketB,ultimoTicketB);
     QSqlQueryModel *modeloListado = new QSqlQueryModel;
     modeloListado->setQuery(consulta);
-    ui->tableView->setModel(modeloListado);
+    QSortFilterProxyModel *proxyModel =new QSortFilterProxyModel;
+    proxyModel->setSourceModel(modeloListado);
+    ui->tableView->setModel(proxyModel);
+    ui->tableView->resizeColumnsToContents();
 
 }
 

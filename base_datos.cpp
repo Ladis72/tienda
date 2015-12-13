@@ -1063,7 +1063,7 @@ void baseDatos::crearLote(QString ean, QString lote, QString fecha, QString uds)
 QString baseDatos::ticketCercanoFecha(QString tabla, QString fecha, QString cuando)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    if (cuando == "mino") {
+    if (cuando == "minimo") {
         consulta.exec("SELECT min(ticket) FROM "+tabla+" WHERE concat_ws('/',fecha,hora) >= '"+fecha+"'");
     }else{ consulta.prepare("SELECT max(ticket) FROM "+tabla+" WHERE concat_ws('/',fecha,hora) <= '"+fecha+"'");
     }
@@ -1077,10 +1077,10 @@ QString baseDatos::ticketCercanoFecha(QString tabla, QString fecha, QString cuan
     return 0;
 }
 
-QSqlQuery baseDatos::estadisticasVentaProductos(QString tabla, QString nPrimerTicket, QString nUltimoTicket)
+QSqlQuery baseDatos::estadisticasVentaProductos(QString nPrimerTicket, QString nUltimoTicket , QString nPrimerTicketB , QString nUltimoTicketB)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.exec("SELECT descripcion , cantidad FROM "+tabla+" WHERE nticket >= '"+nPrimerTicket+"' and nticket <= '"+nUltimoTicket+"' group by cod order by descripcion asc");
+    consulta.exec("SELECT descripcion , sum(cantidad) FROM lineasticket WHERE nticket between '"+nPrimerTicket+"' and '"+nUltimoTicket+"' or nticket between '"+nPrimerTicketB+"' and '"+nUltimoTicketB+"' group by cod order by descripcion asc");
     consulta.first();
     qDebug() << consulta.lastError();
     return consulta;
