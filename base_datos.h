@@ -100,6 +100,7 @@ public:
 //Funciones LISTADOS
     QString ticketCercanoFecha(QString tabla, QString fecha, QString cuando);
     QSqlQuery estadisticasVentaProductos(QString nPrimerTicket , QString nUltimoTicket, QString nPrimerTicketB, QString nUltimoTicketB);
+    QSqlQuery listadoVentaArticulos(QString inicio , QString final);
 
 private:
 

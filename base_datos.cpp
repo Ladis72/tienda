@@ -625,7 +625,7 @@ bool baseDatos::grabarTicket(QString serie , QStringList datos)
 bool baseDatos::grabarLineaTicket(QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("INSERT INTO lineasticket VALUES (NULL,?,?,?,?,?,?,?,?)");
+    consulta.prepare("INSERT INTO lineasticket VALUES (NULL,?,?,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i,datos.at(i));
     }
@@ -1065,7 +1065,7 @@ QString baseDatos::ticketCercanoFecha(QString tabla, QString fecha, QString cuan
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     if (cuando == "minimo") {
         consulta.exec("SELECT min(ticket) FROM "+tabla+" WHERE concat_ws('/',fecha,hora) >= '"+fecha+"'");
-    }else{ consulta.prepare("SELECT max(ticket) FROM "+tabla+" WHERE concat_ws('/',fecha,hora) <= '"+fecha+"'");
+    }else{ consulta.exec("SELECT max(ticket) FROM "+tabla+" WHERE concat_ws('/',fecha,hora) <= '"+fecha+"'");
     }
     //consulta.bindValue(0,tabla);
     //consulta.bindValue(1,fecha);
@@ -1082,6 +1082,18 @@ QSqlQuery baseDatos::estadisticasVentaProductos(QString nPrimerTicket , QString 
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.exec("SELECT descripcion , sum(cantidad) FROM lineasticket WHERE cast(nticket as unsigned) between '"+nPrimerTicket+"' and '"+nUltimoTicket+"' or nticket between '"+nPrimerTicketB+"' and '"+nUltimoTicketB+"' group by cod order by descripcion asc");
     consulta.first();
+    qDebug() << consulta.lastError();
+    return consulta;
+}
+
+QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("SELECT descripcion , sum(cantidad) FROM lineasticket WHERE concat_ws('/',fecha,hora) >= ? AND concat_ws('/',fecha,hora) <= ?");
+    consulta.bindValue(0,inicio);
+    consulta.bindValue(1,final);
+    consulta.exec();
+    //consulta.first();
     qDebug() << consulta.lastError();
     return consulta;
 }

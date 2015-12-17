@@ -422,6 +422,8 @@ void Tpv::on_btn_cobrar_clicked()
             for (int x = 2; x < modeloTicket->columnCount(); ++x) {
                 lineaTicket.append(modeloTicket->record(i).value(x).toString());
                 }
+            lineaTicket.append(QDate::currentDate().toString("yyyy-MM-dd"));
+            lineaTicket.append(QTime::currentTime().toString("hh:mm"));
             QString dato;
             dato = lineaTicket.at(3);
             dato = formatearCadena(dato,3);
@@ -473,7 +475,7 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(QString::number(totalizacion->descuento));
         totalTicket.append(QString::number(totalizacion->total));
         totalTicket.append(base.idFormaPago(totalizacion->efectivo));
-        totalTicket.append("1");
+        totalTicket.append(totalizacion->facturacion);
 
         texto << "\n\nTotal:";
         texto << QString::number(totalizacion->total);

@@ -122,8 +122,9 @@ void Articulos::cargarVentas()
 {
     modeloVentas.clear();
     if(ui->radioButtonVentasMes->isChecked()){
-        modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) , MONTH(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
-                              +ui->lineEditCod->text()+"' group by year(`tickets`.`fecha`) desc, month(`tickets`.`fecha`) desc ",QSqlDatabase::database("DB"));
+//        modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) , MONTH(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
+//                              +ui->lineEditCod->text()+"' group by year(`tickets`.`fecha`) desc, month(`tickets`.`fecha`) desc ",QSqlDatabase::database("DB"));
+        modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , MONTH(fecha) , sum(cantidad) from lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' GROUP BY YEAR(fecha) desc , MONTH(fecha) desc",QSqlDatabase::database("DB"));
         qDebug() << modeloVentas.lastError();
         modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
         modeloVentas.setHeaderData(1,Qt::Horizontal,"Año");
@@ -134,20 +135,29 @@ void Articulos::cargarVentas()
         ui->tableViewVentas->resizeColumnsToContents();
     }
     if(ui->radioButtonVentasDia->isChecked()){
-        modeloVentas.setQuery("SELECT `descripcion`, `tickets`.`fecha` ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
-                              +ui->lineEditCod->text()+"' group by `tickets`.`fecha` desc ",QSqlDatabase::database("DB"));
+//        modeloVentas.setQuery("SELECT `descripcion`, `tickets`.`fecha` ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
+//                              +ui->lineEditCod->text()+"' group by `tickets`.`fecha` desc ",QSqlDatabase::database("DB"));
+//        qDebug() << modeloVentas.lastError();
+//        modeloVentas.setHeaderData(0,Qt::Horizontal,"Artículo");
+//        modeloVentas.setHeaderData(1,Qt::Horizontal,"Fecha");
+//        modeloVentas.setHeaderData(2,Qt::Horizontal,"Cantidad");
+
+//        ui->tableViewVentas->setModel(&modeloVentas);
+//        ui->tableViewVentas->resizeColumnsToContents();
+        modeloVentas.setQuery("SELECT descripcion , fecha , sum(cantidad) FROM lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' group by fecha desc",QSqlDatabase::database("DB"));
         qDebug() << modeloVentas.lastError();
-        modeloVentas.setHeaderData(0,Qt::Horizontal,"Artículo");
+        modeloVentas.setHeaderData(0,Qt::Horizontal,"Producto");
         modeloVentas.setHeaderData(1,Qt::Horizontal,"Fecha");
         modeloVentas.setHeaderData(2,Qt::Horizontal,"Cantidad");
-
         ui->tableViewVentas->setModel(&modeloVentas);
         ui->tableViewVentas->resizeColumnsToContents();
     }
     if(ui->radioButtonVentasAno->isChecked()){
         modeloVentas.clear();
-        modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
-                              +ui->lineEditCod->text()+"' group by year(`tickets`.`fecha`) desc",QSqlDatabase::database("DB"));
+//        modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
+//                              +ui->lineEditCod->text()+"' group by year(`tickets`.`fecha`) desc",QSqlDatabase::database("DB"));
+        modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , sum(cantidad) from lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' GROUP BY YEAR(fecha) desc",QSqlDatabase::database("DB"));
+
         qDebug() << modeloVentas.lastError();
         modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
         modeloVentas.setHeaderData(1,Qt::Horizontal,"Año");
