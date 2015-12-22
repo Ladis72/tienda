@@ -1060,6 +1060,19 @@ void baseDatos::crearLote(QString ean, QString lote, QString fecha, QString uds)
 
 }
 
+QSqlQuery baseDatos::lotesProducto(QString cod)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("SELECT lote , fecha , cantidad FROM lotes WHERE ean = ?");
+    consulta.bindValue(0,cod);
+    if (!consulta.exec()) {
+        qDebug() << consulta.lastError();
+        return consulta;
+    }
+    return consulta;
+
+}
+
 QString baseDatos::ticketCercanoFecha(QString tabla, QString fecha, QString cuando)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));

@@ -39,7 +39,8 @@ SOURCES += main.cpp\
     verfacturas.cpp \
     listadoventas.cpp \
     dialogfecha.cpp \
-    listadoventaarticulos.cpp
+    listadoventaarticulos.cpp \
+    stock.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -68,7 +69,8 @@ HEADERS  += tienda.h \
     verfacturas.h \
     listadoventas.h \
     dialogfecha.h \
-    listadoventaarticulos.h
+    listadoventaarticulos.h \
+    stock.h
 
 FORMS    += tienda.ui \
     tpv.ui \
@@ -94,4 +96,5 @@ FORMS    += tienda.ui \
     verfacturas.ui \
     listadoventas.ui \
     dialogfecha.ui \
-    listadoventaarticulos.ui
+    listadoventaarticulos.ui \
+    stock.ui

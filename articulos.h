@@ -6,6 +6,7 @@
 
 #include "familias.h"
 #include "fabricantes.h"
+#include "stock.h"
 
 
 #include <QDialog>
@@ -66,6 +67,8 @@ private slots:
 
     void on_radioButtonAnos_clicked();
 
+    void on_pushButtonVer_clicked();
+
 private:
     Ui::Articulos *ui;
 
@@ -75,6 +78,7 @@ private:
     QSqlQueryModel modeloCompras;
     QDataWidgetMapper mapper;
     QSqlQuery consulta;
+    Stock *stock;
 
     //Familias *F;
 

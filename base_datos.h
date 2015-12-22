@@ -96,6 +96,7 @@ public:
     QString idLote(QString cod, QString lote, QString fecha);//Devuelve el id del lote igual o 0 si no existe
     void aumentarLote(QString idLote, int uds);
     void crearLote(QString ean,QString lote,QString fecha,QString uds);
+    QSqlQuery lotesProducto(QString cod);
 
 //Funciones LISTADOS
     QString ticketCercanoFecha(QString tabla, QString fecha, QString cuando);

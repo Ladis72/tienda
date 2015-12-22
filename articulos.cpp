@@ -412,3 +412,9 @@ void Articulos::on_radioButtonAnos_clicked()
     cargarCompras();
 
 }
+
+void Articulos::on_pushButtonVer_clicked()
+{
+    Stock *stock = new Stock(ui->lineEditCod->text());
+    stock->exec();
+}
