@@ -17,7 +17,7 @@ Stock::Stock(QString cod ,QWidget *parent) :
     modeloLotes->select();
     ui->tableView->setModel(modeloLotes);
     ui->tableView->hideColumn(0);
-    ui->tableView->hideColumn(1);
+    //ui->tableView->hideColumn(1);
     ui->tableView->hideColumn(2);
 
 
@@ -31,4 +31,16 @@ Stock::~Stock()
 void Stock::on_pushButtonActualizar_clicked()
 {
     modeloLotes->submitAll();
+    qDebug() << modeloLotes->lastError();
+}
+
+void Stock::on_pushButton_clicked()
+{
+    modeloLotes->insertRow(0);
+    QSqlRecord record = modeloLotes->record();
+    record.setValue(1,codProducto);
+    qDebug() << codProducto;
+    record.setValue(2,"");
+
+    modeloLotes->setRecord(0,record);
 }

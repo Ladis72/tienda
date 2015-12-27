@@ -42,6 +42,11 @@
        <string>Actualizar</string>
       </property>
      </widget>
+     <widget class="QPushButton" name="pushButton">
+      <property name="text">
+       <string>Añadir</string>
+      </property>
+     </widget>
     </widget>
    </item>
   </layout>

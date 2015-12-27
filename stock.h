@@ -18,6 +18,8 @@ public:
 private slots:
     void on_pushButtonActualizar_clicked();
 
+    void on_pushButton_clicked();
+
 private:
     Ui::Stock *ui;
     baseDatos *base;
