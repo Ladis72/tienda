@@ -42,8 +42,23 @@ color: rgb(255, 25, 5);</string>
    </item>
    <item>
     <widget class="QTabWidget" name="tabWidget">
+     <property name="tabPosition">
+      <enum>QTabWidget::North</enum>
+     </property>
+     <property name="tabShape">
+      <enum>QTabWidget::Rounded</enum>
+     </property>
      <property name="currentIndex">
       <number>0</number>
+     </property>
+     <property name="elideMode">
+      <enum>Qt::ElideMiddle</enum>
+     </property>
+     <property name="movable">
+      <bool>false</bool>
+     </property>
+     <property name="tabBarAutoHide">
+      <bool>false</bool>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -377,6 +392,37 @@ color: rgb(255, 25, 5);</string>
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tab_3">
+      <attribute name="title">
+       <string>Códigos auxiliares</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_6">
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="gridLayout_5">
+         <item row="0" column="0" colspan="2">
+          <widget class="QTableView" name="tableViewAux"/>
+         </item>
+         <item row="2" column="0">
+          <widget class="QPushButton" name="pushButtonAnadir">
+           <property name="text">
+            <string>Añadir</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QPushButton" name="pushButtonEliminar">
+           <property name="text">
+            <string>Eliminar</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QLineEdit" name="lineEditAux"/>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
      <widget class="QWidget" name="tabVentas">
       <attribute name="title">
        <string>Ventas</string>
@@ -408,7 +454,7 @@ color: rgb(255, 25, 5);</string>
           <item>
            <widget class="QRadioButton" name="radioButtonVentasAno">
             <property name="text">
-             <string>Año</string>
+             <string>A&amp;ño</string>
             </property>
            </widget>
           </item>
@@ -454,7 +500,7 @@ color: rgb(255, 25, 5);</string>
           <item>
            <widget class="QRadioButton" name="radioButtonAnos">
             <property name="text">
-             <string>Años</string>
+             <string>A&amp;ños</string>
             </property>
            </widget>
           </item>

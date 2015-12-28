@@ -560,6 +560,15 @@ QString baseDatos::codigoParaNuevoProveedor()
     return QString::number(id);
 }
 
+QString baseDatos::codigoDesdeAux(QString aux)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT cod FROM codaux WHERE aux = '"+aux+"'");
+    consulta.first();
+    return consulta.value(0).toString();
+
+}
+
 double baseDatos::obtenerNumeroUltimoTicket(QSqlDatabase db)
 {
     QSqlQuery consulta(db);

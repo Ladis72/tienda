@@ -273,6 +273,11 @@ void Tpv::on_lineEdit_cod_returnPressed(){
 
    consulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->lineEdit_cod->text());
    consulta.first();
+   if(!consulta.isValid()){
+       QString cod = base.codigoDesdeAux(ui->lineEdit_cod->text());
+       consulta = base.consulta_producto(QSqlDatabase::database("DB"),cod);
+       consulta.first();
+   }
    if (consulta.numRowsAffected() == 1) {
        QList<QString> linea;
        linea << consulta.value(0).toString();

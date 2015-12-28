@@ -69,6 +69,10 @@ private slots:
 
     void on_pushButtonVer_clicked();
 
+    void on_pushButtonAnadir_clicked();
+
+    void on_pushButtonEliminar_clicked();
+
 private:
     Ui::Articulos *ui;
 
@@ -76,6 +80,7 @@ private:
     QSqlQueryModel *modeloTabla;
     QSqlQueryModel modeloVentas;
     QSqlQueryModel modeloCompras;
+    QSqlTableModel *modeloAux;
     QDataWidgetMapper mapper;
     QSqlQuery consulta;
     Stock *stock;
@@ -88,6 +93,7 @@ private:
     void cargarVentas();
     bool eventFilter(QObject *obj, QEvent *event);
     void cargarCompras();
+    void cargarCodAux();
 };
 
 #endif // ARTICULOS_H

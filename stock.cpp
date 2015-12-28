@@ -43,4 +43,5 @@ void Stock::on_pushButton_clicked()
     record.setValue(2,"");
 
     modeloLotes->setRecord(0,record);
+
 }

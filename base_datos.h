@@ -48,7 +48,7 @@ public:
     QString descuentoProveedor(QString proveedor);
     QStringList listadoProveedores();
     QString codigoParaNuevoProveedor();
-
+    QString codigoDesdeAux(QString aux);
     double obtenerNumeroUltimoTicket(QSqlDatabase db);
     QSqlQuery tcketsPendientes(QSqlDatabase db);
     int maxTicketPendiente(QSqlDatabase db);

@@ -55,6 +55,7 @@ void Articulos::refrescarBotones(int i)
     ui->labelNombrePrecio->setText(ui->lineEditDesc->text()+ "        "+ui->lineEditPvp->text());
     cargarVentas();
     cargarCompras();
+    cargarCodAux();
 }
 
 QStringList Articulos::recogerDatosFormulario()
@@ -116,6 +117,18 @@ void Articulos::cargarCompras(){
         ui->tableViewCompras->setModel(&modeloCompras);
         ui->tableViewCompras->resizeColumnsToContents();
     }
+}
+
+void Articulos::cargarCodAux()
+{
+    modeloAux = new QSqlTableModel(this,QSqlDatabase::database("DB"));
+    modeloAux->setTable("codaux");
+    modeloAux->setEditStrategy(QSqlTableModel::OnRowChange);
+    modeloAux->setFilter("cod ="+ui->lineEditCod->text());
+    modeloAux->select();
+    ui->tableViewAux->setModel(modeloAux);
+    ui->tableViewAux->hideColumn(0);
+
 }
 
 void Articulos::cargarVentas()
@@ -417,4 +430,23 @@ void Articulos::on_pushButtonVer_clicked()
 {
     Stock *stock = new Stock(ui->lineEditCod->text());
     stock->exec();
+}
+
+void Articulos::on_pushButtonAnadir_clicked()
+{
+    if(!ui->lineEditAux->text().isEmpty()){
+        modeloAux->insertRow(0);
+    QSqlRecord record = modeloAux->record();
+    record.setValue(1,ui->lineEditCod->text());
+    record.setValue(2,ui->lineEditAux->text());
+    modeloAux->setRecord(0,record);
+    modeloAux->submitAll();
+    cargarCodAux();
+    }
+    return;
+}
+
+void Articulos::on_pushButtonEliminar_clicked()
+{
+    modeloAux->removeRow(ui->tableViewAux->currentIndex().row());
 }
