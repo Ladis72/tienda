@@ -28,6 +28,7 @@ private:
 
     baseDatos *base;
     QStandardItemModel *modeloTabla;
+    void sumarVentas(QStandardItemModel *modelo);
 };
 
 #endif // LISTADOVENTAS_H

@@ -15,6 +15,7 @@ Familias::Familias(QWidget *parent) :
     ui->tableView->setModel(modelo);
     ui->tableView->resizeColumnsToContents();
     ui->tableView->hideColumn(0);
+    ui->lineEdit->setFocus();
 
 
 }

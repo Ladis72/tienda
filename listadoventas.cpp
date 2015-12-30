@@ -33,18 +33,20 @@ void ListadoVentas::on_pushButtonVer_clicked()
         modeloTabla->setItem(i,1,itemVentas);
         ++i;
     }
-    QSqlQuery ventasB = base->ventasEntreFechas(fechaI,fechaF,"ticketss");
-    i = 0;
-    while (ventasB.next()) {
-        //QStandardItem *itemFecha = new QStandardItem(ventasB.value(0).toString());
+    for (int i = 0; i < modeloTabla->rowCount(); ++i) {
+        QString fecha = modeloTabla->item(i,0)->text();
+        QSqlQuery ventasB = base->ventasEntreFechas(fecha,fecha,"ticketss");
+        ventasB.first();
         QStandardItem *itemVentas = new QStandardItem(ventasB.value(1).toString());
-        //modeloTabla->setItem(i,2,itemFecha);
         modeloTabla->setItem(i,2,itemVentas);
-        ++i;
     }
+
+
     modeloTabla->setHeaderData(0,Qt::Horizontal,"FECHA");
     modeloTabla->setHeaderData(1,Qt::Horizontal,"VENTAS");
+    modeloTabla->setHeaderData(2,Qt::Horizontal,"VENTAS B");
     ui->tableView->setModel(modeloTabla);
+    sumarVentas(modeloTabla);
 }
 
 void ListadoVentas::on_tableView_activated(const QModelIndex &index)
@@ -82,4 +84,16 @@ void ListadoVentas::on_tableView_activated(const QModelIndex &index)
     modeloUsuario->setHeaderData(0,Qt::Horizontal,"Ususario");
     modeloUsuario->setHeaderData(1,Qt::Horizontal,"Ventas");
     ui->tableViewVendedores->setModel(modeloUsuario);
+}
+
+void ListadoVentas::sumarVentas(QStandardItemModel *modelo)
+{
+    double A = 0;
+    double B = 0;
+    for (int i = 0; i < modelo->rowCount(); ++i) {
+        A += modelo->item(i,1)->text().toDouble();
+        B += modelo->item(i,2)->text().toDouble();
+    }
+    ui->labelTotal->setText(QString::number(A));
+    ui->labelTotalB->setText(QString::number(B));
 }
