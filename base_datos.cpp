@@ -753,6 +753,30 @@ bool baseDatos::existeDatoEnTabla(QSqlDatabase db, QString tabla,QString columna
     }
 }
 
+void baseDatos::insertarEnTabla(QSqlDatabase db, QString tabla, QStringList datos)
+{
+    QSqlQuery consulta(db);
+    QString cadenaDatos;
+    for (int i = 0; i < datos.length()-1; ++i) {
+        cadenaDatos +="?,";
+    }
+    cadenaDatos +="?";
+    consulta.prepare("INSERT INTO "+tabla+" VALUES(NULL,"+cadenaDatos+")");
+    for (int i = 0; i < datos.length(); ++i) {
+        consulta.bindValue(i,datos.at(i));
+    }
+    if (consulta.exec()) {
+        return;
+    }
+    qDebug() << consulta.lastError();
+}
+
+void baseDatos::vaciarTabla(QString tabla)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("TRUNCATE "+tabla);
+}
+
 bool baseDatos::crearProveedor(QSqlDatabase db, QStringList datos)
 {
     QSqlQuery consulta(db);
@@ -1005,7 +1029,6 @@ QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF, QString t
     consulta.bindValue(0,fechaI);
     consulta.bindValue(1,FechaF);
     consulta.exec();
-    qDebug() << consulta.lastError();
     return consulta;
 }
 
@@ -1053,6 +1076,12 @@ void baseDatos::aumentarLote(QString idLote, int uds)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.exec("UPDATE lotes SET cantidad = cantidad + "+QString::number(uds)+" WHERE id = '"+idLote+"'");
+    if(consulta.numRowsAffected() == 1) {
+        qDebug() << "Aumentar lote";
+
+    }else{
+    qDebug() << consulta.lastError();
+    }
 
 }
 

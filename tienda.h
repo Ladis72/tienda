@@ -20,6 +20,7 @@
 #include "verfacturas.h"
 #include "listadoventas.h"
 #include "listadoventaarticulos.h"
+#include "entradamercancia.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -72,6 +73,8 @@ private slots:
 
     void on_pushButton_2_clicked();
 
+    void on_pushButtonEntradas_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -90,7 +93,7 @@ private:
     VerFacturas *VFact;
     ListadoVentas *ListVent;
     ListadoVentaArticulos *VentaArticulos;
-    //QSqlDatabase db;
+    EntradaMercancia *Entradas;
 };
 
 #endif // TIENDA_H

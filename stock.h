@@ -20,11 +20,16 @@ private slots:
 
     void on_pushButton_clicked();
 
+    void on_pushButtonBorrar_clicked();
+
+    void on_tableView_clicked(const QModelIndex &index);
+
 private:
     Ui::Stock *ui;
     baseDatos *base;
     QString codProducto;
     QSqlTableModel *modeloLotes;
+    int filaSeleccionada;
 };
 
 #endif // STOCK_H

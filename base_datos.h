@@ -49,6 +49,7 @@ public:
     QStringList listadoProveedores();
     QString codigoParaNuevoProveedor();
     QString codigoDesdeAux(QString aux);
+//Funciones TICKETS
     double obtenerNumeroUltimoTicket(QSqlDatabase db);
     QSqlQuery tcketsPendientes(QSqlDatabase db);
     int maxTicketPendiente(QSqlDatabase db);
@@ -60,7 +61,6 @@ public:
     bool borrarCliente(QSqlDatabase db, int idCliente);
     bool crearCliente(QSqlDatabase db, QStringList datos);
     double descuentoCliente(QString idCliente);
-    bool existeDatoEnTabla(QSqlDatabase db, QString tabla, QString columna, QString dato);
     bool crearProveedor(QSqlDatabase db, QStringList datos);
     double sumarColumna(QString tabla, QString campo, QString campoCondicion = NULL, QString condicion ="%%");
     int contarLineas(QString tabla, QString campoCondicion = NULL, QString condicion ="%%");
@@ -91,6 +91,9 @@ public:
     QSqlQuery devolverTablaCompleta(QString nombreTabla);
     QSqlQuery ejecutarSentencia(QString sentencia);
     double ESdesdeFecha(QString fecha, QString hora);
+    bool existeDatoEnTabla(QSqlDatabase db, QString tabla, QString columna, QString dato);
+    void insertarEnTabla(QSqlDatabase db , QString tabla , QStringList datos);
+    void vaciarTabla(QString tabla);
 
 //Funciones LOTES
     QString idLote(QString cod, QString lote, QString fecha);//Devuelve el id del lote igual o 0 si no existe

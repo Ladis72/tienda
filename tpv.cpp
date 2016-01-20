@@ -466,7 +466,7 @@ void Tpv::on_btn_cobrar_clicked()
                 qDebug() << lote;
                 if (idLote != "0") {
                     base.aumentarLote(idLote,abs(lineaTicket.at(3).toInt()));
-                    qDebug() << "Aumentar lote";
+                    qDebug() << "Error al devolver el producto lote";
                 } else {
                     base.crearLote(lineaTicket.at(1),lote,fecha,QString::number(abs(lineaTicket.at(3).toInt())));
                     qDebug() << "Crear lote";
@@ -483,7 +483,8 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(totalizacion->facturacion);
 
         texto << "\n\nTotal:";
-        texto << QString::number(totalizacion->total);
+        texto << QString::number(totalizacion->total)+"\n";
+        texto << totalizacion->efectivo;
         texto << "\n\n\n     GRACIAS POR SU VISITA\n";
         texto << "\n\n\n\n";
         texto << char(0x1D) << char(0x56) << char(0x30);

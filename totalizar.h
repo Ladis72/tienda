@@ -35,6 +35,8 @@ private slots:
 
     void on_comboBox_currentIndexChanged(int index);
 
+    void on_pushButtonCobrar_clicked();
+
 private:
     Ui::totalizar *ui;
     QSqlQuery fpago;

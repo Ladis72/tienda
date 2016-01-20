@@ -45,3 +45,13 @@ void Stock::on_pushButton_clicked()
     modeloLotes->setRecord(0,record);
 
 }
+
+void Stock::on_pushButtonBorrar_clicked()
+{
+    modeloLotes->removeRow(filaSeleccionada);
+}
+
+void Stock::on_tableView_clicked(const QModelIndex &index)
+{
+   filaSeleccionada = index.row();
+}

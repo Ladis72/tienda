@@ -96,6 +96,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
             qDebug() << "Creando lote";
         } else {
             base.aumentarLote(idLote,uds);
+
         }
         //Comprobar cambio de nombre o PVP y actualizar artículos
         consulta = base.consulta_producto(QSqlDatabase::database("DB"),ean);

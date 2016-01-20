@@ -23,7 +23,6 @@ void ListadoVentas::on_pushButtonVer_clicked()
     fechaF = ui->dateEditHasta->text();
     fechaI = ui->dateEditDesde->text();
     modeloTabla = new QStandardItemModel(this);
-    //modeloTabla->setQuery(base->ventasEntreFechas(fechaI,fechaF));
     QSqlQuery ventasA = base->ventasEntreFechas(fechaI,fechaF,"tickets");
     int i = 0;
     while (ventasA.next()) {

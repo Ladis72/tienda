@@ -128,3 +128,9 @@ void Tienda::on_pushButton_2_clicked()
     VentaArticulos = new ListadoVentaArticulos(this);
     VentaArticulos->exec();
 }
+
+void Tienda::on_pushButtonEntradas_clicked()
+{
+    Entradas = new EntradaMercancia(this);
+    Entradas->exec();
+}
