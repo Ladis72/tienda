@@ -33,6 +33,7 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
 
     }
     base->vaciarTabla("entradaGenero_tmp");
+    actualizarTabla();
 }
 
 void EntradaMercancia::actualizarTabla()

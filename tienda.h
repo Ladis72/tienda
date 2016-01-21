@@ -21,6 +21,7 @@
 #include "listadoventas.h"
 #include "listadoventaarticulos.h"
 #include "entradamercancia.h"
+#include "caducidades.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -75,6 +76,8 @@ private slots:
 
     void on_pushButtonEntradas_clicked();
 
+    void on_pushButton_5_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -94,6 +97,7 @@ private:
     ListadoVentas *ListVent;
     ListadoVentaArticulos *VentaArticulos;
     EntradaMercancia *Entradas;
+    Caducidades *Cad;
 };
 
 #endif // TIENDA_H

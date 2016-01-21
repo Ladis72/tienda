@@ -134,3 +134,9 @@ void Tienda::on_pushButtonEntradas_clicked()
     Entradas = new EntradaMercancia(this);
     Entradas->exec();
 }
+
+void Tienda::on_pushButton_5_clicked()
+{
+    Cad = new Caducidades(this);
+    Cad->exec();
+}
