@@ -417,11 +417,14 @@ void Tpv::on_btn_cobrar_clicked()
             texto << "------------------------------------------\n";
         for(int i = 0; i < modeloTicket->rowCount(); i++){
             lineaTicket.clear();
-            if (totalizacion->facturacion == "1") {
+            if (totalizacion->facturacion == "1" && base.existeDatoEnTabla(QSqlDatabase::database("DB"),"ticketss","ticket",QString::number(ticket)) == false) {
                 qDebug() << "Serie" << totalizacion->facturacion;
+                qDebug() << "Facturación por el B";
                 lineaTicket.append("B"+QString::number(ticket));
             }else{
             lineaTicket.append(QString::number(ticket));
+            totalizacion->facturacion = "0";
+            qDebug() << "Facturación por el A";
 
             }
             for (int x = 2; x < modeloTicket->columnCount(); ++x) {

@@ -70,7 +70,7 @@ void totalizar::keyPressEvent(QKeyEvent *e)
         break;
     case Qt::Key_F2:
         facturacion = "1";
-        qDebug() << "F8 pulsada";
+        qDebug() << "F2 pulsada";
         this->setStyleSheet("background-color:#D1AEAB;");
     case Qt::Key_F8:
         emit on_pushButtonCobrar_clicked();
