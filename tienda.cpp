@@ -140,3 +140,15 @@ void Tienda::on_pushButton_5_clicked()
     Cad = new Caducidades(this);
     Cad->exec();
 }
+
+void Tienda::on_pushButtonSalidas_clicked()
+{
+    Salid = new Salidas(this);
+    Salid->exec();
+}
+
+void Tienda::on_pushButtonEtiquetas_clicked()
+{
+    Etiq = new Etiquetas(this);
+    Etiq->exec();
+}

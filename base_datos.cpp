@@ -472,6 +472,19 @@ QString baseDatos::idFormaPago(QString fpago)
     return 0;
 }
 
+bool baseDatos::insertarEtiqueta(QString etiqueta)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("INSERT INTO etiquetas (cod) VALUES (?)");
+    consulta.bindValue(0,etiqueta);
+    if (consulta.exec() == true) {
+        qDebug() << "Codigo insertado con exito";
+        return true;
+    }
+    qDebug() << consulta.lastError();
+    return false;
+}
+
 QString baseDatos::nombreProveedor(QString id)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
@@ -1101,7 +1114,7 @@ void baseDatos::crearLote(QString ean, QString lote, QString fecha, QString uds)
 QSqlQuery baseDatos::lotesProducto(QString cod)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("SELECT lote , fecha , cantidad FROM lotes WHERE ean = ?");
+    consulta.prepare("SELECT * FROM lotes WHERE ean = ?");
     consulta.bindValue(0,cod);
     if (!consulta.exec()) {
         qDebug() << consulta.lastError();

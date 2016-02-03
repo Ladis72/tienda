@@ -42,7 +42,9 @@ SOURCES += main.cpp\
     listadoventaarticulos.cpp \
     stock.cpp \
     entradamercancia.cpp \
-    caducidades.cpp
+    caducidades.cpp \
+    salidas.cpp \
+    etiquetas.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -74,7 +76,9 @@ HEADERS  += tienda.h \
     listadoventaarticulos.h \
     stock.h \
     entradamercancia.h \
-    caducidades.h
+    caducidades.h \
+    salidas.h \
+    etiquetas.h
 
 FORMS    += tienda.ui \
     tpv.ui \
@@ -103,4 +107,10 @@ FORMS    += tienda.ui \
     listadoventaarticulos.ui \
     stock.ui \
     entradamercancia.ui \
-    caducidades.ui
+    caducidades.ui \
+    salidas.ui \
+    etiquetas.ui
+include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
+
+RESOURCES += \
+    recursos.qrc

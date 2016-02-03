@@ -39,6 +39,7 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
 void EntradaMercancia::actualizarTabla()
 {
     mTablaEntradas->select();
+    mTablaEntradas->setSort(3,Qt::AscendingOrder);
     ui->tableView->setModel(mTablaEntradas);
 }
 

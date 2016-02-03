@@ -41,6 +41,7 @@ public:
     QString nombreCliente(QString id);
     QString nombreFormaPago(QString id);
     QString idFormaPago(QString fpago);
+    bool insertarEtiqueta(QString etiqueta);
 //Funciones PROVEEDORES
     QString nombreProveedor(QString id);
     QString idProveedor(QString nombre);

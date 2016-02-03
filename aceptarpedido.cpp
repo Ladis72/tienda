@@ -115,6 +115,9 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
                 descripcion = cdProducto->nombre;
                 pvp = cdProducto->pvp.toDouble();
                 tipoActualizacion = cdProducto->tipoActualizacion;
+                if (tipoActualizacion == 1) {
+                    base.insertarEtiqueta(ean);
+                }
             }
         default:
             break;
