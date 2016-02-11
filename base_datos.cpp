@@ -11,21 +11,21 @@ QSqlDatabase baseDatos::conectar(){
 
 
 
-        //db = QSqlDatabase::database();
+       db = QSqlDatabase::database();
+       db = QSqlDatabase::addDatabase("QMYSQL","DB");
+       db.setHostName("localhost");
+       db.setDatabaseName("tienda");
+       db.setUserName("root");
+       db.setPassword("meganizado");
+       db.setPort(3306);
 
-            db = QSqlDatabase::addDatabase("QMYSQL","DB");
-            db.setHostName("localhost");
-            db.setDatabaseName("tienda");
-            db.setUserName("root");
-            db.setPassword("meganizado");
-            db.setPort(3306);
-                if(!db.open()){
-                QMessageBox mensaje;
-                mensaje.setText("No se puede continuar"+db.lastError().text());
-                mensaje.setWindowTitle ("Error");
-                mensaje.exec();
-                return QSqlDatabase();
-                }
+       if(!db.open()){
+           QMessageBox mensaje;
+           mensaje.setText("No se puede continuar"+db.lastError().text());
+           mensaje.setWindowTitle ("Error");
+           mensaje.exec();
+           return QSqlDatabase();
+       }
 
 return db;
 

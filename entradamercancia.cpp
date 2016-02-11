@@ -30,7 +30,17 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
     }else{
         base->aumentarLote(idLote,uds.toInt());
     }
-
+    QString codigo = mTablaEntradas->record(i).value(1).toString();
+    QString precio = mTablaEntradas->record(i).value(6).toString();
+    QString descripcion = mTablaEntradas->record(i).value(3).toString();
+    QSqlQuery cambios = base->consulta_producto(QSqlDatabase::database("DB"),codigo);
+    cambios.first();
+    QString precioAnterior = cambios.value("pvp").toString();
+    QString descripcionAnterior = cambios.value("descripcion").toString();
+    if(!(precio == precioAnterior && descripcion == descripcionAnterior)){
+      QSqlQuery tmp = base->ejecutarSentencia("UPDATE articulos SET descripcion = '"+descripcion+"' , pvp = "+precio);
+      qDebug() << tmp.lastError();
+    }
     }
     base->vaciarTabla("entradaGenero_tmp");
     actualizarTabla();
