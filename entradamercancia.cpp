@@ -9,6 +9,7 @@ EntradaMercancia::EntradaMercancia(QWidget *parent) :
     mTablaEntradas = new QSqlTableModel(this,QSqlDatabase::database("DB"));
     mTablaEntradas->setTable("entradaGenero_tmp");
     actualizarTabla();
+    ui->tableView->hideColumn(0);
 }
 
 EntradaMercancia::~EntradaMercancia()
@@ -38,7 +39,7 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
     QString precioAnterior = cambios.value("pvp").toString();
     QString descripcionAnterior = cambios.value("descripcion").toString();
     if(!(precio == precioAnterior && descripcion == descripcionAnterior)){
-      QSqlQuery tmp = base->ejecutarSentencia("UPDATE articulos SET descripcion = '"+descripcion+"' , pvp = "+precio);
+      QSqlQuery tmp = base->ejecutarSentencia("UPDATE articulos SET descripcion = '"+descripcion+"' , pvp = "+precio+" WHERE cod = '"+codigo+"'");
       qDebug() << tmp.lastError();
     }
     }
@@ -51,6 +52,7 @@ void EntradaMercancia::actualizarTabla()
     mTablaEntradas->select();
     mTablaEntradas->setSort(3,Qt::AscendingOrder);
     ui->tableView->setModel(mTablaEntradas);
+    ui->tableView->resizeColumnsToContents();
 }
 
 void EntradaMercancia::on_lineEditCod_returnPressed()
