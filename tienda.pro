@@ -44,7 +44,8 @@ SOURCES += main.cpp\
     entradamercancia.cpp \
     caducidades.cpp \
     salidas.cpp \
-    etiquetas.cpp
+    etiquetas.cpp \
+    formateo.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -78,7 +79,8 @@ HEADERS  += tienda.h \
     entradamercancia.h \
     caducidades.h \
     salidas.h \
-    etiquetas.h
+    etiquetas.h \
+    formateo.h
 
 FORMS    += tienda.ui \
     tpv.ui \

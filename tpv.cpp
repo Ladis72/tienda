@@ -1,7 +1,6 @@
 #include "tpv.h"
 #include "ui_tpv.h"
 #include "dialogfecha.h"
-
 #include <QItemDelegate>
 #include <QDebug>
 #include <QDate>
@@ -297,7 +296,8 @@ void Tpv::on_lineEdit_cod_returnPressed(){
             linea << ui->lineEdit_descuento->text();
        }
        double totalLinea = linea.at(4).toDouble()*linea.at(2).toDouble()*(1-linea.at(5).toDouble()/100);
-       totalLinea = redondear(totalLinea,2);
+       //totalLinea = redondear(totalLinea,2);
+       totalLinea = classFormatear.redondear(totalLinea,2);
        linea << QString::number(totalLinea);
 
        if(ui->tableView->rowAt(0) < 0){

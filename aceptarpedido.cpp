@@ -115,7 +115,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
                 descripcion = cdProducto->nombre;
                 pvp = cdProducto->pvp.toDouble();
                 tipoActualizacion = cdProducto->tipoActualizacion;
-                if (tipoActualizacion == 1) {
+                if (precioAnterior != QString::number(pvp)) {
                     base.insertarEtiqueta(ean);
                 }
             }

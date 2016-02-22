@@ -9,6 +9,7 @@
 #include "buscarproducto.h"
 #include "totalizar.h"
 #include "clientes.h"
+#include "formateo.h"
 
 namespace Ui {
 class Tpv;
@@ -58,7 +59,7 @@ private:
     int usuario;
     int cliente;
     double descuentoCliente;
-
+    Formateo classFormatear;
     Ui::Tpv *ui;
     QSqlDatabase db;
     baseDatos base;

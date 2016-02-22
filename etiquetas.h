@@ -4,6 +4,8 @@
 #include <QDialog>
 #include <QStandardItemModel>
 #include "base_datos.h"
+#include "buscarproducto.h"
+
 
 
 namespace Ui {
@@ -23,12 +25,21 @@ private slots:
 
     void on_lineEditCod_returnPressed();
 
+    void on_lineEditDesc_returnPressed();
+
+    void on_tableView_clicked(const QModelIndex &index);
+
+    void on_pushButton_2_clicked();
+
+    void on_pushButton_3_clicked();
+
 private:
     Ui::Etiquetas *ui;
     QStandardItemModel *modelo;
     baseDatos *base;
+    BuscarProducto *buscarProducto;
+    QString articuloSeleccionado;
 
-    QString formatearCadena(QString cadena);
     void llenarModelo();
 };
 
