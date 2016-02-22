@@ -73,6 +73,8 @@ private slots:
 
     void on_pushButtonEliminar_clicked();
 
+    void on_tableViewCompras_clicked(const QModelIndex &index);
+
 private:
     Ui::Articulos *ui;
 

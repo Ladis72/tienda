@@ -98,8 +98,8 @@ void Articulos::recargarTabla()
 void Articulos::cargarCompras(){
     modeloCompras.clear();
     if (ui->radioButtonFacturas->isChecked()) {
-        modeloCompras.setQuery("SELECT `nDocumento` , `cantidad` , `bonificacion` , `costo` , `descuento1`, `pedidos`.`fechaPedido` FROM `lineaspedido` JOIN `pedidos` on `nDocumento` = `pedidos`.`npedido` WHERE `cod` = '"
-                               +ui->lineEditCod->text()+"'",QSqlDatabase::database("DB"));
+        modeloCompras.setQuery("SELECT `nDocumento` , `pedidos`.`idProveedor` , `cantidad` , `bonificacion` , `costo` , `descuento1`, `pedidos`.`fechaPedido` FROM `lineaspedido` JOIN `pedidos` on `nDocumento` = `pedidos`.`npedido` WHERE `cod` = '"
+                               +ui->lineEditCod->text()+"' ORDER BY `pedidos`.`fechaPedido` DESC",QSqlDatabase::database("DB"));
         qDebug() << modeloCompras.lastError();
         ui->tableViewCompras->setModel(&modeloCompras);
         ui->tableViewCompras->resizeColumnsToContents();
@@ -449,4 +449,12 @@ void Articulos::on_pushButtonAnadir_clicked()
 void Articulos::on_pushButtonEliminar_clicked()
 {
     modeloAux->removeRow(ui->tableViewAux->currentIndex().row());
+}
+
+void Articulos::on_tableViewCompras_clicked(const QModelIndex &index)
+{
+    QModelIndex indice=modeloCompras.index(index.row(),1);
+
+    QString dato=modeloCompras.data(indice,Qt::EditRole).toString();
+    ui->labelProveedor->setText(base.nombreProveedor(dato));
 }

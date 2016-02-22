@@ -475,6 +475,13 @@ color: rgb(255, 25, 5);</string>
        <string>Compras</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
+       <item row="1" column="0">
+        <widget class="QTableView" name="tableViewCompras">
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectRows</enum>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_2">
          <property name="title">
@@ -494,7 +501,7 @@ color: rgb(255, 25, 5);</string>
           <item>
            <widget class="QRadioButton" name="radioButtonMeses">
             <property name="text">
-             <string>Meses</string>
+             <string>&amp;Meses</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -511,8 +518,12 @@ color: rgb(255, 25, 5);</string>
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QTableView" name="tableViewCompras"/>
+       <item row="2" column="0">
+        <widget class="QLabel" name="labelProveedor">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
