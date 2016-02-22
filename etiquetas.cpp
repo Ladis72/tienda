@@ -46,6 +46,7 @@ void Etiquetas::on_pushButtonImprimir_clicked()
     }
 
     painter.end();
+    system("okular ./etiquetas.pdf");
 }
 
 void Etiquetas::on_lineEditCod_returnPressed()

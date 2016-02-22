@@ -50,12 +50,18 @@
        <property name="text">
         <string>Borrar linea</string>
        </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="pushButton_3">
        <property name="text">
         <string>Borrar todo</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -101,12 +107,28 @@
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>883</x>
-     <y>473</y>
+     <x>754</x>
+     <y>488</y>
     </hint>
     <hint type="destinationlabel">
-     <x>966</x>
+     <x>761</x>
      <y>402</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>Etiquetas</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>657</x>
+     <y>463</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>191</x>
+     <y>490</y>
     </hint>
    </hints>
   </connection>
