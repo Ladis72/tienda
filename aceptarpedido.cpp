@@ -81,7 +81,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         descripcion = modelo->record(i).value("descripcion").toString();
         lote = modelo->record(i).value("lote").toString();
         fechaCaducidad = modelo->record(i).value("fc").toString();
-        precioCosto = (modelo->record(i).value("totalbase").toDouble()/uds)*descuento;
+        precioCosto = (modelo->record(i).value("totalbase").toDouble()/uds);
         pvp = modelo->record(i).value("pvp").toDouble();
         baseProducto = modelo->record(i).value("base").toString();
         tipoIva = modelo->record(i).value("tipoIva").toString();
