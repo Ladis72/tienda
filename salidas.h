@@ -20,6 +20,12 @@ public:
 private slots:
     void on_lineEditCod_returnPressed();
 
+    void on_pushButtonAgregar_clicked();
+
+    void on_lineEditDesc_returnPressed();
+
+    void on_pushButtonEnviar_clicked();
+
 private:
     Ui::Salidas *ui;
     baseDatos *base;

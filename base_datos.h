@@ -99,6 +99,7 @@ public:
 //Funciones LOTES
     QString idLote(QString cod, QString lote, QString fecha);//Devuelve el id del lote igual o 0 si no existe
     void aumentarLote(QString idLote, int uds);
+    void disminuirLote(QString cod, QString fecha , int uds);
     void crearLote(QString ean,QString lote,QString fecha,QString uds);
     QSqlQuery lotesProducto(QString cod);
 
