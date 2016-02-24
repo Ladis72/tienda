@@ -112,6 +112,19 @@ void Salidas::on_lineEditDesc_returnPressed()
 
 void Salidas::on_pushButtonEnviar_clicked()
 {
+    QMessageBox msgBox;
+    msgBox.setText("Los datos serán prodesados");
+    msgBox.setInformativeText("¿Deseas continual? \nNo se puede deshacer");
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+    int ret = msgBox.exec();
+    switch (ret) {
+    case QMessageBox::Cancel:
+        qDebug() << "cancelado";
+        return;
+        break;
+    default:
+        break;
+    }
     for (int i = 0; i < mTablaSalidas->rowCount(); ++i) {
         QString cod , descripcion , pvp , fechaCaducidad;
         int uds;
