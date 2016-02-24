@@ -26,11 +26,16 @@ private slots:
 
     void on_pushButtonEnviar_clicked();
 
+    void on_pushButtonBorrar_clicked();
+
+    void on_tableView_clicked(const QModelIndex &index);
+
 private:
     Ui::Salidas *ui;
     baseDatos *base;
     QSqlQuery consulta;
     QSqlTableModel *mTablaSalidas;
+    QString codSeleccionado;
     void actualizarTabla();
 };
 

@@ -11,6 +11,7 @@ Salidas::Salidas(QWidget *parent) :
     mTablaSalidas->setTable("salidaGenero_tmp");
     actualizarTabla();
     ui->tableView->hideColumn(0);
+    codSeleccionado= "";
 }
 
 Salidas::~Salidas()
@@ -127,4 +128,21 @@ void Salidas::on_pushButtonEnviar_clicked()
     QSqlQuery tmp = base->ejecutarSentencia("INSERT INTO salidaGenero (cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp) "
                                   "SELECT salidaGenero_tmp.cod, salidaGenero_tmp.fechaEntrada, salidaGenero_tmp.descripcion, salidaGenero_tmp.cantidad, salidaGenero_tmp.fechaCaducidad, salidaGenero_tmp.pvp FROM salidaGenero_tmp");
     base->vaciarTabla("salidaGenero_tmp");
+    actualizarTabla();
+}
+
+void Salidas::on_pushButtonBorrar_clicked()
+{
+    if (!codSeleccionado.isEmpty()) {
+        QSqlQuery tmp =base->ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE id = '"+codSeleccionado+"'");
+        qDebug() << tmp.lastError();
+    }
+    actualizarTabla();
+}
+
+void Salidas::on_tableView_clicked(const QModelIndex &index)
+{
+    QModelIndex indice = mTablaSalidas->index(index.row(),0);
+    codSeleccionado = mTablaSalidas->data(indice,Qt::EditRole).toString();
+    qDebug() << codSeleccionado;
 }
