@@ -124,4 +124,7 @@ void Salidas::on_pushButtonEnviar_clicked()
         QSqlQuery tmp = base->ejecutarSentencia("UPDATE articulos SET descripcion = '"+descripcion+"' , pvp = "+pvp+" WHERE cod = '"+cod+"'");
 
     }
+    QSqlQuery tmp = base->ejecutarSentencia("INSERT INTO salidaGenero (cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp) "
+                                  "SELECT salidaGenero_tmp.cod, salidaGenero_tmp.fechaEntrada, salidaGenero_tmp.descripcion, salidaGenero_tmp.cantidad, salidaGenero_tmp.fechaCaducidad, salidaGenero_tmp.pvp FROM salidaGenero_tmp");
+    base->vaciarTabla("salidaGenero_tmp");
 }
