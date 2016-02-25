@@ -1101,22 +1101,26 @@ void baseDatos::aumentarLote(QString idLote, int uds)
 void baseDatos::disminuirLote(QString cod, QString fecha, int uds)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("SELECT id , cantidad FROM lotes WHERE ean = ? AND fecha = ?");
-    consulta.bindValue(0,cod);
-    consulta.bindValue(1,fecha);
+    consulta.exec("SELECT id , cantidad FROM lotes WHERE ean = '"+cod+"' AND fecha = '"+fecha+"'");
     consulta.exec();
-    if(!consulta.numRowsAffected() == 0){
+    qDebug() << consulta.numRowsAffected();
+    if(consulta.numRowsAffected() == 0){
+        qDebug() << "Pasa por filas = 0";
         return;
     }
 
     consulta.first();
     QString id = consulta.record().value(0).toString();
+    qDebug() << id;
     if (consulta.record().value(1).toInt() <= uds) {
         consulta.exec("DELETE FROM lotes WHERE id = '"+id+"'");
+        consulta.exec("UPDATE articulos SET stock= (SELECT sum(cantidad) FROM lotes WHERE ean = '"+cod+"') where articulos.cod = '"+cod+"'");
+        consulta.lastError();
         return;
     }
     int descontarUds = consulta.record().value(1).toInt();
-    consulta.exec("UPDATE lotes SET cantidad = "+descontarUds-uds);
+    QString resto = QString::number(descontarUds-uds);
+    consulta.exec("UPDATE lotes SET cantidad = "+resto+" WHERE id = '"+id+"'");
     return;
 }
 
