@@ -8,6 +8,7 @@ EntradaMercancia::EntradaMercancia(QWidget *parent) :
     ui->setupUi(this);
     mTablaEntradas = new QSqlTableModel(this,QSqlDatabase::database("DB"));
     mTablaEntradas->setTable("entradaGenero_tmp");
+    mTablaEntradas->setSort(1,Qt::AscendingOrder);
     actualizarTabla();
     ui->tableView->hideColumn(0);
 }

@@ -78,6 +78,9 @@ void Etiquetas::llenarModelo()
     }
     ui->tableView->setModel(modelo);
     ui->tableView->hideColumn(0);
+    ui->lineEditCod->clear();
+    ui->lineEditDesc->clear();
+    ui->lineEditCod->setFocus();
 }
 
 void Etiquetas::on_lineEditDesc_returnPressed()

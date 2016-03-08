@@ -188,7 +188,11 @@ color: rgb(255, 25, 5);</string>
            </widget>
           </item>
           <item row="3" column="6">
-           <widget class="QLineEdit" name="lineEditCosto"/>
+           <widget class="QLineEdit" name="lineEditCosto">
+            <property name="maxLength">
+             <number>6</number>
+            </property>
+           </widget>
           </item>
           <item row="4" column="8">
            <widget class="QLineEdit" name="lineEditMaximo"/>

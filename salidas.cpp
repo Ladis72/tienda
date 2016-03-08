@@ -8,6 +8,7 @@ Salidas::Salidas(QWidget *parent) :
 {
     ui->setupUi(this);
     mTablaSalidas = new QSqlTableModel(this,QSqlDatabase::database("DB"));
+    mTablaSalidas->setSort(1,Qt::AscendingOrder);
     mTablaSalidas->setTable("salidaGenero_tmp");
     actualizarTabla();
     ui->tableView->hideColumn(0);
