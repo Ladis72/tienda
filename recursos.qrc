@@ -1,3 +1,5 @@
 <RCC>
-    <qresource prefix="/archivos"/>
+    <qresource prefix="/archivos">
+        <file>ventas.xml</file>
+    </qresource>
 </RCC>

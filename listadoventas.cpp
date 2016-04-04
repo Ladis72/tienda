@@ -1,6 +1,7 @@
 #include "listadoventas.h"
 #include "ui_listadoventas.h"
 #include <qstandarditemmodel.h>
+#include "qtrpt.h"
 
 ListadoVentas::ListadoVentas(QWidget *parent) :
     QDialog(parent),
@@ -95,4 +96,25 @@ void ListadoVentas::sumarVentas(QStandardItemModel *modelo)
     }
     ui->labelTotal->setText(QString::number(A));
     ui->labelTotalB->setText(QString::number(B));
+}
+
+void ListadoVentas::on_pushButtonImprimir_clicked()
+{
+    QtRPT *informe = new QtRPT(this);
+    informe->recordCount.append(modeloTabla->rowCount());
+    informe->loadReport(":/archivos/ventas.xml");
+
+    connect(informe, &QtRPT::setValue, [&](const int recNo,
+            const QString paramName,
+            QVariant &paramValue,
+            const int reportPage) {
+        (void) reportPage;
+        if(paramName == "Fecha"){
+            paramValue = modeloTabla->item(recNo,0)->text();
+        }
+        if(paramName == "Cantidad"){
+            paramValue = modeloTabla->item(recNo,1)->text();
+        }
+    });
+    informe->printExec();
 }
