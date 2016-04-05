@@ -8,9 +8,9 @@ EntradaMercancia::EntradaMercancia(QWidget *parent) :
     ui->setupUi(this);
     mTablaEntradas = new QSqlTableModel(this,QSqlDatabase::database("DB"));
     mTablaEntradas->setTable("entradaGenero_tmp");
-    mTablaEntradas->setSort(1,Qt::AscendingOrder);
-    actualizarTabla();
     ui->tableView->hideColumn(0);
+    actualizarTabla();
+    codSeleccionado="";
 }
 
 EntradaMercancia::~EntradaMercancia()
@@ -50,8 +50,8 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
 
 void EntradaMercancia::actualizarTabla()
 {
-    mTablaEntradas->select();
     mTablaEntradas->setSort(3,Qt::AscendingOrder);
+    mTablaEntradas->select();
     ui->tableView->setModel(mTablaEntradas);
     ui->tableView->resizeColumnsToContents();
 }
@@ -92,6 +92,7 @@ void EntradaMercancia::on_pushButtonAgregarLinea_clicked()
     ui->lineEditPVP->clear();
     ui->lineEditUds->clear();
     ui->lineEditCod->setFocus();
+    actualizarTabla();
 
 }
 

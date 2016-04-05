@@ -8,10 +8,9 @@ Salidas::Salidas(QWidget *parent) :
 {
     ui->setupUi(this);
     mTablaSalidas = new QSqlTableModel(this,QSqlDatabase::database("DB"));
-    mTablaSalidas->setSort(1,Qt::AscendingOrder);
     mTablaSalidas->setTable("salidaGenero_tmp");
-    actualizarTabla();
     ui->tableView->hideColumn(0);
+    actualizarTabla();
     codSeleccionado= "";
 }
 
@@ -40,8 +39,8 @@ void Salidas::on_lineEditCod_returnPressed()
 
 void Salidas::actualizarTabla()
 {
-    mTablaSalidas->select();
     mTablaSalidas->setSort(3,Qt::AscendingOrder);
+    mTablaSalidas->select();
     ui->tableView->setModel(mTablaSalidas);
     ui->tableView->resizeColumnsToContents();
 }

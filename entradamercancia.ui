@@ -125,6 +125,9 @@
        <property name="text">
         <string>Borrar linea</string>
        </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
       </widget>
      </item>
      <item>
@@ -160,6 +163,8 @@
   <tabstop>lineEditUds</tabstop>
   <tabstop>dateEditCaducidad</tabstop>
   <tabstop>lineEditPVP</tabstop>
+  <tabstop>pushButtonAgregarLinea</tabstop>
+  <tabstop>pushButtonBorrar</tabstop>
   <tabstop>pushButtonAceptar</tabstop>
   <tabstop>tableView</tabstop>
  </tabstops>
