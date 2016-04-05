@@ -27,11 +27,17 @@ private slots:
 
     void on_lineEditDesc_returnPressed();
 
+    void on_pushButtonBorrar_clicked();
+
+    void on_tableView_clicked(const QModelIndex &index);
+
 private:
     Ui::EntradaMercancia *ui;
     baseDatos *base;
     QSqlTableModel *mTablaEntradas;
     QSqlQuery consulta;
+    QString codSeleccionado;
+
 
 
     void actualizarTabla();

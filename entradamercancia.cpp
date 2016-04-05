@@ -104,3 +104,18 @@ void EntradaMercancia::on_lineEditDesc_returnPressed()
     ui->lineEditCod->setText(buscar->resultado);
     emit on_lineEditCod_returnPressed();
 }
+
+void EntradaMercancia::on_pushButtonBorrar_clicked()
+{
+    if (!codSeleccionado.isEmpty()) {
+        QSqlQuery tmp =base->ejecutarSentencia("DELETE FROM entradaGenero_tmp WHERE id = '"+codSeleccionado+"'");
+        qDebug() << tmp.lastError();
+    }
+}
+
+void EntradaMercancia::on_tableView_clicked(const QModelIndex &index)
+{
+    QModelIndex indice = mTablaEntradas->index(index.row(),0);
+    codSeleccionado = mTablaEntradas->data(indice,Qt::EditRole).toString();
+    qDebug() << codSeleccionado;
+}
