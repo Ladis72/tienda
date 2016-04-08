@@ -387,7 +387,7 @@ void Tpv::on_lineEdit_desc_returnPressed()
 
 void Tpv::on_btn_cobrar_clicked()
 {
-    QFile cajon("/dev/lp1");
+    QFile cajon("/dev/lp0");
     cajon.open(QIODevice::WriteOnly);
     QTextStream codigoApertura(&cajon);
     codigoApertura << char(0x1B) << char(0x70) << char(0x30);
