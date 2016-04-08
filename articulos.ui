@@ -391,6 +391,16 @@ color: rgb(255, 25, 5);</string>
             </property>
            </widget>
           </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="pushButtonEtiqueta">
+            <property name="text">
+             <string>Crear etiqueta</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>

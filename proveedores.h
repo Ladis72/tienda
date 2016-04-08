@@ -37,6 +37,12 @@ private slots:
 
     void on_pushButton_clicked();
 
+    void on_radioButtonComprasFacturas_clicked();
+
+    void on_radioButtonComprasMeses_clicked();
+
+    void on_radioButtonComprasAnos_clicked();
+
 private:
     Ui::Proveedores *ui;
 
@@ -46,12 +52,14 @@ private:
     QSqlQuery consulta;
     BuscarProveedor *proveedor;
     FormasPago *fpago;
+    QSqlQueryModel modeloCompras;
 
     void recargarTabla();
     void borrarFormulario();
     bool eventFilter(QObject *obj, QEvent *event);
     void refrescarBotones(int i);
     QStringList recogerDatosFormulario();
+    void cargarCompras();
 };
 
 #endif // PROVEEDORES_H

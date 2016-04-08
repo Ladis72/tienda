@@ -458,3 +458,8 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index)
     QString dato=modeloCompras.data(indice,Qt::EditRole).toString();
     ui->labelProveedor->setText(base.nombreProveedor(dato));
 }
+
+void Articulos::on_pushButtonEtiqueta_clicked()
+{
+    base.insertarEtiqueta(ui->lineEditCod->text());
+}
