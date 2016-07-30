@@ -51,6 +51,8 @@ public:
     QString codigoParaNuevoProveedor();
     QString codigoDesdeAux(QString aux);
 //Funciones TICKETS
+    QSqlQuery datosTicket(QString nTicket);
+    QSqlQuery consultarLineasTicket(QString nTicket);
     double obtenerNumeroUltimoTicket(QSqlDatabase db);
     QSqlQuery tcketsPendientes(QSqlDatabase db);
     int maxTicketPendiente(QSqlDatabase db);

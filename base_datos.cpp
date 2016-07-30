@@ -582,6 +582,21 @@ QString baseDatos::codigoDesdeAux(QString aux)
 
 }
 
+QSqlQuery baseDatos::datosTicket(QString nTicket)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT * FROM tickets WHERE ticket = '"+nTicket+"'");
+    consulta.first();
+    return consulta;
+}
+
+QSqlQuery baseDatos::consultarLineasTicket(QString nTicket)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT * FROM lineasticket WHERE nticket = '"+nTicket+"'");
+    return consulta;
+}
+
 double baseDatos::obtenerNumeroUltimoTicket(QSqlDatabase db)
 {
     QSqlQuery consulta(db);

@@ -12,6 +12,7 @@ HistoricoTickets::HistoricoTickets(QWidget *parent) :
     ui->dateTimeEditDesde->setDateTime(QDateTime(QDate::currentDate(),QTime(00,00,01)));
     listaTickets = new QSqlQueryModel;
     ticket = new QSqlQueryModel;
+    nTicket = "";
 
 }
 
@@ -77,7 +78,7 @@ void HistoricoTickets::on_pushButtonConsultar_clicked()
 void HistoricoTickets::on_tableViewTickets_activated(const QModelIndex &index)
 {
     QModelIndex indice = listaTickets->index(index.row(),0);
-    QString nTicket = listaTickets->data(indice,Qt::EditRole).toString();
+    nTicket = listaTickets->data(indice,Qt::EditRole).toString();
     ticket->setQuery("SELECT * FROM lineasticket WHERE nticket = "+nTicket,QSqlDatabase::database("DB"));
 
 
@@ -87,4 +88,15 @@ void HistoricoTickets::on_tableViewTickets_activated(const QModelIndex &index)
     ui->tableViewLineasTicket->hideColumn(2);
     ui->tableViewLineasTicket->resizeColumnsToContents();
     //ui->label->setText("Vendedor"+listaTickets->data());
+}
+
+void HistoricoTickets::on_pushButtonImprimir_clicked()
+{
+    ImprimirTicket c1(nTicket);
+
+}
+
+void HistoricoTickets::on_pushButtonFormaPago_clicked()
+{
+
 }

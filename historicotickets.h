@@ -3,6 +3,8 @@
 
 #include <QDialog>
 #include "base_datos.h"
+#include "imprimirticket.h"
+
 namespace Ui {
 class HistoricoTickets;
 }
@@ -20,11 +22,16 @@ private slots:
 
     void on_tableViewTickets_activated(const QModelIndex &index);
 
+    void on_pushButtonImprimir_clicked();
+
+    void on_pushButtonFormaPago_clicked();
+
 private:
     Ui::HistoricoTickets *ui;
     QSqlQueryModel *listaTickets;
     QSqlQueryModel *ticket;
     baseDatos base;
+    QString nTicket;
 
     void mostrarTickets();
 };

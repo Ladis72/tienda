@@ -45,7 +45,8 @@ SOURCES += main.cpp\
     caducidades.cpp \
     salidas.cpp \
     etiquetas.cpp \
-    formateo.cpp
+    formateo.cpp \
+    imprimirticket.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -80,7 +81,8 @@ HEADERS  += tienda.h \
     caducidades.h \
     salidas.h \
     etiquetas.h \
-    formateo.h
+    formateo.h \
+    imprimirticket.h
 
 FORMS    += tienda.ui \
     tpv.ui \
