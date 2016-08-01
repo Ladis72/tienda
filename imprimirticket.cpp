@@ -24,7 +24,7 @@ ImprimirTicket::ImprimirTicket(QString nTicket)
     texto << "Web: emeicjac.com\n\n";
     texto << QDate::fromString(fecha,"yyyy-MM-dd").toString("dd-MMM-yyyy") + "  " + hora + "    " + "Ticket: "+ticket;
     texto <<"\n";
-    texto << "UDS|  Producto              |Prec.|Dto|Total\n";
+    texto << "UDS|  Producto            |Prec.|Dto|Total\n";
     texto << "------------------------------------------\n";
 
     consulta = base.consultarLineasTicket(ticket);
@@ -35,16 +35,18 @@ ImprimirTicket::ImprimirTicket(QString nTicket)
         dto = consulta.value(7).toString();
         totalLinea = consulta.value(8).toString();
         texto << formatearCadena(uds,3);
-        texto << formatearCadena(producto,25)+" ";
+        texto << formatearCadena(producto,24)+" ";
         texto << formatearCadena(precio,6);
         texto << formatearCadena(dto,2);
-        texto << formatearCadena(totalLinea,7)+"\n";
+        texto << formatearCadena(totalLinea,6);
     }
+    texto << "\n\n";
     texto << "Total: "+total+"\n";
     texto << "Forma de pago. "+fPago;
     texto << "\n\n\n     GRACIAS POR SU VISITA\n";
     texto << "\n\n\n\n";
     texto << char(0x1D) << char(0x56) << char(0x30);
+    impresora.close();
     system("less ./ticket.txt >> /dev/lp0");
 }
 
