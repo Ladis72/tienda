@@ -33,6 +33,7 @@ private:
     baseDatos base;
     QString nTicket;
 
+
     void mostrarTickets();
 };
 

@@ -26,6 +26,7 @@ private slots:
 
     void on_tableView_clicked(const QModelIndex &index);
 
+
 private:
     Ui::FormasPago *ui;
     QSqlTableModel *modelolista;

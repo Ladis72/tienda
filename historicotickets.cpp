@@ -1,5 +1,6 @@
 #include "historicotickets.h"
 #include "ui_historicotickets.h"
+#include "formaspago.h"
 #include <QStandardItemModel>
 
 HistoricoTickets::HistoricoTickets(QWidget *parent) :
@@ -98,5 +99,9 @@ void HistoricoTickets::on_pushButtonImprimir_clicked()
 
 void HistoricoTickets::on_pushButtonFormaPago_clicked()
 {
-
+    FormasPago *FP = new FormasPago;
+    FP->exec();
+    if (FP->Accepted) {
+        qDebug() << FP->resultado;
+    }
 }

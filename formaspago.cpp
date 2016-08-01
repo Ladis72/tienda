@@ -17,6 +17,7 @@ FormasPago::FormasPago(QWidget *parent) :
     ui->tableView->setModel(modelolista);
     ui->tableView->resizeColumnsToContents();
     ui->tableView->hideColumn(0);
+    connect(ui->buttonBox , SIGNAL(rejected()) , this , SLOT(reject()));
 }
 
 FormasPago::~FormasPago()
@@ -48,3 +49,5 @@ void FormasPago::on_tableView_clicked(const QModelIndex &index)
     QModelIndex indice = modelolista->index(index.row(),0);
     resultado = modelolista->data(indice).toString();
 }
+
+
