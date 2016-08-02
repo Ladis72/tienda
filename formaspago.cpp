@@ -17,7 +17,6 @@ FormasPago::FormasPago(QWidget *parent) :
     ui->tableView->setModel(modelolista);
     ui->tableView->resizeColumnsToContents();
     ui->tableView->hideColumn(0);
-    connect(ui->buttonBox , SIGNAL(rejected()) , this , SLOT(reject()));
 }
 
 FormasPago::~FormasPago()

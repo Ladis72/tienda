@@ -2,6 +2,7 @@
 #include "ui_historicotickets.h"
 #include "formaspago.h"
 #include <QStandardItemModel>
+#include <QMessageBox>
 
 HistoricoTickets::HistoricoTickets(QWidget *parent) :
     QDialog(parent),
@@ -24,6 +25,7 @@ HistoricoTickets::~HistoricoTickets()
 
 void HistoricoTickets::mostrarTickets()
 {
+    nTicket="";
     QString fechaI,fechaF,horaI,horaF;
     fechaI = ui->dateTimeEditDesde->date().toString("yyyy-MM-dd");
     fechaF = ui->dateTimeEditHasta->date().toString("yyyy-MM-dd");
@@ -99,9 +101,18 @@ void HistoricoTickets::on_pushButtonImprimir_clicked()
 
 void HistoricoTickets::on_pushButtonFormaPago_clicked()
 {
+    if (nTicket == "") {
+        int msg = QMessageBox::information(this,"Error","Primero debe seleccionar un ticket");
+        return;
+    }
     FormasPago *FP = new FormasPago;
-    FP->exec();
-    if (FP->Accepted) {
-        qDebug() << FP->resultado;
+    if (FP->exec() == QDialog::Accepted) {
+        QString idFormaPago = FP->resultado;
+        if (idFormaPago == "") {
+            return;
+        }
+        QSqlQuery consulta = base.ejecutarSentencia("UPDATE tickets SET fpago ='"+FP->resultado+"' WHERE ticket = '"+nTicket+"'");
+        qDebug() << consulta.lastError();
+    mostrarTickets();
     }
 }
