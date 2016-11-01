@@ -24,25 +24,26 @@ void Etiquetas::on_pushButtonImprimir_clicked()
 {
     int etiquetas = modelo->rowCount();
     int filas = floor(modelo->rowCount()/3)+1;
-    int paginas = floor(filas/10)+1;
+    int paginas = floor(filas/7)+1;
+    qDebug() << etiquetas << filas << paginas;
     QPdfWriter etiquetasPDF("./etiquetas.pdf");
     QPainter painter(&etiquetasPDF);
     for (int p = 0; p < paginas; ++p){
-        for (int i = 0; i < filas; ++i) {
+        for (int i = 0; i < 7; ++i) {
             int y = 300+1800*i;
             for (int j = 0; j < 3; ++j) {
                 int x = 300+3100*j;
-                if(i*3+j < etiquetas){
+                if((21*p)+i*3+j < etiquetas){
                     painter.setPen(Qt::black);
                     painter.setFont(QFont("Liberation",15));
-                    painter.drawText(QRect(x,y,3000,600),modelo->item(i*3+j,1)->text());
+                    painter.drawText(QRect(x,y,3000,600),modelo->item((21*p)+i*3+j,1)->text());
                     painter.setPen(Qt::blue);
                     painter.setFont(QFont("Arial",50));
-                    painter.drawText(x+200,y+1200,modelo->item(i*3+j,2)->text());
+                    painter.drawText(x+200,y+1200,modelo->item((21*p)+i*3+j,2)->text());
                     }
                 }
             }
-        if (p > paginas -1) etiquetasPDF.newPage();
+        if (p < paginas -1) etiquetasPDF.newPage();
     }
 
     painter.end();
