@@ -43,9 +43,26 @@ void Caducados::on_pushButton_clicked()
 {
     base.disminuirLote(ui->lineEditCodigo->text(),ui->comboBox->currentText(),ui->spinBox->value());
     QString sentencia;
-    sentencia = "INSERT INTO caducados VALUES (NULL, '"+ui->lineEditCodigo->text()+"' , '"+QString::number(ui->spinBox->value())+"' , '"+ui->lineEditDescripcion->text()+"' , '"+QDate::currentDate().toString("yyyy-MM-dd")+"' , '15' , '"+ui->comboBox->currentText()+"')";
+    QSqlQuery precioConsulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->lineEditCodigo->text());
+    precioConsulta.first();
+    QString precio = precioConsulta.value("pvp").toString();
+    qDebug() << precio;
+    sentencia = "INSERT INTO caducados VALUES (NULL, '"+ui->lineEditCodigo->text()+"' , '"+QString::number(ui->spinBox->value())+"' , '"+ui->lineEditDescripcion->text()+"' , '"+QDate::currentDate().toString("yyyy-MM-dd")+"' , '"+precio+"' , '"+ui->comboBox->currentText()+"')";
     qDebug() << sentencia;
     QSqlQuery ejecutar = base.ejecutarSentencia(sentencia);
     qDebug() << ejecutar.lastError();
-    close();
+    ui->lineEditCodigo->clear();
+    ui->lineEditDescripcion->clear();
+    ui->comboBox->clear();
+    ui->spinBox->setValue(1);
+}
+
+void Caducados::on_lineEditDescripcion_returnPressed()
+{
+    QSqlQuery consulta = base.buscarProducto(QSqlDatabase::database("DB"),"articulos",ui->lineEditDescripcion->text());
+    consulta.first();
+    BuscarProducto *buscar = new BuscarProducto(this,consulta);
+    buscar->exec();
+    ui->lineEditCodigo->setText(buscar->resultado);
+    emit on_lineEditCodigo_returnPressed();
 }

@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include "base_datos.h"
+#include "buscarproducto.h"
 
 namespace Ui {
 class Caducados;
@@ -21,10 +22,13 @@ private slots:
 
     void on_pushButton_clicked();
 
+    void on_lineEditDescripcion_returnPressed();
+
 private:
     Ui::Caducados *ui;
     baseDatos base;
     QSqlQuery consulta;
+    BuscarProducto *buscar;
 
     void llenarComboFechas(QString id);
     void ajustarSpinbox(QString idLote);
