@@ -24,6 +24,7 @@
 #include "caducidades.h"
 #include "salidas.h"
 #include "etiquetas.h"
+#include "caducados.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -84,6 +85,8 @@ private slots:
 
     void on_pushButtonEtiquetas_clicked();
 
+    void on_pushButtonCaducados_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -106,6 +109,7 @@ private:
     Caducidades *Cad;
     Salidas *Salid;
     Etiquetas *Etiq;
+    Caducados *Caduca;
 };
 
 #endif // TIENDA_H

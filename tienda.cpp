@@ -152,3 +152,9 @@ void Tienda::on_pushButtonEtiquetas_clicked()
     Etiq = new Etiquetas(this);
     Etiq->exec();
 }
+
+void Tienda::on_pushButtonCaducados_clicked()
+{
+    Caduca = new Caducados(this);
+    Caduca->exec();
+}

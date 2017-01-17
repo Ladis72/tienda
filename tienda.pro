@@ -46,7 +46,8 @@ SOURCES += main.cpp\
     salidas.cpp \
     etiquetas.cpp \
     formateo.cpp \
-    imprimirticket.cpp
+    imprimirticket.cpp \
+    caducados.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -82,7 +83,8 @@ HEADERS  += tienda.h \
     salidas.h \
     etiquetas.h \
     formateo.h \
-    imprimirticket.h
+    imprimirticket.h \
+    caducados.h
 
 FORMS    += tienda.ui \
     tpv.ui \
@@ -113,7 +115,8 @@ FORMS    += tienda.ui \
     entradamercancia.ui \
     caducidades.ui \
     salidas.ui \
-    etiquetas.ui
+    etiquetas.ui \
+    caducados.ui
 include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
 RESOURCES += \

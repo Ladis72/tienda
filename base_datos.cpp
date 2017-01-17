@@ -1154,8 +1154,9 @@ void baseDatos::crearLote(QString ean, QString lote, QString fecha, QString uds)
 
 QSqlQuery baseDatos::lotesProducto(QString cod)
 {
+    //Devuelve los diferentes lotes de un producto
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("SELECT * FROM lotes WHERE ean = ?");
+    consulta.prepare("SELECT * FROM lotes WHERE ean = ? group by fecha");
     consulta.bindValue(0,cod);
     if (!consulta.exec()) {
         qDebug() << consulta.lastError();
