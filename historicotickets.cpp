@@ -95,7 +95,11 @@ void HistoricoTickets::on_tableViewTickets_activated(const QModelIndex &index)
 
 void HistoricoTickets::on_pushButtonImprimir_clicked()
 {
-    ImprimirTicket c1(nTicket);
+    if (nTicket == "") {
+        int msg = QMessageBox::information(this,"Error","Primero debe seleccionar un ticket");
+        return;
+    }
+    ImprimirTicket c1(nTicket , "ticket");
 
 }
 
@@ -115,4 +119,14 @@ void HistoricoTickets::on_pushButtonFormaPago_clicked()
         qDebug() << consulta.lastError();
     mostrarTickets();
     }
+}
+
+void HistoricoTickets::on_pushButtonImprimirFactura_clicked()
+{
+    if (nTicket == "") {
+        int msg = QMessageBox::information(this,"Error","Primero debe seleccionar un ticket");
+        return;
+    }
+    ImprimirFactura fact(nTicket);
+
 }

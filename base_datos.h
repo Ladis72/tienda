@@ -39,6 +39,7 @@ public:
     QString nombreFabricante(QString id);
     QString nombreUsusario(QString id);
     QString nombreCliente(QString id);
+    QString etiquetaCliente(QString idCliente);
     QString nombreFormaPago(QString id);
     QString idFormaPago(QString fpago);
     bool insertarEtiqueta(QString etiqueta);

@@ -445,6 +445,25 @@ QString baseDatos::nombreCliente(QString id)
     return "Sin asignar";
 }
 
+QString baseDatos::etiquetaCliente(QString idCliente)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("SELECT * FROM clientes WHERE idCliente LIKE ?");
+    consulta.bindValue(0,idCliente);
+    consulta.exec();
+    if (consulta.first() == true) {
+        QString cliente="";
+        cliente += consulta.value(1).toString()+" "+consulta.value(2).toString()+"\n";
+        cliente += consulta.value(3).toString()+"\n";
+        cliente += consulta.value(4).toString()+"  "+consulta.value(5).toString()+"\n";
+        cliente += consulta.value(6).toString()+"\n";
+        cliente += "N.I.F: "+consulta.value(7).toString();
+        return cliente;
+
+    }
+    return "Sin asignar";
+}
+
 
 
 QString baseDatos::nombreFormaPago(QString id)

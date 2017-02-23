@@ -4,6 +4,7 @@
 #include <QDialog>
 #include "base_datos.h"
 #include "imprimirticket.h"
+#include "imprimirfactura.h"
 
 namespace Ui {
 class HistoricoTickets;
@@ -25,6 +26,8 @@ private slots:
     void on_pushButtonImprimir_clicked();
 
     void on_pushButtonFormaPago_clicked();
+
+    void on_pushButtonImprimirFactura_clicked();
 
 private:
     Ui::HistoricoTickets *ui;

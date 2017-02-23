@@ -3,13 +3,14 @@
 
 #include <QDebug>
 #include <QString>
+#include <qstandarditemmodel.h>
 #include "base_datos.h"
 
 
 class ImprimirTicket
 {
 public:
-    ImprimirTicket(QString nTicket);
+    ImprimirTicket(QString nTicket, QString formato);
 
 private:
     QString formatearCadena(QString cadena, int tamano);

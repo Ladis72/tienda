@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/archivos">
         <file>ventas.xml</file>
+        <file>factura.xml</file>
     </qresource>
 </RCC>

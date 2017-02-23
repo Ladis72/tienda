@@ -1,10 +1,11 @@
 #include "imprimirticket.h"
 #include <QFile>
 #include <QDate>
+#include "qtrpt.h"
 
 
 
-ImprimirTicket::ImprimirTicket(QString nTicket)
+ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
 {
     consulta = base.datosTicket(nTicket);
     ticket = consulta.value(0).toString();
@@ -12,6 +13,9 @@ ImprimirTicket::ImprimirTicket(QString nTicket)
     hora = consulta.value(4).toString();
     total = consulta.value(12).toString();
     fPago = base.nombreFormaPago(consulta.value(13).toString());
+    if (formato == "ticket") {
+
+
     QFile impresora("ticket.txt");
     impresora.open(QIODevice::WriteOnly);
     QTextStream texto(&impresora);
@@ -48,7 +52,11 @@ ImprimirTicket::ImprimirTicket(QString nTicket)
     texto << char(0x1D) << char(0x56) << char(0x30);
     impresora.close();
     system("less ./ticket.txt >> /dev/lp0");
+    return;
+    }
+
 }
+
 
 QString ImprimirTicket::formatearCadena(QString cadena, int tamano)
 {

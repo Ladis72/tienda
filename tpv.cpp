@@ -231,13 +231,13 @@ QStringList Tpv::recopilarBasesIvas()
         qDebug() << tipoIva;
         switch (tipoIva) {
         case 4:
-            base1 += modeloTicket->record(i).value(6).toDouble();
+            base1 += modeloTicket->record(i).value(8).toDouble();
             break;
         case 10:
-            base2 += modeloTicket->record(i).value(6).toDouble();
+            base2 += modeloTicket->record(i).value(8).toDouble();
             break;
         case 21:
-            base3 += modeloTicket->record(i).value(6).toDouble();
+            base3 += modeloTicket->record(i).value(8).toDouble();
             break;
         default:
             break;
@@ -504,8 +504,10 @@ void Tpv::on_btn_cobrar_clicked()
 
         emit on_pushButtonBorrarTodo_clicked();
         impresora.close();
-        if (totalizacion->ticket == true) {
+        if (totalizacion->ticket == true && totalizacion->factura == false) {
             system("less ./ticket.txt >> /dev/lp0");
+        }else if (totalizacion->factura == true) {
+
         }
     }
 

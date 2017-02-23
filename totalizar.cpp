@@ -29,6 +29,7 @@ totalizar::~totalizar()
 void totalizar::on_pushButtonTicket_clicked()
 {
     ticket = true;
+    factura = false;
     emit accept();
 }
 
@@ -85,5 +86,12 @@ void totalizar::keyPressEvent(QKeyEvent *e)
 void totalizar::on_pushButtonCobrar_clicked()
 {
     ticket = false;
+    emit accept();
+}
+
+void totalizar::on_pushButtonFactura_clicked()
+{
+    ticket = true;
+    factura = true;
     emit accept();
 }
