@@ -194,6 +194,11 @@ void pedidos::on_leCod_returnPressed()
 {
     consulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->leCod->text());
     consulta.first();
+    if(!consulta.isValid()){
+           QString cod = base.codigoDesdeAux(ui->leCod->text());
+           consulta = base.consulta_producto(QSqlDatabase::database("DB"),cod);
+           consulta.first();
+       }
     if (consulta.numRowsAffected() == 1) {
         ui->leCod->setText(consulta.value(0).toString());
         ui->leDescripcion->setText(consulta.value(1).toString());

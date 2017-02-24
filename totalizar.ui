@@ -106,7 +106,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Entrega</string>
+        <string>E&amp;ntrega</string>
        </property>
        <property name="buddy">
         <cstring>lineEditEntrega</cstring>
@@ -161,7 +161,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Importe</string>
+        <string>I&amp;mporte</string>
        </property>
        <property name="buddy">
         <cstring>lineEditImporte</cstring>
@@ -178,7 +178,7 @@
         </font>
        </property>
        <property name="text">
-        <string>Total</string>
+        <string>Tota&amp;l</string>
        </property>
        <property name="buddy">
         <cstring>lineEditTotal</cstring>

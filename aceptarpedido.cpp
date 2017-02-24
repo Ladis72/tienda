@@ -81,7 +81,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         descripcion = modelo->record(i).value("descripcion").toString();
         lote = modelo->record(i).value("lote").toString();
         fechaCaducidad = modelo->record(i).value("fc").toString();
-        precioCosto = (modelo->record(i).value("totalbase").toDouble()/uds)*descuento;
+        precioCosto = modelo->record(i).value("costo").toDouble();
         pvp = modelo->record(i).value("pvp").toDouble();
         baseProducto = modelo->record(i).value("base").toString();
         tipoIva = modelo->record(i).value("tipoIva").toString();
@@ -96,6 +96,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
             qDebug() << "Creando lote";
         } else {
             base.aumentarLote(idLote,uds);
+
         }
         //Comprobar cambio de nombre o PVP y actualizar artículos
         consulta = base.consulta_producto(QSqlDatabase::database("DB"),ean);
@@ -114,6 +115,13 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
                 descripcion = cdProducto->nombre;
                 pvp = cdProducto->pvp.toDouble();
                 tipoActualizacion = cdProducto->tipoActualizacion;
+                if (precioAnterior != QString::number(pvp)) {
+                    base.insertarEtiqueta(ean);
+                }
+            }
+        case 1:
+            if (precioAnterior != QString::number(pvp)) {
+                base.insertarEtiqueta(ean);
             }
         default:
             break;

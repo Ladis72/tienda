@@ -641,7 +641,7 @@
   <tabstop>lePvt</tabstop>
   <tabstop>leIva</tabstop>
   <tabstop>lePvp</tabstop>
-  <tabstop>leTotalLinea</tabstop>
+  <tabstop>leDescuento</tabstop>
   <tabstop>pushButtonAnadir</tabstop>
   <tabstop>pushButtonModificar</tabstop>
   <tabstop>pushButtonBorrar</tabstop>
@@ -663,6 +663,8 @@
   <tabstop>leBase4</tabstop>
   <tabstop>tableView</tabstop>
   <tabstop>leIva21</tabstop>
+  <tabstop>leTotalLinea</tabstop>
+  <tabstop>leMargen</tabstop>
  </tabstops>
  <resources/>
  <connections>

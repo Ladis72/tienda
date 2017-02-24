@@ -22,6 +22,7 @@ public:
     int formaPago;
     QString facturacion;
     bool ticket;
+    bool factura;
     
 private slots:
     void on_pushButtonTicket_clicked();
@@ -34,6 +35,10 @@ private slots:
     void on_comboBox_currentTextChanged(const QString &arg1);
 
     void on_comboBox_currentIndexChanged(int index);
+
+    void on_pushButtonCobrar_clicked();
+
+    void on_pushButtonFactura_clicked();
 
 private:
     Ui::totalizar *ui;

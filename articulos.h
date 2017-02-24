@@ -6,6 +6,7 @@
 
 #include "familias.h"
 #include "fabricantes.h"
+#include "stock.h"
 
 
 #include <QDialog>
@@ -66,6 +67,18 @@ private slots:
 
     void on_radioButtonAnos_clicked();
 
+    void on_pushButtonVer_clicked();
+
+    void on_pushButtonAnadir_clicked();
+
+    void on_pushButtonEliminar_clicked();
+
+    void on_tableViewCompras_clicked(const QModelIndex &index);
+
+    void on_pushButtonEtiqueta_clicked();
+
+    void on_pushButtonCaducados_clicked();
+
 private:
     Ui::Articulos *ui;
 
@@ -73,8 +86,10 @@ private:
     QSqlQueryModel *modeloTabla;
     QSqlQueryModel modeloVentas;
     QSqlQueryModel modeloCompras;
+    QSqlTableModel *modeloAux;
     QDataWidgetMapper mapper;
     QSqlQuery consulta;
+    Stock *stock;
 
     //Familias *F;
 
@@ -84,6 +99,7 @@ private:
     void cargarVentas();
     bool eventFilter(QObject *obj, QEvent *event);
     void cargarCompras();
+    void cargarCodAux();
 };
 
 #endif // ARTICULOS_H

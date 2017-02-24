@@ -128,3 +128,33 @@ void Tienda::on_pushButton_2_clicked()
     VentaArticulos = new ListadoVentaArticulos(this);
     VentaArticulos->exec();
 }
+
+void Tienda::on_pushButtonEntradas_clicked()
+{
+    Entradas = new EntradaMercancia(this);
+    Entradas->exec();
+}
+
+void Tienda::on_pushButton_5_clicked()
+{
+    Cad = new Caducidades(this);
+    Cad->exec();
+}
+
+void Tienda::on_pushButtonSalidas_clicked()
+{
+    Salid = new Salidas(this);
+    Salid->exec();
+}
+
+void Tienda::on_pushButtonEtiquetas_clicked()
+{
+    Etiq = new Etiquetas(this);
+    Etiq->exec();
+}
+
+void Tienda::on_pushButtonCaducados_clicked()
+{
+    Caduca = new Caducados(this);
+    Caduca->exec();
+}

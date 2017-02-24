@@ -20,6 +20,11 @@
 #include "verfacturas.h"
 #include "listadoventas.h"
 #include "listadoventaarticulos.h"
+#include "entradamercancia.h"
+#include "caducidades.h"
+#include "salidas.h"
+#include "etiquetas.h"
+#include "caducados.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -72,6 +77,16 @@ private slots:
 
     void on_pushButton_2_clicked();
 
+    void on_pushButtonEntradas_clicked();
+
+    void on_pushButton_5_clicked();
+
+    void on_pushButtonSalidas_clicked();
+
+    void on_pushButtonEtiquetas_clicked();
+
+    void on_pushButtonCaducados_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -90,7 +105,11 @@ private:
     VerFacturas *VFact;
     ListadoVentas *ListVent;
     ListadoVentaArticulos *VentaArticulos;
-    //QSqlDatabase db;
+    EntradaMercancia *Entradas;
+    Caducidades *Cad;
+    Salidas *Salid;
+    Etiquetas *Etiq;
+    Caducados *Caduca;
 };
 
 #endif // TIENDA_H

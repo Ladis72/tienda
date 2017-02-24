@@ -48,3 +48,5 @@ void FormasPago::on_tableView_clicked(const QModelIndex &index)
     QModelIndex indice = modelolista->index(index.row(),0);
     resultado = modelolista->data(indice).toString();
 }
+
+

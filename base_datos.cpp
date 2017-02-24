@@ -11,21 +11,21 @@ QSqlDatabase baseDatos::conectar(){
 
 
 
-        //db = QSqlDatabase::database();
+       db = QSqlDatabase::database();
+       db = QSqlDatabase::addDatabase("QMYSQL","DB");
+       db.setHostName("localhost");
+       db.setDatabaseName("tienda");
+       db.setUserName("root");
+       db.setPassword("meganizado");
+       db.setPort(3306);
 
-            db = QSqlDatabase::addDatabase("QMYSQL","DB");
-            db.setHostName("localhost");
-            db.setDatabaseName("tienda");
-            db.setUserName("root");
-            db.setPassword("meganizado");
-            db.setPort(3306);
-                if(!db.open()){
-                QMessageBox mensaje;
-                mensaje.setText("No se puede continuar"+db.lastError().text());
-                mensaje.setWindowTitle ("Error");
-                mensaje.exec();
-                return QSqlDatabase();
-                }
+       if(!db.open()){
+           QMessageBox mensaje;
+           mensaje.setText("No se puede continuar"+db.lastError().text());
+           mensaje.setWindowTitle ("Error");
+           mensaje.exec();
+           return QSqlDatabase();
+       }
 
 return db;
 
@@ -445,6 +445,25 @@ QString baseDatos::nombreCliente(QString id)
     return "Sin asignar";
 }
 
+QString baseDatos::etiquetaCliente(QString idCliente)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("SELECT * FROM clientes WHERE idCliente LIKE ?");
+    consulta.bindValue(0,idCliente);
+    consulta.exec();
+    if (consulta.first() == true) {
+        QString cliente="";
+        cliente += consulta.value(1).toString()+" "+consulta.value(2).toString()+"\n";
+        cliente += consulta.value(3).toString()+"\n";
+        cliente += consulta.value(4).toString()+"  "+consulta.value(5).toString()+"\n";
+        cliente += consulta.value(6).toString()+"\n";
+        cliente += "N.I.F: "+consulta.value(7).toString();
+        return cliente;
+
+    }
+    return "Sin asignar";
+}
+
 
 
 QString baseDatos::nombreFormaPago(QString id)
@@ -470,6 +489,19 @@ QString baseDatos::idFormaPago(QString fpago)
         return consulta.value(0).toString();
     }
     return 0;
+}
+
+bool baseDatos::insertarEtiqueta(QString etiqueta)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("INSERT INTO etiquetas (cod) VALUES (?)");
+    consulta.bindValue(0,etiqueta);
+    if (consulta.exec() == true) {
+        qDebug() << "Codigo insertado con exito";
+        return true;
+    }
+    qDebug() << consulta.lastError();
+    return false;
 }
 
 QString baseDatos::nombreProveedor(QString id)
@@ -560,6 +592,30 @@ QString baseDatos::codigoParaNuevoProveedor()
     return QString::number(id);
 }
 
+QString baseDatos::codigoDesdeAux(QString aux)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT cod FROM codaux WHERE aux = '"+aux+"'");
+    consulta.first();
+    return consulta.value(0).toString();
+
+}
+
+QSqlQuery baseDatos::datosTicket(QString nTicket)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT * FROM tickets WHERE ticket = '"+nTicket+"'");
+    consulta.first();
+    return consulta;
+}
+
+QSqlQuery baseDatos::consultarLineasTicket(QString nTicket)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT * FROM lineasticket WHERE nticket = '"+nTicket+"'");
+    return consulta;
+}
+
 double baseDatos::obtenerNumeroUltimoTicket(QSqlDatabase db)
 {
     QSqlQuery consulta(db);
@@ -625,7 +681,7 @@ bool baseDatos::grabarTicket(QString serie , QStringList datos)
 bool baseDatos::grabarLineaTicket(QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("INSERT INTO lineasticket VALUES (NULL,?,?,?,?,?,?,?,?)");
+    consulta.prepare("INSERT INTO lineasticket VALUES (NULL,?,?,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i,datos.at(i));
     }
@@ -742,6 +798,30 @@ bool baseDatos::existeDatoEnTabla(QSqlDatabase db, QString tabla,QString columna
     }else{
         return false;
     }
+}
+
+void baseDatos::insertarEnTabla(QSqlDatabase db, QString tabla, QStringList datos)
+{
+    QSqlQuery consulta(db);
+    QString cadenaDatos;
+    for (int i = 0; i < datos.length()-1; ++i) {
+        cadenaDatos +="?,";
+    }
+    cadenaDatos +="?";
+    consulta.prepare("INSERT INTO "+tabla+" VALUES(NULL,"+cadenaDatos+")");
+    for (int i = 0; i < datos.length(); ++i) {
+        consulta.bindValue(i,datos.at(i));
+    }
+    if (consulta.exec()) {
+        return;
+    }
+    qDebug() << consulta.lastError();
+}
+
+void baseDatos::vaciarTabla(QString tabla)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("TRUNCATE "+tabla);
 }
 
 bool baseDatos::crearProveedor(QSqlDatabase db, QStringList datos)
@@ -996,7 +1076,6 @@ QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF, QString t
     consulta.bindValue(0,fechaI);
     consulta.bindValue(1,FechaF);
     consulta.exec();
-    qDebug() << consulta.lastError();
     return consulta;
 }
 
@@ -1044,7 +1123,39 @@ void baseDatos::aumentarLote(QString idLote, int uds)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.exec("UPDATE lotes SET cantidad = cantidad + "+QString::number(uds)+" WHERE id = '"+idLote+"'");
+    if(consulta.numRowsAffected() == 1) {
+        qDebug() << "Aumentar lote";
 
+    }else{
+    qDebug() << consulta.lastError();
+    }
+
+}
+
+void baseDatos::disminuirLote(QString cod, QString fecha, int uds)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT id , cantidad FROM lotes WHERE ean = '"+cod+"' AND fecha = '"+fecha+"'");
+    consulta.exec();
+    qDebug() << consulta.numRowsAffected();
+    if(consulta.numRowsAffected() == 0){
+        qDebug() << "Pasa por filas = 0";
+        return;
+    }
+
+    consulta.first();
+    QString id = consulta.record().value(0).toString();
+    qDebug() << id;
+    if (consulta.record().value(1).toInt() <= uds) {
+        consulta.exec("DELETE FROM lotes WHERE id = '"+id+"'");
+        consulta.exec("UPDATE articulos SET stock= (SELECT sum(cantidad) FROM lotes WHERE ean = '"+cod+"') where articulos.cod = '"+cod+"'");
+        consulta.lastError();
+        return;
+    }
+    int descontarUds = consulta.record().value(1).toInt();
+    QString resto = QString::number(descontarUds-uds);
+    consulta.exec("UPDATE lotes SET cantidad = "+resto+" WHERE id = '"+id+"'");
+    return;
 }
 
 void baseDatos::crearLote(QString ean, QString lote, QString fecha, QString uds)
@@ -1060,12 +1171,26 @@ void baseDatos::crearLote(QString ean, QString lote, QString fecha, QString uds)
 
 }
 
+QSqlQuery baseDatos::lotesProducto(QString cod)
+{
+    //Devuelve los diferentes lotes de un producto
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("SELECT * FROM lotes WHERE ean = ? group by fecha");
+    consulta.bindValue(0,cod);
+    if (!consulta.exec()) {
+        qDebug() << consulta.lastError();
+        return consulta;
+    }
+    return consulta;
+
+}
+
 QString baseDatos::ticketCercanoFecha(QString tabla, QString fecha, QString cuando)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     if (cuando == "minimo") {
         consulta.exec("SELECT min(ticket) FROM "+tabla+" WHERE concat_ws('/',fecha,hora) >= '"+fecha+"'");
-    }else{ consulta.prepare("SELECT max(ticket) FROM "+tabla+" WHERE concat_ws('/',fecha,hora) <= '"+fecha+"'");
+    }else{ consulta.exec("SELECT max(ticket) FROM "+tabla+" WHERE concat_ws('/',fecha,hora) <= '"+fecha+"'");
     }
     //consulta.bindValue(0,tabla);
     //consulta.bindValue(1,fecha);
@@ -1082,6 +1207,18 @@ QSqlQuery baseDatos::estadisticasVentaProductos(QString nPrimerTicket , QString 
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.exec("SELECT descripcion , sum(cantidad) FROM lineasticket WHERE cast(nticket as unsigned) between '"+nPrimerTicket+"' and '"+nUltimoTicket+"' or nticket between '"+nPrimerTicketB+"' and '"+nUltimoTicketB+"' group by cod order by descripcion asc");
     consulta.first();
+    qDebug() << consulta.lastError();
+    return consulta;
+}
+
+QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("SELECT descripcion , sum(cantidad) FROM lineasticket WHERE concat_ws('/',fecha,hora) >= ? AND concat_ws('/',fecha,hora) <= ? group by descripcion asc");
+    consulta.bindValue(0,inicio);
+    consulta.bindValue(1,final);
+    consulta.exec();
+    //consulta.first();
     qDebug() << consulta.lastError();
     return consulta;
 }

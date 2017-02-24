@@ -1,7 +1,7 @@
 #include "tpv.h"
 #include "ui_tpv.h"
 #include "dialogfecha.h"
-
+#include "imprimirfactura.h"
 #include <QItemDelegate>
 #include <QDebug>
 #include <QDate>
@@ -232,13 +232,13 @@ QStringList Tpv::recopilarBasesIvas()
         qDebug() << tipoIva;
         switch (tipoIva) {
         case 4:
-            base1 += modeloTicket->record(i).value(6).toDouble();
+            base1 += modeloTicket->record(i).value(8).toDouble();
             break;
         case 10:
-            base2 += modeloTicket->record(i).value(6).toDouble();
+            base2 += modeloTicket->record(i).value(8).toDouble();
             break;
         case 21:
-            base3 += modeloTicket->record(i).value(6).toDouble();
+            base3 += modeloTicket->record(i).value(8).toDouble();
             break;
         default:
             break;
@@ -273,6 +273,11 @@ void Tpv::on_lineEdit_cod_returnPressed(){
 
    consulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->lineEdit_cod->text());
    consulta.first();
+   if(!consulta.isValid()){
+       QString cod = base.codigoDesdeAux(ui->lineEdit_cod->text());
+       consulta = base.consulta_producto(QSqlDatabase::database("DB"),cod);
+       consulta.first();
+   }
    if (consulta.numRowsAffected() == 1) {
        QList<QString> linea;
        linea << consulta.value(0).toString();
@@ -292,7 +297,8 @@ void Tpv::on_lineEdit_cod_returnPressed(){
             linea << ui->lineEdit_descuento->text();
        }
        double totalLinea = linea.at(4).toDouble()*linea.at(2).toDouble()*(1-linea.at(5).toDouble()/100);
-       totalLinea = redondear(totalLinea,2);
+       //totalLinea = redondear(totalLinea,2);
+       totalLinea = classFormatear.redondear(totalLinea,2);
        linea << QString::number(totalLinea);
 
        if(ui->tableView->rowAt(0) < 0){
@@ -382,7 +388,7 @@ void Tpv::on_lineEdit_desc_returnPressed()
 
 void Tpv::on_btn_cobrar_clicked()
 {
-    QFile cajon("/dev/lp1");
+    QFile cajon("/dev/lp0");
     cajon.open(QIODevice::WriteOnly);
     QTextStream codigoApertura(&cajon);
     codigoApertura << char(0x1B) << char(0x70) << char(0x30);
@@ -412,16 +418,21 @@ void Tpv::on_btn_cobrar_clicked()
             texto << "------------------------------------------\n";
         for(int i = 0; i < modeloTicket->rowCount(); i++){
             lineaTicket.clear();
-            if (totalizacion->facturacion == "1") {
+            if (totalizacion->facturacion == "1" && base.existeDatoEnTabla(QSqlDatabase::database("DB"),"ticketss","ticket",QString::number(ticket)) == false) {
                 qDebug() << "Serie" << totalizacion->facturacion;
+                qDebug() << "Facturación por el B";
                 lineaTicket.append("B"+QString::number(ticket));
             }else{
             lineaTicket.append(QString::number(ticket));
+            totalizacion->facturacion = "0";
+            qDebug() << "Facturación por el A";
 
             }
             for (int x = 2; x < modeloTicket->columnCount(); ++x) {
                 lineaTicket.append(modeloTicket->record(i).value(x).toString());
                 }
+            lineaTicket.append(QDate::currentDate().toString("yyyy-MM-dd"));
+            lineaTicket.append(QTime::currentTime().toString("hh:mm"));
             QString dato;
             dato = lineaTicket.at(3);
             dato = formatearCadena(dato,3);
@@ -459,7 +470,7 @@ void Tpv::on_btn_cobrar_clicked()
                 qDebug() << lote;
                 if (idLote != "0") {
                     base.aumentarLote(idLote,abs(lineaTicket.at(3).toInt()));
-                    qDebug() << "Aumentar lote";
+                    qDebug() << "Error al devolver el producto lote";
                 } else {
                     base.crearLote(lineaTicket.at(1),lote,fecha,QString::number(abs(lineaTicket.at(3).toInt())));
                     qDebug() << "Crear lote";
@@ -473,10 +484,11 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(QString::number(totalizacion->descuento));
         totalTicket.append(QString::number(totalizacion->total));
         totalTicket.append(base.idFormaPago(totalizacion->efectivo));
-        totalTicket.append("1");
+        totalTicket.append(totalizacion->facturacion);
 
         texto << "\n\nTotal:";
-        texto << QString::number(totalizacion->total);
+        texto << QString::number(totalizacion->total)+"\n";
+        texto << totalizacion->efectivo;
         texto << "\n\n\n     GRACIAS POR SU VISITA\n";
         texto << "\n\n\n\n";
         texto << char(0x1D) << char(0x56) << char(0x30);
@@ -493,8 +505,10 @@ void Tpv::on_btn_cobrar_clicked()
 
         emit on_pushButtonBorrarTodo_clicked();
         impresora.close();
-        if (totalizacion->ticket == true) {
+        if (totalizacion->ticket == true && totalizacion->factura == false) {
             system("less ./ticket.txt >> /dev/lp0");
+        }else if (totalizacion->factura == true) {
+            ImprimirFactura(QString::number(ticket-1));
         }
     }
 

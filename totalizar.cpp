@@ -29,6 +29,7 @@ totalizar::~totalizar()
 void totalizar::on_pushButtonTicket_clicked()
 {
     ticket = true;
+    factura = false;
     emit accept();
 }
 
@@ -72,8 +73,25 @@ void totalizar::keyPressEvent(QKeyEvent *e)
         facturacion = "1";
         qDebug() << "F2 pulsada";
         this->setStyleSheet("background-color:#D1AEAB;");
+    case Qt::Key_F8:
+        emit on_pushButtonCobrar_clicked();
+    case Qt::Key_F9:
+        emit on_pushButtonTicket_clicked();
     default:
         qDebug() << "Otra tecla pulsada";
         break;
     }
+}
+
+void totalizar::on_pushButtonCobrar_clicked()
+{
+    ticket = false;
+    emit accept();
+}
+
+void totalizar::on_pushButtonFactura_clicked()
+{
+    ticket = true;
+    factura = true;
+    emit accept();
 }

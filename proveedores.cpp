@@ -30,6 +30,9 @@ Proveedores::Proveedores(QWidget *parent) :
     mapper.toFirst();
     refrescarBotones(mapper.currentIndex());
     ui->lineEditCod->installEventFilter(this);
+    borrarFormulario();
+    cargarCompras();
+
 
 }
 
@@ -71,6 +74,8 @@ void Proveedores::refrescarBotones(int i)
     ui->pushButtonAnterior->setEnabled(i > 0);
     ui->pushButtonSiguiente->setEnabled(i < modeloTabla->rowCount() -1);
     ui->labelNombre->setText(ui->lineEditNombre->text());
+    cargarCompras();
+
 }
 
 QStringList Proveedores::recogerDatosFormulario()
@@ -94,6 +99,28 @@ QStringList Proveedores::recogerDatosFormulario()
     listaDatosFormulario.append(ui->plainTextEdit->toPlainText());
 
     return listaDatosFormulario;
+}
+
+void Proveedores::cargarCompras()
+{
+    modeloCompras.clear();
+    if (ui->radioButtonComprasFacturas->isChecked()) {
+        modeloCompras.setQuery("SELECT * FROM facturas WHERE idProveedor = '"+ui->lineEditCod->text()+"'",QSqlDatabase::database("DB"));
+        ui->tableViewCompras->setModel(&modeloCompras);
+        ui->tableViewCompras->resizeColumnsToContents();
+    }
+    if (ui->radioButtonComprasMeses->isChecked()) {
+        modeloCompras.setQuery("SELECT year(fechaFactura) , month(fechaFactura) , sum(total) FROM tienda.facturas where idProveedor = '"+
+                               ui->lineEditCod->text()+"' group by year(fechaFactura) desc,"
+                               " month(fechaFactura) desc",QSqlDatabase::database("DB"));
+        ui->tableViewCompras->setModel(&modeloCompras);
+        ui->tableViewCompras->resizeColumnsToContents();
+    }
+    if (ui->radioButtonComprasAnos->isChecked()) {
+
+        ui->tableViewCompras->setModel(&modeloCompras);
+        ui->tableViewCompras->resizeColumnsToContents();
+    }
 }
 
 void Proveedores::on_pushButtonNuevo_clicked()
@@ -194,4 +221,19 @@ void Proveedores::on_pushButton_clicked()
 {
     borrarFormulario();
     ui->lineEditCod->setText(base.codigoParaNuevoProveedor());
+}
+
+void Proveedores::on_radioButtonComprasFacturas_clicked()
+{
+    cargarCompras();
+}
+
+void Proveedores::on_radioButtonComprasMeses_clicked()
+{
+    cargarCompras();
+}
+
+void Proveedores::on_radioButtonComprasAnos_clicked()
+{
+    cargarCompras();
 }

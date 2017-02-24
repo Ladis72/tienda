@@ -42,8 +42,23 @@ color: rgb(255, 25, 5);</string>
    </item>
    <item>
     <widget class="QTabWidget" name="tabWidget">
+     <property name="tabPosition">
+      <enum>QTabWidget::North</enum>
+     </property>
+     <property name="tabShape">
+      <enum>QTabWidget::Rounded</enum>
+     </property>
      <property name="currentIndex">
       <number>0</number>
+     </property>
+     <property name="elideMode">
+      <enum>Qt::ElideMiddle</enum>
+     </property>
+     <property name="movable">
+      <bool>false</bool>
+     </property>
+     <property name="tabBarAutoHide">
+      <bool>false</bool>
      </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
@@ -173,7 +188,11 @@ color: rgb(255, 25, 5);</string>
            </widget>
           </item>
           <item row="3" column="6">
-           <widget class="QLineEdit" name="lineEditCosto"/>
+           <widget class="QLineEdit" name="lineEditCosto">
+            <property name="maxLength">
+             <number>6</number>
+            </property>
+           </widget>
           </item>
           <item row="4" column="8">
            <widget class="QLineEdit" name="lineEditMaximo"/>
@@ -362,8 +381,63 @@ color: rgb(255, 25, 5);</string>
             </property>
            </widget>
           </item>
+          <item row="4" column="2">
+           <widget class="QPushButton" name="pushButtonVer">
+            <property name="text">
+             <string>Ver/Actualizar</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="pushButtonEtiqueta">
+            <property name="text">
+             <string>Crear etiqueta</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_3">
+      <attribute name="title">
+       <string>Códigos auxiliares</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_6">
+       <item row="0" column="0">
+        <layout class="QGridLayout" name="gridLayout_5">
+         <item row="0" column="0" colspan="2">
+          <widget class="QTableView" name="tableViewAux"/>
+         </item>
+         <item row="2" column="0">
+          <widget class="QPushButton" name="pushButtonAnadir">
+           <property name="text">
+            <string>Añadir</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QPushButton" name="pushButtonEliminar">
+           <property name="text">
+            <string>Eliminar</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" colspan="2">
+          <widget class="QLineEdit" name="lineEditAux">
+           <property name="maxLength">
+            <number>13</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </widget>
@@ -398,7 +472,7 @@ color: rgb(255, 25, 5);</string>
           <item>
            <widget class="QRadioButton" name="radioButtonVentasAno">
             <property name="text">
-             <string>Año</string>
+             <string>A&amp;ño</string>
             </property>
            </widget>
           </item>
@@ -415,6 +489,13 @@ color: rgb(255, 25, 5);</string>
        <string>Compras</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
+       <item row="1" column="0">
+        <widget class="QTableView" name="tableViewCompras">
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectRows</enum>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_2">
          <property name="title">
@@ -434,7 +515,7 @@ color: rgb(255, 25, 5);</string>
           <item>
            <widget class="QRadioButton" name="radioButtonMeses">
             <property name="text">
-             <string>Meses</string>
+             <string>&amp;Meses</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -444,15 +525,19 @@ color: rgb(255, 25, 5);</string>
           <item>
            <widget class="QRadioButton" name="radioButtonAnos">
             <property name="text">
-             <string>Años</string>
+             <string>A&amp;ños</string>
             </property>
            </widget>
           </item>
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QTableView" name="tableViewCompras"/>
+       <item row="2" column="0">
+        <widget class="QLabel" name="labelProveedor">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -517,6 +602,13 @@ color: rgb(255, 25, 5);</string>
        </property>
        <property name="autoDefault">
         <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonCaducados">
+       <property name="text">
+        <string>Caducados</string>
        </property>
       </widget>
      </item>

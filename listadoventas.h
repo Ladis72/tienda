@@ -23,11 +23,14 @@ private slots:
 
     void on_tableView_activated(const QModelIndex &index);
 
+    void on_pushButtonImprimir_clicked();
+
 private:
     Ui::ListadoVentas *ui;
 
     baseDatos *base;
     QStandardItemModel *modeloTabla;
+    void sumarVentas(QStandardItemModel *modelo);
 };
 
 #endif // LISTADOVENTAS_H

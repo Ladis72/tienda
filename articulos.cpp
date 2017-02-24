@@ -1,6 +1,6 @@
 #include "articulos.h"
 #include "ui_articulos.h"
-
+#include "caducados.h"
 
 #include <QDir>
 #include <QMessageBox>
@@ -55,6 +55,7 @@ void Articulos::refrescarBotones(int i)
     ui->labelNombrePrecio->setText(ui->lineEditDesc->text()+ "        "+ui->lineEditPvp->text());
     cargarVentas();
     cargarCompras();
+    cargarCodAux();
 }
 
 QStringList Articulos::recogerDatosFormulario()
@@ -97,8 +98,8 @@ void Articulos::recargarTabla()
 void Articulos::cargarCompras(){
     modeloCompras.clear();
     if (ui->radioButtonFacturas->isChecked()) {
-        modeloCompras.setQuery("SELECT `nDocumento` , `cantidad` , `bonificacion` , `costo` , `descuento1`, `pedidos`.`fechaPedido` FROM `lineaspedido` JOIN `pedidos` on `nDocumento` = `pedidos`.`npedido` WHERE `cod` = '"
-                               +ui->lineEditCod->text()+"'",QSqlDatabase::database("DB"));
+        modeloCompras.setQuery("SELECT `nDocumento` , `pedidos`.`idProveedor` , `cantidad` , `bonificacion` , `costo` , `descuento1`, `pedidos`.`fechaPedido` FROM `lineaspedido` JOIN `pedidos` on `nDocumento` = `pedidos`.`npedido` WHERE `cod` = '"
+                               +ui->lineEditCod->text()+"' ORDER BY `pedidos`.`fechaPedido` DESC",QSqlDatabase::database("DB"));
         qDebug() << modeloCompras.lastError();
         ui->tableViewCompras->setModel(&modeloCompras);
         ui->tableViewCompras->resizeColumnsToContents();
@@ -118,12 +119,25 @@ void Articulos::cargarCompras(){
     }
 }
 
+void Articulos::cargarCodAux()
+{
+    modeloAux = new QSqlTableModel(this,QSqlDatabase::database("DB"));
+    modeloAux->setTable("codaux");
+    modeloAux->setEditStrategy(QSqlTableModel::OnRowChange);
+    modeloAux->setFilter("cod ="+ui->lineEditCod->text());
+    modeloAux->select();
+    ui->tableViewAux->setModel(modeloAux);
+    ui->tableViewAux->hideColumn(0);
+
+}
+
 void Articulos::cargarVentas()
 {
     modeloVentas.clear();
     if(ui->radioButtonVentasMes->isChecked()){
-        modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) , MONTH(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
-                              +ui->lineEditCod->text()+"' group by year(`tickets`.`fecha`) desc, month(`tickets`.`fecha`) desc ",QSqlDatabase::database("DB"));
+//        modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) , MONTH(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
+//                              +ui->lineEditCod->text()+"' group by year(`tickets`.`fecha`) desc, month(`tickets`.`fecha`) desc ",QSqlDatabase::database("DB"));
+        modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , MONTH(fecha) , sum(cantidad) from lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' GROUP BY YEAR(fecha) desc , MONTH(fecha) desc",QSqlDatabase::database("DB"));
         qDebug() << modeloVentas.lastError();
         modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
         modeloVentas.setHeaderData(1,Qt::Horizontal,"Año");
@@ -134,20 +148,29 @@ void Articulos::cargarVentas()
         ui->tableViewVentas->resizeColumnsToContents();
     }
     if(ui->radioButtonVentasDia->isChecked()){
-        modeloVentas.setQuery("SELECT `descripcion`, `tickets`.`fecha` ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
-                              +ui->lineEditCod->text()+"' group by `tickets`.`fecha` desc ",QSqlDatabase::database("DB"));
+//        modeloVentas.setQuery("SELECT `descripcion`, `tickets`.`fecha` ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
+//                              +ui->lineEditCod->text()+"' group by `tickets`.`fecha` desc ",QSqlDatabase::database("DB"));
+//        qDebug() << modeloVentas.lastError();
+//        modeloVentas.setHeaderData(0,Qt::Horizontal,"Artículo");
+//        modeloVentas.setHeaderData(1,Qt::Horizontal,"Fecha");
+//        modeloVentas.setHeaderData(2,Qt::Horizontal,"Cantidad");
+
+//        ui->tableViewVentas->setModel(&modeloVentas);
+//        ui->tableViewVentas->resizeColumnsToContents();
+        modeloVentas.setQuery("SELECT descripcion , fecha , sum(cantidad) FROM lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' group by fecha desc",QSqlDatabase::database("DB"));
         qDebug() << modeloVentas.lastError();
-        modeloVentas.setHeaderData(0,Qt::Horizontal,"Artículo");
+        modeloVentas.setHeaderData(0,Qt::Horizontal,"Producto");
         modeloVentas.setHeaderData(1,Qt::Horizontal,"Fecha");
         modeloVentas.setHeaderData(2,Qt::Horizontal,"Cantidad");
-
         ui->tableViewVentas->setModel(&modeloVentas);
         ui->tableViewVentas->resizeColumnsToContents();
     }
     if(ui->radioButtonVentasAno->isChecked()){
         modeloVentas.clear();
-        modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
-                              +ui->lineEditCod->text()+"' group by year(`tickets`.`fecha`) desc",QSqlDatabase::database("DB"));
+//        modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
+//                              +ui->lineEditCod->text()+"' group by year(`tickets`.`fecha`) desc",QSqlDatabase::database("DB"));
+        modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , sum(cantidad) from lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' GROUP BY YEAR(fecha) desc",QSqlDatabase::database("DB"));
+
         qDebug() << modeloVentas.lastError();
         modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
         modeloVentas.setHeaderData(1,Qt::Horizontal,"Año");
@@ -401,4 +424,48 @@ void Articulos::on_radioButtonAnos_clicked()
 {
     cargarCompras();
 
+}
+
+void Articulos::on_pushButtonVer_clicked()
+{
+    Stock *stock = new Stock(ui->lineEditCod->text());
+    stock->exec();
+}
+
+void Articulos::on_pushButtonAnadir_clicked()
+{
+    if(!ui->lineEditAux->text().isEmpty()){
+        modeloAux->insertRow(0);
+    QSqlRecord record = modeloAux->record();
+    record.setValue(1,ui->lineEditCod->text());
+    record.setValue(2,ui->lineEditAux->text());
+    modeloAux->setRecord(0,record);
+    modeloAux->submitAll();
+    cargarCodAux();
+    }
+    return;
+}
+
+void Articulos::on_pushButtonEliminar_clicked()
+{
+    modeloAux->removeRow(ui->tableViewAux->currentIndex().row());
+}
+
+void Articulos::on_tableViewCompras_clicked(const QModelIndex &index)
+{
+    QModelIndex indice=modeloCompras.index(index.row(),1);
+
+    QString dato=modeloCompras.data(indice,Qt::EditRole).toString();
+    ui->labelProveedor->setText(base.nombreProveedor(dato));
+}
+
+void Articulos::on_pushButtonEtiqueta_clicked()
+{
+    base.insertarEtiqueta(ui->lineEditCod->text());
+}
+
+void Articulos::on_pushButtonCaducados_clicked()
+{
+    Caducados *cad = new Caducados(ui->lineEditCod->text(),this);
+    cad->exec();
 }

@@ -1,6 +1,8 @@
 #include "historicotickets.h"
 #include "ui_historicotickets.h"
+#include "formaspago.h"
 #include <QStandardItemModel>
+#include <QMessageBox>
 
 HistoricoTickets::HistoricoTickets(QWidget *parent) :
     QDialog(parent),
@@ -12,6 +14,7 @@ HistoricoTickets::HistoricoTickets(QWidget *parent) :
     ui->dateTimeEditDesde->setDateTime(QDateTime(QDate::currentDate(),QTime(00,00,01)));
     listaTickets = new QSqlQueryModel;
     ticket = new QSqlQueryModel;
+    nTicket = "";
 
 }
 
@@ -22,6 +25,7 @@ HistoricoTickets::~HistoricoTickets()
 
 void HistoricoTickets::mostrarTickets()
 {
+    nTicket="";
     QString fechaI,fechaF,horaI,horaF;
     fechaI = ui->dateTimeEditDesde->date().toString("yyyy-MM-dd");
     fechaF = ui->dateTimeEditHasta->date().toString("yyyy-MM-dd");
@@ -77,7 +81,7 @@ void HistoricoTickets::on_pushButtonConsultar_clicked()
 void HistoricoTickets::on_tableViewTickets_activated(const QModelIndex &index)
 {
     QModelIndex indice = listaTickets->index(index.row(),0);
-    QString nTicket = listaTickets->data(indice,Qt::EditRole).toString();
+    nTicket = listaTickets->data(indice,Qt::EditRole).toString();
     ticket->setQuery("SELECT * FROM lineasticket WHERE nticket = "+nTicket,QSqlDatabase::database("DB"));
 
 
@@ -87,4 +91,42 @@ void HistoricoTickets::on_tableViewTickets_activated(const QModelIndex &index)
     ui->tableViewLineasTicket->hideColumn(2);
     ui->tableViewLineasTicket->resizeColumnsToContents();
     //ui->label->setText("Vendedor"+listaTickets->data());
+}
+
+void HistoricoTickets::on_pushButtonImprimir_clicked()
+{
+    if (nTicket == "") {
+        int msg = QMessageBox::information(this,"Error","Primero debe seleccionar un ticket");
+        return;
+    }
+    ImprimirTicket c1(nTicket , "ticket");
+
+}
+
+void HistoricoTickets::on_pushButtonFormaPago_clicked()
+{
+    if (nTicket == "") {
+        int msg = QMessageBox::information(this,"Error","Primero debe seleccionar un ticket");
+        return;
+    }
+    FormasPago *FP = new FormasPago;
+    if (FP->exec() == QDialog::Accepted) {
+        QString idFormaPago = FP->resultado;
+        if (idFormaPago == "") {
+            return;
+        }
+        QSqlQuery consulta = base.ejecutarSentencia("UPDATE tickets SET fpago ='"+FP->resultado+"' WHERE ticket = '"+nTicket+"'");
+        qDebug() << consulta.lastError();
+    mostrarTickets();
+    }
+}
+
+void HistoricoTickets::on_pushButtonImprimirFactura_clicked()
+{
+    if (nTicket == "") {
+        int msg = QMessageBox::information(this,"Error","Primero debe seleccionar un ticket");
+        return;
+    }
+    ImprimirFactura fact(nTicket);
+
 }
