@@ -77,6 +77,8 @@ private slots:
 
     void on_pushButtonEtiqueta_clicked();
 
+    void on_pushButtonCaducados_clicked();
+
 private:
     Ui::Articulos *ui;
 

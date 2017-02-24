@@ -606,6 +606,13 @@ color: rgb(255, 25, 5);</string>
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="pushButtonCaducados">
+       <property name="text">
+        <string>Caducados</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="pushButtonCerrar">
        <property name="text">
         <string>Cerrar</string>

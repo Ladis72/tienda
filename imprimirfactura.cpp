@@ -93,6 +93,21 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent) : QObject(par
         if(paramName == "IVA4"){
             paramValue = iva4;
         }
+        if(paramName == "total21"){
+            paramValue = base21.toDouble()+iva21.toDouble();
+        }
+        if(paramName == "total10"){
+            paramValue = base10.toDouble()+iva10.toDouble();
+        }
+        if(paramName == "total4"){
+            paramValue = base4.toDouble()+iva4.toDouble();
+        }
+        if(paramName == "totalBase"){
+            paramValue = base21.toDouble()+base10.toDouble()+base4.toDouble();
+        }
+        if(paramName == "totalIVA"){
+            paramValue = iva4.toDouble()+iva21.toDouble()+iva10.toDouble();
+        }
         if(paramName == "total"){
             paramValue = totalFactura;
         }

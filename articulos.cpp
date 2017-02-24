@@ -1,6 +1,6 @@
 #include "articulos.h"
 #include "ui_articulos.h"
-
+#include "caducados.h"
 
 #include <QDir>
 #include <QMessageBox>
@@ -462,4 +462,10 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index)
 void Articulos::on_pushButtonEtiqueta_clicked()
 {
     base.insertarEtiqueta(ui->lineEditCod->text());
+}
+
+void Articulos::on_pushButtonCaducados_clicked()
+{
+    Caducados *cad = new Caducados(ui->lineEditCod->text(),this);
+    cad->exec();
 }

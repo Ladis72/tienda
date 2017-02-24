@@ -1,6 +1,7 @@
 #include "tpv.h"
 #include "ui_tpv.h"
 #include "dialogfecha.h"
+#include "imprimirfactura.h"
 #include <QItemDelegate>
 #include <QDebug>
 #include <QDate>
@@ -507,7 +508,7 @@ void Tpv::on_btn_cobrar_clicked()
         if (totalizacion->ticket == true && totalizacion->factura == false) {
             system("less ./ticket.txt >> /dev/lp0");
         }else if (totalizacion->factura == true) {
-
+            ImprimirFactura(QString::number(ticket-1));
         }
     }
 

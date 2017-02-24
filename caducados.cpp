@@ -9,6 +9,15 @@ Caducados::Caducados(QWidget *parent) :
     ui->setupUi(this);
 }
 
+Caducados::Caducados(QString ean, QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::Caducados)
+{
+    ui->setupUi(this);
+    ui->lineEditCodigo->setText(ean);
+    emit on_lineEditCodigo_returnPressed();
+}
+
 Caducados::~Caducados()
 {
     delete ui;
