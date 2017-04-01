@@ -69,6 +69,9 @@ public:
     double sumarColumna(QString tabla, QString campo, QString campoCondicion = NULL, QString condicion ="%%");
     int contarLineas(QString tabla, QString campoCondicion = NULL, QString condicion ="%%");
     bool insertarES(QStringList datos);
+    QStringList recuperarConfigTicket();
+    bool ticketPromo();
+    bool grabarConfiguracionTicket(QStringList configTicket);
 //Funciones PEDIDOS
     QSqlQuery recuperarPedidos();
     bool crearPedido(QString proveedor, QString nPedido, QString fecha);

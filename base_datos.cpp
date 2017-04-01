@@ -888,6 +888,55 @@ bool baseDatos::insertarES(QStringList datos)
     return false;
 }
 
+
+QStringList baseDatos::recuperarConfigTicket()
+{
+    QStringList configTicket;
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    if(!consulta.exec("SELECT * FROM tienda.configTicket")){
+        qDebug() << consulta.lastError();
+        return configTicket;
+    }
+    consulta.first();
+    configTicket << consulta.value("cabecera").toString();
+    configTicket << consulta.value("pie").toString();
+    configTicket << consulta.value("promocion").toString();
+    configTicket << consulta.value("ruta").toString();
+    configTicket << consulta.value("codApertura").toString();
+    configTicket << consulta.value("codCorte").toString();
+    return configTicket;
+}
+
+bool baseDatos::ticketPromo()
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    if(!consulta.exec("SELECT boolPromocion FROM tienda.configTicket"))
+        return false;
+    consulta.first();
+    return consulta.value("boolPromocion").toBool();
+}
+
+bool baseDatos::grabarConfiguracionTicket(QStringList configTicket)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("UPDATE configTicket SET cabecera = ? , pie = ? , promocion = ? , boolPromocion = ? , ruta = ? , codApertura = ? , codCorte = ? WHERE id = 1");
+    consulta.bindValue(0,configTicket.at(0));
+    consulta.bindValue(1,configTicket.at(1));
+    consulta.bindValue(2,configTicket.at(2));
+//    if (configTicket.at(3) == "0") {
+//        consulta.bindValue(3,"FALSE");
+//    } else {consulta.bindValue(3,"TRUE");
+//    }
+    consulta.bindValue(3,configTicket.at(3));
+    consulta.bindValue(4,configTicket.at(4));
+    consulta.bindValue(5,configTicket.at(5));
+    consulta.bindValue(6,configTicket.at(6));
+    if(consulta.exec()) return true;
+    qDebug() << consulta.lastError().text();
+    return false;
+
+}
+
 bool baseDatos::crearPedido(QString proveedor, QString nPedido, QString fecha)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));

@@ -25,6 +25,7 @@
 #include "salidas.h"
 #include "etiquetas.h"
 #include "caducados.h"
+#include "configticket.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -87,6 +88,8 @@ private slots:
 
     void on_pushButtonCaducados_clicked();
 
+    void on_pushButtonTicket_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -110,6 +113,7 @@ private:
     Salidas *Salid;
     Etiquetas *Etiq;
     Caducados *Caduca;
+    ConfigTicket *CTicket;
 };
 
 #endif // TIENDA_H
