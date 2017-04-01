@@ -332,12 +332,13 @@ bool baseDatos::actualizarFechaVentaArticulo(QString cod, QString fecha)
 bool baseDatos::actualizarArticulosDesdeCompras(QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("UPDATE articulos SET descripcion = ? , pvp = ? , precio_compra = ? , ultimo_pedido = ?  WHERE cod = ?");
+    consulta.prepare("UPDATE articulos SET descripcion = ? , pvp = ? , iva = ? , precio_compra = ? , ultimo_pedido = ?  WHERE cod = ?");
     consulta.bindValue(0,datos.at(1));
     consulta.bindValue(1,datos.at(2));
     consulta.bindValue(2,datos.at(3));
     consulta.bindValue(3,datos.at(4));
-    consulta.bindValue(4,datos.at(0));
+    consulta.bindValue(4,datos.at(5));
+    consulta.bindValue(5,datos.at(0));
     if(consulta.exec()){
         return true;
     }

@@ -46,6 +46,10 @@ private slots:
 
     void on_pushButtonModificar_clicked();
 
+    void on_leIva_editingFinished();
+
+    void on_dateEdit_editingFinished();
+
 private:
     Ui::pedidos *ui;
 
