@@ -229,3 +229,14 @@ void Clientes::on_lineEditNombre_returnPressed()
     }
     delete buscar;
 }
+
+void Clientes::on_lineEditCod_editingFinished()
+{
+    for (int i = 0; i < modeloTabla->rowCount(); ++i) {
+        if (modeloTabla->record(i).value("idCliente").toString() == ui->lineEditCod->text()) {
+            mapper.setCurrentIndex(i);
+            refrescarBotones(i);
+            break;
+        }
+    }
+}

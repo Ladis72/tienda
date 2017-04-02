@@ -348,6 +348,14 @@ void Articulos::on_lineEditCod_editingFinished()
             mapper.setCurrentIndex(i);
             refrescarBotones(i);
             break;
+        }else{
+                QString cod = base.codigoDesdeAux(ui->lineEditCod->text());
+                consulta = base.consulta_producto(QSqlDatabase::database("DB"),cod);
+                consulta.first();
+                if (consulta.isValid()) {
+                    ui->lineEditCod->setText(consulta.value(0).toString());
+                    emit on_lineEditCod_editingFinished();
+                }
         }
     }
 }

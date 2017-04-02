@@ -94,6 +94,7 @@ public:
     QSqlQuery recuperarDatosUltimoArqueo();
     bool grabarArqueo(QStringList datos);
     QSqlQuery ventasEntreFechas(QString fechaI , QString FechaF, QString tabla);
+    int nTarjetasDesdeUltimoArqueo(QString fechaI , QString horaI);
 //Funciones GENERALISTAS
     QSqlQuery devolverTablaCompleta(QString nombreTabla);
     QSqlQuery ejecutarSentencia(QString sentencia);

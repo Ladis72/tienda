@@ -4,6 +4,7 @@
 #include <QDialog>
 #include "base_datos.h"
 #include "entradasalida.h"
+#include <QKeyEvent>
 
 namespace Ui {
 class Cajas;
@@ -48,7 +49,7 @@ private:
     Ui::Cajas *ui;
 
     baseDatos *base;
-    double efectivoReal, totalEfectivo, ventasEfectivo, ventasTarjeta, saldoAnterior, salidas, descuadre;
+    double efectivoReal, totalEfectivo, ventasEfectivo, ventasTarjeta, saldoAnterior, salidas, descuadre , ventasB;
     int nTarjetas;
     QString fechaUltimoArqueo, horaUltimoArqueo;
 
@@ -56,6 +57,7 @@ private:
     void ventas();
     void ES();
     EntradaSalida *entSal;
+    void keyPressEvent(QKeyEvent *e);
 };
 
 #endif // CAJAS_H

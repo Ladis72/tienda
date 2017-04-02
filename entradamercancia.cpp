@@ -66,6 +66,7 @@ void EntradaMercancia::on_lineEditCod_returnPressed()
         consulta.first();
     }
     if(consulta.numRowsAffected() ==1){
+        ui->lineEditCod->setText(consulta.value(0).toString());
         ui->lineEditDesc->setText(consulta.value(1).toString());
         ui->lineEditPVP->setText(consulta.value(2).toString());
         ui->lineEditUds->setFocus();

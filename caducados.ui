@@ -96,7 +96,7 @@
    <item row="5" column="1">
     <widget class="QPushButton" name="pushButton">
      <property name="text">
-      <string>Aceptar</string>
+      <string>Procesar</string>
      </property>
      <property name="autoDefault">
       <bool>false</bool>
@@ -106,7 +106,7 @@
    <item row="5" column="2">
     <widget class="QPushButton" name="pushButton_2">
      <property name="text">
-      <string>Cancelar</string>
+      <string>Salir</string>
      </property>
      <property name="autoDefault">
       <bool>false</bool>
@@ -115,6 +115,14 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>lineEditCodigo</tabstop>
+  <tabstop>spinBox</tabstop>
+  <tabstop>pushButton</tabstop>
+  <tabstop>pushButton_2</tabstop>
+  <tabstop>comboBox</tabstop>
+  <tabstop>lineEditDescripcion</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

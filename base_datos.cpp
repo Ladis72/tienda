@@ -1129,6 +1129,14 @@ QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF, QString t
     return consulta;
 }
 
+int baseDatos::nTarjetasDesdeUltimoArqueo(QString fechaI , QString horaI)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT count(total) FROM tickets WHERE concat_ws('/',fecha , hora) >= '"+fechaI+"/"+horaI+"' group by fpago");
+    consulta.first();
+    return consulta.value(0).toInt();
+}
+
 QSqlQuery baseDatos::devolverTablaCompleta(QString nombreTabla)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
