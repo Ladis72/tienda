@@ -14,10 +14,46 @@
    <string>Listado de ventas</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
-    <widget class="QLabel" name="label">
+   <item row="0" column="3">
+    <widget class="QDateEdit" name="dateEditHasta">
+     <property name="displayFormat">
+      <string>yyyy-MM-dd</string>
+     </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1" colspan="2">
+    <widget class="QLabel" name="labelTotal">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
      <property name="text">
-      <string>Desde</string>
+      <string/>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Hasta</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="4">
+    <widget class="QPushButton" name="pushButtonImprimir">
+     <property name="text">
+      <string>Imprimir</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="4">
+    <widget class="QPushButton" name="pushButtonVer">
+     <property name="text">
+      <string>Ver</string>
      </property>
     </widget>
    </item>
@@ -31,59 +67,22 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="2">
-    <widget class="QLabel" name="label_2">
+   <item row="2" column="3">
+    <widget class="QLabel" name="labelTotalB">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
      <property name="text">
-      <string>Hasta</string>
+      <string/>
      </property>
     </widget>
    </item>
-   <item row="0" column="3">
-    <widget class="QDateEdit" name="dateEditHasta">
-     <property name="displayFormat">
-      <string>yyyy-MM-dd</string>
-     </property>
-     <property name="calendarPopup">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="4">
-    <widget class="QPushButton" name="pushButtonVer">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
      <property name="text">
-      <string>Ver</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0" colspan="4">
-    <widget class="QTableView" name="tableView">
-     <property name="minimumSize">
-      <size>
-       <width>350</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="alternatingRowColors">
-      <bool>true</bool>
-     </property>
-     <property name="selectionMode">
-      <enum>QAbstractItemView::SingleSelection</enum>
-     </property>
-     <property name="selectionBehavior">
-      <enum>QAbstractItemView::SelectRows</enum>
-     </property>
-     <attribute name="verticalHeaderVisible">
-      <bool>false</bool>
-     </attribute>
-    </widget>
-   </item>
-   <item row="2" column="5">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <string>Desde</string>
      </property>
     </widget>
    </item>
@@ -97,6 +96,9 @@
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
          <widget class="QTableView" name="tableViewFPago">
+          <property name="editTriggers">
+           <set>QAbstractItemView::NoEditTriggers</set>
+          </property>
           <property name="alternatingRowColors">
            <bool>true</bool>
           </property>
@@ -122,6 +124,9 @@
        <layout class="QGridLayout" name="gridLayout_3">
         <item row="0" column="0">
          <widget class="QTableView" name="tableViewVendedores">
+          <property name="editTriggers">
+           <set>QAbstractItemView::NoEditTriggers</set>
+          </property>
           <property name="alternatingRowColors">
            <bool>true</bool>
           </property>
@@ -141,34 +146,55 @@
      </item>
     </layout>
    </item>
-   <item row="2" column="1" colspan="2">
-    <widget class="QLabel" name="labelTotal">
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-      </font>
+   <item row="2" column="5">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
-     <property name="text">
-      <string>TextLabel</string>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
      </property>
     </widget>
    </item>
-   <item row="2" column="3">
-    <widget class="QLabel" name="labelTotalB">
+   <item row="1" column="0" colspan="4">
+    <widget class="QTableView" name="tableView">
+     <property name="minimumSize">
+      <size>
+       <width>350</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="alternatingRowColors">
+      <bool>true</bool>
+     </property>
+     <property name="selectionMode">
+      <enum>QAbstractItemView::SingleSelection</enum>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <attribute name="verticalHeaderVisible">
+      <bool>false</bool>
+     </attribute>
+    </widget>
+   </item>
+   <item row="3" column="1" colspan="3">
+    <widget class="QLabel" name="labelTotal2">
      <property name="font">
       <font>
        <pointsize>12</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
       </font>
      </property>
      <property name="text">
-      <string>TextLabel</string>
+      <string/>
      </property>
-    </widget>
-   </item>
-   <item row="2" column="4">
-    <widget class="QPushButton" name="pushButtonImprimir">
-     <property name="text">
-      <string>Imprimir</string>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
      </property>
     </widget>
    </item>
