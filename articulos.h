@@ -45,7 +45,7 @@ private slots:
 
     void on_lineEditDesc_returnPressed();
 
-    void on_lineEditCod_editingFinished();
+    void on_lineEditCod_returnPressed();
 
     void on_pushButtonBuscarFamilia_clicked();
 

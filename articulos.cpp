@@ -341,7 +341,7 @@ void Articulos::on_lineEditDesc_returnPressed()
 
 
 
-void Articulos::on_lineEditCod_editingFinished()
+void Articulos::on_lineEditCod_returnPressed()
 {
     for (int i = 0; i < modeloTabla->rowCount(); i++){
         if (modeloTabla->record(i).value("cod").toString() == ui->lineEditCod->text()) {
@@ -354,7 +354,7 @@ void Articulos::on_lineEditCod_editingFinished()
                 consulta.first();
                 if (consulta.isValid()) {
                     ui->lineEditCod->setText(consulta.value(0).toString());
-                    emit on_lineEditCod_editingFinished();
+                    emit on_lineEditCod_returnPressed();
                 }
         }
     }
