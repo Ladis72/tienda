@@ -113,6 +113,7 @@ void EntradaMercancia::on_pushButtonBorrar_clicked()
         QSqlQuery tmp =base->ejecutarSentencia("DELETE FROM entradaGenero_tmp WHERE id = '"+codSeleccionado+"'");
         qDebug() << tmp.lastError();
     }
+    actualizarTabla();
 }
 
 void EntradaMercancia::on_tableView_clicked(const QModelIndex &index)
