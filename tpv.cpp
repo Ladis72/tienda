@@ -395,10 +395,14 @@ void Tpv::on_btn_cobrar_clicked()
 //    codigoApertura << char(0x1B) << char(0x70) << char(0x30);
 //    cajon.close();
     QStringList confTicket = base.recuperarConfigTicket();
-
     QFile cajon(confTicket.at(4));
     cajon.open(QIODevice::WriteOnly);
     QTextStream codigoApertura(&cajon);
+    QString codApertura = confTicket.at(6);
+    QStringList cadaCodApertura = codApertura.split(",");
+    for (int i = 0; i < cadaCodApertura.size(); ++i) {
+        codigoApertura << char(cadaCodApertura.at(i).toInt());
+    }
     codigoApertura << char(0x1B) << char(0x70) << char(0x30);
     cajon.close();
     totalizacion = new totalizar(QString::number(calcularPrecioTotal()),this);

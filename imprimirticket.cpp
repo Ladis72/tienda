@@ -57,13 +57,12 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     QString codCorte = confTicket.at(4);
     QStringList cadaCodCorte = codCorte.split(",");
     for (int i = 0; i < cadaCodCorte.size(); ++i) {
-        texto << char(cadaCodCorte.at(i));
+        texto << char(cadaCodCorte.at(i).toInt());
     }
     //texto << confTicket.at(4);
     texto << "\n\n";
     impresora.close();
     QString imprimir = "less ./ticket.txt >> "+confTicket.at(3);
-
     const char* ch = imprimir.toLocal8Bit().constData();
     system(ch);
     return;
