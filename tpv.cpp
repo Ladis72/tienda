@@ -389,7 +389,14 @@ void Tpv::on_lineEdit_desc_returnPressed()
 
 void Tpv::on_btn_cobrar_clicked()
 {
-    QFile cajon("/dev/lp0");
+//    QFile cajon("/dev/lp0");
+//    cajon.open(QIODevice::WriteOnly);
+//    QTextStream codigoApertura(&cajon);
+//    codigoApertura << char(0x1B) << char(0x70) << char(0x30);
+//    cajon.close();
+    QStringList confTicket = base.recuperarConfigTicket();
+
+    QFile cajon(confTicket.at(4));
     cajon.open(QIODevice::WriteOnly);
     QTextStream codigoApertura(&cajon);
     codigoApertura << char(0x1B) << char(0x70) << char(0x30);
