@@ -79,6 +79,7 @@ void Etiquetas::llenarModelo()
     }
     ui->tableView->setModel(modelo);
     ui->tableView->hideColumn(0);
+    ui->tableView->resizeColumnsToContents();
     ui->lineEditCod->clear();
     ui->lineEditDesc->clear();
     ui->lineEditCod->setFocus();
