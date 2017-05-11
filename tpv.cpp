@@ -639,5 +639,7 @@ void Tpv::on_tableView_doubleClicked(const QModelIndex &index)
 
 void Tpv::on_tableView_clicked(const QModelIndex &index)
 {
-
+    QModelIndex indice = modeloTicket->index(index.row(),0);
+    int idModeloTicket = indice.row();
+    datosProducto(modeloTicket->data(modeloTicket->index(idModeloTicket,2)).toString());
 }
