@@ -270,6 +270,15 @@ QString Tpv::formatearCadena(QString cadena, int tamano)
     return cadena;
 }
 
+void Tpv::datosProducto(QString IdProducto)
+{
+    ui->labelStock->setText(base.sumarStockArticulo(IdProducto));
+    QSqlQuery tmp = base.ejecutarSentencia("SELECT fecha FROM lotes WHERE ean = "+IdProducto+" ORDER BY fecha asc");
+    tmp.first();
+    ui->labelFecha->setText(tmp.value(0).toString());
+
+}
+
 void Tpv::on_lineEdit_cod_returnPressed(){
 
    consulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->lineEdit_cod->text());
@@ -282,6 +291,7 @@ void Tpv::on_lineEdit_cod_returnPressed(){
    if (consulta.numRowsAffected() == 1) {
        QList<QString> linea;
        linea << consulta.value(0).toString();
+       datosProducto(consulta.value(0).toString());
        linea << consulta.value(1).toString();
        linea << ui->lineEdit_Uds->text();
        linea << consulta.value(3).toString();
@@ -624,5 +634,10 @@ void Tpv::on_tableView_doubleClicked(const QModelIndex &index)
     ui->lineEdit_descuento->setText(modeloTicket->data(modeloTicket->index(idModeloTicket,7)).toString());
     ui->lineEdit_6->setText(modeloTicket->data(modeloTicket->index(idModeloTicket,8)).toString());
     modeloTicket->removeRow(ui->tableView->currentIndex().row());
+
+}
+
+void Tpv::on_tableView_clicked(const QModelIndex &index)
+{
 
 }
