@@ -11,7 +11,7 @@ class ImprimirTicket
 {
 public:
     ImprimirTicket(QString nTicket, QString formato);
-
+    void ImprimirTicketRegalo();
 private:
     QString formatearCadena(QString cadena, int tamano);
 

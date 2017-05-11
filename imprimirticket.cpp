@@ -54,7 +54,7 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     texto << confTicket.at(1);
     texto << "\n\n\n\n";
 //    texto << char(0x1D) << char(0x56) << char(0x30);
-    QString codCorte = confTicket.at(4);
+    QString codCorte = confTicket.at(6);
     QStringList cadaCodCorte = codCorte.split(",");
     for (int i = 0; i < cadaCodCorte.size(); ++i) {
         texto << char(cadaCodCorte.at(i).toInt());
@@ -67,6 +67,11 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     system(ch);
     return;
     }
+
+}
+
+void ImprimirTicket::ImprimirTicketRegalo()
+{
 
 }
 
