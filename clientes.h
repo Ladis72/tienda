@@ -34,11 +34,22 @@ private slots:
 
     void on_lineEditCod_editingFinished();
 
+    void on_radioButtonMeses_clicked();
+
+    void on_radioButtonAnos_clicked();
+
+    void on_radioButtonFechas_clicked();
+
+    void on_dateEditHasta_userDateChanged(const QDate &date);
+
+    void on_dateEditDesde_userDateChanged(const QDate &date);
+
 private:
     Ui::Clientes *ui;
 
     baseDatos base;
     QSqlQueryModel *modeloTabla;
+    QSqlQueryModel modeloCompras;
     QDataWidgetMapper mapper;
     QSqlQuery consulta;
 
@@ -47,6 +58,7 @@ private:
     void borrarFormulario();
     bool eventFilter(QObject *obj, QEvent *event);
     void refrescarBotones(int i);
+    void cargarCompras();
     QStringList recogerDatosFormulario();
 
 };
