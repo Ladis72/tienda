@@ -286,8 +286,85 @@
      </widget>
      <widget class="QWidget" name="tab_4">
       <attribute name="title">
-       <string>Tab 2</string>
+       <string>Ventas</string>
       </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Periodo</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QRadioButton" name="radioButtonMeses">
+            <property name="text">
+             <string>&amp;Meses</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radioButtonAnos">
+            <property name="text">
+             <string>A&amp;ños</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radioButtonFechas">
+            <property name="text">
+             <string>E&amp;ntre fechas</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDateEdit" name="dateEditDesde">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="displayFormat">
+             <string>dd/MM/yyyy</string>
+            </property>
+            <property name="calendarPopup">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDateEdit" name="dateEditHasta">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="displayFormat">
+             <string>dd/MM/yyyy</string>
+            </property>
+            <property name="calendarPopup">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableView" name="tableView"/>
+       </item>
+      </layout>
      </widget>
     </widget>
    </item>
@@ -391,12 +468,44 @@
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>950</x>
-     <y>561</y>
+     <x>1047</x>
+     <y>543</y>
     </hint>
     <hint type="destinationlabel">
      <x>878</x>
      <y>575</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>radioButtonFechas</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>dateEditDesde</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>265</x>
+     <y>103</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>377</x>
+     <y>108</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>radioButtonFechas</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>dateEditHasta</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>265</x>
+     <y>103</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>489</x>
+     <y>108</y>
     </hint>
    </hints>
   </connection>

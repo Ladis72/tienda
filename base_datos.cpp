@@ -1243,6 +1243,18 @@ QSqlQuery baseDatos::lotesProducto(QString cod)
 
 }
 
+QString baseDatos::sumarStockArticulo(QString id)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("SELECT sum(cantidad) FROM lotes WHERE ean = ?");
+    consulta.bindValue(0,id);
+    if (consulta.exec()) {
+        consulta.first();
+        return consulta.value(0).toString();
+    }
+    return "Desconocido";
+}
+
 QString baseDatos::ticketCercanoFecha(QString tabla, QString fecha, QString cuando)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));

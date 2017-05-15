@@ -53,6 +53,8 @@ private slots:
 
     void on_tableView_doubleClicked(const QModelIndex &index);
 
+    void on_tableView_clicked(const QModelIndex &index);
+
 private:
     int ticket;
     int ticketActual;
@@ -85,6 +87,7 @@ private:
     QStringList recopilarDatosTicket();
     QStringList recopilarBasesIvas();
     QString formatearCadena(QString cadena, int tamano);
+    void datosProducto(QString IdProducto);
 
 
 

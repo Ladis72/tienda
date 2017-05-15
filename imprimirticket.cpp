@@ -53,13 +53,30 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     texto << "\n\n\n";
     texto << confTicket.at(1);
     texto << "\n\n\n\n";
-    texto << char(0x1D) << char(0x56) << char(0x30);
+//    texto << char(0x1D) << char(0x56) << char(0x30);
+    QString codCorte = confTicket.at(5);
+    qDebug() << codCorte;
+    QStringList cadaCodCorte = codCorte.split(",");
+    for (int i = 0; i < cadaCodCorte.size(); ++i) {
+        texto << char(cadaCodCorte.at(i).toInt());
+    }
+    //texto << confTicket.at(4);
+    texto << "\n\n";
     impresora.close();
-    system("less ./ticket.txt >> /dev/lp0");
+    QString imprimir = "less ./ticket.txt >> "+confTicket.at(3);
+    const char* ch = imprimir.toLocal8Bit().constData();
+    system(ch);
     return;
     }
 
 }
+
+void ImprimirTicket::ImprimirTicketRegalo()
+{
+
+}
+
+
 
 
 QString ImprimirTicket::formatearCadena(QString cadena, int tamano)

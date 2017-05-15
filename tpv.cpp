@@ -270,6 +270,15 @@ QString Tpv::formatearCadena(QString cadena, int tamano)
     return cadena;
 }
 
+void Tpv::datosProducto(QString IdProducto)
+{
+    ui->labelStock->setText(base.sumarStockArticulo(IdProducto));
+    QSqlQuery tmp = base.ejecutarSentencia("SELECT fecha FROM lotes WHERE ean = "+IdProducto+" ORDER BY fecha asc");
+    tmp.first();
+    ui->labelFecha->setText(tmp.value(0).toString());
+
+}
+
 void Tpv::on_lineEdit_cod_returnPressed(){
 
    consulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->lineEdit_cod->text());
@@ -282,6 +291,7 @@ void Tpv::on_lineEdit_cod_returnPressed(){
    if (consulta.numRowsAffected() == 1) {
        QList<QString> linea;
        linea << consulta.value(0).toString();
+       datosProducto(consulta.value(0).toString());
        linea << consulta.value(1).toString();
        linea << ui->lineEdit_Uds->text();
        linea << consulta.value(3).toString();
@@ -389,11 +399,25 @@ void Tpv::on_lineEdit_desc_returnPressed()
 
 void Tpv::on_btn_cobrar_clicked()
 {
-    QFile cajon("/dev/lp0");
+//    QFile cajon("/dev/lp0");
+//    cajon.open(QIODevice::WriteOnly);
+//    QTextStream codigoApertura(&cajon);
+//    codigoApertura << char(0x1B) << char(0x70) << char(0x30);
+//    cajon.close();
+    QStringList confTicket = base.recuperarConfigTicket();
+    QFile cajon(confTicket.at(3));
+    qDebug() << confTicket.at(3);
     cajon.open(QIODevice::WriteOnly);
     QTextStream codigoApertura(&cajon);
-    codigoApertura << char(0x1B) << char(0x70) << char(0x30);
+    QString codApertura = confTicket.at(4);
+    qDebug() << codApertura;
+    QStringList cadaCodApertura = codApertura.split(",");
+    for (int i = 0; i < cadaCodApertura.size(); ++i) {
+        qDebug() << cadaCodApertura.at(i);
+        codigoApertura << char(cadaCodApertura.at(i).toInt());
+    }
     cajon.close();
+    qDebug() << "Finalizado apertura cajon";
     totalizacion = new totalizar(QString::number(calcularPrecioTotal()),this);
 
     QStringList lineaTicket,totalTicket;
@@ -611,4 +635,11 @@ void Tpv::on_tableView_doubleClicked(const QModelIndex &index)
     ui->lineEdit_6->setText(modeloTicket->data(modeloTicket->index(idModeloTicket,8)).toString());
     modeloTicket->removeRow(ui->tableView->currentIndex().row());
 
+}
+
+void Tpv::on_tableView_clicked(const QModelIndex &index)
+{
+    QModelIndex indice = modeloTicket->index(index.row(),0);
+    int idModeloTicket = indice.row();
+    datosProducto(modeloTicket->data(modeloTicket->index(idModeloTicket,2)).toString());
 }

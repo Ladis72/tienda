@@ -109,6 +109,7 @@ public:
     void disminuirLote(QString cod, QString fecha , int uds);
     void crearLote(QString ean,QString lote,QString fecha,QString uds);
     QSqlQuery lotesProducto(QString cod);
+    QString sumarStockArticulo(QString id);
 
 //Funciones LISTADOS
     QString ticketCercanoFecha(QString tabla, QString fecha, QString cuando);
