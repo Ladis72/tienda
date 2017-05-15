@@ -135,8 +135,6 @@ void Articulos::cargarVentas()
 {
     modeloVentas.clear();
     if(ui->radioButtonVentasMes->isChecked()){
-//        modeloVentas.setQuery("SELECT `descripcion`, YEAR(`tickets`.`fecha`) , MONTH(`tickets`.`fecha`) ,sum(`cantidad`)FROM `lineasticket` join `tickets` on `nticket` = `tickets`.`ticket` where `cod` = '"
-//                              +ui->lineEditCod->text()+"' group by year(`tickets`.`fecha`) desc, month(`tickets`.`fecha`) desc ",QSqlDatabase::database("DB"));
         modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , MONTH(fecha) , sum(cantidad) from lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' GROUP BY YEAR(fecha) desc , MONTH(fecha) desc",QSqlDatabase::database("DB"));
         qDebug() << modeloVentas.lastError();
         modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
@@ -341,15 +339,24 @@ void Articulos::on_lineEditDesc_returnPressed()
 
 
 
-void Articulos::on_lineEditCod_editingFinished()
+void Articulos::on_lineEditCod_returnPressed()
 {
     for (int i = 0; i < modeloTabla->rowCount(); i++){
         if (modeloTabla->record(i).value("cod").toString() == ui->lineEditCod->text()) {
             mapper.setCurrentIndex(i);
             refrescarBotones(i);
-            break;
+            return;
         }
     }
+        qDebug() << "MAL";
+        QString cod = base.codigoDesdeAux(ui->lineEditCod->text());
+        consulta = base.consulta_producto(QSqlDatabase::database("DB"),cod);
+        consulta.first();
+        if (consulta.numRowsAffected() == 1) {
+            ui->lineEditCod->setText(consulta.value(0).toString());
+            emit on_lineEditCod_returnPressed();
+                }
+
 }
 
 void Articulos::on_pushButtonBuscarFamilia_clicked()

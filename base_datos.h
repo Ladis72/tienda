@@ -69,6 +69,9 @@ public:
     double sumarColumna(QString tabla, QString campo, QString campoCondicion = NULL, QString condicion ="%%");
     int contarLineas(QString tabla, QString campoCondicion = NULL, QString condicion ="%%");
     bool insertarES(QStringList datos);
+    QStringList recuperarConfigTicket();
+    bool ticketPromo();
+    bool grabarConfiguracionTicket(QStringList configTicket);
 //Funciones PEDIDOS
     QSqlQuery recuperarPedidos();
     bool crearPedido(QString proveedor, QString nPedido, QString fecha);
@@ -91,6 +94,7 @@ public:
     QSqlQuery recuperarDatosUltimoArqueo();
     bool grabarArqueo(QStringList datos);
     QSqlQuery ventasEntreFechas(QString fechaI , QString FechaF, QString tabla);
+    int nTarjetasDesdeUltimoArqueo(QString fechaI , QString horaI);
 //Funciones GENERALISTAS
     QSqlQuery devolverTablaCompleta(QString nombreTabla);
     QSqlQuery ejecutarSentencia(QString sentencia);

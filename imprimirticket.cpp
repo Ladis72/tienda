@@ -13,19 +13,21 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     hora = consulta.value(4).toString();
     total = consulta.value(12).toString();
     fPago = base.nombreFormaPago(consulta.value(13).toString());
+    QStringList confTicket = base.recuperarConfigTicket();
     if (formato == "ticket") {
 
 
     QFile impresora("ticket.txt");
     impresora.open(QIODevice::WriteOnly);
     QTextStream texto(&impresora);
-    texto << "\n";
-    texto << "HERBOLARIO EMEICJAC\n";
-    texto << "C/Perines 14 bajo\n";
-    texto << "Tlfn: 942-37-20-27\n";
-    texto << "N.I.F.: 20196639-V\n";
-    texto << "E-mail: emeicjac@emeicjac.com\n";
-    texto << "Web: emeicjac.com\n\n";
+//    texto << "\n";
+//    texto << "HERBOLARIO EMEICJAC\n";
+//    texto << "C/Perines 14 bajo\n";
+//    texto << "Tlfn: 942-37-20-27\n";
+//    texto << "N.I.F.: 20196639-V\n";
+//    texto << "E-mail: emeicjac@emeicjac.com\n";
+//    texto << "Web: emeicjac.com\n\n";
+    texto << confTicket.at(0)+"\n\n";
     texto << QDate::fromString(fecha,"yyyy-MM-dd").toString("dd-MMM-yyyy") + "  " + hora + "    " + "Ticket: "+ticket;
     texto <<"\n";
     texto << "UDS|  Producto            |Prec.|Dto|Total\n";
@@ -43,11 +45,13 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
         texto << formatearCadena(precio,6);
         texto << formatearCadena(dto,2);
         texto << formatearCadena(totalLinea,6);
+        texto << "\n";
     }
     texto << "\n\n";
     texto << "Total: "+total+"\n";
     texto << "Forma de pago. "+fPago;
-    texto << "\n\n\n     GRACIAS POR SU VISITA\n";
+    texto << "\n\n\n";
+    texto << confTicket.at(1);
     texto << "\n\n\n\n";
     texto << char(0x1D) << char(0x56) << char(0x30);
     impresora.close();

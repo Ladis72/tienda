@@ -9,6 +9,8 @@ Cajas::Cajas(QWidget *parent) :
     ui(new Ui::Cajas)
 {
     ui->setupUi(this);
+    ui->label_21->hide();
+    ui->label_ventasB->hide();
     recuperarDatosUltimoArqueo();
     ventas();
     ES();
@@ -188,11 +190,12 @@ void Cajas::ventas()
     resultado.next();
     ventasTarjeta = resultado.value(0).toDouble();
     ui->label_ventasTarjeta->setText(QString::number(ventasTarjeta));
-    nTarjetas = base->contarLineas("tickets","fpago","2");
+    nTarjetas = base->nTarjetasDesdeUltimoArqueo(fechaUltimoArqueo,horaUltimoArqueo);
     ui->labelNumeroTarjetas->setText(QString::number(nTarjetas));
     resultado = base->ventasDesdeUltimoArqueo(fechaUltimoArqueo,horaUltimoArqueo,"ticketss");
     resultado.first();
-    ui->label_ventasB->setText(resultado.value(0).toString());
+    ventasB = resultado.value(0).toDouble();
+    ui->label_ventasB->setText(QString::number(ventasB));
     ventasEfectivo += resultado.value(0).toDouble();
     ui->label_ventasEfectivo->setText(QString::number(ventasEfectivo));
     ui->label_ventasTotales->setText(QString::number(ventasEfectivo+ventasTarjeta));
@@ -208,6 +211,23 @@ void Cajas::ES()
     }else{
         ui->labelEntradas->setStyleSheet("color:blue");
 
+    }
+}
+
+void Cajas::keyPressEvent(QKeyEvent *e)
+{
+    switch (e->key()) {
+    case Qt::Key_F2:
+        ui->label_21->show();
+        ui->label_ventasB->show();
+        ui->label_ventasTotales->setText(QString::number(ventasEfectivo+ventasTarjeta+ventasB));
+        break;
+    default:
+        ui->label_21->hide();
+        ui->label_ventasB->hide();
+        ui->label_ventasTotales->setText(QString::number(ventasEfectivo+ventasTarjeta));
+
+        break;
     }
 }
 

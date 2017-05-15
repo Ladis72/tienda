@@ -31,6 +31,9 @@ private slots:
 
     void on_lineEditNombre_returnPressed();
 
+
+    void on_lineEditCod_editingFinished();
+
 private:
     Ui::Clientes *ui;
 

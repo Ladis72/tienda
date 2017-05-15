@@ -2,6 +2,7 @@
 #include "ui_tpv.h"
 #include "dialogfecha.h"
 #include "imprimirfactura.h"
+#include "imprimirticket.h"
 #include <QItemDelegate>
 #include <QDebug>
 #include <QDate>
@@ -400,22 +401,22 @@ void Tpv::on_btn_cobrar_clicked()
 
     if (totalizacion->exec() == totalizacion->Accepted){
         //QFile impresora("/dev/lp0");
-        QFile impresora("ticket.txt");
+//        QFile impresora("ticket.txt");
 
-        impresora.open(QIODevice::WriteOnly);
-            QTextStream texto(&impresora);
-            texto << "\n";
-            texto << "HERBOLARIO EMEICJAC\n";
-            texto << "C/Perines 14 bajo\n";
-            texto << "Tlfn: 942-37-20-27\n";
-            texto << "N.I.F.: 20196639-V\n";
-            texto << "E-mail: emeicjac@emeicjac.com\n";
-            texto << "Web: emeicjac.com\n\n";
-            texto << QDateTime::currentDateTime().toString("dd-MMM-yyyy  HH:mm:ss");
-            texto << "    Ticket:" << QString::number(ticket);
-            texto <<"\n";
-            texto << "UDS | Producto            |Prec.|Dto|Total\n";
-            texto << "------------------------------------------\n";
+//        impresora.open(QIODevice::WriteOnly);
+//            QTextStream texto(&impresora);
+//            texto << "\n";
+//            texto << "HERBOLARIO EMEICJAC\n";
+//            texto << "C/Perines 14 bajo\n";
+//            texto << "Tlfn: 942-37-20-27\n";
+//            texto << "N.I.F.: 20196639-V\n";
+//            texto << "E-mail: emeicjac@emeicjac.com\n";
+//            texto << "Web: emeicjac.com\n\n";
+//            texto << QDateTime::currentDateTime().toString("dd-MMM-yyyy  HH:mm:ss");
+//            texto << "    Ticket:" << QString::number(ticket);
+//            texto <<"\n";
+//            texto << "UDS | Producto            |Prec.|Dto|Total\n";
+//            texto << "------------------------------------------\n";
         for(int i = 0; i < modeloTicket->rowCount(); i++){
             lineaTicket.clear();
             if (totalizacion->facturacion == "1" && base.existeDatoEnTabla(QSqlDatabase::database("DB"),"ticketss","ticket",QString::number(ticket)) == false) {
@@ -437,27 +438,27 @@ void Tpv::on_btn_cobrar_clicked()
             dato = lineaTicket.at(3);
             dato = formatearCadena(dato,3);
             qDebug() << dato;
-            texto << dato;
+//            texto << dato;
             //texto << " ";
             dato = lineaTicket.at(2);
             dato = formatearCadena(dato,23);
             qDebug() << dato;
-            texto << dato;
-            texto << " ";
+//            texto << dato;
+//            texto << " ";
             dato = lineaTicket.at(5);
             dato = formatearCadena(dato,6);
-            texto << dato;
+//            texto << dato;
             //texto << " ";
             dato.clear();
             dato = lineaTicket.at(6);
             dato = formatearCadena(dato,2);
-            texto << dato;
-            texto << " ";
+//            texto << dato;
+//            texto << " ";
             dato.clear();
             dato = lineaTicket.at(7);
             dato = formatearCadena(dato,6);
-            texto << dato;
-            texto << "\n";
+//            texto << dato;
+//            texto << "\n";
             dato.clear();
             qDebug() << lineaTicket;
             base.grabarLineaTicket(lineaTicket);
@@ -486,12 +487,12 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(base.idFormaPago(totalizacion->efectivo));
         totalTicket.append(totalizacion->facturacion);
 
-        texto << "\n\nTotal:";
-        texto << QString::number(totalizacion->total)+"\n";
-        texto << totalizacion->efectivo;
-        texto << "\n\n\n     GRACIAS POR SU VISITA\n";
-        texto << "\n\n\n\n";
-        texto << char(0x1D) << char(0x56) << char(0x30);
+//        texto << "\n\nTotal:";
+//        texto << QString::number(totalizacion->total)+"\n";
+//        texto << totalizacion->efectivo;
+//        texto << "\n\n\n     GRACIAS POR SU VISITA\n";
+//        texto << "\n\n\n\n";
+//        texto << char(0x1D) << char(0x56) << char(0x30);
         QString serie;
         serie = "ticketss";
         if (totalizacion->facturacion == "0") {
@@ -504,9 +505,10 @@ void Tpv::on_btn_cobrar_clicked()
         qDebug() << serie;
 
         emit on_pushButtonBorrarTodo_clicked();
-        impresora.close();
+//        impresora.close();
         if (totalizacion->ticket == true && totalizacion->factura == false) {
-            system("less ./ticket.txt >> /dev/lp0");
+//            system("less ./ticket.txt >> /dev/lp0");
+                ImprimirTicket(QString::number(ticket-1),"ticket");
         }else if (totalizacion->factura == true) {
             ImprimirFactura(QString::number(ticket-1));
         }

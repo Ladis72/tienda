@@ -283,3 +283,21 @@ void pedidos::on_pushButtonModificar_clicked()
     editando = true;
     emit on_pushButtonAnadir_clicked();
 }
+
+void pedidos::on_leIva_editingFinished()
+{
+    if (ui->leIva->text() != "4" && ui->leIva->text() != "10" && ui->leIva->text() != "21") {
+        QMessageBox::information(this,"Error en el IVA","Ha escrito un IVA diferente de los permitidos");
+        ui->leIva->clear();
+        ui->leIva->setFocus();
+    }
+}
+
+void pedidos::on_dateEdit_editingFinished()
+{
+    if (ui->dateEdit->date() <= QDate::currentDate()) {
+        QMessageBox::information(this,"Error en fecha de caducidad","La fecha no puede ser anterior al día de hoy");
+        ui->dateEdit->setFocus();
+        ui->dateEdit->setDate(QDate::currentDate());
+    }
+}

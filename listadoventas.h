@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QVBoxLayout>
 #include <QStandardItemModel>
+#include <QKeyEvent>
 #include "base_datos.h"
 
 namespace Ui {
@@ -31,6 +32,7 @@ private:
     baseDatos *base;
     QStandardItemModel *modeloTabla;
     void sumarVentas(QStandardItemModel *modelo);
+    void keyPressEvent(QKeyEvent *e);
 };
 
 #endif // LISTADOVENTAS_H

@@ -64,6 +64,7 @@ void Caducados::on_pushButton_clicked()
     ui->lineEditDescripcion->clear();
     ui->comboBox->clear();
     ui->spinBox->setValue(1);
+    ui->lineEditCodigo->setFocus();
 }
 
 void Caducados::on_lineEditDescripcion_returnPressed()

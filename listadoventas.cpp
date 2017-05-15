@@ -47,6 +47,9 @@ void ListadoVentas::on_pushButtonVer_clicked()
     modeloTabla->setHeaderData(2,Qt::Horizontal,"VENTAS B");
     ui->tableView->setModel(modeloTabla);
     sumarVentas(modeloTabla);
+    ui->tableView->setColumnHidden(2,true);
+    ui->labelTotalB->hide();
+    ui->labelTotal2->hide();
 }
 
 void ListadoVentas::on_tableView_activated(const QModelIndex &index)
@@ -96,6 +99,24 @@ void ListadoVentas::sumarVentas(QStandardItemModel *modelo)
     }
     ui->labelTotal->setText(QString::number(A));
     ui->labelTotalB->setText(QString::number(B));
+    ui->labelTotal2->setText(QString::number(A+B));
+}
+
+void ListadoVentas::keyPressEvent(QKeyEvent *e)
+{
+    switch (e->key()) {
+    case Qt::Key_F2:
+        ui->labelTotalB->show();
+        ui->labelTotal2->show();
+        ui->tableView->setColumnHidden(2,false);
+        break;
+    default:
+        ui->labelTotalB->hide();
+        ui->labelTotal2->hide();
+        ui->tableView->setColumnHidden(2,true);
+
+        break;
+    }
 }
 
 void ListadoVentas::on_pushButtonImprimir_clicked()

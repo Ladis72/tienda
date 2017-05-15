@@ -164,7 +164,11 @@ color: rgb(255, 25, 5);</string>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QLineEdit" name="lineEditCod"/>
+           <widget class="QLineEdit" name="lineEditCod">
+            <property name="maxLength">
+             <number>13</number>
+            </property>
+           </widget>
           </item>
           <item row="6" column="5">
            <widget class="QLabel" name="label_11">
@@ -189,8 +193,17 @@ color: rgb(255, 25, 5);</string>
           </item>
           <item row="3" column="6">
            <widget class="QLineEdit" name="lineEditCosto">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <property name="inputMask">
+             <string/>
+            </property>
             <property name="maxLength">
-             <number>6</number>
+             <number>32767</number>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
             </property>
            </widget>
           </item>

@@ -158,3 +158,10 @@ void Tienda::on_pushButtonCaducados_clicked()
     Caduca = new Caducados(this);
     Caduca->exec();
 }
+
+
+void Tienda::on_pushButtonTicket_clicked()
+{
+    CTicket = new ConfigTicket(this);
+    CTicket->exec();
+}

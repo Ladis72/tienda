@@ -131,6 +131,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         datos.append(ean);
         datos.append(descripcion);
         datos.append(QString::number(pvp));
+        datos.append(tipoIva);
         datos.append(QString::number(precioCosto));
         datos.append(fecha);
         if(base.actualizarArticulosDesdeCompras(datos)){
