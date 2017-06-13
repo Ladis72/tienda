@@ -49,7 +49,9 @@ SOURCES += main.cpp\
     imprimirticket.cpp \
     caducados.cpp \
     imprimirfactura.cpp \
-    configticket.cpp
+    configticket.cpp \
+    configbase.cpp \
+    visorimagenes.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -88,7 +90,9 @@ HEADERS  += tienda.h \
     imprimirticket.h \
     caducados.h \
     imprimirfactura.h \
-    configticket.h
+    configticket.h \
+    configbase.h \
+    visorimagenes.h
 
 FORMS    += tienda.ui \
     tpv.ui \
@@ -121,7 +125,9 @@ FORMS    += tienda.ui \
     salidas.ui \
     etiquetas.ui \
     caducados.ui \
-    configticket.ui
+    configticket.ui \
+    configbase.ui \
+    visorimagenes.ui
 include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
 RESOURCES += \

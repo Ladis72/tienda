@@ -7,28 +7,58 @@ baseDatos::baseDatos()
 
 }
 
-QSqlDatabase baseDatos::conectar(){
+bool baseDatos::conectar(QString host , QString puerto , QString baseDatos , QString usuario , QString clave){
 
 
+    QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL","DB");
+    db.setHostName(host);
+    db.setDatabaseName(baseDatos);
+    db.setUserName(usuario);
+    db.setPassword(clave);
+    db.setPort(puerto.toInt());
+        if(!db.open()){
+        QMessageBox mensaje;
+        mensaje.setText("No se puede continuar. "+db.lastError().text());
+        mensaje.setWindowTitle ("Error");
+        mensaje.exec();
+        return false;
+        }
 
-       db = QSqlDatabase::database();
-       db = QSqlDatabase::addDatabase("QMYSQL","DB");
-       db.setHostName("localhost");
-       db.setDatabaseName("tienda");
-       db.setUserName("root");
-       db.setPassword("meganizado");
-       db.setPort(3306);
+return true;
 
-       if(!db.open()){
-           QMessageBox mensaje;
-           mensaje.setText("No se puede continuar"+db.lastError().text());
-           mensaje.setWindowTitle ("Error");
-           mensaje.exec();
-           return QSqlDatabase();
-       }
+}
 
-return db;
+bool baseDatos::guardarDatosConexion(QString host, QString puerto, QString baseDatos, QString usuario, QString clave)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("UPDATE configBase SET servidor =? , puerto =?, baseDatos =? , usuario =? , clave =? WHERE id=1");
+    consulta.bindValue(0,host);
+    consulta.bindValue(1,puerto.toInt());
+    consulta.bindValue(2,baseDatos);
+    consulta.bindValue(3,usuario);
+    consulta.bindValue(4,clave);
+    if (!consulta.exec()) {
+        QMessageBox mensaje;
+        mensaje.setText("No se han podido guardar los datos"+consulta.lastError().text());
+        mensaje.setWindowTitle("Error");
+        mensaje.exec();
+        return false;
+    }
+    return true;
+}
 
+QStringList baseDatos::datosConexion()
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT * FROM configBase");
+    consulta.first();
+    QStringList datos;
+    datos.clear();
+    qDebug() << consulta.size();
+    for (int i = 1; i < 6; ++i) {
+        datos.append(consulta.value(i).toString());
+    }
+    return datos;
 }
 
 bool baseDatos::base_datos_abierta(){

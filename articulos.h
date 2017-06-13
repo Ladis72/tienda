@@ -7,9 +7,11 @@
 #include "familias.h"
 #include "fabricantes.h"
 #include "stock.h"
+#include "visorimagenes.h"
 
 
 #include <QDialog>
+#include <QLabel>
 
 namespace Ui {
 class Articulos;
@@ -79,6 +81,9 @@ private slots:
 
     void on_pushButtonCaducados_clicked();
 
+    void on_pushButtonVer_2_clicked();
+    void mostrarFoto();
+
 private:
     Ui::Articulos *ui;
 
@@ -90,6 +95,7 @@ private:
     QDataWidgetMapper mapper;
     QSqlQuery consulta;
     Stock *stock;
+    VisorImagenes *visor;
 
     //Familias *F;
 
@@ -100,6 +106,21 @@ private:
     bool eventFilter(QObject *obj, QEvent *event);
     void cargarCompras();
     void cargarCodAux();
+};
+
+class ClickableLabel : public QLabel {
+    Q_OBJECT
+
+public:
+    explicit ClickableLabel(QWidget* parent = Q_NULLPTR, Qt::WindowFlags f = Qt::WindowFlags());
+    ~ClickableLabel();
+
+signals:
+    void clicked();
+
+protected:
+    void mousePressEvent(QMouseEvent* event);
+
 };
 
 #endif // ARTICULOS_H

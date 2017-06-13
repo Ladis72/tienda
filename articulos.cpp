@@ -11,7 +11,9 @@ Articulos::Articulos(QWidget *parent) :
     ui(new Ui::Articulos)
 {
     ui->setupUi(this);
-
+    ClickableLabel *fotoHR = new ClickableLabel(ui->labelFoto);
+    fotoHR->setMinimumSize(200,200);
+    connect(fotoHR,SIGNAL(clicked()),this,SLOT(mostrarFoto()));
     modeloTabla = new QSqlQueryModel;
     recargarTabla();
 
@@ -30,6 +32,8 @@ Articulos::Articulos(QWidget *parent) :
     mapper.addMapping(ui->lineEditCosto,12);
     mapper.addMapping(ui->lineEditCodFabricante,13);
     mapper.addMapping(ui->lineEditFoto,14);
+    mapper.addMapping(ui->plainTextEdit,15);
+
     mapper.toFirst();
     refrescarBotones(mapper.currentIndex());
 
@@ -475,4 +479,34 @@ void Articulos::on_pushButtonCaducados_clicked()
 {
     Caducados *cad = new Caducados(ui->lineEditCod->text(),this);
     cad->exec();
+}
+
+void Articulos::on_pushButtonVer_2_clicked()
+{
+
+}
+
+void Articulos::mostrarFoto()
+{
+    VisorImagenes *visor = new VisorImagenes(ui->lineEditFoto->text());
+    visor->showMaximized();
+ qDebug() << "LADIS";
+}
+
+
+
+
+ClickableLabel::ClickableLabel(QWidget *parent, Qt::WindowFlags f) : QLabel(parent)
+{
+
+}
+
+ClickableLabel::~ClickableLabel()
+{
+
+}
+
+void ClickableLabel::mousePressEvent(QMouseEvent *event)
+{
+    emit clicked();
 }
