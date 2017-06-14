@@ -22,7 +22,7 @@ Articulos::Articulos(QWidget *parent) :
     mapper.addMapping(ui->lineEditDesc,1);
     mapper.addMapping(ui->lineEditPvp,2);
     mapper.addMapping(ui->lineEditIva,3);
-    mapper.addMapping(ui->lineEditStock,4);
+    //mapper.addMapping(ui->lineEditStock,4);
     mapper.addMapping(ui->lineEditMinimo,5);
     mapper.addMapping(ui->lineEditMaximo,6);
     mapper.addMapping(ui->lineEditPendientes,8);
@@ -57,6 +57,7 @@ void Articulos::refrescarBotones(int i)
 
     ui->labelFoto->setPixmap(imagenAjustada);
     ui->labelNombrePrecio->setText(ui->lineEditDesc->text()+ "        "+ui->lineEditPvp->text());
+    ui->lineEditStock->setText(base.sumarStockArticulo(ui->lineEditCod->text()));
     cargarVentas();
     cargarCompras();
     cargarCodAux();
