@@ -11,6 +11,7 @@ VerFacturas::VerFacturas(QWidget *parent) :
     ui->setupUi(this);
     llenarProveedores();
     llenarTabla();
+    idFactura="";
 }
 
 VerFacturas::~VerFacturas()
@@ -86,6 +87,8 @@ void VerFacturas::on_checkBoxTodosProveedores_clicked(bool checked)
 
 void VerFacturas::on_pushButtonVer_clicked()
 {
+    idFactura="";
+
     llenarTabla();
 }
 
@@ -93,14 +96,27 @@ void VerFacturas::on_pushButtonVer_clicked()
 
 void VerFacturas::on_tableView_doubleClicked(const QModelIndex &index)
 {
-//    QModelIndex indice = modeloTabla->index(index.row(),0);
-//    idFactura = modeloTabla->data(indice,Qt::EditRole).toString();
-//    qDebug() << idFactura;
+    QModelIndex indice = modeloTabla->index(index.row(),0);
+    idFactura = modeloTabla->data(indice,Qt::EditRole).toString();
+    if (idFactura == "") {
+        return;
+    }
+    VisorFacturas *visor = new VisorFacturas(idFactura,this);
+    visor->show();
 }
 
 void VerFacturas::on_tableView_clicked(const QModelIndex &index)
 {
     QModelIndex indice = modeloTabla->index(index.row(),0);
     idFactura = modeloTabla->data(indice,Qt::EditRole).toString();
-    qDebug() << idFactura;
+
+}
+
+void VerFacturas::on_pushButtonVerFactura_clicked()
+{
+    if (idFactura == "") {
+        return;
+    }
+    VisorFacturas *visor = new VisorFacturas(idFactura,this);
+    visor->show();
 }

@@ -35,3 +35,22 @@ static bool createConnection()
 return true;
 
 }
+static bool createConnection(QString host , QString puerto , QString baseDatos , QString usuario , QString clave)
+{
+    QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL","DB");
+    db.setHostName(host);
+    db.setDatabaseName(baseDatos);
+    db.setUserName(usuario);
+    db.setPassword(clave);
+    db.setPort(puerto.toInt());
+        if(!db.open()){
+        QMessageBox mensaje;
+        mensaje.setText("No se puede continuar"+db.lastError().text());
+        mensaje.setWindowTitle ("Error");
+        mensaje.exec();
+        return false;
+        }
+
+return true;
+
+}

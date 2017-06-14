@@ -1,6 +1,6 @@
 #include "tienda.h"
 #include "ui_tienda.h"
-
+#include "conexion.h"
 #include <QDebug>
 #include <QMessageBox>
 
@@ -164,4 +164,10 @@ void Tienda::on_pushButtonTicket_clicked()
 {
     CTicket = new ConfigTicket(this);
     CTicket->exec();
+}
+
+void Tienda::on_pushButtonConfigDB_clicked()
+{
+    CBase = new ConfigBase(this);
+    CBase->exec();
 }

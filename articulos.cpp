@@ -11,7 +11,9 @@ Articulos::Articulos(QWidget *parent) :
     ui(new Ui::Articulos)
 {
     ui->setupUi(this);
-
+    ClickableLabel *fotoHR = new ClickableLabel(ui->labelFoto);
+    fotoHR->setMinimumSize(200,200);
+    connect(fotoHR,SIGNAL(clicked()),this,SLOT(mostrarFoto()));
     modeloTabla = new QSqlQueryModel;
     recargarTabla();
 
@@ -20,7 +22,7 @@ Articulos::Articulos(QWidget *parent) :
     mapper.addMapping(ui->lineEditDesc,1);
     mapper.addMapping(ui->lineEditPvp,2);
     mapper.addMapping(ui->lineEditIva,3);
-    mapper.addMapping(ui->lineEditStock,4);
+    //mapper.addMapping(ui->lineEditStock,4);
     mapper.addMapping(ui->lineEditMinimo,5);
     mapper.addMapping(ui->lineEditMaximo,6);
     mapper.addMapping(ui->lineEditPendientes,8);
@@ -30,6 +32,8 @@ Articulos::Articulos(QWidget *parent) :
     mapper.addMapping(ui->lineEditCosto,12);
     mapper.addMapping(ui->lineEditCodFabricante,13);
     mapper.addMapping(ui->lineEditFoto,14);
+    mapper.addMapping(ui->plainTextEdit,15);
+
     mapper.toFirst();
     refrescarBotones(mapper.currentIndex());
 
@@ -53,6 +57,7 @@ void Articulos::refrescarBotones(int i)
 
     ui->labelFoto->setPixmap(imagenAjustada);
     ui->labelNombrePrecio->setText(ui->lineEditDesc->text()+ "        "+ui->lineEditPvp->text());
+    ui->lineEditStock->setText(base.sumarStockArticulo(ui->lineEditCod->text()));
     cargarVentas();
     cargarCompras();
     cargarCodAux();
@@ -475,4 +480,34 @@ void Articulos::on_pushButtonCaducados_clicked()
 {
     Caducados *cad = new Caducados(ui->lineEditCod->text(),this);
     cad->exec();
+}
+
+void Articulos::on_pushButtonVer_2_clicked()
+{
+
+}
+
+void Articulos::mostrarFoto()
+{
+    VisorImagenes *visor = new VisorImagenes(ui->lineEditFoto->text());
+    visor->showMaximized();
+ qDebug() << "LADIS";
+}
+
+
+
+
+ClickableLabel::ClickableLabel(QWidget *parent, Qt::WindowFlags f) : QLabel(parent)
+{
+
+}
+
+ClickableLabel::~ClickableLabel()
+{
+
+}
+
+void ClickableLabel::mousePressEvent(QMouseEvent *event)
+{
+    emit clicked();
 }
