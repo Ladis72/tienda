@@ -424,17 +424,20 @@ void Articulos::on_radioButtonVentasAno_clicked()
 void Articulos::on_radioButtonFacturas_clicked()
 {
     cargarCompras();
+    ui->pushButtonVerFactura->setEnabled(true);
 }
 
 void Articulos::on_radioButtonMeses_clicked()
 {
     cargarCompras();
+    ui->pushButtonVerFactura->setEnabled(false);
 
 }
 
 void Articulos::on_radioButtonAnos_clicked()
 {
     cargarCompras();
+    ui->pushButtonVerFactura->setEnabled(false);
 
 }
 
@@ -465,10 +468,13 @@ void Articulos::on_pushButtonEliminar_clicked()
 
 void Articulos::on_tableViewCompras_clicked(const QModelIndex &index)
 {
+    if(ui->radioButtonFacturas->isChecked()){
     QModelIndex indice=modeloCompras.index(index.row(),1);
-
-    QString dato=modeloCompras.data(indice,Qt::EditRole).toString();
-    ui->labelProveedor->setText(base.nombreProveedor(dato));
+    idProveedor = modeloCompras.data(indice,Qt::EditRole).toString();
+    ui->labelProveedor->setText(base.nombreProveedor(idProveedor));
+    indice = modeloCompras.index(index.row(),0);
+    nFactura = modeloCompras.data(indice,Qt::EditRole).toString();
+    }
 }
 
 void Articulos::on_pushButtonEtiqueta_clicked()
@@ -491,7 +497,6 @@ void Articulos::mostrarFoto()
 {
     VisorImagenes *visor = new VisorImagenes(ui->lineEditFoto->text());
     visor->showMaximized();
- qDebug() << "LADIS";
 }
 
 
@@ -510,4 +515,13 @@ ClickableLabel::~ClickableLabel()
 void ClickableLabel::mousePressEvent(QMouseEvent *event)
 {
     emit clicked();
+}
+
+
+
+void Articulos::on_pushButtonVerFactura_clicked()
+{
+
+    VisorFacturas *factura = new VisorFacturas(nFactura,this);
+    factura->show();
 }
