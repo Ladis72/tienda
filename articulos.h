@@ -8,6 +8,7 @@
 #include "fabricantes.h"
 #include "stock.h"
 #include "visorimagenes.h"
+#include "visorfacturas.h"
 
 
 #include <QDialog>
@@ -84,6 +85,9 @@ private slots:
     void on_pushButtonVer_2_clicked();
     void mostrarFoto();
 
+
+    void on_pushButtonVerFactura_clicked();
+
 private:
     Ui::Articulos *ui;
 
@@ -96,6 +100,8 @@ private:
     QSqlQuery consulta;
     Stock *stock;
     VisorImagenes *visor;
+    VisorFacturas *factura;
+    QString nFactura , idProveedor;
 
     //Familias *F;
 
