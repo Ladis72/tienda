@@ -71,6 +71,7 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
 
 }
 
+
 void ImprimirTicket::ImprimirTicketRegalo()
 {
 

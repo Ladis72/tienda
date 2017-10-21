@@ -304,6 +304,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="btn_preTicket">
+       <property name="text">
+        <string>Pre-ticket</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btn_cerrar">
        <property name="toolTip">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Cerrar Esc&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
