@@ -301,15 +301,6 @@ bool baseDatos::insertarArticulo(QSqlDatabase db, QStringList datos)
 
 bool baseDatos::descontarArticulo(QString cod, int uds)
 {
-//    QSqlQuery consulta(QSqlDatabase::database("DB"));
-//    consulta.prepare("UPDATE articulos SET stock = stock - ? WHERE cod LIKE ?");
-//    consulta.bindValue(0,uds);
-//    consulta.bindValue(1,cod);
-//    if(consulta.exec()){
-//        return true;
-//    }
-//    qDebug() << consulta.lastError().text();
-//    return false;
 
     QSqlQuery consulta(QSqlDatabase::database("DB"));
 
@@ -342,6 +333,9 @@ bool baseDatos::descontarArticulo(QString cod, int uds)
             return true;
         }
     }
+    }else {
+        qDebug() << "No hay lotes de ese artículo";
+        crearLote(cod,"","2000-01-01",QString::number(0-uds));
     }
 }
 
@@ -1205,6 +1199,16 @@ QString baseDatos::idLote(QString cod, QString lote, QString fecha)
     consulta.first();
     if(consulta.isValid()) return consulta.value(0).toString();
     return "0";
+}
+
+int baseDatos::unidadesLote(QString idLote){
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT cantidad FROM lotes WHERE id ='"+idLote+"'");
+    consulta.first();
+    if (consulta.isValid()) {
+        return consulta.value(0).toInt();
+    }
+    return 0;
 }
 
 void baseDatos::aumentarLote(QString idLote, int uds)

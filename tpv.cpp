@@ -446,27 +446,17 @@ void Tpv::on_btn_cobrar_clicked()
             dato = lineaTicket.at(3);
             dato = formatearCadena(dato,3);
             qDebug() << dato;
-//            texto << dato;
-            //texto << " ";
             dato = lineaTicket.at(2);
             dato = formatearCadena(dato,23);
             qDebug() << dato;
-//            texto << dato;
-//            texto << " ";
             dato = lineaTicket.at(5);
             dato = formatearCadena(dato,6);
-//            texto << dato;
-            //texto << " ";
             dato.clear();
             dato = lineaTicket.at(6);
             dato = formatearCadena(dato,2);
-//            texto << dato;
-//            texto << " ";
             dato.clear();
             dato = lineaTicket.at(7);
             dato = formatearCadena(dato,6);
-//            texto << dato;
-//            texto << "\n";
             dato.clear();
             qDebug() << lineaTicket;
             base.grabarLineaTicket(lineaTicket);
@@ -705,5 +695,7 @@ void Tpv::on_btn_preTicket_clicked()
         //texto << confTicket.at(4);
         texto << "\n\n";
         impresora.close();
-
+        QString imprimir = "less ./ticket.txt >> "+confTicket.at(3);
+        const char* ch = imprimir.toLocal8Bit().constData();
+        system(ch);
 }

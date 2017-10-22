@@ -112,6 +112,8 @@ public:
     void crearLote(QString ean,QString lote,QString fecha,QString uds);
     QSqlQuery lotesProducto(QString cod);
     QString sumarStockArticulo(QString id);
+    int unidadesLote(QString idLote);
+
 
 //Funciones LISTADOS
     QString ticketCercanoFecha(QString tabla, QString fecha, QString cuando);
