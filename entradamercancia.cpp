@@ -21,11 +21,43 @@ EntradaMercancia::~EntradaMercancia()
 void EntradaMercancia::on_pushButtonAceptar_clicked()
 {
     for (int i = 0; i < mTablaEntradas->rowCount(); ++i) {
-    QString idLote = base->idLote(mTablaEntradas->record(i).value(1).toString(),"",mTablaEntradas->record(i).value(5).toString());
+        QString cod = mTablaEntradas->record(i).value(1).toString();
+        QString fechaCaducidad = mTablaEntradas->record(i).value(5).toString();
+        QString uds = mTablaEntradas->record(i).value(4).toString();
+
+
+
+        // Buscar si hay lotes con unidades pendientes
+        QString idLote = base->idLote(mTablaEntradas->record(i).value(1).toString(),"","2000-01-01");
+        qDebug() << "IDLOTE "+ idLote;
+        if (idLote != "0") {
+            int pendientes = base->unidadesLote(idLote);
+            if(abs(pendientes) > uds.toInt() ){
+                base->aumentarLote(idLote,uds.toInt());
+            }else if (abs(pendientes) == uds.toInt()) {
+                base->ejecutarSentencia("DELETE FROM lotes WHERE id = '"+idLote+"'");
+            }else {
+                base->ejecutarSentencia("DELETE FROM lotes WHERE id = '"+idLote+"'");
+                int unidades = uds.toInt()+pendientes;
+                idLote = base->idLote(cod,"",fechaCaducidad);
+                if (idLote == "") {
+                    base->crearLote(cod,"",fechaCaducidad,QString::number(unidades));
+                }else {
+                    base->aumentarLote(idLote,unidades);
+                }
+            }
+        }else {
+            idLote = base->idLote(cod,"",fechaCaducidad);
+            if (idLote == "") {
+                base->crearLote(cod,"",fechaCaducidad,uds);
+            }else {
+                base->aumentarLote(idLote,uds.toInt());
+            }
+        }
+
+    idLote = base->idLote(mTablaEntradas->record(i).value(1).toString(),"",mTablaEntradas->record(i).value(5).toString());
     qDebug() << idLote;
-    QString cod = mTablaEntradas->record(i).value(1).toString();
-    QString fechaCaducidad = mTablaEntradas->record(i).value(5).toString();
-    QString uds = mTablaEntradas->record(i).value(4).toString();
+
 
     if (idLote == "0") {
         base->crearLote(cod,"",fechaCaducidad,uds);
