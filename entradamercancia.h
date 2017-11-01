@@ -31,6 +31,8 @@ private slots:
 
     void on_tableView_clicked(const QModelIndex &index);
 
+    void on_dateEditCaducidad_editingFinished();
+
 private:
     Ui::EntradaMercancia *ui;
     baseDatos *base;
