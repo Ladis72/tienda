@@ -699,3 +699,4 @@ void Tpv::on_btn_preTicket_clicked()
         const char* ch = imprimir.toLocal8Bit().constData();
         system(ch);
 }
+

@@ -13,6 +13,9 @@
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
   <layout class="QGridLayout" name="gridLayout_3">
    <item row="7" column="6">
     <layout class="QGridLayout" name="gridLayout">
@@ -358,7 +361,7 @@
      <item row="0" column="9">
       <widget class="QLabel" name="label_16">
        <property name="text">
-        <string>I.V.A.</string>
+        <string>&amp;I.V.A.</string>
        </property>
        <property name="buddy">
         <cstring>leIva</cstring>
