@@ -52,7 +52,8 @@ SOURCES += main.cpp\
     configticket.cpp \
     configbase.cpp \
     visorimagenes.cpp \
-    visorfacturas.cpp
+    visorfacturas.cpp \
+    prestamos.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -94,7 +95,8 @@ HEADERS  += tienda.h \
     configticket.h \
     configbase.h \
     visorimagenes.h \
-    visorfacturas.h
+    visorfacturas.h \
+    prestamos.h
 
 FORMS    += tienda.ui \
     tpv.ui \
@@ -130,7 +132,8 @@ FORMS    += tienda.ui \
     configticket.ui \
     configbase.ui \
     visorimagenes.ui \
-    visorfacturas.ui
+    visorfacturas.ui \
+    prestamos.ui
 include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
 RESOURCES += \
