@@ -26,6 +26,7 @@
 #include "etiquetas.h"
 #include "caducados.h"
 #include "configticket.h"
+#include "prestamos.h"
 #include "configbase.h"
 
 extern Configuracion *conf;
@@ -93,6 +94,8 @@ private slots:
 
     void on_pushButtonConfigDB_clicked();
 
+    void on_pushButtonPrestamos_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -118,6 +121,7 @@ private:
     Caducados *Caduca;
     ConfigTicket *CTicket;
     ConfigBase *CBase;
+    Prestamos *Prest;
 };
 
 #endif // TIENDA_H

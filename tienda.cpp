@@ -171,3 +171,9 @@ void Tienda::on_pushButtonConfigDB_clicked()
     CBase = new ConfigBase(this);
     CBase->exec();
 }
+
+void Tienda::on_pushButtonPrestamos_clicked()
+{
+    Prest = new Prestamos(this);
+    Prest->exec();
+}
