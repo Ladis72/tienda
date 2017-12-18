@@ -5,6 +5,7 @@ Stock::Stock(QString cod ,QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Stock)
 {
+    DateEditDelegate *dateDelegate =new DateEditDelegate;
     ui->setupUi(this);
     QSqlQuery producto(base->consulta_producto(QSqlDatabase::database("DB"),cod));
     producto.first();
@@ -19,6 +20,7 @@ Stock::Stock(QString cod ,QWidget *parent) :
     ui->tableView->hideColumn(0);
     //ui->tableView->hideColumn(1);
     ui->tableView->hideColumn(2);
+    ui->tableView->setItemDelegateForColumn(3,dateDelegate);
 
 
 }

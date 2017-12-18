@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include "base_datos.h"
+#include "dateeditdelegate.h"
 namespace Ui {
 class Stock;
 }
