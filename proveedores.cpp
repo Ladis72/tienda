@@ -117,7 +117,8 @@ void Proveedores::cargarCompras()
         ui->tableViewCompras->resizeColumnsToContents();
     }
     if (ui->radioButtonComprasAnos->isChecked()) {
-
+        modeloCompras.setQuery("SELECT year(fechaFactura) , sum(total) FROM tienda.facturas where idProveedor = '"+
+                               ui->lineEditCod->text()+"' group by year(fechaFactura) desc",QSqlDatabase::database("DB"));
         ui->tableViewCompras->setModel(&modeloCompras);
         ui->tableViewCompras->resizeColumnsToContents();
     }
