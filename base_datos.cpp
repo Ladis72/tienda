@@ -909,6 +909,7 @@ bool baseDatos::insertarES(QStringList datos)
     consulta.bindValue(1,datos.at(1));
     consulta.bindValue(2,datos.at(2));
     consulta.bindValue(3,datos.at(3));
+    consulta.bindValue(4,datos.at(4));
     if(consulta.exec()) return true;
     return false;
 }
