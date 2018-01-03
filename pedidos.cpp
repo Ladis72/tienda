@@ -139,6 +139,9 @@ void pedidos::on_pushButtonAnadir_clicked()
         int tipoIva = ui->leIva->text().toInt();
         float iva = baseTotal*tipoIva/100;
         float re;
+
+        if(base.leerConfiguracion() == "1"){
+
         switch (tipoIva) {
         case 21:
             re = baseTotal*5.2/100;
@@ -153,6 +156,7 @@ void pedidos::on_pushButtonAnadir_clicked()
             re = 0;
             break;
         };
+        }else {re = 0;}
         float baseProducto = ui->leTotalLinea->text().toFloat()/ui->leUds->text().toFloat();
 
     datos.append(idPedido);
@@ -232,7 +236,7 @@ void pedidos::on_leCod_returnPressed()
 void pedidos::on_pushButtonBorrar_clicked()
 {
     if(lineaSeleccionada.isEmpty()){
-        QMessageBox::information(this,"ATENCIÓN","Primero debe seleccionar una linea para poder borrarlo");
+        QMessageBox::information(this,"ATENCIÓN","Primero debe seleccionar una linea para poder borrarla");
         return;
     }
     base.borrarLineaPedido(lineaSeleccionada);

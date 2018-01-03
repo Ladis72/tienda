@@ -11,6 +11,9 @@ Tienda::Tienda(QWidget *parent) :
 {
     ui->setupUi(this);
     qDebug() << conf->usuario;
+    QPixmap logo;
+    logo.load("./documentos/logo.jpg");
+    ui->logo->setPixmap(logo);
 
 }
 
@@ -176,4 +179,10 @@ void Tienda::on_pushButtonPrestamos_clicked()
 {
     Prest = new Prestamos(this);
     Prest->exec();
+}
+
+void Tienda::on_pushButtonConfiguracion_clicked()
+{
+    ConfigOtros = new ConfiguracionOtros(this);
+    ConfigOtros->exec();
 }

@@ -318,6 +318,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="pushButtonConfiguracion">
+            <property name="text">
+             <string>Otras configuraciones</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="pushButtonPermisos">
             <property name="text">
              <string>Permisos</string>
@@ -381,8 +388,8 @@
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>119</x>
-     <y>125</y>
+     <x>129</x>
+     <y>94</y>
     </hint>
     <hint type="destinationlabel">
      <x>539</x>

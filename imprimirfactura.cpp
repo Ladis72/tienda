@@ -42,8 +42,8 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent) : QObject(par
     }
     QtRPT *informe = new QtRPT();
     informe->recordCount.append(modeloTabla->rowCount());
-    informe->loadReport(":/archivos/factura.xml");
-
+    //informe->loadReport(":/archivos/factura.xml");
+    informe->loadReport("./documentos/factura.xml");
     connect(informe, &QtRPT::setValue, [&](const int recNo,
             const QString paramName,
             QVariant &paramValue,

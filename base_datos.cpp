@@ -1328,6 +1328,26 @@ QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final)
     return consulta;
 }
 
+QString baseDatos::leerConfiguracion()
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT * FROM configuracion");
+    consulta.first();
+    return consulta.value("recargoeq").toString();
+}
+
+bool baseDatos::GuardarConfiguracion(int datos)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("UPDATE configuracion SET recargoeq = ? WHERE idconfiguracion = 0");
+    consulta.bindValue(0,datos);
+    qDebug() << consulta.lastError();
+    if (consulta.exec()) {
+        return true;
+    }
+    return false;
+}
+
 
 
 

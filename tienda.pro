@@ -54,7 +54,8 @@ SOURCES += main.cpp\
     visorimagenes.cpp \
     visorfacturas.cpp \
     prestamos.cpp \
-    dateeditdelegate.cpp
+    dateeditdelegate.cpp \
+    configuracionotros.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -98,7 +99,8 @@ HEADERS  += tienda.h \
     visorimagenes.h \
     visorfacturas.h \
     prestamos.h \
-    dateeditdelegate.h
+    dateeditdelegate.h \
+    configuracionotros.h
 
 FORMS    += tienda.ui \
     tpv.ui \
@@ -135,7 +137,8 @@ FORMS    += tienda.ui \
     configbase.ui \
     visorimagenes.ui \
     visorfacturas.ui \
-    prestamos.ui
+    prestamos.ui \
+    configuracionotros.ui
 include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
 RESOURCES += \

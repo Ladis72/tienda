@@ -120,6 +120,12 @@ public:
     QSqlQuery estadisticasVentaProductos(QString nPrimerTicket , QString nUltimoTicket, QString nPrimerTicketB, QString nUltimoTicketB);
     QSqlQuery listadoVentaArticulos(QString inicio , QString final);
 
+
+//Funciones de configuración
+    QString leerConfiguracion();
+    bool GuardarConfiguracion(int datos);
+
+
 private:
 
     QSqlDatabase db;

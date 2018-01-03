@@ -28,7 +28,7 @@
 #include "configticket.h"
 #include "prestamos.h"
 #include "configbase.h"
-
+#include "configuracionotros.h"
 extern Configuracion *conf;
 namespace Ui {
 class Tienda;
@@ -96,6 +96,8 @@ private slots:
 
     void on_pushButtonPrestamos_clicked();
 
+    void on_pushButtonConfiguracion_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -122,6 +124,7 @@ private:
     ConfigTicket *CTicket;
     ConfigBase *CBase;
     Prestamos *Prest;
+    ConfiguracionOtros *ConfigOtros;
 };
 
 #endif // TIENDA_H
