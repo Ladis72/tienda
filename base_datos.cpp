@@ -904,7 +904,7 @@ int baseDatos::contarLineas(QString tabla, QString campoCondicion, QString condi
 bool baseDatos::insertarES(QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("INSERT INTO entradasSalidas VALUES (NULL,?,?,?,?)");
+    consulta.prepare("INSERT INTO entradasSalidas VALUES (NULL,?,?,?,?,?)");
     consulta.bindValue(0,datos.at(0));
     consulta.bindValue(1,datos.at(1));
     consulta.bindValue(2,datos.at(2));
