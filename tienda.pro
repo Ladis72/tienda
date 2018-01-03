@@ -53,7 +53,8 @@ SOURCES += main.cpp\
     configbase.cpp \
     visorimagenes.cpp \
     visorfacturas.cpp \
-    prestamos.cpp
+    prestamos.cpp \
+    dateeditdelegate.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -96,7 +97,8 @@ HEADERS  += tienda.h \
     configbase.h \
     visorimagenes.h \
     visorfacturas.h \
-    prestamos.h
+    prestamos.h \
+    dateeditdelegate.h
 
 FORMS    += tienda.ui \
     tpv.ui \
