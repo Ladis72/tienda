@@ -241,20 +241,27 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     if (!base.contabilizarPedido(datosPedido)) {
         return false;
     }
-    qDebug() << "Albaran grabado";
+    qDebug() << "Pedido grabado";
+    QStringList datosFactura;
+    datosFactura.clear();
+    datosFactura.append(ui->lineEditNDoc->text());
+    datosFactura.append(fecha);
+    datosFactura.append(base.idProveedor(ui->labelProveedor->text()));
+    datosFactura.append(ui->leTotalBase->text());
+    datosFactura.append(ui->leTotalIva->text());
+    datosFactura.append(ui->leTotalRe->text());
+    datosFactura.append(ui->leTotal->text());
+
     if (ui->comboBox->currentText() == "Factura") {
-        QStringList datosFactura;
-        datosFactura.clear();
-        datosFactura.append(ui->lineEditNDoc->text());
-        datosFactura.append(fecha);
-        datosFactura.append(base.idProveedor(ui->labelProveedor->text()));
-        datosFactura.append(ui->leTotalBase->text());
-        datosFactura.append(ui->leTotalIva->text());
-        datosFactura.append(ui->leTotalRe->text());
-        datosFactura.append(ui->leTotal->text());
+
         datosFactura.append(ui->dateEditVencimiento->text());
         datosFactura.append("0");
         if (!base.grabarFactura(datosFactura)) {
+            return false;
+        }
+    }else {
+        datosFactura.append("0");
+        if (base.grabarAlbaran(datosFactura)) {
             return false;
         }
     }

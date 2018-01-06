@@ -116,7 +116,7 @@ void Tienda::on_pushButtonTickets_clicked()
 
 void Tienda::on_pushButtonFacturas_clicked()
 {
-    VFact = new VerFacturas;
+    VFact = new VerFacturas("facturas",this);
     VFact->exec();
 }
 
@@ -185,4 +185,10 @@ void Tienda::on_pushButtonConfiguracion_clicked()
 {
     ConfigOtros = new ConfiguracionOtros(this);
     ConfigOtros->exec();
+}
+
+void Tienda::on_pushButtonAlbaranes_clicked()
+{
+    VFact = new VerFacturas("albaranes",this);
+    VFact->exec();
 }

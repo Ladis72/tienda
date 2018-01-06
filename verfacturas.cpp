@@ -4,11 +4,12 @@
 #include <QStandardItemModel>
 
 
-VerFacturas::VerFacturas(QWidget *parent) :
+VerFacturas::VerFacturas(QString docType, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::VerFacturas)
 {
     ui->setupUi(this);
+    tipoDocumento = docType;
     llenarProveedores();
     llenarTabla();
     idFactura="";
@@ -37,11 +38,19 @@ void VerFacturas::llenarTabla()
         return;
     }
     if (ui->checkBoxTodosProveedores->isChecked()) {
+        if(tipoDocumento == "facturas"){
         sentenciaSql = "SELECT * FROM facturas WHERE fechaFactura >= '"+fechaInicial+"' AND fechaFactura <= '"+fechaFinal+"'";
+        }else{
+            sentenciaSql = "SELECT * FROM albaranes WHERE fechaFactura >= '"+fechaInicial+"' AND fechaFactura <= '"+fechaFinal+"'";
+        }
     }else{
+        if(tipoDocumento == "facturas"){
         idProveedor = base->idProveedor(ui->comboBoxProceedores->currentText());
         sentenciaSql = "SELECT * FROM facturas WHERE idProveedor = '"+idProveedor+"' AND fechaFactura >= '"+fechaInicial+"' AND fechaFactura <= '"+fechaFinal+"'";
-    }
+        }else{
+            idProveedor = base->idProveedor(ui->comboBoxProceedores->currentText());
+            sentenciaSql = "SELECT * FROM albaranes WHERE idProveedor = '"+idProveedor+"' AND fechaFactura >= '"+fechaInicial+"' AND fechaFactura <= '"+fechaFinal+"'";
+        }}
     modeloTabla = new QStandardItemModel(this);
     QSqlQuery resultado = base->ejecutarSentencia(sentenciaSql);
     qDebug() << resultado.lastError() << resultado.numRowsAffected();
@@ -61,15 +70,25 @@ void VerFacturas::llenarTabla()
         modeloTabla->setItem(i,5,itemRe);
         QStandardItem *itemTotal = new QStandardItem(resultado.value("total").toString());
         modeloTabla->setItem(i,6,itemTotal);
+        if(tipoDocumento == "facturas"){
         QStandardItem *itemFechaV = new QStandardItem(resultado.value("vencimiento").toString());
         modeloTabla->setItem(i,7,itemFechaV);
         QStandardItem *itemPagado = new QStandardItem(resultado.value("pagada").toString());
         modeloTabla->setItem(i,8,itemPagado);
+        }else{
+            QStandardItem *itemFacturada = new QStandardItem(resultado.value("facturada").toString());
+            modeloTabla->setItem(i,7,itemFacturada);
+        }
 
         resultado.next();
     }
     QStringList etiquetas;
+    if(tipoDocumento == "facturas"){
     etiquetas << "Nº Factura" << "Fecha" << "Proveedor" << "Base" << "I.V.A" << "R.E." << "Total" << "Fecha vencimiento" << "Pagada";
+    }else{
+        etiquetas << "Nº Factura" << "Fecha" << "Proveedor" << "Base" << "I.V.A" << "R.E." << "Total" << "Facturada";
+
+    }
     modeloTabla->setHorizontalHeaderLabels(etiquetas);
     ui->tableView->setModel(modeloTabla);
     ui->tableView->resizeColumnsToContents();

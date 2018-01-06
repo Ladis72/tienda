@@ -85,6 +85,7 @@ public:
     bool borrarLineaPedido(QString idLinea);
     bool contabilizarPedido(QStringList datos);
     bool grabarFactura(QStringList datos);
+    bool grabarAlbaran(QStringList datos);
     bool borrarAlbaranTmp(QString idAlbaran);
     bool pasarLineaPedidoAHistorico(QStringList datos);
     bool modificarLineaPedido(QStringList datos);

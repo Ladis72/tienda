@@ -1078,6 +1078,18 @@ bool baseDatos::grabarFactura(QStringList datos)
     return false;
 }
 
+bool baseDatos::grabarAlbaran(QStringList datos)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("INSERT INTO albaranes VALUES(NULL,?,?,?,?,?,?,?,?)");
+    for (int i = 0; i < datos.length(); ++i) {
+        consulta.bindValue(i,datos.at(i));
+    }
+    if(consulta.exec()) return true;
+    qDebug() << consulta.lastError().text();
+    return false;
+}
+
 bool baseDatos::borrarAlbaranTmp(QString idAlbaran)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
