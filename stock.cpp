@@ -14,7 +14,7 @@ Stock::Stock(QString cod ,QWidget *parent) :
     modeloLotes = new QSqlTableModel(this,QSqlDatabase::database("DB"));
     modeloLotes->setTable("lotes");
     modeloLotes->setEditStrategy(QSqlTableModel::OnManualSubmit);
-    modeloLotes->setFilter("ean ="+codProducto);
+    modeloLotes->setFilter("ean = '"+codProducto+"'");
     modeloLotes->select();
     ui->tableView->setModel(modeloLotes);
     ui->tableView->hideColumn(0);
