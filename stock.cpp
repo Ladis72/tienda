@@ -55,5 +55,15 @@ void Stock::on_pushButtonBorrar_clicked()
 
 void Stock::on_tableView_clicked(const QModelIndex &index)
 {
-   filaSeleccionada = index.row();
+    filaSeleccionada = index.row();
+}
+
+void Stock::keyPressEvent(QKeyEvent *e)
+{
+    if(e->modifiers() == Qt::ControlModifier && e->key() == Qt::Key_F11){
+        ui->pushButton->setEnabled(true);
+        ui->pushButtonActualizar->setEnabled(true);
+        ui->pushButtonBorrar->setEnabled(true);
+    }
+
 }

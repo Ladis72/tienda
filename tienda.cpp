@@ -192,3 +192,9 @@ void Tienda::on_pushButtonAlbaranes_clicked()
     VFact = new VerFacturas("albaranes",this);
     VFact->exec();
 }
+
+void Tienda::on_pushButtonPrestamistas_clicked()
+{
+    Prestamis = new Prestamistas(this);
+    Prestamis->exec();
+}

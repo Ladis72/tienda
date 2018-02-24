@@ -1021,6 +1021,17 @@ bool baseDatos::modificarLineaPedido(QStringList datos){
     return false;
 }
 
+QStringList baseDatos::listadoPrestamistas()
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QStringList prestamistas;
+    consulta.exec("SELECT nombre FROM prestamistas");
+    while (consulta.next()) {
+        prestamistas << consulta.value("nombre").toString();
+    }
+    return prestamistas;
+}
+
 float baseDatos::sumarIvasPedido(QString idPedido, QString tipoIva)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));

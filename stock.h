@@ -2,6 +2,7 @@
 #define STOCK_H
 
 #include <QDialog>
+#include <QKeyEvent>
 #include "base_datos.h"
 #include "dateeditdelegate.h"
 namespace Ui {
@@ -31,6 +32,7 @@ private:
     QString codProducto;
     QSqlTableModel *modeloLotes;
     int filaSeleccionada;
+    void keyPressEvent(QKeyEvent *e);
 };
 
 #endif // STOCK_H

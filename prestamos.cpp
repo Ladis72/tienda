@@ -23,6 +23,7 @@ Prestamos::Prestamos(QWidget *parent) :
     ui->tableView->setModel(modeloPrestamos);
     ui->tableView->hideColumn(0);
     ui->tableView->resizeColumnsToContents();
+    ui->comboBox->addItems(base->listadoPrestamistas());
 }
 
 Prestamos::~Prestamos()

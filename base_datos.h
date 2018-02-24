@@ -89,6 +89,7 @@ public:
     bool borrarAlbaranTmp(QString idAlbaran);
     bool pasarLineaPedidoAHistorico(QStringList datos);
     bool modificarLineaPedido(QStringList datos);
+    QStringList listadoPrestamistas();
 
 //Funciones CAJAS
     QSqlQuery ventas(QString fecha);

@@ -18,7 +18,7 @@
     <item row="0" column="1">
      <widget class="QTabWidget" name="tab">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <property name="iconSize">
        <size>
@@ -80,60 +80,67 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout">
-          <item>
-           <widget class="QPushButton" name="pushButtonUsuarios">
-            <property name="text">
-             <string>Usuarios</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushButton">
-            <property name="text">
-             <string>Artículos</string>
-            </property>
-           </widget>
-          </item>
-          <item>
+         <layout class="QGridLayout" name="gridLayout_6">
+          <item row="0" column="2">
            <widget class="QPushButton" name="pushButtonProveedores">
             <property name="text">
              <string>Proveedores</string>
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QPushButton" name="pushButton_3">
+          <item row="0" column="7">
+           <widget class="QPushButton" name="pushButtonEntradaSalida">
             <property name="text">
-             <string>Clientes</string>
+             <string>Tipos E/S</string>
             </property>
            </widget>
           </item>
-          <item>
+          <item row="0" column="4">
            <widget class="QPushButton" name="pushButtonFabricantes">
             <property name="text">
              <string>Fabricantes</string>
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QPushButton" name="pushButtonFamilias">
-            <property name="text">
-             <string>Familias</string>
-            </property>
-           </widget>
-          </item>
-          <item>
+          <item row="0" column="6">
            <widget class="QPushButton" name="pushButtonFormasPago">
             <property name="text">
              <string>Formas de pago</string>
             </property>
            </widget>
           </item>
-          <item>
-           <widget class="QPushButton" name="pushButtonEntradaSalida">
+          <item row="0" column="0">
+           <widget class="QPushButton" name="pushButtonUsuarios">
             <property name="text">
-             <string>Tipos E/S</string>
+             <string>Usuarios</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="pushButton">
+            <property name="text">
+             <string>Artículos</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="pushButton_3">
+            <property name="text">
+             <string>Clientes</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="4">
+           <widget class="QPushButton" name="pushButtonFamilias">
+            <property name="text">
+             <string>Familias</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="6">
+           <widget class="QPushButton" name="pushButtonPrestamistas">
+            <property name="text">
+             <string>Prestamos</string>
             </property>
            </widget>
           </item>
