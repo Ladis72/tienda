@@ -1,4 +1,4 @@
-#ifndef BASE_DATOS_H
+﻿#ifndef BASE_DATOS_H
 #define BASE_DATOS_H
 
 #include <QSqlDatabase>
@@ -121,6 +121,7 @@ public:
     QString ticketCercanoFecha(QString tabla, QString fecha, QString cuando);
     QSqlQuery estadisticasVentaProductos(QString nPrimerTicket , QString nUltimoTicket, QString nPrimerTicketB, QString nUltimoTicketB);
     QSqlQuery listadoVentaArticulos(QString inicio , QString final);
+    QSqlQuery listadoMovimientosEfectivo(QString inicio , QString final);
 
 
 //Funciones de configuración

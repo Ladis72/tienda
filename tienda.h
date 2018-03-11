@@ -30,6 +30,7 @@
 #include "configbase.h"
 #include "configuracionotros.h"
 #include "prestamistas.h"
+#include "listadosalidas.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -104,6 +105,8 @@ private slots:
 
     void on_pushButtonPrestamistas_clicked();
 
+    void on_pushButtonListadoMovimientos_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -132,6 +135,7 @@ private:
     Prestamos *Prest;
     ConfiguracionOtros *ConfigOtros;
     Prestamistas *Prestamis;
+    ListadoSalidas *ListSalidas;
 };
 
 #endif // TIENDA_H

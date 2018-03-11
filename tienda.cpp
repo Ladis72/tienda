@@ -198,3 +198,9 @@ void Tienda::on_pushButtonPrestamistas_clicked()
     Prestamis = new Prestamistas(this);
     Prestamis->exec();
 }
+
+void Tienda::on_pushButtonListadoMovimientos_clicked()
+{
+    ListSalidas = new ListadoSalidas(this);
+    ListSalidas->exec();
+}

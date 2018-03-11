@@ -18,7 +18,7 @@
     <item row="0" column="1">
      <widget class="QTabWidget" name="tab">
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <property name="iconSize">
        <size>
@@ -186,6 +186,20 @@
            </size>
           </property>
          </spacer>
+        </item>
+        <item row="1" column="2">
+         <widget class="QPushButton" name="pushButtonListadoMovimientos">
+          <property name="text">
+           <string>Movimientos efectivo</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QPushButton" name="pushButtonListadoArqueos">
+          <property name="text">
+           <string>Arqueos</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
