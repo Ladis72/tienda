@@ -68,6 +68,9 @@ void ListadoSalidas::on_pushButton_2_clicked()
         if(paramName == "tipo"){
             paramValue = modeloTabla->record(recNo).value("descripcion").toString();
         }
+        if(paramName == "descripcion"){
+            paramValue = modeloTabla->record(recNo).value(4).toString();
+        }
         if(paramName == "total"){
             paramValue = ui->labelTotal->text();
         }

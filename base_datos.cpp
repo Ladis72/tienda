@@ -1354,7 +1354,7 @@ QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final)
 QSqlQuery baseDatos::listadoMovimientosEfectivo(QString inicio, QString final)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("SELECT fecha , hora , cantidad , descripcion FROM entradasSalidas left join motivosEntrada on entradasSalidas.idTiposRentrada = motivosEntrada.idtiposEntrada WHERE fecha >= ? AND fecha <= ?");
+    consulta.prepare("SELECT fecha , hora , cantidad , motivosEntrada.descripcion , entradasSalidas.descripcion FROM entradasSalidas left join motivosEntrada on entradasSalidas.idTiposRentrada = motivosEntrada.idtiposEntrada WHERE fecha >= ? AND fecha <= ?");
     consulta.bindValue(0,inicio);
     consulta.bindValue(1,final);
     consulta.exec();
