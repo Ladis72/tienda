@@ -57,7 +57,8 @@ SOURCES += main.cpp\
     dateeditdelegate.cpp \
     configuracionotros.cpp \
     prestamistas.cpp \
-    listadosalidas.cpp
+    listadosalidas.cpp \
+    listadoarqueos.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -104,7 +105,8 @@ HEADERS  += tienda.h \
     dateeditdelegate.h \
     configuracionotros.h \
     prestamistas.h \
-    listadosalidas.h
+    listadosalidas.h \
+    listadoarqueos.h
 
 FORMS    += tienda.ui \
     tpv.ui \
@@ -144,7 +146,8 @@ FORMS    += tienda.ui \
     prestamos.ui \
     configuracionotros.ui \
     prestamistas.ui \
-    listadosalidas.ui
+    listadosalidas.ui \
+    listadoarqueos.ui
 include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
 RESOURCES += \

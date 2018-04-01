@@ -204,3 +204,9 @@ void Tienda::on_pushButtonListadoMovimientos_clicked()
     ListSalidas = new ListadoSalidas(this);
     ListSalidas->exec();
 }
+
+void Tienda::on_pushButtonListadoArqueos_clicked()
+{
+    ListaArqueos = new ListadoArqueos(this);
+    ListaArqueos->exec();
+}
