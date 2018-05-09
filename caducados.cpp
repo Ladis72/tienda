@@ -1,6 +1,7 @@
 #include "caducados.h"
 #include "ui_caducados.h"
 #include "QDate"
+#include <QMessageBox>
 
 Caducados::Caducados(QWidget *parent) :
     QDialog(parent),
@@ -41,6 +42,8 @@ void Caducados::on_lineEditCodigo_returnPressed()
 void Caducados::llenarComboFechas(QString id)
 {
     ui->comboBox->clear();
+    ui->comboBox->addItem("Selecciona uno");
+
     consulta = base.lotesProducto(id);
     while (consulta.next()) {
         ui->comboBox->addItem(consulta.value("fecha").toString());
@@ -50,6 +53,10 @@ void Caducados::llenarComboFechas(QString id)
 
 void Caducados::on_pushButton_clicked()
 {
+    if (ui->comboBox->currentText() == "Selecciona uno") {
+        QMessageBox::information(this,"Faltan datos","Selecciona la fecha adecuada del desplegable");
+        return;
+    }
     base.disminuirLote(ui->lineEditCodigo->text(),ui->comboBox->currentText(),ui->spinBox->value());
     QString sentencia;
     QSqlQuery precioConsulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->lineEditCodigo->text());
@@ -60,11 +67,12 @@ void Caducados::on_pushButton_clicked()
     qDebug() << sentencia;
     QSqlQuery ejecutar = base.ejecutarSentencia(sentencia);
     qDebug() << ejecutar.lastError();
-    ui->lineEditCodigo->clear();
-    ui->lineEditDescripcion->clear();
+    //ui->lineEditCodigo->clear();
+    //ui->lineEditDescripcion->clear();
     ui->comboBox->clear();
     ui->spinBox->setValue(1);
-    ui->lineEditCodigo->setFocus();
+    //ui->lineEditCodigo->setFocus();
+    emit on_lineEditCodigo_returnPressed();
 }
 
 void Caducados::on_lineEditDescripcion_returnPressed()
@@ -75,4 +83,15 @@ void Caducados::on_lineEditDescripcion_returnPressed()
     buscar->exec();
     ui->lineEditCodigo->setText(buscar->resultado);
     emit on_lineEditCodigo_returnPressed();
+}
+
+void Caducados::on_comboBox_currentIndexChanged(const QString &arg1)
+{
+    QString idLote = base.idLote(ui->lineEditCodigo->text(),"",arg1);
+    int udsLote = base.unidadesLote(idLote);
+    if (arg1 == "Desconocido") {
+        ui->spinBox->setMaximum(1000);
+    }else {
+        ui->spinBox->setMaximum(udsLote);
+    }
 }
