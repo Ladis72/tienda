@@ -57,6 +57,10 @@ void Caducados::on_pushButton_clicked()
         QMessageBox::information(this,"Faltan datos","Selecciona la fecha adecuada del desplegable");
         return;
     }
+    if (ui->lineEditCodigo->text().isEmpty() || ui->lineEditDescripcion->text().isEmpty()) {
+        QMessageBox::warning(this, "Faltan datos del producto","No hay datos en el codigo o descripción del producto");
+        return;
+    }
     base.disminuirLote(ui->lineEditCodigo->text(),ui->comboBox->currentText(),ui->spinBox->value());
     QString sentencia;
     QSqlQuery precioConsulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->lineEditCodigo->text());
@@ -91,7 +95,9 @@ void Caducados::on_comboBox_currentIndexChanged(const QString &arg1)
     int udsLote = base.unidadesLote(idLote);
     if (arg1 == "Desconocido") {
         ui->spinBox->setMaximum(1000);
+        ui->spinBox->setMinimum(1);
     }else {
         ui->spinBox->setMaximum(udsLote);
+        ui->spinBox->setMinimum(1);
     }
 }
