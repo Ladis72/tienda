@@ -32,6 +32,7 @@
 #include "prestamistas.h"
 #include "listadosalidas.h"
 #include "listadoarqueos.h"
+#include "listadocaducados.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -55,60 +56,34 @@ private slots:
     void activar_btn_tpv();
 
     void on_pushButtonUsuarios_clicked();
-
     void on_pushButton_clicked();
-
     void on_pushButtonFamilias_clicked();
-
     void on_pushButtonFabricantes_clicked();
-
     void on_pushButtonFormasPago_clicked();
-
     void on_pushButton_3_clicked();
-
     void on_pushButtonProveedores_clicked();
-
     void on_pushButtonGestionar_clicked();
-
     void on_cajasButton_clicked();
-
     void on_pushButtonEntradaSalida_clicked();
-
     void on_movimientosButton_clicked();
-
     void on_pushButtonTickets_clicked();
-
     void on_pushButtonFacturas_clicked();
-
     void on_listadoVentasButton_clicked();
-
     void on_pushButton_2_clicked();
-
     void on_pushButtonEntradas_clicked();
-
     void on_pushButton_5_clicked();
-
     void on_pushButtonSalidas_clicked();
-
     void on_pushButtonEtiquetas_clicked();
-
     void on_pushButtonCaducados_clicked();
-
     void on_pushButtonTicket_clicked();
-
     void on_pushButtonConfigDB_clicked();
-
     void on_pushButtonPrestamos_clicked();
-
     void on_pushButtonConfiguracion_clicked();
-
     void on_pushButtonAlbaranes_clicked();
-
     void on_pushButtonPrestamistas_clicked();
-
     void on_pushButtonListadoMovimientos_clicked();
-
     void on_pushButtonListadoArqueos_clicked();
+    void on_pushButtonCaducados_2_clicked();
 
 private:
     Ui::Tienda *ui;
@@ -140,6 +115,7 @@ private:
     Prestamistas *Prestamis;
     ListadoSalidas *ListSalidas;
     ListadoArqueos *ListaArqueos;
+    ListadoCaducados *ListaCaducados;
 };
 
 #endif // TIENDA_H

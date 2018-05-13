@@ -1363,6 +1363,17 @@ QSqlQuery baseDatos::listadoMovimientosEfectivo(QString inicio, QString final)
     return consulta;
 }
 
+QSqlQuery baseDatos::listadoCaducados(QString desde, QString hasta)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("SELECT * FROM caducados WHERE fecha >= ? AND fecha <= ?");
+    consulta.bindValue(0 , desde);
+    consulta.bindValue(1 , hasta);
+    if (!consulta.exec())
+        qDebug() << consulta.lastError();
+    return consulta;
+}
+
 QString baseDatos::leerConfiguracion()
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));

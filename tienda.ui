@@ -22,7 +22,7 @@
     <item row="0" column="1">
      <widget class="QTabWidget" name="tab">
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <property name="iconSize">
        <size>
@@ -178,19 +178,6 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
-         <spacer name="verticalSpacer_5">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
         <item row="1" column="2">
          <widget class="QPushButton" name="pushButtonListadoMovimientos">
           <property name="text">
@@ -202,6 +189,13 @@
          <widget class="QPushButton" name="pushButtonListadoArqueos">
           <property name="text">
            <string>Arqueos</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QPushButton" name="pushButtonCaducados_2">
+          <property name="text">
+           <string>Caducados</string>
           </property>
          </widget>
         </item>

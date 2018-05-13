@@ -210,3 +210,9 @@ void Tienda::on_pushButtonListadoArqueos_clicked()
     ListaArqueos = new ListadoArqueos(this);
     ListaArqueos->exec();
 }
+
+void Tienda::on_pushButtonCaducados_2_clicked()
+{
+    ListaCaducados = new ListadoCaducados(this);
+    ListaCaducados->exec();
+}
