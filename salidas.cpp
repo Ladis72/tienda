@@ -43,6 +43,7 @@ void Salidas::actualizarTabla()
     mTablaSalidas->setSort(3,Qt::AscendingOrder);
     mTablaSalidas->select();
     ui->tableView->setModel(mTablaSalidas);
+    ui->tableView->hideColumn(0);
     ui->tableView->resizeColumnsToContents();
 }
 
@@ -99,6 +100,8 @@ void Salidas::on_pushButtonAgregar_clicked()
     ui->lineEditDesc->clear();
     ui->lineEditPrecio->clear();
     ui->lineEditCod->setFocus();
+    ui->tableView->resizeColumnsToContents();
+
 }
 
 void Salidas::on_lineEditDesc_returnPressed()

@@ -95,9 +95,9 @@ void Caducados::on_comboBox_currentIndexChanged(const QString &arg1)
     int udsLote = base.unidadesLote(idLote);
     if (arg1 == "Desconocido") {
         ui->spinBox->setMaximum(1000);
-        ui->spinBox->setMinimum(1);
+        ui->spinBox->setMinimum(0);
     }else {
         ui->spinBox->setMaximum(udsLote);
-        ui->spinBox->setMinimum(1);
+        ui->spinBox->setMinimum(0);
     }
 }
