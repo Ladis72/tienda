@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ListadoArqueos</class>
+ <widget class="QDialog" name="ListadoArqueos">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>897</width>
+    <height>550</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Listado arqueos</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="recursos.qrc">
+    <normaloff>:/imagenes/Emeicjac logo.jpg</normaloff>:/imagenes/Emeicjac logo.jpg</iconset>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Desde</string>
+     </property>
+     <property name="buddy">
+      <cstring>dateEditDesde</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QDateEdit" name="dateEditDesde">
+     <property name="displayFormat">
+      <string>yyyy-MM-dd</string>
+     </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Hasta</string>
+     </property>
+     <property name="buddy">
+      <cstring>dateEditHasta</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="3">
+    <widget class="QDateEdit" name="dateEditHasta">
+     <property name="displayFormat">
+      <string>yyyy-MM-dd</string>
+     </property>
+     <property name="calendarPopup">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="4">
+    <widget class="QPushButton" name="pushButtonImprimir">
+     <property name="text">
+      <string>Imprimir</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="5">
+    <widget class="QPushButton" name="pushButtonCerrar">
+     <property name="text">
+      <string>Cerrar</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="6">
+    <widget class="QTableView" name="tableView"/>
+   </item>
+   <item row="0" column="4">
+    <widget class="QPushButton" name="pushButtonConsultar">
+     <property name="text">
+      <string>Consultar</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="recursos.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>pushButtonCerrar</sender>
+   <signal>clicked()</signal>
+   <receiver>ListadoArqueos</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>800</x>
+     <y>519</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>512</x>
+     <y>507</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

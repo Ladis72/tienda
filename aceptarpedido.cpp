@@ -89,15 +89,44 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         ivaLinea = modelo->record(i).value("iva").toString();
         reLinea = modelo->record(i).value("re").toString();
         //qDebug() << ean << " " << descripcion << " " << uds << " " << lote << " " << fechaCaducidad << " " << precioCosto << " " <<pvp;
-        //Modificar o crear lotes
-        QString idLote = base.idLote(ean,lote,fechaCaducidad);
-        if (idLote == "0") {
-            base.crearLote(ean,lote,fechaCaducidad,QString::number(uds));
-            qDebug() << "Creando lote";
-        } else {
-            base.aumentarLote(idLote,uds);
 
+        // Buscar si hay lotes con unidades pendientes
+        QString idLote = base.idLote(ean,"","2000-01-01");
+        qDebug() << "IDLOTE "+ idLote;
+        if (idLote != "0") {
+            qDebug() << "IDLOTE "+ idLote;
+            int pendientes = base.unidadesLote(idLote);
+            qDebug() << "PENDIENTES: "+QString::number(pendientes);
+            if(abs(pendientes) > uds ){
+                base.aumentarLote(idLote,uds);
+            }else if (abs(pendientes) == uds) {
+                base.ejecutarSentencia("DELETE FROM lotes WHERE id = '"+idLote+"'");
+            }else {
+                base.ejecutarSentencia("DELETE FROM lotes WHERE id = '"+idLote+"'");
+                uds = uds+pendientes;
+                //Modificar o crear lotes
+                idLote = base.idLote(ean,lote,fechaCaducidad);
+                if (idLote == "0") {
+                    base.crearLote(ean,lote,fechaCaducidad,QString::number(uds));
+                    qDebug() << "Creando lote";
+                } else {
+                    base.aumentarLote(idLote,uds);
+
+                }
+            }
+        }else {
+            //Modificar o crear lotes
+            idLote = base.idLote(ean,lote,fechaCaducidad);
+            if (idLote == "0") {
+                base.crearLote(ean,lote,fechaCaducidad,QString::number(uds));
+                qDebug() << "Creando lote";
+            } else {
+                base.aumentarLote(idLote,uds);
+
+            }
         }
+
+
         //Comprobar cambio de nombre o PVP y actualizar artículos
         consulta = base.consulta_producto(QSqlDatabase::database("DB"),ean);
         consulta.first();
@@ -212,20 +241,27 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     if (!base.contabilizarPedido(datosPedido)) {
         return false;
     }
-    qDebug() << "Albaran grabado";
+    qDebug() << "Pedido grabado";
+    QStringList datosFactura;
+    datosFactura.clear();
+    datosFactura.append(ui->lineEditNDoc->text());
+    datosFactura.append(fecha);
+    datosFactura.append(base.idProveedor(ui->labelProveedor->text()));
+    datosFactura.append(ui->leTotalBase->text());
+    datosFactura.append(ui->leTotalIva->text());
+    datosFactura.append(ui->leTotalRe->text());
+    datosFactura.append(ui->leTotal->text());
+
     if (ui->comboBox->currentText() == "Factura") {
-        QStringList datosFactura;
-        datosFactura.clear();
-        datosFactura.append(ui->lineEditNDoc->text());
-        datosFactura.append(fecha);
-        datosFactura.append(base.idProveedor(ui->labelProveedor->text()));
-        datosFactura.append(ui->leTotalBase->text());
-        datosFactura.append(ui->leTotalIva->text());
-        datosFactura.append(ui->leTotalRe->text());
-        datosFactura.append(ui->leTotal->text());
+
         datosFactura.append(ui->dateEditVencimiento->text());
         datosFactura.append("0");
         if (!base.grabarFactura(datosFactura)) {
+            return false;
+        }
+    }else {
+        datosFactura.append("0");
+        if (base.grabarAlbaran(datosFactura)) {
             return false;
         }
     }

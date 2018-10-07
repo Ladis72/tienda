@@ -3,4 +3,7 @@
         <file>ventas.xml</file>
         <file>factura.xml</file>
     </qresource>
+    <qresource prefix="/imagenes">
+        <file>Emeicjac logo.jpg</file>
+    </qresource>
 </RCC>

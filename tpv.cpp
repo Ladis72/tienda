@@ -424,23 +424,7 @@ void Tpv::on_btn_cobrar_clicked()
     totalTicket.clear();
 
     if (totalizacion->exec() == totalizacion->Accepted){
-        //QFile impresora("/dev/lp0");
-//        QFile impresora("ticket.txt");
 
-//        impresora.open(QIODevice::WriteOnly);
-//            QTextStream texto(&impresora);
-//            texto << "\n";
-//            texto << "HERBOLARIO EMEICJAC\n";
-//            texto << "C/Perines 14 bajo\n";
-//            texto << "Tlfn: 942-37-20-27\n";
-//            texto << "N.I.F.: 20196639-V\n";
-//            texto << "E-mail: emeicjac@emeicjac.com\n";
-//            texto << "Web: emeicjac.com\n\n";
-//            texto << QDateTime::currentDateTime().toString("dd-MMM-yyyy  HH:mm:ss");
-//            texto << "    Ticket:" << QString::number(ticket);
-//            texto <<"\n";
-//            texto << "UDS | Producto            |Prec.|Dto|Total\n";
-//            texto << "------------------------------------------\n";
         for(int i = 0; i < modeloTicket->rowCount(); i++){
             lineaTicket.clear();
             if (totalizacion->facturacion == "1" && base.existeDatoEnTabla(QSqlDatabase::database("DB"),"ticketss","ticket",QString::number(ticket)) == false) {
@@ -462,27 +446,17 @@ void Tpv::on_btn_cobrar_clicked()
             dato = lineaTicket.at(3);
             dato = formatearCadena(dato,3);
             qDebug() << dato;
-//            texto << dato;
-            //texto << " ";
             dato = lineaTicket.at(2);
             dato = formatearCadena(dato,23);
             qDebug() << dato;
-//            texto << dato;
-//            texto << " ";
             dato = lineaTicket.at(5);
             dato = formatearCadena(dato,6);
-//            texto << dato;
-            //texto << " ";
             dato.clear();
             dato = lineaTicket.at(6);
             dato = formatearCadena(dato,2);
-//            texto << dato;
-//            texto << " ";
             dato.clear();
             dato = lineaTicket.at(7);
             dato = formatearCadena(dato,6);
-//            texto << dato;
-//            texto << "\n";
             dato.clear();
             qDebug() << lineaTicket;
             base.grabarLineaTicket(lineaTicket);
@@ -643,3 +617,86 @@ void Tpv::on_tableView_clicked(const QModelIndex &index)
     int idModeloTicket = indice.row();
     datosProducto(modeloTicket->data(modeloTicket->index(idModeloTicket,2)).toString());
 }
+
+void Tpv::on_btn_preTicket_clicked()
+{
+    QStringList lineaTicket;
+
+    QStringList confTicket = base.recuperarConfigTicket();
+
+    QFile impresora("ticket.txt");
+    impresora.open(QIODevice::WriteOnly);
+    QTextStream texto(&impresora);
+    texto << confTicket.at(0)+"\n\n";
+    texto << QDate::currentDate().toString("yyyy-MM-dd") + "  " + QTime::currentTime().toString("hh:mm") + "   " + "Ticket: TICKET";
+    texto <<"\n";
+    texto << "UDS|  Producto            |Prec.|Dto|Total\n";
+    texto << "------------------------------------------\n";
+
+//            texto << "HERBOLARIO EMEICJAC\n";
+//            texto << "C/Perines 14 bajo\n";
+//            texto << "Tlfn: 942-37-20-27\n";
+//            texto << "N.I.F.: 20196639-V\n";
+//            texto << "E-mail: emeicjac@emeicjac.com\n";
+//            texto << "Web: emeicjac.com\n\n";
+//            texto << QDateTime::currentDateTime().toString("dd-MMM-yyyy  HH:mm:ss");
+//            texto << "    Ticket:" << QString::number(ticket);
+//            texto <<"\n";
+//            texto << "UDS | Producto            |Prec.|Dto|Total\n";
+//            texto << "------------------------------------------\n";
+    for (int i = 0; i < modeloTicket->rowCount(); i++) {
+        lineaTicket.clear();
+        lineaTicket.append("TICKET");
+        for (int x = 2; x < modeloTicket->columnCount(); ++x) {
+           lineaTicket.append(modeloTicket->record(i).value(x).toString());
+        }
+        QString dato;
+        dato = lineaTicket.at(3);
+        dato = formatearCadena(dato,3);
+        qDebug() << dato;
+        texto << dato;
+        texto << " ";
+        dato = lineaTicket.at(2);
+        dato = formatearCadena(dato,23);
+        qDebug() << dato;
+        texto << dato;
+        texto << " ";
+        dato = lineaTicket.at(5);
+        dato = formatearCadena(dato,6);
+        texto << dato;
+        texto << " ";
+        dato.clear();
+        dato = lineaTicket.at(6);
+        dato = formatearCadena(dato,2);
+        texto << dato;
+        texto << " ";
+        dato.clear();
+        dato = lineaTicket.at(7);
+        dato = formatearCadena(dato,6);
+        texto << dato;
+        texto << "\n";
+        dato.clear();
+        qDebug() << lineaTicket;
+    }
+        texto << "\n\n";
+        texto << "Total : " + QString::number(calcularPrecioTotal())+"\n";
+//        texto << QString::number(totalizacion->total)+"\n";
+//        texto << totalizacion->efectivo;
+        texto << "\n\n\n";
+        texto << confTicket.at(1);
+        texto << "\n\n\n\n";
+    //    texto << char(0x1D) << char(0x56) << char(0x30);
+        QString codCorte = confTicket.at(5);
+        qDebug() << codCorte;
+        QStringList cadaCodCorte = codCorte.split(",");
+        for (int i = 0; i < cadaCodCorte.size(); ++i) {
+            texto << char(cadaCodCorte.at(i).toInt());
+        }
+        //texto << confTicket.at(4);
+        texto << "\n\n";
+        impresora.close();
+        QString imprimir = "less ./ticket.txt >> "+confTicket.at(3);
+        const char* ch = imprimir.toLocal8Bit().constData();
+        system(ch);
+}
+

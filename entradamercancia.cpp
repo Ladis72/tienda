@@ -1,6 +1,8 @@
 #include "entradamercancia.h"
 #include "ui_entradamercancia.h"
 
+#include <QMessageBox>
+
 EntradaMercancia::EntradaMercancia(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::EntradaMercancia)
@@ -21,17 +23,50 @@ EntradaMercancia::~EntradaMercancia()
 void EntradaMercancia::on_pushButtonAceptar_clicked()
 {
     for (int i = 0; i < mTablaEntradas->rowCount(); ++i) {
-    QString idLote = base->idLote(mTablaEntradas->record(i).value(1).toString(),"",mTablaEntradas->record(i).value(5).toString());
-    qDebug() << idLote;
-    QString cod = mTablaEntradas->record(i).value(1).toString();
-    QString fechaCaducidad = mTablaEntradas->record(i).value(5).toString();
-    QString uds = mTablaEntradas->record(i).value(4).toString();
+        QString cod = mTablaEntradas->record(i).value(1).toString();
+        QString fechaCaducidad = mTablaEntradas->record(i).value(5).toString();
+        QString uds = mTablaEntradas->record(i).value(4).toString();
 
-    if (idLote == "0") {
-        base->crearLote(cod,"",fechaCaducidad,uds);
-    }else{
-        base->aumentarLote(idLote,uds.toInt());
-    }
+
+
+        // Buscar si hay lotes con unidades pendientes
+        QString idLote = base->idLote(mTablaEntradas->record(i).value(1).toString(),"","2000-01-01");
+        qDebug() << "IDLOTE "+ idLote;
+        if (idLote != "0") {
+            int pendientes = base->unidadesLote(idLote);
+            qDebug() << "Hay lotes pendientes";
+            qDebug() << "Lotes PENDIENTES "+pendientes;
+            if(abs(pendientes) > uds.toInt() ){
+                qDebug() << "Hay mas pendientes que entradas";
+                base->aumentarLote(idLote,uds.toInt());
+            }else if (abs(pendientes) == uds.toInt()) {
+                qDebug() << "Hay los mismos pendientes que entradas";
+                base->ejecutarSentencia("DELETE FROM lotes WHERE id = '"+idLote+"'");
+            }else {
+                qDebug() << "Hay mas entradas que pendientes";
+                base->ejecutarSentencia("DELETE FROM lotes WHERE id = '"+idLote+"'");
+                qDebug() << "ENTRADAS: "+uds;
+                qDebug() << "PENDIENTES: "+pendientes;
+                int unidades = uds.toInt()+pendientes;
+                qDebug() << "DIFERENCIA: "+unidades;
+
+                idLote = base->idLote(cod,"",fechaCaducidad);
+                if (idLote == "0") {
+                    base->crearLote(cod,"",fechaCaducidad,QString::number(unidades));
+                }else {
+                    base->aumentarLote(idLote,unidades);
+                }
+            }
+        }else {
+            idLote = base->idLote(cod,"",fechaCaducidad);
+            if (idLote == "0") {
+                base->crearLote(cod,"",fechaCaducidad,uds);
+            }else {
+                base->aumentarLote(idLote,uds.toInt());
+            }
+        }
+
+
     QString codigo = mTablaEntradas->record(i).value(1).toString();
     QString precio = mTablaEntradas->record(i).value(6).toString();
     QString descripcion = mTablaEntradas->record(i).value(3).toString();
@@ -121,4 +156,13 @@ void EntradaMercancia::on_tableView_clicked(const QModelIndex &index)
     QModelIndex indice = mTablaEntradas->index(index.row(),0);
     codSeleccionado = mTablaEntradas->data(indice,Qt::EditRole).toString();
     qDebug() << codSeleccionado;
+}
+
+void EntradaMercancia::on_dateEditCaducidad_editingFinished()
+{
+    if (ui->dateEditCaducidad->date() <= QDate::currentDate()) {
+        QMessageBox::information(this,"Error en la fecha de caducidad","La fecha no puede ser anterior a la fecha de hoy");
+        ui->dateEditCaducidad->setFocus();
+        ui->dateEditCaducidad->setDate(QDate::currentDate());
+    }
 }

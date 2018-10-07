@@ -11,6 +11,9 @@ Tienda::Tienda(QWidget *parent) :
 {
     ui->setupUi(this);
     qDebug() << conf->usuario;
+    QPixmap logo;
+    logo.load("./documentos/logo.jpg");
+    ui->logo->setPixmap(logo);
 
 }
 
@@ -113,7 +116,7 @@ void Tienda::on_pushButtonTickets_clicked()
 
 void Tienda::on_pushButtonFacturas_clicked()
 {
-    VFact = new VerFacturas;
+    VFact = new VerFacturas("facturas",this);
     VFact->exec();
 }
 
@@ -170,4 +173,46 @@ void Tienda::on_pushButtonConfigDB_clicked()
 {
     CBase = new ConfigBase(this);
     CBase->exec();
+}
+
+void Tienda::on_pushButtonPrestamos_clicked()
+{
+    Prest = new Prestamos(this);
+    Prest->exec();
+}
+
+void Tienda::on_pushButtonConfiguracion_clicked()
+{
+    ConfigOtros = new ConfiguracionOtros(this);
+    ConfigOtros->exec();
+}
+
+void Tienda::on_pushButtonAlbaranes_clicked()
+{
+    VFact = new VerFacturas("albaranes",this);
+    VFact->exec();
+}
+
+void Tienda::on_pushButtonPrestamistas_clicked()
+{
+    Prestamis = new Prestamistas(this);
+    Prestamis->exec();
+}
+
+void Tienda::on_pushButtonListadoMovimientos_clicked()
+{
+    ListSalidas = new ListadoSalidas(this);
+    ListSalidas->exec();
+}
+
+void Tienda::on_pushButtonListadoArqueos_clicked()
+{
+    ListaArqueos = new ListadoArqueos(this);
+    ListaArqueos->exec();
+}
+
+void Tienda::on_pushButtonCaducados_2_clicked()
+{
+    ListaCaducados = new ListadoCaducados(this);
+    ListaCaducados->exec();
 }

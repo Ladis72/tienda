@@ -1,4 +1,4 @@
-#ifndef BASE_DATOS_H
+﻿#ifndef BASE_DATOS_H
 #define BASE_DATOS_H
 
 #include <QSqlDatabase>
@@ -85,9 +85,11 @@ public:
     bool borrarLineaPedido(QString idLinea);
     bool contabilizarPedido(QStringList datos);
     bool grabarFactura(QStringList datos);
+    bool grabarAlbaran(QStringList datos);
     bool borrarAlbaranTmp(QString idAlbaran);
     bool pasarLineaPedidoAHistorico(QStringList datos);
     bool modificarLineaPedido(QStringList datos);
+    QStringList listadoPrestamistas();
 
 //Funciones CAJAS
     QSqlQuery ventas(QString fecha);
@@ -112,11 +114,20 @@ public:
     void crearLote(QString ean,QString lote,QString fecha,QString uds);
     QSqlQuery lotesProducto(QString cod);
     QString sumarStockArticulo(QString id);
+    int unidadesLote(QString idLote);
+
 
 //Funciones LISTADOS
     QString ticketCercanoFecha(QString tabla, QString fecha, QString cuando);
     QSqlQuery estadisticasVentaProductos(QString nPrimerTicket , QString nUltimoTicket, QString nPrimerTicketB, QString nUltimoTicketB);
     QSqlQuery listadoVentaArticulos(QString inicio , QString final);
+    QSqlQuery listadoMovimientosEfectivo(QString inicio , QString final);
+    QSqlQuery listadoCaducados(QString desde , QString hasta);
+
+//Funciones de configuración
+    QString leerConfiguracion();
+    bool GuardarConfiguracion(int datos);
+
 
 private:
 

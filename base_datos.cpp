@@ -301,15 +301,6 @@ bool baseDatos::insertarArticulo(QSqlDatabase db, QStringList datos)
 
 bool baseDatos::descontarArticulo(QString cod, int uds)
 {
-//    QSqlQuery consulta(QSqlDatabase::database("DB"));
-//    consulta.prepare("UPDATE articulos SET stock = stock - ? WHERE cod LIKE ?");
-//    consulta.bindValue(0,uds);
-//    consulta.bindValue(1,cod);
-//    if(consulta.exec()){
-//        return true;
-//    }
-//    qDebug() << consulta.lastError().text();
-//    return false;
 
     QSqlQuery consulta(QSqlDatabase::database("DB"));
 
@@ -342,6 +333,9 @@ bool baseDatos::descontarArticulo(QString cod, int uds)
             return true;
         }
     }
+    }else {
+        qDebug() << "No hay lotes de ese artículo";
+        crearLote(cod,"","2000-01-01",QString::number(0-uds));
     }
 }
 
@@ -910,11 +904,12 @@ int baseDatos::contarLineas(QString tabla, QString campoCondicion, QString condi
 bool baseDatos::insertarES(QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("INSERT INTO entradasSalidas VALUES (NULL,?,?,?,?)");
+    consulta.prepare("INSERT INTO entradasSalidas VALUES (NULL,?,?,?,?,?)");
     consulta.bindValue(0,datos.at(0));
     consulta.bindValue(1,datos.at(1));
     consulta.bindValue(2,datos.at(2));
     consulta.bindValue(3,datos.at(3));
+    consulta.bindValue(4,datos.at(4));
     if(consulta.exec()) return true;
     return false;
 }
@@ -1026,6 +1021,17 @@ bool baseDatos::modificarLineaPedido(QStringList datos){
     return false;
 }
 
+QStringList baseDatos::listadoPrestamistas()
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QStringList prestamistas;
+    consulta.exec("SELECT nombre FROM prestamistas");
+    while (consulta.next()) {
+        prestamistas << consulta.value("nombre").toString();
+    }
+    return prestamistas;
+}
+
 float baseDatos::sumarIvasPedido(QString idPedido, QString tipoIva)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
@@ -1075,6 +1081,18 @@ bool baseDatos::grabarFactura(QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.prepare("INSERT INTO facturas VALUES(NULL,?,?,?,?,?,?,?,?,?)");
+    for (int i = 0; i < datos.length(); ++i) {
+        consulta.bindValue(i,datos.at(i));
+    }
+    if(consulta.exec()) return true;
+    qDebug() << consulta.lastError().text();
+    return false;
+}
+
+bool baseDatos::grabarAlbaran(QStringList datos)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("INSERT INTO albaranes VALUES(NULL,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i,datos.at(i));
     }
@@ -1207,6 +1225,16 @@ QString baseDatos::idLote(QString cod, QString lote, QString fecha)
     return "0";
 }
 
+int baseDatos::unidadesLote(QString idLote){
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT cantidad FROM lotes WHERE id ='"+idLote+"'");
+    consulta.first();
+    if (consulta.isValid()) {
+        return consulta.value(0).toInt();
+    }
+    return 0;
+}
+
 void baseDatos::aumentarLote(QString idLote, int uds)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
@@ -1321,6 +1349,49 @@ QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final)
     //consulta.first();
     qDebug() << consulta.lastError();
     return consulta;
+}
+
+QSqlQuery baseDatos::listadoMovimientosEfectivo(QString inicio, QString final)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("SELECT fecha , hora , cantidad , motivosEntrada.descripcion , entradasSalidas.descripcion FROM entradasSalidas left join motivosEntrada on entradasSalidas.idTiposRentrada = motivosEntrada.idtiposEntrada WHERE fecha >= ? AND fecha <= ?");
+    consulta.bindValue(0,inicio);
+    consulta.bindValue(1,final);
+    consulta.exec();
+    //consulta.first();
+    qDebug() << consulta.lastError();
+    return consulta;
+}
+
+QSqlQuery baseDatos::listadoCaducados(QString desde, QString hasta)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("SELECT * FROM caducados WHERE fecha >= ? AND fecha <= ?");
+    consulta.bindValue(0 , desde);
+    consulta.bindValue(1 , hasta);
+    if (!consulta.exec())
+        qDebug() << consulta.lastError();
+    return consulta;
+}
+
+QString baseDatos::leerConfiguracion()
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT * FROM configuracion");
+    consulta.first();
+    return consulta.value("recargoeq").toString();
+}
+
+bool baseDatos::GuardarConfiguracion(int datos)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("UPDATE configuracion SET recargoeq = ? WHERE idconfiguracion = 0");
+    consulta.bindValue(0,datos);
+    qDebug() << consulta.lastError();
+    if (consulta.exec()) {
+        return true;
+    }
+    return false;
 }
 
 

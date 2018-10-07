@@ -55,6 +55,8 @@ private slots:
 
     void on_tableView_clicked(const QModelIndex &index);
 
+    void on_btn_preTicket_clicked();
+
 private:
     int ticket;
     int ticketActual;

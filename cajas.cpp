@@ -159,7 +159,7 @@ void Cajas::actualizarEfectivo()
             ui->doubleSpinBoxCambios->value() +
             ui->doubleSpinBoxCajaF->value();
     ui->labelEfectivoR->setText(QString::number(efectivoReal));
-    totalEfectivo = saldoAnterior+ventasEfectivo+salidas;
+    totalEfectivo = saldoAnterior+ventasEfectivo+salidas+ventasB;
     ui->labelEfectivoTotal->setText(QString::number(totalEfectivo));
     descuadre = efectivoReal-totalEfectivo;
     if (descuadre < 0){
@@ -196,7 +196,7 @@ void Cajas::ventas()
     resultado.first();
     ventasB = resultado.value(0).toDouble();
     ui->label_ventasB->setText(QString::number(ventasB));
-    ventasEfectivo += resultado.value(0).toDouble();
+    //ventasEfectivo += resultado.value(0).toDouble();
     ui->label_ventasEfectivo->setText(QString::number(ventasEfectivo));
     ui->label_ventasTotales->setText(QString::number(ventasEfectivo+ventasTarjeta));
 

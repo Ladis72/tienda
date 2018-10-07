@@ -18,7 +18,7 @@ class VerFacturas : public QDialog
     Q_OBJECT
 
 public:
-    explicit VerFacturas(QWidget *parent = 0);
+    explicit VerFacturas(QString docType , QWidget *parent = 0);
     ~VerFacturas();
 
 private slots:
@@ -42,6 +42,7 @@ private:
     baseDatos *base;
     QString idProveedor , fechaInicial , fechaFinal , idFactura;
     QStandardItemModel *modeloTabla;
+    QString tipoDocumento;
 };
 
 #endif // VERFACTURAS_H

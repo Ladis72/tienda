@@ -52,7 +52,14 @@ SOURCES += main.cpp\
     configticket.cpp \
     configbase.cpp \
     visorimagenes.cpp \
-    visorfacturas.cpp
+    visorfacturas.cpp \
+    prestamos.cpp \
+    dateeditdelegate.cpp \
+    configuracionotros.cpp \
+    prestamistas.cpp \
+    listadosalidas.cpp \
+    listadoarqueos.cpp \
+    listadocaducados.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -94,7 +101,14 @@ HEADERS  += tienda.h \
     configticket.h \
     configbase.h \
     visorimagenes.h \
-    visorfacturas.h
+    visorfacturas.h \
+    prestamos.h \
+    dateeditdelegate.h \
+    configuracionotros.h \
+    prestamistas.h \
+    listadosalidas.h \
+    listadoarqueos.h \
+    listadocaducados.h
 
 FORMS    += tienda.ui \
     tpv.ui \
@@ -130,7 +144,13 @@ FORMS    += tienda.ui \
     configticket.ui \
     configbase.ui \
     visorimagenes.ui \
-    visorfacturas.ui
+    visorfacturas.ui \
+    prestamos.ui \
+    configuracionotros.ui \
+    prestamistas.ui \
+    listadosalidas.ui \
+    listadoarqueos.ui \
+    listadocaducados.ui
 include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
 RESOURCES += \
