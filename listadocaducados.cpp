@@ -83,5 +83,6 @@ void ListadoCaducados::llenarTabla(QString desde, QString hasta)
 {
     mCaducados->setQuery(base->listadoCaducados(desde , hasta));
     ui->tableView->setModel(mCaducados);
+    ui->tableView->resizeColumnsToContents();
     ui->tableView->hideColumn(0);
 }

@@ -33,6 +33,23 @@ void Salidas::on_lineEditCod_returnPressed()
         ui->lineEditDesc->setText(consulta.value(1).toString());
         ui->lineEditPrecio->setText(consulta.value(2).toString());
         ui->lineEditCantidad->setFocus();
+    }else{
+        QMessageBox *msg = new QMessageBox(this);
+        msg->setText("No se encuentra el producto");
+        msg->setInformativeText("Desea crearlo?");
+        msg->setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+        msg->setDefaultButton(QMessageBox::Ok);
+        int resp = msg->exec();
+        if(resp == QMessageBox::Ok){
+            Articulos *articulo = new Articulos;
+            articulo->exec();
+            articulo->borrarFormulario();
+
+            qDebug() << "Crear producto";
+        }else{
+            ui->lineEditCod->setFocus();
+            ui->lineEditCod->selectAll();
+        }
     }
 
 

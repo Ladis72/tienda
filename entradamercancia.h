@@ -4,6 +4,7 @@
 #include <QDialog>
 #include "base_datos.h"
 #include "buscarproducto.h"
+#include "articulos.h"
 
 namespace Ui {
 class EntradaMercancia;
@@ -39,6 +40,7 @@ private:
     QSqlTableModel *mTablaEntradas;
     QSqlQuery consulta;
     QString codSeleccionado;
+    Articulos *articulo;
 
 
 

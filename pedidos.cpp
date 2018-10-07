@@ -213,6 +213,7 @@ void pedidos::on_leCod_returnPressed()
         ui->leUds->setText("1");
         ui->leTotalLinea->setText(calcularTotalLinea());
         ui->leUds->setFocus();
+        ui->leUds->selectAll();
     }else{
         QMessageBox *msg = new QMessageBox(this);
         msg->setText("No se encuentra el producto");
