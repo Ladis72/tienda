@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>700</width>
-    <height>262</height>
+    <height>283</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -92,16 +92,6 @@
      </layout>
     </widget>
    </item>
-   <item row="4" column="2">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-    </widget>
-   </item>
    <item row="3" column="0" colspan="3">
     <widget class="QGroupBox" name="groupBox_3">
      <property name="title">
@@ -111,21 +101,21 @@
       <item row="0" column="1">
        <widget class="QRadioButton" name="radioButtonDatosAlmacen">
         <property name="text">
-         <string>Utilizar siempre datos del almacen</string>
+         <string>&amp;Utilizar siempre datos del almacen</string>
         </property>
        </widget>
       </item>
       <item row="0" column="0">
        <widget class="QRadioButton" name="radioButtonDatosPedido">
         <property name="text">
-         <string>Utilizar siempre datos del pedido</string>
+         <string>Utili&amp;zar siempre datos del pedido</string>
         </property>
        </widget>
       </item>
       <item row="0" column="2">
        <widget class="QRadioButton" name="radioButton">
         <property name="text">
-         <string>Preguntar siempre</string>
+         <string>Preguntar sie&amp;mpre</string>
         </property>
         <property name="checked">
          <bool>true</bool>
@@ -165,39 +155,30 @@
      </layout>
     </widget>
    </item>
+   <item row="4" column="2">
+    <widget class="QPushButton" name="pushButton">
+     <property name="text">
+      <string>Aceptar</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>
  <connections>
   <connection>
-   <sender>buttonBox</sender>
-   <signal>accepted()</signal>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
    <receiver>CambioDatosProducto</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>441</x>
+     <y>262</y>
     </hint>
     <hint type="destinationlabel">
-     <x>157</x>
-     <y>274</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>rejected()</signal>
-   <receiver>CambioDatosProducto</receiver>
-   <slot>reject()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>286</x>
-     <y>274</y>
+     <x>326</x>
+     <y>242</y>
     </hint>
    </hints>
   </connection>

@@ -4,6 +4,7 @@
 #include <QDialog>
 #include "base_datos.h"
 #include "buscarproducto.h"
+#include "articulos.h"
 
 namespace Ui {
 class Salidas;
@@ -37,6 +38,8 @@ private:
     QSqlTableModel *mTablaSalidas;
     QString codSeleccionado;
     void actualizarTabla();
+    Articulos *articulo;
+
 };
 
 #endif // SALIDAS_H
