@@ -148,6 +148,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
                     base.insertarEtiqueta(ean);
                 }
             }
+
         case 1:
             if (precioAnterior != QString::number(pvp)) {
                 base.insertarEtiqueta(ean);

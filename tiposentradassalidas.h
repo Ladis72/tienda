@@ -14,7 +14,7 @@ class TiposEntradasSalidas : public QDialog
     Q_OBJECT
 
 public:
-    explicit TiposEntradasSalidas(QWidget *parent = 0);
+    explicit TiposEntradasSalidas(QWidget *parent = nullptr);
     ~TiposEntradasSalidas();
 
 private slots:

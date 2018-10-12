@@ -245,7 +245,7 @@ bool baseDatos::modificarFotoUsusario(QString foto, int id)
 bool baseDatos::modificarArticulo(QSqlDatabase db, QStringList datos, QString dato)
 {
     QSqlQuery consulta(db);
-    consulta.prepare("UPDATE articulos SET cod = ? , descripcion = ? , pvp = ? , iva = ? , stock = ? , min = ? , max = ? , pendientes_pedido = ? , encargados = ? , ultima_venta = ? , ultimo_pedido = ? , familia = ? , precio_compra = ? , fabricante = ? , foto = ? , notas = ? WHERE cod = ?");
+    consulta.prepare("UPDATE articulos SET cod = ? , descripcion = ? , pvp = ? , iva = ? , stock = ? , min = ? , max = ? , pendientes_pedido = ? , encargados = ? , ultima_venta = ? , ultimo_pedido = ? , familia = ? , precio_compra = ? , fabricante = ? , foto = ? , notas = ? , formato = ? , cantformato = ? WHERE cod = ?");
     consulta.bindValue(0,datos.at(0));
     consulta.bindValue(1,datos.at(1));
     consulta.bindValue(2,datos.at(2).toDouble());
@@ -262,7 +262,9 @@ bool baseDatos::modificarArticulo(QSqlDatabase db, QStringList datos, QString da
     consulta.bindValue(13,datos.at(13).toInt());
     consulta.bindValue(14,datos.at(14));
     consulta.bindValue(15,datos.at(15));
-    consulta.bindValue(16,dato);
+    consulta.bindValue(16,datos.at(16));
+    consulta.bindValue(17,datos.at(17).toDouble());
+    consulta.bindValue(18,dato);
 
     qDebug() << db.lastError().text();
     qDebug() << consulta.lastError();
@@ -283,7 +285,7 @@ bool baseDatos::insertarArticulo(QSqlDatabase db, QStringList datos)
 {
     qDebug() << datos;
     QSqlQuery consulta(db);
-    consulta.prepare("INSERT INTO articulos VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    consulta.prepare("INSERT INTO articulos VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i,datos.at(i));

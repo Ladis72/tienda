@@ -14,6 +14,7 @@ Articulos::Articulos(QWidget *parent) :
     ClickableLabel *fotoHR = new ClickableLabel(ui->labelFoto);
     fotoHR->setMinimumSize(200,200);
     connect(fotoHR,SIGNAL(clicked()),this,SLOT(mostrarFoto()));
+    llenarComboFormatos();
     modeloTabla = new QSqlQueryModel;
     recargarTabla();
 
@@ -33,6 +34,8 @@ Articulos::Articulos(QWidget *parent) :
     mapper.addMapping(ui->lineEditCodFabricante,13);
     mapper.addMapping(ui->lineEditFoto,14);
     mapper.addMapping(ui->plainTextEdit,15);
+    mapper.addMapping(ui->comboBoxFormato,16);
+    mapper.addMapping(ui->lineEditCantidad,17);
 
     mapper.toFirst();
     refrescarBotones(mapper.currentIndex());
@@ -58,6 +61,7 @@ void Articulos::refrescarBotones(int i)
     ui->labelFoto->setPixmap(imagenAjustada);
     ui->labelNombrePrecio->setText(ui->lineEditDesc->text()+ "        "+ui->lineEditPvp->text());
     ui->lineEditStock->setText(base.sumarStockArticulo(ui->lineEditCod->text()));
+
     cargarVentas();
     cargarCompras();
     cargarCodAux();
@@ -87,6 +91,8 @@ QStringList Articulos::recogerDatosFormulario()
     listaDatosFormulario.append(ui->lineEditFoto->text());
     }
     listaDatosFormulario.append(ui->plainTextEdit->toPlainText());
+    listaDatosFormulario.append(ui->comboBoxFormato->currentText());
+    listaDatosFormulario.append(ui->lineEditCantidad->text());
 
 
 
@@ -134,6 +140,15 @@ void Articulos::cargarCodAux()
     ui->tableViewAux->setModel(modeloAux);
     ui->tableViewAux->hideColumn(0);
 
+}
+
+void Articulos::llenarComboFormatos()
+{
+    consulta = base.devolverTablaCompleta("formatos");
+    consulta.first();
+    do{
+        ui->comboBoxFormato->addItem(consulta.value("formato").toString());
+    }while (consulta.next());
 }
 
 void Articulos::cargarVentas()
@@ -206,17 +221,20 @@ void Articulos::borrarFormulario()
     ui->dateEditUltimoPedido->setDate(QDate::fromString("2000-01-01"));
     ui->labelFoto->clear();
     ui->labelNombrePrecio->clear();
+    ui->comboBoxFormato->setCurrentIndex(0);
 }
 
 
 void Articulos::on_pushButtonAnterior_clicked()
 {
+    borrarFormulario();
     mapper.toPrevious();
     refrescarBotones(mapper.currentIndex());
 }
 
 void Articulos::on_pushButtonSiguiente_clicked()
 {
+    borrarFormulario();
     mapper.toNext();
     refrescarBotones(mapper.currentIndex());
 }

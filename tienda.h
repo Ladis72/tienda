@@ -33,6 +33,7 @@
 #include "listadosalidas.h"
 #include "listadoarqueos.h"
 #include "listadocaducados.h"
+#include "formatos.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -85,6 +86,8 @@ private slots:
     void on_pushButtonListadoArqueos_clicked();
     void on_pushButtonCaducados_2_clicked();
 
+    void on_pushButtonFormatos_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -116,6 +119,7 @@ private:
     ListadoSalidas *ListSalidas;
     ListadoArqueos *ListaArqueos;
     ListadoCaducados *ListaCaducados;
+    Formatos *Format;
 };
 
 #endif // TIENDA_H

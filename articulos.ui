@@ -68,6 +68,86 @@ color: rgb(255, 25, 5);</string>
        <item>
         <widget class="QWidget" name="General" native="true">
          <layout class="QGridLayout" name="gridLayout">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetDefaultConstraint</enum>
+          </property>
+          <property name="leftMargin">
+           <number>4</number>
+          </property>
+          <property name="topMargin">
+           <number>4</number>
+          </property>
+          <property name="rightMargin">
+           <number>4</number>
+          </property>
+          <property name="bottomMargin">
+           <number>4</number>
+          </property>
+          <property name="spacing">
+           <number>4</number>
+          </property>
+          <item row="5" column="3">
+           <widget class="QDateEdit" name="dateEditUltimoPedido">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
+            </property>
+            <property name="displayFormat">
+             <string>yyyy-MM-dd</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="6">
+           <widget class="QLineEdit" name="lineEditPvp"/>
+          </item>
+          <item row="7" column="4">
+           <widget class="QLabel" name="label_12">
+            <property name="text">
+             <string>Foto</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="5" rowspan="3">
+           <widget class="QLabel" name="labelFoto">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>Sin foto</string>
+            </property>
+            <property name="scaledContents">
+             <bool>false</bool>
+            </property>
+            <property name="openExternalLinks">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="7" rowspan="5">
+           <widget class="QTableView" name="tableViewStockTiendas"/>
+          </item>
+          <item row="5" column="2">
+           <widget class="QLabel" name="label_11">
+            <property name="text">
+             <string>Ultimo pedido</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="7">
+           <widget class="QPushButton" name="pushButtonBorrarFoto">
+            <property name="text">
+             <string>Borrar foto</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="label">
             <property name="text">
@@ -139,9 +219,6 @@ color: rgb(255, 25, 5);</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="6">
-           <widget class="QLineEdit" name="lineEditPvp"/>
-          </item>
           <item row="3" column="0">
            <widget class="QLabel" name="label_5">
             <property name="text">
@@ -203,20 +280,6 @@ color: rgb(255, 25, 5);</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="3">
-           <widget class="QLabel" name="label_9">
-            <property name="text">
-             <string>Encargados</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="4">
-           <widget class="QLineEdit" name="lineEditEncargados">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
           <item row="5" column="0">
            <widget class="QLabel" name="label_10">
             <property name="text">
@@ -234,26 +297,6 @@ color: rgb(255, 25, 5);</string>
             </property>
             <property name="correctionMode">
              <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
-            </property>
-            <property name="displayFormat">
-             <string>yyyy-MM-dd</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="3">
-           <widget class="QLabel" name="label_11">
-            <property name="text">
-             <string>Ultimo pedido</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="4">
-           <widget class="QDateEdit" name="dateEditUltimoPedido">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="focusPolicy">
-             <enum>Qt::NoFocus</enum>
             </property>
             <property name="displayFormat">
              <string>yyyy-MM-dd</string>
@@ -284,22 +327,6 @@ color: rgb(255, 25, 5);</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="4">
-           <widget class="QPushButton" name="pushButtonBuscarFamilia">
-            <property name="maximumSize">
-             <size>
-              <width>40</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>...</string>
-            </property>
-            <property name="autoDefault">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
           <item row="7" column="0">
            <widget class="QLabel" name="label_16">
             <property name="text">
@@ -324,7 +351,23 @@ color: rgb(255, 25, 5);</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="4">
+          <item row="9" column="0" colspan="10">
+           <widget class="QPlainTextEdit" name="plainTextEdit"/>
+          </item>
+          <item row="1" column="1" colspan="6">
+           <widget class="QLineEdit" name="lineEditDesc"/>
+          </item>
+          <item row="7" column="6">
+           <widget class="QPushButton" name="pushButtonPonerFoto">
+            <property name="text">
+             <string>Añadir Foto</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="3">
            <widget class="QPushButton" name="pushButton_2">
             <property name="maximumSize">
              <size>
@@ -340,14 +383,37 @@ color: rgb(255, 25, 5);</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="5">
-           <widget class="QLabel" name="label_12">
+          <item row="6" column="3">
+           <widget class="QPushButton" name="pushButtonBuscarFamilia">
+            <property name="maximumSize">
+             <size>
+              <width>40</width>
+              <height>16777215</height>
+             </size>
+            </property>
             <property name="text">
-             <string>Foto</string>
+             <string>...</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
             </property>
            </widget>
           </item>
-          <item row="7" column="6">
+          <item row="8" column="0">
+           <widget class="QLabel" name="label_13">
+            <property name="text">
+             <string>Presentación</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="2">
+           <widget class="QLabel" name="label_9">
+            <property name="text">
+             <string>Encargados</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="5">
            <widget class="QLineEdit" name="lineEditFoto">
             <property name="enabled">
              <bool>false</bool>
@@ -363,62 +429,25 @@ color: rgb(255, 25, 5);</string>
             </property>
            </widget>
           </item>
-          <item row="7" column="7">
-           <widget class="QPushButton" name="pushButtonPonerFoto">
-            <property name="text">
-             <string>Añadir Foto</string>
-            </property>
-            <property name="autoDefault">
+          <item row="4" column="3">
+           <widget class="QLineEdit" name="lineEditEncargados">
+            <property name="enabled">
              <bool>false</bool>
             </property>
            </widget>
           </item>
-          <item row="7" column="8">
-           <widget class="QPushButton" name="pushButtonBorrarFoto">
+          <item row="8" column="2">
+           <widget class="QLabel" name="label_17">
             <property name="text">
-             <string>Borrar foto</string>
-            </property>
-            <property name="autoDefault">
-             <bool>false</bool>
+             <string>Cantidad</string>
             </property>
            </widget>
           </item>
-          <item row="8" column="0" colspan="10">
-           <widget class="QPlainTextEdit" name="plainTextEdit"/>
+          <item row="8" column="1">
+           <widget class="QComboBox" name="comboBoxFormato"/>
           </item>
-          <item row="1" column="7" rowspan="6" colspan="3">
-           <widget class="QLabel" name="labelFoto">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>200</width>
-              <height>200</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>200</width>
-              <height>200</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Sin foto</string>
-            </property>
-            <property name="scaledContents">
-             <bool>false</bool>
-            </property>
-            <property name="openExternalLinks">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1" colspan="6">
-           <widget class="QLineEdit" name="lineEditDesc"/>
+          <item row="8" column="3">
+           <widget class="QLineEdit" name="lineEditCantidad"/>
           </item>
          </layout>
         </widget>
@@ -664,11 +693,7 @@ color: rgb(255, 25, 5);</string>
   <tabstop>lineEditMinimo</tabstop>
   <tabstop>lineEditMaximo</tabstop>
   <tabstop>lineEditCodFamila</tabstop>
-  <tabstop>pushButtonBuscarFamilia</tabstop>
   <tabstop>lineEditCodFabricante</tabstop>
-  <tabstop>pushButton_2</tabstop>
-  <tabstop>pushButtonPonerFoto</tabstop>
-  <tabstop>pushButtonBorrarFoto</tabstop>
   <tabstop>pushButtonNuevo</tabstop>
   <tabstop>pushButtonBorrar</tabstop>
   <tabstop>pushButtonModificar</tabstop>
@@ -677,7 +702,6 @@ color: rgb(255, 25, 5);</string>
   <tabstop>pushButtonSiguiente</tabstop>
   <tabstop>pushButtonCerrar</tabstop>
   <tabstop>plainTextEdit</tabstop>
-  <tabstop>lineEditEncargados</tabstop>
   <tabstop>lineEditPendientes</tabstop>
   <tabstop>tabWidget</tabstop>
  </tabstops>

@@ -59,7 +59,8 @@ SOURCES += main.cpp\
     prestamistas.cpp \
     listadosalidas.cpp \
     listadoarqueos.cpp \
-    listadocaducados.cpp
+    listadocaducados.cpp \
+    formatos.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -108,7 +109,8 @@ HEADERS  += tienda.h \
     prestamistas.h \
     listadosalidas.h \
     listadoarqueos.h \
-    listadocaducados.h
+    listadocaducados.h \
+    formatos.h
 
 FORMS    += tienda.ui \
     tpv.ui \
@@ -150,7 +152,8 @@ FORMS    += tienda.ui \
     prestamistas.ui \
     listadosalidas.ui \
     listadoarqueos.ui \
-    listadocaducados.ui
+    listadocaducados.ui \
+    formatos.ui
 include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
 RESOURCES += \

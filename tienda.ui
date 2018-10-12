@@ -148,6 +148,13 @@
             </property>
            </widget>
           </item>
+          <item row="1" column="7">
+           <widget class="QPushButton" name="pushButtonFormatos">
+            <property name="text">
+             <string>Formatos</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
        </layout>

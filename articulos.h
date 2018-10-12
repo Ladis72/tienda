@@ -23,7 +23,7 @@ class Articulos : public QDialog
     Q_OBJECT
     
 public:
-    explicit Articulos(QWidget *parent = 0);
+    explicit Articulos(QWidget *parent = nullptr);
     ~Articulos();
     void borrarFormulario();
 
@@ -112,6 +112,7 @@ private:
     bool eventFilter(QObject *obj, QEvent *event);
     void cargarCompras();
     void cargarCodAux();
+    void llenarComboFormatos();
 };
 
 class ClickableLabel : public QLabel {
