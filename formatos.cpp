@@ -42,5 +42,6 @@ void Formatos::keyPressEvent(QKeyEvent *e)
 {
     if(e->modifiers() == Qt::ControlModifier && e->key() == Qt::Key_F11){
         ui->pushButtonModificar->setEnabled(true);
+        ui->pushButtonnadir->setEnabled(true);
     }
 }

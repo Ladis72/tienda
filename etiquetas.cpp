@@ -4,6 +4,7 @@
 #include <QPdfWriter>
 #include <QPainter>
 #include <QMessageBox>
+#include "qtrpt.h"
 
 Etiquetas::Etiquetas(QWidget *parent) :
     QDialog(parent),
@@ -22,32 +23,128 @@ Etiquetas::~Etiquetas()
 
 void Etiquetas::on_pushButtonImprimir_clicked()
 {
-    int etiquetas = modelo->rowCount();
-    int filas = floor(modelo->rowCount()/3)+1;
-    int paginas = floor(filas/7)+1;
-    qDebug() << etiquetas << filas << paginas;
-    QPdfWriter etiquetasPDF("./etiquetas.pdf");
-    QPainter painter(&etiquetasPDF);
-    for (int p = 0; p < paginas; ++p){
-        for (int i = 0; i < 7; ++i) {
-            int y = 300+1800*i;
-            for (int j = 0; j < 3; ++j) {
-                int x = 300+3100*j;
-                if((21*p)+i*3+j < etiquetas){
-                    painter.setPen(Qt::black);
-                    painter.setFont(QFont("Liberation",15));
-                    painter.drawText(QRect(x,y,3000,600),modelo->item((21*p)+i*3+j,1)->text());
-                    painter.setPen(Qt::blue);
-                    painter.setFont(QFont("Arial",50));
-                    painter.drawText(x+200,y+1200,modelo->item((21*p)+i*3+j,2)->text());
-                    }
-                }
-            }
-        if (p < paginas -1) etiquetasPDF.newPage();
+//    int etiquetas = modelo->rowCount();
+//    int filas = floor(modelo->rowCount()/3)+1;
+//    int paginas = floor(filas/7)+1;
+//    qDebug() << etiquetas << filas << paginas;
+//    QPdfWriter etiquetasPDF("./etiquetas.pdf");
+//    QPainter painter(&etiquetasPDF);
+//    for (int p = 0; p < paginas; ++p){
+//        for (int i = 0; i < 7; ++i) {
+//            int y = 300+1800*i;
+//            for (int j = 0; j < 3; ++j) {
+//                int x = 300+3100*j;
+//                if((21*p)+i*3+j < etiquetas){
+//                    painter.setPen(Qt::black);
+//                    painter.setFont(QFont("Liberation",15));
+//                    painter.drawText(QRect(x,y,3000,600),modelo->item((21*p)+i*3+j,1)->text());
+//                    painter.setPen(Qt::blue);
+//                    painter.setFont(QFont("Arial",50));
+//                    painter.drawText(x+200,y+1200,modelo->item((21*p)+i*3+j,2)->text());
+//                    }
+//                }
+//            }
+//        if (p < paginas -1) etiquetasPDF.newPage();
+//    }
+
+//    painter.end();
+//    system("okular ./etiquetas.pdf");
+QStandardItemModel *modeloImpresion = new QStandardItemModel();
+modeloImpresion->clear();
+int contadorfila = 0;
+int contadorcolumna = 0;
+for (int i = 0;i < modelo->rowCount();i++) {
+
+    QString textoFormateado = modelo->item(i,1)->text();
+    if(textoFormateado.length() > 25){
+        textoFormateado.insert(textoFormateado.indexOf(" ",20),"\n");
+    }
+    QStandardItem *nombreImp = new QStandardItem(textoFormateado);
+    modeloImpresion->setItem(contadorfila,contadorcolumna,nombreImp);
+    contadorcolumna++;
+
+    QStandardItem *PVPImp = new QStandardItem(modelo->item(i,2)->text());
+    modeloImpresion->setItem(contadorfila,contadorcolumna,PVPImp);
+    contadorcolumna++;
+
+    QString formato = modelo->item(i,3)->text();
+    QString formatoEtiqueta;
+    if(formato == "Uds"){
+        formatoEtiqueta = "Precio / ud \n";
+        double pvp = modelo->item(i,2)->text().toDouble()/modelo->item(i,4)->text().toDouble();
+        formatoEtiqueta += QString::number(pvp);
+    }
+    if(formato == "Peso"){
+        formatoEtiqueta = "Precio / Kg \n";
+        double pvp = modelo->item(i,2)->text().toDouble()*1000/modelo->item(i,4)->text().toDouble();
+        formatoEtiqueta += QString::number(pvp);
+    }
+    if(formato == "Volumen"){
+        formatoEtiqueta = "Precio / L \n";
+        double pvp = modelo->item(i,2)->text().toDouble()*1000/modelo->item(i,4)->text().toDouble();
+        formatoEtiqueta += QString::number(pvp);
+    }
+    if(formato == "No definido"){
+        formatoEtiqueta = "--- / --- \n";
     }
 
-    painter.end();
-    system("okular ./etiquetas.pdf");
+
+    QStandardItem *formatoImp = new QStandardItem(formatoEtiqueta);
+    modeloImpresion->setItem(contadorfila,contadorcolumna,formatoImp);
+    contadorcolumna++;
+
+    if (contadorcolumna == 9){
+        contadorcolumna=0;
+        contadorfila++;
+    }
+
+}
+while(contadorcolumna < 9){
+    QStandardItem *vacio = new QStandardItem("");
+    modeloImpresion->setItem(contadorfila,contadorcolumna,vacio);
+
+    contadorcolumna++;
+}
+
+
+QtRPT *informe = new QtRPT();
+informe->recordCount.append(modeloImpresion->rowCount());
+qDebug() << modeloImpresion->rowCount()-1;
+informe->loadReport("./documentos/etiquetas2.xml");
+connect(informe, &QtRPT::setValue, [&](const int recNo,
+        const QString paramName,
+        QVariant &paramValue,
+        const int reportPage) {
+    (void) reportPage;
+    if(paramName == "producto1"){
+        paramValue = modeloImpresion->item(recNo,0)->text();
+    }
+    if(paramName == "pvp1"){
+        paramValue = modeloImpresion->item(recNo,1)->text();
+    }if(paramName == "producto2"){
+        paramValue = modeloImpresion->item(recNo,3)->text();
+    }
+    if(paramName == "pvp2"){
+        paramValue = modeloImpresion->item(recNo,4)->text();
+    }if(paramName == "producto3"){
+        paramValue = modeloImpresion->item(recNo,6)->text();
+    }
+    if(paramName == "pvp3"){
+        paramValue = modeloImpresion->item(recNo,7)->text();
+    }
+    if(paramName == "peso1"){
+        paramValue = modeloImpresion->item(recNo,2)->text();
+    }
+    if(paramName == "peso2"){
+        paramValue = modeloImpresion->item(recNo,5)->text();
+    }
+    if(paramName == "peso3"){
+        paramValue = modeloImpresion->item(recNo,8)->text();
+    }
+
+
+});
+informe->printExec();
 }
 
 void Etiquetas::on_lineEditCod_returnPressed()
@@ -71,9 +168,13 @@ void Etiquetas::llenarModelo()
         QStandardItem *cod = new QStandardItem(producto.value(0).toString());
         QStandardItem *nombre = new QStandardItem(producto.value(1).toString());
         QStandardItem *precio = new QStandardItem(QString::number(pvp,'f',2));
+        QStandardItem *formato = new QStandardItem(producto.value("formato").toString());
+        QStandardItem *cantidad = new QStandardItem(producto.value("cantformato").toString());
         modelo->setItem(i,0,cod);
         modelo->setItem(i,1,nombre);
         modelo->setItem(i,2,precio);
+        modelo->setItem(i,3,formato);
+        modelo->setItem(i,4,cantidad);
         listaEtiquetas.next();
 
     }
