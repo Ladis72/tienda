@@ -127,7 +127,8 @@ public:
 //Funciones de configuración
     QString leerConfiguracion();
     bool GuardarConfiguracion(int datos);
-
+    bool guardarDirectorios(QStringList directorios);
+    QStringList cargarDirectorios();
 
 private:
 

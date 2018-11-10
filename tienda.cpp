@@ -222,3 +222,9 @@ void Tienda::on_pushButtonFormatos_clicked()
     Format = new Formatos(this);
     Format->exec();
 }
+
+void Tienda::on_pushButtonInformes_clicked()
+{
+    Director = new Directorios(this);
+    Director->exec();
+}

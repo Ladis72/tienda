@@ -21,7 +21,7 @@ class Tpv : public QWidget
     Q_OBJECT
     
 public:
-    explicit Tpv(QWidget *parent = 0);
+    explicit Tpv(QWidget *parent = nullptr);
     ~Tpv();
 
 

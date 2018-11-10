@@ -5,6 +5,7 @@
 #include <QStandardItemModel>
 #include "base_datos.h"
 #include "buscarproducto.h"
+#include "formateo.h"
 
 
 
@@ -39,6 +40,7 @@ private:
     baseDatos *base;
     BuscarProducto *buscarProducto;
     QString articuloSeleccionado;
+    Formateo classFormatear;
 
     void llenarModelo();
 };

@@ -71,17 +71,17 @@ for (int i = 0;i < modelo->rowCount();i++) {
     QString formatoEtiqueta;
     if(formato == "Uds"){
         formatoEtiqueta = "Precio / ud \n";
-        double pvp = modelo->item(i,2)->text().toDouble()/modelo->item(i,4)->text().toDouble();
+        double pvp = classFormatear.redondear(modelo->item(i,2)->text().toDouble()/modelo->item(i,4)->text().toDouble(),3);
         formatoEtiqueta += QString::number(pvp);
     }
     if(formato == "Peso"){
         formatoEtiqueta = "Precio / Kg \n";
-        double pvp = modelo->item(i,2)->text().toDouble()*1000/modelo->item(i,4)->text().toDouble();
+        double pvp = classFormatear.redondear(modelo->item(i,2)->text().toDouble()*1000/modelo->item(i,4)->text().toDouble(),3);
         formatoEtiqueta += QString::number(pvp);
     }
     if(formato == "Volumen"){
         formatoEtiqueta = "Precio / L \n";
-        double pvp = modelo->item(i,2)->text().toDouble()*1000/modelo->item(i,4)->text().toDouble();
+        double pvp = classFormatear.redondear(modelo->item(i,2)->text().toDouble()*1000/modelo->item(i,4)->text().toDouble(),3);
         formatoEtiqueta += QString::number(pvp);
     }
     if(formato == "No definido"){

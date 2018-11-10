@@ -1396,6 +1396,33 @@ bool baseDatos::GuardarConfiguracion(int datos)
     return false;
 }
 
+bool baseDatos::guardarDirectorios(QStringList directorios)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("UPDATE directorios SET directorio = ? WHERE id = ?");
+    for(int i = 1; i < directorios.count()+1; i++){
+    consulta.bindValue(0,directorios.at(i-1));
+    consulta.bindValue(1,i);
+    if(!consulta.exec()){
+        return false;
+    };
+    }
+    return true;
+}
+
+QStringList baseDatos::cargarDirectorios()
+{
+    QStringList resultado;
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT directorio FROM directorios");
+    consulta.first();
+    for (int i = 0;i <= consulta.numRowsAffected();i++) {
+        resultado.append(consulta.record().value(0).toString());
+        consulta.next();
+    }
+    return resultado;
+}
+
 
 
 
