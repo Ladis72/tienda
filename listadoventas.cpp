@@ -123,8 +123,8 @@ void ListadoVentas::on_pushButtonImprimir_clicked()
 {
     QtRPT *informe = new QtRPT(this);
     informe->recordCount.append(modeloTabla->rowCount());
-    //informe->loadReport(":/archivos/ventas.xml");
-    informe->loadReport("./documentos/ventas.xml");
+    QString informeDir = base->devolverDirectorio("ventas");
+    informe->loadReport(informeDir);
 
     connect(informe, &QtRPT::setValue, [&](const int recNo,
             const QString paramName,

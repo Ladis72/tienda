@@ -44,7 +44,8 @@ void ListadoSalidas::on_pushButton_2_clicked()
 {
     QtRPT *informe = new QtRPT(this);
     informe->recordCount.append(modeloTabla->rowCount());
-    informe->loadReport("./documentos/salidasEfectivo.xml");
+    QString informeDir = base->devolverDirectorio("movimientos");
+    informe->loadReport(informeDir);
     connect(informe, &QtRPT::setValue, [&](const int recNo,
             const QString paramName,
             QVariant &paramValue,

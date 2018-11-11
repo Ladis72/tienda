@@ -24,6 +24,7 @@ private slots:
 private:
     Ui::ListadoArqueos *ui;
     QSqlTableModel *modeloTabla;
+    baseDatos *base;
 };
 
 #endif // LISTADOARQUEOS_H

@@ -35,7 +35,8 @@ void ListadoArqueos::on_pushButtonImprimir_clicked()
 {
     QtRPT *informe = new QtRPT(this);
     informe->recordCount.append(modeloTabla->rowCount());
-    informe->loadReport("./documentos/listadoArqueos.xml");
+    QString informeDir = base->devolverDirectorio("arqueos");
+    informe->loadReport(informeDir);
     connect(informe, &QtRPT::setValue, [&](const int recNo,
             const QString paramName,
             QVariant &paramValue,

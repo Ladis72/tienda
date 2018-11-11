@@ -129,6 +129,7 @@ public:
     bool GuardarConfiguracion(int datos);
     bool guardarDirectorios(QStringList directorios);
     QStringList cargarDirectorios();
+    QString devolverDirectorio(QString tipo);
 
 private:
 

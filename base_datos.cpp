@@ -1423,6 +1423,17 @@ QStringList baseDatos::cargarDirectorios()
     return resultado;
 }
 
+QString baseDatos::devolverDirectorio(QString tipo)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("SELECT directorio FROM directorios WHERE nombre = ?");
+    consulta.bindValue(0,tipo);
+    consulta.exec();
+    qDebug() << consulta.lastError();
+    consulta.first();
+    return consulta.record().value(0).toString();
+}
+
 
 
 

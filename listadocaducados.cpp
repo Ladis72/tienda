@@ -42,7 +42,8 @@ void ListadoCaducados::on_pushButtonImprimir_clicked()
     }
     QtRPT *informe = new QtRPT(this);
     informe->recordCount.append(mCaducados->rowCount());
-    informe->loadReport("./documentos/caducados.xml");
+    QString informeDir = base->devolverDirectorio("caducados");
+    informe->loadReport(informeDir);
     connect(informe, &QtRPT::setValue, [&](const int recNo,
             const QString paramName,
             QVariant &paramValue,
