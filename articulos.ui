@@ -13,7 +13,7 @@
     <x>0</x>
     <y>0</y>
     <width>1039</width>
-    <height>556</height>
+    <height>578</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -615,6 +615,9 @@ color: rgb(255, 25, 5);</string>
      </item>
      <item>
       <widget class="QPushButton" name="pushButtonBorrar">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>Borrar</string>
        </property>
@@ -741,8 +744,8 @@ color: rgb(255, 25, 5);</string>
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>1028</x>
-     <y>534</y>
+     <x>1031</x>
+     <y>570</y>
     </hint>
     <hint type="destinationlabel">
      <x>788</x>

@@ -22,7 +22,7 @@
     <item row="0" column="1">
      <widget class="QTabWidget" name="tab">
       <property name="currentIndex">
-       <number>5</number>
+       <number>0</number>
       </property>
       <property name="iconSize">
        <size>
@@ -92,7 +92,7 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="7">
+          <item row="0" column="8">
            <widget class="QPushButton" name="pushButtonEntradaSalida">
             <property name="text">
              <string>Tipos E/S</string>
@@ -145,6 +145,13 @@
            <widget class="QPushButton" name="pushButtonPrestamistas">
             <property name="text">
              <string>Prestamos</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="7">
+           <widget class="QPushButton" name="pushButtonTiendas">
+            <property name="text">
+             <string>Tiendas</string>
             </property>
            </widget>
           </item>

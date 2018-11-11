@@ -228,3 +228,9 @@ void Tienda::on_pushButtonInformes_clicked()
     Director = new Directorios(this);
     Director->exec();
 }
+
+void Tienda::on_pushButtonTiendas_clicked()
+{
+    Sucursal = new tiendas(this);
+    Sucursal->exec();
+}

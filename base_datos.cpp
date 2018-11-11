@@ -531,6 +531,54 @@ bool baseDatos::insertarEtiqueta(QString etiqueta)
     return false;
 }
 
+bool baseDatos::modificarTienda(QStringList datos)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("UPDATE tiendas SET nombre = ? , direccion = ? , ciudad = ? , telefono = ? , whatsapp = ? , email = ? , ip = ? , usuario = ? , password = ? WHERE id = ?");
+    consulta.bindValue(0,datos.at(1));
+    consulta.bindValue(1,datos.at(2));
+    consulta.bindValue(2,datos.at(3));
+    consulta.bindValue(3,datos.at(4));
+    consulta.bindValue(4,datos.at(5));
+    consulta.bindValue(5,datos.at(6));
+    consulta.bindValue(6,datos.at(7));
+    consulta.bindValue(7,datos.at(8));
+    consulta.bindValue(8,datos.at(9));
+    consulta.bindValue(9,datos.at(0));
+    if(consulta.exec()){
+        return true;
+    }
+    return false;
+
+}
+
+bool baseDatos::borrarTienda(QString dato)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("DELETE FROM tiendas where id = ?");
+    consulta.bindValue(0,dato);
+    if(consulta.exec()){
+        return true;
+    }
+    return false;
+}
+
+bool baseDatos::crearTienda(QStringList datos)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("INSERT INTO tiendas (id, nombre, direccion, ciudad, telefono, whatsapp, email, ip, usuario, password) VALUES (? , ? , ? , ? , ? , ? , ? , ? , ? ,?)");
+        qDebug() << datos.length();
+    for (int i = 0; i < datos.length() ;i++) {
+        consulta.bindValue(i,datos.at(i));
+        qDebug() << i;
+        //qDebug() << datos.at(i);
+    }
+    if(consulta.exec()){
+        return true;
+    }
+    return false;
+}
+
 QString baseDatos::nombreProveedor(QString id)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));

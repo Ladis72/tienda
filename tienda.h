@@ -35,7 +35,7 @@
 #include "listadocaducados.h"
 #include "formatos.h"
 #include "directorios.h"
-
+#include "tiendas.h"
 extern Configuracion *conf;
 namespace Ui {
 class Tienda;
@@ -91,6 +91,8 @@ private slots:
 
     void on_pushButtonInformes_clicked();
 
+    void on_pushButtonTiendas_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -124,6 +126,7 @@ private:
     ListadoCaducados *ListaCaducados;
     Formatos *Format;
     Directorios *Director;
+    tiendas *Sucursal;
 };
 
 #endif // TIENDA_H
