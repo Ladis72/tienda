@@ -1,10 +1,12 @@
 #include "articulos.h"
 #include "ui_articulos.h"
 #include "caducados.h"
+#include "conexion.h"
 
 #include <QDir>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QTreeWidget>
 
 Articulos::Articulos(QWidget *parent) :
     QDialog(parent),
@@ -23,7 +25,6 @@ Articulos::Articulos(QWidget *parent) :
     mapper.addMapping(ui->lineEditDesc,1);
     mapper.addMapping(ui->lineEditPvp,2);
     mapper.addMapping(ui->lineEditIva,3);
-    //mapper.addMapping(ui->lineEditStock,4);
     mapper.addMapping(ui->lineEditMinimo,5);
     mapper.addMapping(ui->lineEditMaximo,6);
     mapper.addMapping(ui->lineEditPendientes,8);
@@ -38,11 +39,22 @@ Articulos::Articulos(QWidget *parent) :
     mapper.addMapping(ui->lineEditCantidad,17);
 
     mapper.toFirst();
+    listaConexionesRemotas = crearConexionesRemotas();
+    qDebug() << listaConexionesRemotas;
     refrescarBotones(mapper.currentIndex());
 
     ui->lineEditCod->installEventFilter(this);
     borrarFormulario();
     ui->lineEditCod->setFocus();
+
+
+//    QSqlQuery tiendas = base.tiendas(QSqlDatabase::database("DB"));
+
+//    if(createConnection("localhost","3306","tienda","root","meganizado","remoto1")){
+//        qDebug() << "Conexion remota exitosa";
+//    }
+//    base.fpago(QSqlDatabase::database("remoto1"));
+
 }
 
 Articulos::~Articulos()
@@ -61,11 +73,12 @@ void Articulos::refrescarBotones(int i)
 
     ui->labelFoto->setPixmap(imagenAjustada);
     ui->labelNombrePrecio->setText(ui->lineEditDesc->text()+ "        "+ui->lineEditPvp->text());
-    ui->lineEditStock->setText(base.sumarStockArticulo(ui->lineEditCod->text()));
+    ui->lineEditStock->setText(base.sumarStockArticulo(ui->lineEditCod->text(),"DB"));
 
     cargarVentas();
     cargarCompras();
     cargarCodAux();
+    llenarStockRemoto(ui->lineEditCod->text());
 }
 
 QStringList Articulos::recogerDatosFormulario()
@@ -150,6 +163,49 @@ void Articulos::llenarComboFormatos()
     do{
         ui->comboBoxFormato->addItem(consulta.value("formato").toString());
     }while (consulta.next());
+}
+
+void Articulos::llenarStockRemoto(QString ean)
+{
+    qDebug() << listaConexionesRemotas.length();
+    QStringList encabezado;
+    encabezado << "Tienda" << "Stock";
+    ui->treeWidgetStockTiendas->setColumnCount(2);
+    ui->treeWidgetStockTiendas->setHeaderLabels(encabezado);
+    ui->treeWidgetStockTiendas->clear();
+    for (int i = 0; i < listaConexionesRemotas.length();i++) {
+        QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidgetStockTiendas);
+        item->setText(0,listaConexionesRemotas.at(i));
+        item->setText(1,base.sumarStockArticulo(ean,listaConexionesRemotas.at(i)));
+        QSqlQuery lotes = base.lotesProducto(ean,listaConexionesRemotas.at(i));
+        while (lotes.next()) {
+            QTreeWidgetItem *lote = new QTreeWidgetItem(item);
+            lote->setText(0,lotes.record().value("fecha").toString());
+            lote->setText(1,lotes.record().value("cantidad").toString());
+        }
+    }
+
+}
+
+QStringList Articulos::crearConexionesRemotas()
+{
+    listaConexionesRemotas.clear();
+    QSqlQuery tiendas = base.tiendas(QSqlDatabase::database("DB"));
+    tiendas.first();
+    for (int i = 0; i < tiendas.numRowsAffected();i++) {
+        QString host = tiendas.value("ip").toString();
+        QString puerto = "3306";
+        QString baseDatos = "tienda";
+        QString usuario = tiendas.value("usuario").toString();
+        QString constrasena = tiendas.value("password").toString();
+        QString nombreConexion = tiendas.value("nombre").toString();
+        createConnection(host,puerto,baseDatos,usuario,constrasena,nombreConexion);
+        qDebug() << "conexion creada: " << nombreConexion;
+        listaConexionesRemotas.append(nombreConexion);
+        tiendas.next();
+    }
+    return listaConexionesRemotas;
+
 }
 
 void Articulos::cargarVentas()

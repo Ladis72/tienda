@@ -515,7 +515,7 @@ QString baseDatos::idFormaPago(QString fpago)
         consulta.first();
         return consulta.value(0).toString();
     }
-    return 0;
+    return nullptr;
 }
 
 bool baseDatos::insertarEtiqueta(QString etiqueta)
@@ -577,6 +577,15 @@ bool baseDatos::crearTienda(QStringList datos)
         return true;
     }
     return false;
+}
+
+QSqlQuery baseDatos::tiendas(QSqlDatabase db)
+{
+    QSqlQuery consulta(db);
+    if (!consulta.exec("SELECT * FROM tiendas")){
+        qDebug() << consulta.lastError();
+    }
+    return consulta;
 }
 
 QString baseDatos::nombreProveedor(QString id)
@@ -1337,10 +1346,10 @@ void baseDatos::crearLote(QString ean, QString lote, QString fecha, QString uds)
 
 }
 
-QSqlQuery baseDatos::lotesProducto(QString cod)
+QSqlQuery baseDatos::lotesProducto(QString cod, QString nombreConnexion)
 {
     //Devuelve los diferentes lotes de un producto
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(nombreConnexion));
     consulta.prepare("SELECT * FROM lotes WHERE ean = ? group by fecha");
     consulta.bindValue(0,cod);
     if (!consulta.exec()) {
@@ -1351,9 +1360,9 @@ QSqlQuery baseDatos::lotesProducto(QString cod)
 
 }
 
-QString baseDatos::sumarStockArticulo(QString id)
+QString baseDatos::sumarStockArticulo(QString id, QString nombreConnexion)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(nombreConnexion));
     consulta.prepare("SELECT sum(cantidad) FROM lotes WHERE ean = ?");
     consulta.bindValue(0,id);
     if (consulta.exec()) {

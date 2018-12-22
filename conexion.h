@@ -35,9 +35,9 @@ static bool createConnection()
 return true;
 
 }
-static bool createConnection(QString host , QString puerto , QString baseDatos , QString usuario , QString clave)
+static bool createConnection(QString host , QString puerto , QString baseDatos , QString usuario , QString clave , QString nombreConexion)
 {
-    QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL","DB");
+    QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL",nombreConexion);
     db.setHostName(host);
     db.setDatabaseName(baseDatos);
     db.setUserName(usuario);

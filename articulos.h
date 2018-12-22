@@ -102,6 +102,7 @@ private:
     VisorImagenes *visor;
     VisorFacturas *factura;
     QString nFactura , idProveedor;
+    QStringList listaConexionesRemotas;
 
     //Familias *F;
 
@@ -113,6 +114,8 @@ private:
     void cargarCompras();
     void cargarCodAux();
     void llenarComboFormatos();
+    void llenarStockRemoto(QString ean);
+    QStringList crearConexionesRemotas();
 };
 
 class ClickableLabel : public QLabel {

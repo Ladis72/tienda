@@ -44,7 +44,7 @@ void Caducados::llenarComboFechas(QString id)
     ui->comboBox->clear();
     ui->comboBox->addItem("Selecciona uno");
 
-    consulta = base.lotesProducto(id);
+    consulta = base.lotesProducto(id,"DB");
     while (consulta.next()) {
         ui->comboBox->addItem(consulta.value("fecha").toString());
     }

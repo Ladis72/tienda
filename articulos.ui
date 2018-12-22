@@ -128,9 +128,6 @@ color: rgb(255, 25, 5);</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="7" rowspan="5">
-           <widget class="QTableView" name="tableViewStockTiendas"/>
-          </item>
           <item row="5" column="2">
            <widget class="QLabel" name="label_11">
             <property name="text">
@@ -449,6 +446,15 @@ color: rgb(255, 25, 5);</string>
           <item row="8" column="3">
            <widget class="QLineEdit" name="lineEditCantidad"/>
           </item>
+          <item row="1" column="7" rowspan="5">
+           <widget class="QTreeWidget" name="treeWidgetStockTiendas">
+            <column>
+             <property name="text">
+              <string notr="true">1</string>
+             </property>
+            </column>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -716,7 +722,7 @@ color: rgb(255, 25, 5);</string>
   <tabstop>pushButtonVer</tabstop>
   <tabstop>pushButtonPonerFoto</tabstop>
   <tabstop>plainTextEdit</tabstop>
-  <tabstop>tableViewStockTiendas</tabstop>
+  <tabstop>treeWidgetStockTiendas</tabstop>
   <tabstop>lineEditEncargados</tabstop>
   <tabstop>lineEditPendientes</tabstop>
   <tabstop>tabWidget</tabstop>

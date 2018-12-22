@@ -48,6 +48,7 @@ public:
     bool modificarTienda(QStringList datos);
     bool borrarTienda(QString dato);
     bool crearTienda(QStringList datos);
+    QSqlQuery tiendas(QSqlDatabase db);
 //Funciones PROVEEDORES
     QString nombreProveedor(QString id);
     QString idProveedor(QString nombre);
@@ -115,8 +116,8 @@ public:
     void aumentarLote(QString idLote, int uds);
     void disminuirLote(QString cod, QString fecha , int uds);
     void crearLote(QString ean,QString lote,QString fecha,QString uds);
-    QSqlQuery lotesProducto(QString cod);
-    QString sumarStockArticulo(QString id);
+    QSqlQuery lotesProducto(QString cod, QString nombreConnexion);
+    QString sumarStockArticulo(QString id, QString nombreConnexion);
     int unidadesLote(QString idLote);
 
 

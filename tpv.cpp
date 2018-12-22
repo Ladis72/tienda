@@ -272,7 +272,7 @@ QString Tpv::formatearCadena(QString cadena, int tamano)
 
 void Tpv::datosProducto(QString IdProducto)
 {
-    ui->labelStock->setText(base.sumarStockArticulo(IdProducto));
+    ui->labelStock->setText(base.sumarStockArticulo(IdProducto,"DB"));
     QSqlQuery tmp = base.ejecutarSentencia("SELECT fecha FROM lotes WHERE ean = "+IdProducto+" ORDER BY fecha asc");
     tmp.first();
     ui->labelFecha->setText(tmp.value(0).toString());
