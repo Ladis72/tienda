@@ -7,6 +7,7 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QTreeWidget>
+#include <QtConcurrent/QtConcurrent>
 
 Articulos::Articulos(QWidget *parent) :
     QDialog(parent),
@@ -39,8 +40,11 @@ Articulos::Articulos(QWidget *parent) :
     mapper.addMapping(ui->lineEditCantidad,17);
 
     mapper.toFirst();
-    listaConexionesRemotas = crearConexionesRemotas();
-    qDebug() << listaConexionesRemotas;
+
+    remoto = false;
+//    listaConexionesRemotas = crearConexionesRemotas(consultaRemota);
+//    qDebug() << listaConexionesRemotas;
+
     refrescarBotones(mapper.currentIndex());
 
     ui->lineEditCod->installEventFilter(this);
@@ -48,12 +52,7 @@ Articulos::Articulos(QWidget *parent) :
     ui->lineEditCod->setFocus();
 
 
-//    QSqlQuery tiendas = base.tiendas(QSqlDatabase::database("DB"));
 
-//    if(createConnection("localhost","3306","tienda","root","meganizado","remoto1")){
-//        qDebug() << "Conexion remota exitosa";
-//    }
-//    base.fpago(QSqlDatabase::database("remoto1"));
 
 }
 
@@ -78,7 +77,8 @@ void Articulos::refrescarBotones(int i)
     cargarVentas();
     cargarCompras();
     cargarCodAux();
-    llenarStockRemoto(ui->lineEditCod->text());
+    if (ui->checkBoxRemoto->isChecked()) llenarStockRemoto(ui->lineEditCod->text());
+    qDebug() << listaConexionesRemotas;
 }
 
 QStringList Articulos::recogerDatosFormulario()
@@ -187,10 +187,11 @@ void Articulos::llenarStockRemoto(QString ean)
 
 }
 
-QStringList Articulos::crearConexionesRemotas()
+QStringList Articulos::crearConexionesRemotas(QSqlQuery consultaRemota)
 {
+    QStringList listaConexionesRemotas;
     listaConexionesRemotas.clear();
-    QSqlQuery tiendas = base.tiendas(QSqlDatabase::database("DB"));
+    QSqlQuery tiendas = consultaRemota;
     tiendas.first();
     for (int i = 0; i < tiendas.numRowsAffected();i++) {
         QString host = tiendas.value("ip").toString();
@@ -199,9 +200,11 @@ QStringList Articulos::crearConexionesRemotas()
         QString usuario = tiendas.value("usuario").toString();
         QString constrasena = tiendas.value("password").toString();
         QString nombreConexion = tiendas.value("nombre").toString();
-        createConnection(host,puerto,baseDatos,usuario,constrasena,nombreConexion);
-        qDebug() << "conexion creada: " << nombreConexion;
-        listaConexionesRemotas.append(nombreConexion);
+        if(createConnection(host,puerto,baseDatos,usuario,constrasena,nombreConexion)){
+            qDebug() << "conexion creada: " << nombreConexion;
+            listaConexionesRemotas.append(nombreConexion);
+        }
+
         tiendas.next();
     }
     return listaConexionesRemotas;
@@ -590,4 +593,15 @@ void Articulos::on_pushButtonVerFactura_clicked()
 
     VisorFacturas *factura = new VisorFacturas(nFactura,this);
     factura->show();
+}
+
+void Articulos::on_checkBoxRemoto_stateChanged(int arg1)
+{
+    if( remoto == false && arg1 == 2){
+        QSqlQuery consultaRemota = base.tiendas(QSqlDatabase::database("DB"));
+        listaConexionesRemotas = crearConexionesRemotas(consultaRemota);
+        qDebug() << listaConexionesRemotas;
+        remoto = true;
+        refrescarBotones(mapper.currentIndex());
+    }
 }

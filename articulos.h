@@ -88,6 +88,8 @@ private slots:
 
     void on_pushButtonVerFactura_clicked();
 
+    void on_checkBoxRemoto_stateChanged(int arg1);
+
 private:
     Ui::Articulos *ui;
 
@@ -97,12 +99,13 @@ private:
     QSqlQueryModel modeloCompras;
     QSqlTableModel *modeloAux;
     QDataWidgetMapper mapper;
-    QSqlQuery consulta;
+    QSqlQuery consulta , consultaRemota;
     Stock *stock;
     VisorImagenes *visor;
     VisorFacturas *factura;
     QString nFactura , idProveedor;
     QStringList listaConexionesRemotas;
+    bool remoto;
 
     //Familias *F;
 
@@ -115,7 +118,8 @@ private:
     void cargarCodAux();
     void llenarComboFormatos();
     void llenarStockRemoto(QString ean);
-    QStringList crearConexionesRemotas();
+    static QStringList crearConexionesRemotas(QSqlQuery consultaRemota);
+
 };
 
 class ClickableLabel : public QLabel {

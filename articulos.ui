@@ -455,6 +455,13 @@ color: rgb(255, 25, 5);</string>
             </column>
            </widget>
           </item>
+          <item row="0" column="7">
+           <widget class="QCheckBox" name="checkBoxRemoto">
+            <property name="text">
+             <string>Cargar remoto</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
