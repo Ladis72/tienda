@@ -77,7 +77,10 @@ void Articulos::refrescarBotones(int i)
     cargarVentas();
     cargarCompras();
     cargarCodAux();
-    if (ui->checkBoxRemoto->isChecked()) llenarStockRemoto(ui->lineEditCod->text());
+    if (ui->checkBoxRemoto->isChecked()){
+        llenarStockRemoto(ui->lineEditCod->text());}else{
+        ui->treeWidgetStockTiendas->clear();
+    }
     qDebug() << listaConexionesRemotas;
 }
 
@@ -602,6 +605,7 @@ void Articulos::on_checkBoxRemoto_stateChanged(int arg1)
         listaConexionesRemotas = crearConexionesRemotas(consultaRemota);
         qDebug() << listaConexionesRemotas;
         remoto = true;
-        refrescarBotones(mapper.currentIndex());
+
     }
+    refrescarBotones(mapper.currentIndex());
 }
