@@ -7,6 +7,7 @@ Salidas::Salidas(QWidget *parent) :
     ui(new Ui::Salidas)
 {
     ui->setupUi(this);
+    llenarComboTiendas();
     mTablaSalidas = new QSqlTableModel(this,QSqlDatabase::database("DB"));
     mTablaSalidas->setTable("salidaGenero_tmp");
     ui->tableView->hideColumn(0);
@@ -57,11 +58,24 @@ void Salidas::on_lineEditCod_returnPressed()
 
 void Salidas::actualizarTabla()
 {
+    mTablaSalidas->setFilter("idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxDestino->currentText())));
     mTablaSalidas->setSort(3,Qt::AscendingOrder);
     mTablaSalidas->select();
     ui->tableView->setModel(mTablaSalidas);
     ui->tableView->hideColumn(0);
+
     ui->tableView->resizeColumnsToContents();
+}
+
+void Salidas::llenarComboTiendas()
+{
+    QSqlQuery listaCombo = base->tiendas(QSqlDatabase::database("DB"));
+    listaCombo.first();
+    do{
+        ui->comboBoxDestino->addItem(listaCombo.value("nombre").toString());
+    }while (listaCombo.next());
+
+
 }
 
 void Salidas::on_pushButtonAgregar_clicked()
@@ -109,15 +123,17 @@ void Salidas::on_pushButtonAgregar_clicked()
     datos.append(ui->lineEditCantidad->text());
     datos.append(ui->dateEditFC->text());
     datos.append(ui->lineEditPrecio->text());
+    datos.append(QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxDestino->currentText())));
     base->insertarEnTabla(QSqlDatabase::database("DB"),"salidaGenero_tmp",datos);
 
-    mTablaSalidas->select();
+//    mTablaSalidas->select();
     ui->lineEditCantidad->clear();
     ui->lineEditCod->clear();
     ui->lineEditDesc->clear();
     ui->lineEditPrecio->clear();
     ui->lineEditCod->setFocus();
-    ui->tableView->resizeColumnsToContents();
+//    ui->tableView->resizeColumnsToContents();
+    actualizarTabla();
 
 }
 
@@ -147,21 +163,23 @@ void Salidas::on_pushButtonEnviar_clicked()
         break;
     }
     for (int i = 0; i < mTablaSalidas->rowCount(); ++i) {
-        QString cod , descripcion , pvp , fechaCaducidad;
+        QString cod , descripcion , pvp , fechaCaducidad, idTienda;
         int uds;
         cod = mTablaSalidas->record(i).value(1).toString();
         descripcion = mTablaSalidas->record(i).value(3).toString();
         pvp = mTablaSalidas->record(i).value(6).toString();
         fechaCaducidad =mTablaSalidas->record(i).value(5).toString();
         uds =mTablaSalidas->record(i).value(4).toInt();
+        idTienda = mTablaSalidas->record(i).value(7).toString();
 
         base->disminuirLote(cod,fechaCaducidad,uds);
         QSqlQuery tmp = base->ejecutarSentencia("UPDATE articulos SET descripcion = '"+descripcion+"' , pvp = "+pvp+" WHERE cod = '"+cod+"'");
 
     }
-    QSqlQuery tmp = base->ejecutarSentencia("INSERT INTO salidaGenero (cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp) "
-                                  "SELECT salidaGenero_tmp.cod, salidaGenero_tmp.fechaEntrada, salidaGenero_tmp.descripcion, salidaGenero_tmp.cantidad, salidaGenero_tmp.fechaCaducidad, salidaGenero_tmp.pvp FROM salidaGenero_tmp");
-    base->vaciarTabla("salidaGenero_tmp");
+    QSqlQuery tmp = base->ejecutarSentencia("INSERT INTO salidaGenero (cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp , idTienda) "
+                                  "SELECT salidaGenero_tmp.cod, salidaGenero_tmp.fechaEntrada, salidaGenero_tmp.descripcion, salidaGenero_tmp.cantidad, salidaGenero_tmp.fechaCaducidad, salidaGenero_tmp.pvp , salidaGenero_tmp.idTienda"
+                                            " FROM salidaGenero_tmp WHERE salidaGenero_tmp.idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxDestino->currentText())));
+    base->ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxDestino->currentText())));
     actualizarTabla();
 }
 
@@ -179,4 +197,17 @@ void Salidas::on_tableView_clicked(const QModelIndex &index)
     QModelIndex indice = mTablaSalidas->index(index.row(),0);
     codSeleccionado = mTablaSalidas->data(indice,Qt::EditRole).toString();
     qDebug() << codSeleccionado;
+}
+
+
+
+void Salidas::on_comboBoxDestino_activated(const QString &arg1)
+{
+    actualizarTabla();
+    qDebug() << "Current index chaned";
+}
+
+void Salidas::on_pushButtonActualizar_clicked()
+{
+    actualizarTabla();
 }

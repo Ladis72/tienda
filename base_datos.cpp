@@ -588,6 +588,16 @@ QSqlQuery baseDatos::tiendas(QSqlDatabase db)
     return consulta;
 }
 
+int baseDatos::idTiendaDesdeNombre(QSqlDatabase db, QString nombreTienda)
+{
+    QSqlQuery consulta(db);
+    if (!consulta.exec("SELECT id FROM tiendas WHERE nombre = '"+nombreTienda+"'")) {
+        qDebug() << consulta.lastError();
+    }
+    consulta.first();
+    return consulta.value(0).toInt();
+}
+
 QString baseDatos::nombreProveedor(QString id)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
@@ -1255,6 +1265,7 @@ QSqlQuery baseDatos::ejecutarSentencia(QString sentencia)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.exec(sentencia);
+    qDebug() << consulta.lastError();
     return consulta;
 }
 

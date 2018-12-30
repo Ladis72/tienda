@@ -49,6 +49,7 @@ public:
     bool borrarTienda(QString dato);
     bool crearTienda(QStringList datos);
     QSqlQuery tiendas(QSqlDatabase db);
+    int idTiendaDesdeNombre(QSqlDatabase db , QString nombreTienda);
 //Funciones PROVEEDORES
     QString nombreProveedor(QString id);
     QString idProveedor(QString nombre);

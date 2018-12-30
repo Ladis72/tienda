@@ -34,6 +34,8 @@ private slots:
 
     void on_dateEditCaducidad_editingFinished();
 
+    void on_comboBoxProcedencia_activated(const QString &arg1);
+
 private:
     Ui::EntradaMercancia *ui;
     baseDatos *base;
@@ -45,6 +47,7 @@ private:
 
 
     void actualizarTabla();
+    void llenarComboTiendas();
 };
 
 #endif // ENTRADAMERCANCIA_H
