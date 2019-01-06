@@ -1412,7 +1412,7 @@ QSqlQuery baseDatos::estadisticasVentaProductos(QString nPrimerTicket , QString 
 QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("SELECT descripcion , sum(cantidad) FROM lineasticket WHERE concat_ws('/',fecha,hora) >= ? AND concat_ws('/',fecha,hora) <= ? group by descripcion asc");
+    consulta.prepare("SELECT descripcion , sum(cantidad) FROM lineasticket WHERE concat_ws('/',fecha,hora) >= ? AND concat_ws('/',fecha,hora) <= ? group by cod asc");
     consulta.bindValue(0,inicio);
     consulta.bindValue(1,final);
     consulta.exec();
