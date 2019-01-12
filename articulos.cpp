@@ -265,6 +265,13 @@ bool Articulos::eventFilter(QObject *obj, QEvent *event)
     return false;
 }
 
+void Articulos::keyPressEvent(QKeyEvent *e)
+{
+    if (e->key() == Qt::Key_F11) {
+        ui->pushButtonBorrar->setEnabled(true);
+    }
+}
+
 void Articulos::borrarFormulario()
 {
     foreach (QLineEdit* le, ui->General->findChildren<QLineEdit*>()) {

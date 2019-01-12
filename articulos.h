@@ -13,6 +13,7 @@
 
 #include <QDialog>
 #include <QLabel>
+#include <QKeyEvent>
 
 namespace Ui {
 class Articulos;
@@ -114,6 +115,7 @@ private:
     void recargarTabla();
     void cargarVentas();
     bool eventFilter(QObject *obj, QEvent *event);
+    void keyPressEvent(QKeyEvent *e);
     void cargarCompras();
     void cargarCodAux();
     void llenarComboFormatos();

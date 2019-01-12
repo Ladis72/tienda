@@ -14,7 +14,7 @@ class Stock : public QDialog
     Q_OBJECT
 
 public:
-    explicit Stock(QString cod, QWidget *parent = 0);
+    explicit Stock(QString cod, QWidget *parent = nullptr);
     ~Stock();
 
 private slots:
