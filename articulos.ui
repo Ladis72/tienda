@@ -448,6 +448,9 @@ color: rgb(255, 25, 5);</string>
           </item>
           <item row="1" column="7" rowspan="5">
            <widget class="QTreeWidget" name="treeWidgetStockTiendas">
+            <property name="contextMenuPolicy">
+             <enum>Qt::DefaultContextMenu</enum>
+            </property>
             <column>
              <property name="text">
               <string notr="true">1</string>

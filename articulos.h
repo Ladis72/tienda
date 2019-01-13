@@ -9,11 +9,14 @@
 #include "stock.h"
 #include "visorimagenes.h"
 #include "visorfacturas.h"
+#include "comprasventasremoto.h"
 
 
 #include <QDialog>
 #include <QLabel>
 #include <QKeyEvent>
+#include <QTreeWidget>
+
 
 namespace Ui {
 class Articulos;
@@ -91,6 +94,9 @@ private slots:
 
     void on_checkBoxRemoto_stateChanged(int arg1);
 
+
+    void on_treeWidgetStockTiendas_itemDoubleClicked(QTreeWidgetItem *item, int column);
+
 private:
     Ui::Articulos *ui;
 
@@ -104,6 +110,7 @@ private:
     Stock *stock;
     VisorImagenes *visor;
     VisorFacturas *factura;
+    comprasVentasRemoto *cvr;
     QString nFactura , idProveedor;
     QStringList listaConexionesRemotas;
     bool remoto;

@@ -62,7 +62,8 @@ SOURCES += main.cpp\
     listadocaducados.cpp \
     formatos.cpp \
     directorios.cpp \
-    tiendas.cpp
+    tiendas.cpp \
+    comprasventasremoto.cpp
 
 HEADERS  += tienda.h \
     tpv.h \
@@ -114,7 +115,8 @@ HEADERS  += tienda.h \
     listadocaducados.h \
     formatos.h \
     directorios.h \
-    tiendas.h
+    tiendas.h \
+    comprasventasremoto.h
 
 FORMS    += tienda.ui \
     tpv.ui \
@@ -159,7 +161,9 @@ FORMS    += tienda.ui \
     listadocaducados.ui \
     formatos.ui \
     directorios.ui \
-    tiendas.ui
+    tiendas.ui \
+    comprasventasremoto.ui \
+    comprasventasremoto.ui
 include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
 RESOURCES += \

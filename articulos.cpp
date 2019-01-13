@@ -6,7 +6,6 @@
 #include <QDir>
 #include <QMessageBox>
 #include <QFileDialog>
-#include <QTreeWidget>
 #include <QtConcurrent/QtConcurrent>
 
 Articulos::Articulos(QWidget *parent) :
@@ -258,7 +257,6 @@ bool Articulos::eventFilter(QObject *obj, QEvent *event)
     if (obj == ui->lineEditCod) {
         if (event->type() == QEvent::MouseButtonPress) {
             borrarFormulario();
-            qDebug() << "Event";
             return true;
         }
     }
@@ -285,7 +283,6 @@ void Articulos::borrarFormulario()
     ui->comboBoxFormato->setCurrentIndex(0);
 }
 
-
 void Articulos::on_pushButtonAnterior_clicked()
 {
     borrarFormulario();
@@ -299,7 +296,6 @@ void Articulos::on_pushButtonSiguiente_clicked()
     mapper.toNext();
     refrescarBotones(mapper.currentIndex());
 }
-
 
 void Articulos::on_pushButtonModificar_clicked()
 {
@@ -331,7 +327,6 @@ void Articulos::on_pushButtonModificar_clicked()
 
 }
 }
-
 
 void Articulos::on_pushButtonBorrar_clicked()
 {
@@ -378,7 +373,6 @@ void Articulos::on_pushButtonPonerFoto_clicked()
     refrescarBotones(mapper.currentIndex());
 }
 
-
 void Articulos::on_pushButtonBorrarFoto_clicked()
 {
     int curr = mapper.currentIndex();
@@ -420,8 +414,6 @@ void Articulos::on_lineEditDesc_returnPressed()
     }
     delete buscar;
 }
-
-
 
 void Articulos::on_lineEditCod_returnPressed()
 {
@@ -481,8 +473,6 @@ void Articulos::on_pushButtonNuevo_clicked()
 
 }
 
-
-
 void Articulos::on_radioButtonVentasDia_clicked()
 {
     cargarVentas();
@@ -497,8 +487,6 @@ void Articulos::on_radioButtonVentasAno_clicked()
 {
     cargarVentas();
 }
-
-
 
 void Articulos::on_radioButtonFacturas_clicked()
 {
@@ -615,4 +603,18 @@ void Articulos::on_checkBoxRemoto_stateChanged(int arg1)
 
     }
     refrescarBotones(mapper.currentIndex());
+}
+
+
+
+void Articulos::on_treeWidgetStockTiendas_itemDoubleClicked(QTreeWidgetItem *item, int column)
+{
+    QString baseDatosRemota;
+    if (!item->parent()) {
+        baseDatosRemota = item->text(0);
+    }else{
+    baseDatosRemota = item->parent()->text(0);
+}
+    comprasVentasRemoto *cvr = new comprasVentasRemoto(QSqlDatabase::database(baseDatosRemota),ui->lineEditCod->text());
+    cvr->show();
 }
