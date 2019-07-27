@@ -27,7 +27,8 @@ Articulos::Articulos(QWidget *parent) :
     mapper.addMapping(ui->lineEditIva,3);
     mapper.addMapping(ui->lineEditMinimo,5);
     mapper.addMapping(ui->lineEditMaximo,6);
-    mapper.addMapping(ui->lineEditPendientes,8);
+    mapper.addMapping(ui->lineEditEncargados,8);
+    mapper.addMapping(ui->lineEditPendientes,7);
     mapper.addMapping(ui->dateEditUltimaVenta,9);
     mapper.addMapping(ui->dateEditUltimoPedido,10);
     mapper.addMapping(ui->lineEditCodFamila,11);
@@ -108,7 +109,11 @@ QStringList Articulos::recogerDatosFormulario()
     }
     listaDatosFormulario.append(ui->plainTextEdit->toPlainText());
     listaDatosFormulario.append(ui->comboBoxFormato->currentText());
-    listaDatosFormulario.append(ui->lineEditCantidad->text());
+    if (ui->lineEditCantidad->text().isEmpty()) {
+        listaDatosFormulario.append(nullptr);
+    }else {
+        listaDatosFormulario.append(ui->lineEditCantidad->text());
+    }
 
 
 

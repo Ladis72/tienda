@@ -275,6 +275,9 @@ color: rgb(255, 25, 5);</string>
             <property name="enabled">
              <bool>false</bool>
             </property>
+            <property name="text">
+             <string>0</string>
+            </property>
            </widget>
           </item>
           <item row="5" column="0">
@@ -430,6 +433,9 @@ color: rgb(255, 25, 5);</string>
            <widget class="QLineEdit" name="lineEditEncargados">
             <property name="enabled">
              <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>0</string>
             </property>
            </widget>
           </item>
