@@ -92,11 +92,23 @@ QStringList Articulos::recogerDatosFormulario()
     listaDatosFormulario.append(ui->lineEditDesc->text());
     listaDatosFormulario.append(ui->lineEditPvp->text());
     listaDatosFormulario.append(ui->lineEditIva->text());
-    listaDatosFormulario.append(ui->lineEditStock->text());
+    if(ui->lineEditStock->text().isEmpty()){
+        listaDatosFormulario.append("0");
+    }else {
+        listaDatosFormulario.append(ui->lineEditStock->text());
+    }
     listaDatosFormulario.append(ui->lineEditMinimo->text());
     listaDatosFormulario.append(ui->lineEditMaximo->text());
-    listaDatosFormulario.append(ui->lineEditPendientes->text());
-    listaDatosFormulario.append(ui->lineEditEncargados->text());
+    if (ui->lineEditPendientes->text().isEmpty()) {
+        listaDatosFormulario.append("0");
+    } else {
+        listaDatosFormulario.append(ui->lineEditPendientes->text());
+    }
+    if (ui->lineEditEncargados->text().isEmpty()) {
+        listaDatosFormulario.append("0");
+    } else {
+        listaDatosFormulario.append(ui->lineEditEncargados->text());
+    }
     listaDatosFormulario.append(ui->dateEditUltimaVenta->text());
     listaDatosFormulario.append(ui->dateEditUltimoPedido->text());
     listaDatosFormulario.append(ui->lineEditCodFamila->text());
