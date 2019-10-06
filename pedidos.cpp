@@ -37,9 +37,10 @@ void pedidos::on_leCod_editingFinished()
 QString pedidos::calcularTotalLinea()
 {
     double total = ui->lePvt->text().toDouble()*ui->leUds->text().toDouble()*((100-ui->leDescuento->text().toDouble())/100);
-    double costo = ui->leTotalLinea->text().toDouble()/(ui->leUds->text().toDouble()+ui->leBon->text().toDouble())*(1+ui->leIva->text().toDouble()/100);
-    int margen = qFloor(1-(costo/ui->lePvp->text().toDouble())*100);
-    ui->leMargen->setText(QString::number(margen));
+    double venta = (ui->leUds->text().toDouble()+ui->leBon->text().toDouble()) * ui->lePvp->text().toDouble();
+    double margen = (venta-total)/venta*100;
+    //int margen = qFloor(1-(costo/ui->lePvp->text().toDouble())*100);
+    ui->leMargen->setText(QString::number(margen,'f',2));
     return QString::number(total);
 
 }
@@ -309,4 +310,14 @@ void pedidos::on_dateEdit_editingFinished()
         ui->dateEdit->setFocus();
         ui->dateEdit->setDate(QDate::currentDate());
     }
+}
+
+void pedidos::on_leBon_textChanged(const QString &arg1)
+{
+    ui->leTotalLinea->setText(calcularTotalLinea());
+}
+
+void pedidos::on_lePvp_textChanged(const QString &arg1)
+{
+    ui->leTotalLinea->setText(calcularTotalLinea());
 }

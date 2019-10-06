@@ -50,6 +50,10 @@ private slots:
 
     void on_dateEdit_editingFinished();
 
+    void on_leBon_textChanged(const QString &arg1);
+
+    void on_lePvp_textChanged(const QString &arg1);
+
 private:
     Ui::pedidos *ui;
 
