@@ -163,7 +163,11 @@ void pedidos::on_pushButtonAnadir_clicked()
     datos.append(ui->leCod->text());
     datos.append(ui->leDescripcion->text());
     datos.append(ui->leUds->text());
-    datos.append(ui->leBon->text());
+    if (ui->leBon->text().isEmpty()) {
+        datos.append("0");
+    }else{
+        datos.append(ui->leBon->text());
+    }
     datos.append(ui->leLote->text());
     datos.append(ui->dateEdit->date().toString("yyyy-MM-dd"));
     datos.append(ui->lePvt->text());

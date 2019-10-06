@@ -97,8 +97,16 @@ QStringList Articulos::recogerDatosFormulario()
     }else {
         listaDatosFormulario.append(ui->lineEditStock->text());
     }
-    listaDatosFormulario.append(ui->lineEditMinimo->text());
-    listaDatosFormulario.append(ui->lineEditMaximo->text());
+    if (ui->lineEditMinimo->text().isEmpty()) {
+        listaDatosFormulario.append("0");
+    }else{
+        listaDatosFormulario.append(ui->lineEditMinimo->text());
+    }
+    if (ui->lineEditMaximo->text().isEmpty()) {
+        listaDatosFormulario.append("0");
+    }else{
+        listaDatosFormulario.append(ui->lineEditMaximo->text());
+    }
     if (ui->lineEditPendientes->text().isEmpty()) {
         listaDatosFormulario.append("0");
     } else {
@@ -111,9 +119,17 @@ QStringList Articulos::recogerDatosFormulario()
     }
     listaDatosFormulario.append(ui->dateEditUltimaVenta->text());
     listaDatosFormulario.append(ui->dateEditUltimoPedido->text());
-    listaDatosFormulario.append(ui->lineEditCodFamila->text());
+    if (ui->lineEditCodFamila->text().isEmpty()) {
+        listaDatosFormulario.append("0");
+    }else{
+        listaDatosFormulario.append(ui->lineEditCodFamila->text());
+    }
     listaDatosFormulario.append(ui->lineEditCosto->text());
-    listaDatosFormulario.append(ui->lineEditCodFabricante->text());
+    if (ui->lineEditCodFabricante->text().isEmpty()) {
+        listaDatosFormulario.append("0");
+    }else{
+        listaDatosFormulario.append(ui->lineEditCodFabricante->text());
+    }
     if (ui->lineEditFoto->text() == "") {
         listaDatosFormulario.append("imagenes/1.jpg");
     }else{
