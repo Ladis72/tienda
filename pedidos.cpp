@@ -201,11 +201,11 @@ void pedidos::on_pushButtonAnadir_clicked()
 
 void pedidos::on_leCod_returnPressed()
 {
-    consulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->leCod->text());
+    consulta = base.consulta_producto("DB",ui->leCod->text());
     consulta.first();
     if(!consulta.isValid()){
            QString cod = base.codigoDesdeAux(ui->leCod->text());
-           consulta = base.consulta_producto(QSqlDatabase::database("DB"),cod);
+           consulta = base.consulta_producto("DB",cod);
            consulta.first();
        }
     if (consulta.numRowsAffected() == 1) {

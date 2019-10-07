@@ -23,7 +23,7 @@ public:
     QSqlQuery usuarios(QSqlDatabase db);
     QSqlQuery fpago(QSqlDatabase db);
     QSqlDatabase conexion();
-    QSqlQuery consulta_producto(QSqlDatabase db, QString cod);
+    QSqlQuery consulta_producto(QString nombreConnexion, QString cod);
     QSqlQuery buscarProducto (QSqlDatabase db, QString tabla, QString nombre);
     bool insertarUsuario(QSqlDatabase db, QStringList datos);
     QSqlQuery buscarEnTabla(QSqlDatabase db, QString tabla, QString campo, QString dato);

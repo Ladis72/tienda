@@ -99,10 +99,10 @@ QSqlDatabase baseDatos::conexion()
     return QSqlDatabase();
 }
 
-QSqlQuery baseDatos::consulta_producto(QSqlDatabase db, QString cod)
+QSqlQuery baseDatos::consulta_producto(QString nombreConnexion, QString cod)
 {
-    if(db.isOpen()){
-        QSqlQuery consulta(db);
+    if(QSqlDatabase::database(nombreConnexion).isOpen()){
+        QSqlQuery consulta(QSqlDatabase::database(nombreConnexion));
         consulta.exec("SELECT * FROM articulos WHERE cod LIKE '"+cod+"'");
         return consulta;
     }

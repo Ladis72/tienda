@@ -22,11 +22,11 @@ Salidas::~Salidas()
 
 void Salidas::on_lineEditCod_returnPressed()
 {
-    consulta = base->consulta_producto(QSqlDatabase::database("DB"),ui->lineEditCod->text());
+    consulta = base->consulta_producto("DB",ui->lineEditCod->text());
     consulta.first();
     if (!consulta.isValid()) {
         QString cod = base->codigoDesdeAux(ui->lineEditCod->text());
-        consulta = base->consulta_producto(QSqlDatabase::database("DB"),cod);
+        consulta = base->consulta_producto("DB",cod);
         consulta.first();
     }
     if (consulta.numRowsAffected() == 1) {

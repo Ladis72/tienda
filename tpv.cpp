@@ -281,11 +281,11 @@ void Tpv::datosProducto(QString IdProducto)
 
 void Tpv::on_lineEdit_cod_returnPressed(){
 
-   consulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->lineEdit_cod->text());
+   consulta = base.consulta_producto("DB",ui->lineEdit_cod->text());
    consulta.first();
    if(!consulta.isValid()){
        QString cod = base.codigoDesdeAux(ui->lineEdit_cod->text());
-       consulta = base.consulta_producto(QSqlDatabase::database("DB"),cod);
+       consulta = base.consulta_producto("DB",cod);
        consulta.first();
    }
    if (consulta.numRowsAffected() == 1) {

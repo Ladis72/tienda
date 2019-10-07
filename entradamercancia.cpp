@@ -72,7 +72,7 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
     QString codigo = mTablaEntradas->record(i).value(1).toString();
     QString precio = mTablaEntradas->record(i).value(6).toString();
     QString descripcion = mTablaEntradas->record(i).value(3).toString();
-    QSqlQuery cambios = base->consulta_producto(QSqlDatabase::database("DB"),codigo);
+    QSqlQuery cambios = base->consulta_producto("DB",codigo);
     cambios.first();
     QString precioAnterior = cambios.value("pvp").toString();
     QString descripcionAnterior = cambios.value("descripcion").toString();
@@ -109,11 +109,11 @@ void EntradaMercancia::llenarComboTiendas()
 
 void EntradaMercancia::on_lineEditCod_returnPressed()
 {
-    consulta = base->consulta_producto(QSqlDatabase::database("DB"),ui->lineEditCod->text());
+    consulta = base->consulta_producto("DB",ui->lineEditCod->text());
     consulta.first();
     if(!consulta.isValid()){
         QString cod = base->codigoDesdeAux(ui->lineEditCod->text());
-        consulta = base->consulta_producto(QSqlDatabase::database("DB"),cod);
+        consulta = base->consulta_producto("DB",cod);
         consulta.first();
     }
     if(consulta.numRowsAffected() ==1){

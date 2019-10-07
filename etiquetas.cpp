@@ -137,7 +137,7 @@ void Etiquetas::llenarModelo()
     listaEtiquetas.first();
     for (int i = 0; i < listaEtiquetas.numRowsAffected(); ++i) {
         qDebug() << "COD: " << listaEtiquetas.record().value(0).toString();
-        QSqlQuery producto = base->consulta_producto(QSqlDatabase::database("DB"),listaEtiquetas.record().value(0).toString());
+        QSqlQuery producto = base->consulta_producto("DB",listaEtiquetas.record().value(0).toString());
         producto.first();
         double pvp = producto.value(2).toDouble();
         QStandardItem *cod = new QStandardItem(producto.value(0).toString());

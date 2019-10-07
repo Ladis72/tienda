@@ -459,13 +459,35 @@ void Articulos::on_lineEditCod_returnPressed()
     }
         qDebug() << "MAL";
         QString cod = base.codigoDesdeAux(ui->lineEditCod->text());
-        consulta = base.consulta_producto(QSqlDatabase::database("DB"),cod);
+        consulta = base.consulta_producto("DB",cod);
         consulta.first();
         if (consulta.numRowsAffected() == 1) {
             ui->lineEditCod->setText(consulta.value(0).toString());
             emit on_lineEditCod_returnPressed();
                 }
+    QMessageBox msgbox;
+    msgbox.setText("NO SE ENCUENTRA EL ARCHIVO");
+    msgbox.setInformativeText("Desea buscar los datos en otras tiendas?");
+    msgbox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgbox.setDefaultButton(QMessageBox::No);
+    if(msgbox.exec() == QMessageBox::Yes){
+        qDebug() << listaConexionesRemotas.length();
+        if(listaConexionesRemotas.isEmpty()){
+            crearConexionesRemotas(base.tiendas(QSqlDatabase::database("DB")));
+        }
+        for (int i = 0 ;listaConexionesRemotas.length() ; i++) {
+            QSqlQuery consulta = base.consulta_producto(listaConexionesRemotas.at(i),ui->lineEditCod->text());
+            if (consulta.isValid()) {
+                qDebug() << "Valor devuelto";
+            }else{
+                qDebug() << "Sin volor devuelto";
+            }
+        }
 
+
+
+
+    }
 }
 
 void Articulos::on_pushButtonBuscarFamilia_clicked()
@@ -488,7 +510,7 @@ void Articulos::on_pushButton_2_clicked()
 
 void Articulos::on_pushButtonNuevo_clicked()
 {
-    consulta = base.consulta_producto(QSqlDatabase::database("DB"), ui->lineEditCod->text());
+    consulta = base.consulta_producto("DB", ui->lineEditCod->text());
     if(consulta.numRowsAffected() > 0){
         QMessageBox::warning(this, "ATENCION",
                               "El registro ya existe");
