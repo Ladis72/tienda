@@ -466,28 +466,41 @@ void Articulos::on_lineEditCod_returnPressed()
             emit on_lineEditCod_returnPressed();
                 }
     QMessageBox msgbox;
-    msgbox.setText("NO SE ENCUENTRA EL ARCHIVO");
+    msgbox.setText("NO SE ENCUENTRA EL ARTÍCULO");
     msgbox.setInformativeText("Desea buscar los datos en otras tiendas?");
     msgbox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgbox.setDefaultButton(QMessageBox::No);
     if(msgbox.exec() == QMessageBox::Yes){
-        qDebug() << listaConexionesRemotas.length();
+        qDebug() << "Entrando en buscar";
+        qDebug() << "Lista conexiones:" << listaConexionesRemotas.length();
         if(listaConexionesRemotas.isEmpty()){
-            crearConexionesRemotas(base.tiendas(QSqlDatabase::database("DB")));
+            listaConexionesRemotas = crearConexionesRemotas(base.tiendas(QSqlDatabase::database("DB")));
+            qDebug() << "Lista conexiones remotas vacia." << listaConexionesRemotas;
+
         }
-        for (int i = 0 ;listaConexionesRemotas.length() ; i++) {
+        for (int i = 0 ;i < listaConexionesRemotas.length() ; i++) {
             QSqlQuery consulta = base.consulta_producto(listaConexionesRemotas.at(i),ui->lineEditCod->text());
             if (consulta.isValid()) {
+                consulta.first();
+                QSqlRecord q=consulta.record();
+                QStringList datos;
+                datos.clear();
+                for (int i = 0; i < q.count(); i++) {
+                    datos.append(q.value(i).toString());
+                    qDebug() << q.value(i).toString();
+                }
                 qDebug() << "Valor devuelto";
-            }else{
-                qDebug() << "Sin volor devuelto";
+                return;
             }
         }
-
-
+        msgbox.setText("NO SE ENCUENTRA");
+        msgbox.setInformativeText("No se ha encontrado el producto en tiendas conectadas");
+        msgbox.setStandardButtons(QMessageBox::Ok);
+        msgbox.exec();
 
 
     }
+    return;
 }
 
 void Articulos::on_pushButtonBuscarFamilia_clicked()
