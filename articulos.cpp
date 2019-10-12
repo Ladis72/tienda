@@ -480,7 +480,10 @@ void Articulos::on_lineEditCod_returnPressed()
         }
         for (int i = 0 ;i < listaConexionesRemotas.length() ; i++) {
             QSqlQuery consulta = base.consulta_producto(listaConexionesRemotas.at(i),ui->lineEditCod->text());
-            if (consulta.isValid()) {
+            qDebug() << consulta.lastQuery();
+            qDebug() << listaConexionesRemotas.at(i);
+            qDebug() << ui->lineEditCod->text();
+            if (consulta.numRowsAffected() > 0) {
                 consulta.first();
                 QSqlRecord q=consulta.record();
                 QStringList datos;
@@ -489,8 +492,16 @@ void Articulos::on_lineEditCod_returnPressed()
                     datos.append(q.value(i).toString());
                     qDebug() << q.value(i).toString();
                 }
+                msgbox.setText("¿UTILIZAR ESTOS DATOS?");
+                msgbox.setInformativeText(datos.join("\n"));
+                msgbox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+                if(msgbox.exec() == QMessageBox::Ok){
                 qDebug() << "Valor devuelto";
+                base.insertarArticulo(QSqlDatabase::database("DB"), datos);
+                recargarTabla();
+                emit on_lineEditCod_returnPressed();
                 return;
+                }
             }
         }
         msgbox.setText("NO SE ENCUENTRA");
