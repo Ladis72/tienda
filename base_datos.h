@@ -54,6 +54,7 @@ public:
     QString nombreProveedor(QString id);
     QString idProveedor(QString nombre);
     bool modificarProveedor(QSqlDatabase db, QStringList datos, QString dato);
+    bool borrarProveedor(QSqlDatabase db , QString dato);
     QString descuentoProveedor(QString proveedor);
     QStringList listadoProveedores();
     QString codigoParaNuevoProveedor();

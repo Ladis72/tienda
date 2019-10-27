@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1128</width>
-    <height>526</height>
+    <height>529</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -341,6 +341,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="pushButtonBorrar">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>Borrar</string>
        </property>

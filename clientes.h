@@ -14,7 +14,7 @@ class Clientes : public QDialog
     Q_OBJECT
 
 public:
-    explicit Clientes(QWidget *parent = 0);
+    explicit Clientes(QWidget *parent = nullptr);
     explicit Clientes(QWidget *parent , QString codigo );
     ~Clientes();
 

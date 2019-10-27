@@ -645,11 +645,30 @@ bool baseDatos::modificarProveedor(QSqlDatabase db, QStringList datos, QString d
     consulta.bindValue(14,dato.toInt());
     if (!consulta.exec()) {
         db.rollback();
+        QMessageBox msgBox;
+        msgBox.setText("Error base de datos");
+        msgBox.setInformativeText(consulta.lastError().text());
+        msgBox.exec();
         qDebug() << consulta.lastError();
         return false;
     } else {
         db.commit();
         qDebug() << "Articulo insertado";
+        return true;
+    }
+}
+
+bool baseDatos::borrarProveedor(QSqlDatabase db, QString dato)
+{
+    QSqlQuery consulta(db);
+    consulta.prepare("DELETE FROM proveedores WHERE idProveedor LIKE ?");
+    consulta.bindValue(0,dato);
+    if (!consulta.exec()) {
+        qDebug() << consulta.lastError();
+
+        return false;
+    }else{
+        db.commit();
         return true;
     }
 }
@@ -940,6 +959,10 @@ bool baseDatos::crearProveedor(QSqlDatabase db, QStringList datos)
     consulta.bindValue(15,datos.at(15));
     if (!consulta.exec()) {
         db.rollback();
+        QMessageBox msgBox;
+        msgBox.setText("Error base de datos");
+        msgBox.setInformativeText(consulta.lastError().text());
+        msgBox.exec();
         qDebug() << consulta.lastError();
         return false;
     } else {

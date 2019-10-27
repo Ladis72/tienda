@@ -94,7 +94,11 @@ QStringList Proveedores::recogerDatosFormulario()
     listaDatosFormulario.append(ui->lineEditTelefono->text());
     listaDatosFormulario.append(ui->lineEditMail->text());
     listaDatosFormulario.append(ui->lineEditDescuento->text());
-    listaDatosFormulario.append(ui->lineEditFechaUltimaCompra->text());
+    if(ui->lineEditFechaUltimaCompra->text().isEmpty()){
+        listaDatosFormulario.append("2000-01-01");
+    }else{
+        listaDatosFormulario.append(ui->lineEditFechaUltimaCompra->text());
+    }
     listaDatosFormulario.append(ui->lineEditFormaPago->text());
     listaDatosFormulario.append(ui->plainTextEdit->toPlainText());
 
@@ -124,6 +128,13 @@ void Proveedores::cargarCompras()
     }
 }
 
+void Proveedores::keyPressEvent(QKeyEvent *e)
+{
+    if (e->key() == Qt::Key_F11) {
+        ui->pushButtonBorrar->setEnabled(true);
+    }
+}
+
 void Proveedores::on_pushButtonNuevo_clicked()
 {
     if(base.existeDatoEnTabla(QSqlDatabase::database("DB"),"proveedores","idProveedor",ui->lineEditCod->text())){
@@ -135,7 +146,7 @@ void Proveedores::on_pushButtonNuevo_clicked()
     if (base.crearProveedor(QSqlDatabase::database("DB"),datos)) {
         QMessageBox::about(this,"Atención", "Proveedor creado con éxito");
     } else {
-        QMessageBox::warning(this,"Error","No se ha podido crear el proveedor");
+        QMessageBox::warning(this,"Error","No se ha podido crear el proveedor.");
     }
     recargarTabla();
 }
@@ -237,4 +248,31 @@ void Proveedores::on_radioButtonComprasMeses_clicked()
 void Proveedores::on_radioButtonComprasAnos_clicked()
 {
     cargarCompras();
+}
+
+void Proveedores::on_pushButtonBorrar_clicked()
+{
+    int i = mapper.currentIndex();
+    QMessageBox msgBox;
+     msgBox.setText("Borrar.");
+     msgBox.setInformativeText("Seguro que quiere borrar este proveedor?");
+     msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+     msgBox.setDefaultButton(QMessageBox::Ok);
+     int resp = msgBox.exec();
+     if(resp == QMessageBox::Ok){
+    if (base.borrarProveedor(QSqlDatabase::database("DB") , ui->lineEditCod->text())){
+            msgBox.setText("Borrado con exito");
+            msgBox.setInformativeText("El registro se ha borrado correctamente");
+            msgBox.setStandardButtons(QMessageBox::Ok);
+            msgBox.exec();
+    }else{
+        msgBox.setText("Error al borrar");
+        msgBox.setInformativeText("Revise los datos del formulario o contacte con el administrador");
+        msgBox.setStandardButtons(QMessageBox::Ok);
+        msgBox.exec();
+    }
+    recargarTabla();
+    mapper.setCurrentIndex(i);
+    refrescarBotones(mapper.currentIndex());
+     }
 }
