@@ -234,3 +234,8 @@ void Tienda::on_pushButtonTiendas_clicked()
     Sucursal = new tiendas(this);
     Sucursal->exec();
 }
+
+void Tienda::on_pushButtonMaster_clicked()
+{
+
+}

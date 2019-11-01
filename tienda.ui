@@ -337,9 +337,16 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_4">
           <item>
+           <widget class="QPushButton" name="pushButtonMaster">
+            <property name="text">
+             <string>Servidor principal</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="pushButtonConfigDB">
             <property name="text">
-             <string>Base de datos</string>
+             <string>Servidor local</string>
             </property>
            </widget>
           </item>

@@ -14,7 +14,7 @@ class ConfigBase : public QDialog
     Q_OBJECT
 
 public:
-    explicit ConfigBase(QWidget *parent = 0);
+    explicit ConfigBase(QWidget *parent = nullptr);
     ~ConfigBase();
 
 private slots:

@@ -93,6 +93,8 @@ private slots:
 
     void on_pushButtonTiendas_clicked();
 
+    void on_pushButtonMaster_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
