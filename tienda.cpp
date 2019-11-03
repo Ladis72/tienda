@@ -1,6 +1,7 @@
-#include "tienda.h"
+﻿#include "tienda.h"
 #include "ui_tienda.h"
 #include "conexion.h"
+
 #include <QDebug>
 #include <QMessageBox>
 
@@ -14,6 +15,29 @@ Tienda::Tienda(QWidget *parent) :
     QPixmap logo;
     logo.load("./documentos/logo.jpg");
     ui->logo->setPixmap(logo);
+
+    conexiones = new conexionesRemotas(this);
+    ui->statusBar->addPermanentWidget(ui->pushButtonConectar);
+
+//    refrescarConexiones();
+//    QLabel *button[conexiones->lista().length()];
+//    for (int i = 0;i < conexiones->lista().length() ;i++ ) {
+//        button[i] = new QLabel(conexiones->lista().at(i));
+//        ui->statusBar->addWidget(button[i]);
+//    }
+//    ui->statusBar->addWidget(ui->pushButtonConectar);
+//    QStringList conexionesActivas;
+//    QStringList conn = conexiones->crear();
+//    conf->setNombreconexiones(conexiones->lista());
+//    for (int i = 0 ; i < conn.length() ; i=i+2 ) {
+//        if(conn.at(i+1) == "0"){
+//            button[i/2]->setStyleSheet("QLabel {background-color : red}");
+//        }else{
+//            button[i/2]->setStyleSheet("QLabel {background-color : green}");
+//            conexionesActivas << conn.at(i);
+//        }
+//    }
+//    conf->setNombreConexionesActivas(conexionesActivas);
 
 }
 
@@ -238,4 +262,35 @@ void Tienda::on_pushButtonTiendas_clicked()
 void Tienda::on_pushButtonMaster_clicked()
 {
 
+}
+
+void Tienda::refrescarConexiones()
+{
+    foreach (QLabel* lab, ui->statusBar->findChildren<QLabel*>()){
+        lab->deleteLater();
+    }
+    QLabel *button[conexiones->lista().length()];
+    for (int i = 0;i < conexiones->lista().length() ;i++ ) {
+        button[i] = new QLabel(conexiones->lista().at(i));
+        ui->statusBar->insertWidget(i,button[i]);
+    }
+    QStringList conexionesActivas;
+    QStringList conn;
+    conn.clear();
+    conn = conexiones->crear();
+    conf->setNombreconexiones(conexiones->lista());
+    for (int i = 0 ; i < conn.length() ; i=i+2 ) {
+        if(conn.at(i+1) == "0"){
+            button[i/2]->setStyleSheet("QLabel {background-color : red}");
+        }else{
+            button[i/2]->setStyleSheet("QLabel {background-color : green}");
+            conexionesActivas << conn.at(i);
+        }
+    }
+    conf->setNombreConexionesActivas(conexionesActivas);
+}
+
+void Tienda::on_pushButtonConectar_clicked()
+{
+    refrescarConexiones();
 }

@@ -12,6 +12,8 @@ Articulos::Articulos(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Articulos)
 {
+    listaConexionesRemotas = conf->getNombreConexionesActivas();
+    qDebug() << listaConexionesRemotas;
     ui->setupUi(this);
     ClickableLabel *fotoHR = new ClickableLabel(ui->labelFoto);
     fotoHR->setMinimumSize(200,200);
@@ -42,8 +44,6 @@ Articulos::Articulos(QWidget *parent) :
     mapper.toFirst();
 
     remoto = false;
-//    listaConexionesRemotas = crearConexionesRemotas(consultaRemota);
-//    qDebug() << listaConexionesRemotas;
 
     refrescarBotones(mapper.currentIndex());
 
@@ -52,6 +52,7 @@ Articulos::Articulos(QWidget *parent) :
     ui->lineEditCod->setFocus();
 
 
+    //conexiones = new conexionesRemotas();
 
 
 }
@@ -224,25 +225,25 @@ void Articulos::llenarStockRemoto(QString ean)
 
 QStringList Articulos::crearConexionesRemotas(QSqlQuery consultaRemota)
 {
-    QStringList listaConexionesRemotas;
-    listaConexionesRemotas.clear();
-    QSqlQuery tiendas = consultaRemota;
-    tiendas.first();
-    for (int i = 0; i < tiendas.numRowsAffected();i++) {
-        QString host = tiendas.value("ip").toString();
-        QString puerto = "3306";
-        QString baseDatos = "tienda";
-        QString usuario = tiendas.value("usuario").toString();
-        QString constrasena = tiendas.value("password").toString();
-        QString nombreConexion = tiendas.value("nombre").toString();
-        if(createConnection(host,puerto,baseDatos,usuario,constrasena,nombreConexion)){
-            qDebug() << "conexion creada: " << nombreConexion;
-            listaConexionesRemotas.append(nombreConexion);
-        }
+//    QStringList listaConexionesRemotas;
+//    listaConexionesRemotas.clear();
+//    QSqlQuery tiendas = consultaRemota;
+//    tiendas.first();
+//    for (int i = 0; i < tiendas.numRowsAffected();i++) {
+//        QString host = tiendas.value("ip").toString();
+//        QString puerto = "3306";
+//        QString baseDatos = "tienda";
+//        QString usuario = tiendas.value("usuario").toString();
+//        QString constrasena = tiendas.value("password").toString();
+//        QString nombreConexion = tiendas.value("nombre").toString();
+//        if(createConnection(host,puerto,baseDatos,usuario,constrasena,nombreConexion)){
+//            qDebug() << "conexion creada: " << nombreConexion;
+//            listaConexionesRemotas.append(nombreConexion);
+//        }
 
-        tiendas.next();
-    }
-    return listaConexionesRemotas;
+//        tiendas.next();
+//    }
+//    return listaConexionesRemotas;
 
 }
 
@@ -307,7 +308,6 @@ void Articulos::borrarFormulario()
 {
     foreach (QLineEdit* le, ui->General->findChildren<QLineEdit*>()) {
         le->clear();
-        qDebug() << "Borrando line edit";
     }
     ui->dateEditUltimaVenta->setDate(QDate::fromString("2000-01-01"));
     ui->dateEditUltimoPedido->setDate(QDate::fromString("2000-01-01"));
@@ -675,10 +675,10 @@ void Articulos::on_pushButtonVerFactura_clicked()
 void Articulos::on_checkBoxRemoto_stateChanged(int arg1)
 {
     if( remoto == false && arg1 == 2){
-        QSqlQuery consultaRemota = base.tiendas(QSqlDatabase::database("DB"));
-        listaConexionesRemotas = crearConexionesRemotas(consultaRemota);
-        qDebug() << listaConexionesRemotas;
-        remoto = true;
+//        QSqlQuery consultaRemota = base.tiendas(QSqlDatabase::database("DB"));
+//        listaConexionesRemotas = crearConexionesRemotas(consultaRemota);
+//        qDebug() << listaConexionesRemotas;
+//        remoto = true;
 
     }
     refrescarBotones(mapper.currentIndex());

@@ -1,8 +1,10 @@
 #ifndef ARTICULOS_H
 #define ARTICULOS_H
 
+#include "configuracion.h"
 #include "base_datos.h"
 #include "buscarproducto.h"
+#include "conexionesremotas.h"
 
 #include "familias.h"
 #include "fabricantes.h"
@@ -17,7 +19,7 @@
 #include <QKeyEvent>
 #include <QTreeWidget>
 
-
+extern Configuracion *conf;
 namespace Ui {
 class Articulos;
 }
@@ -112,6 +114,7 @@ private:
     VisorFacturas *factura;
     comprasVentasRemoto *cvr;
     QString nFactura , idProveedor;
+    conexionesRemotas *conexiones;
     QStringList listaConexionesRemotas;
     bool remoto;
 

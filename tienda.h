@@ -36,6 +36,8 @@
 #include "formatos.h"
 #include "directorios.h"
 #include "tiendas.h"
+#include "conexionesremotas.h"
+
 extern Configuracion *conf;
 namespace Ui {
 class Tienda;
@@ -49,7 +51,7 @@ public:
     explicit Tienda(QWidget *parent = 0);
     ~Tienda();
 
-
+    QStringList listaConexiones , conexionesActivas;
     
 private slots:
     void on_ventasButton_clicked();
@@ -95,6 +97,10 @@ private slots:
 
     void on_pushButtonMaster_clicked();
 
+    void refrescarConexiones();
+
+    void on_pushButtonConectar_clicked();
+
 private:
     Ui::Tienda *ui;
     Tpv *T;
@@ -129,6 +135,8 @@ private:
     Formatos *Format;
     Directorios *Director;
     tiendas *Sucursal;
+    conexionesRemotas *conexiones;
+    QLabel *button[];
 };
 
 #endif // TIENDA_H

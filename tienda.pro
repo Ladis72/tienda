@@ -13,6 +13,7 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
+    conexionesremotas.cpp \
         tienda.cpp \
     tpv.cpp \
     base_datos.cpp \
@@ -66,6 +67,7 @@ SOURCES += main.cpp\
     comprasventasremoto.cpp
 
 HEADERS  += tienda.h \
+    conexionesremotas.h \
     tpv.h \
     base_datos.h \
     conexion.h \
