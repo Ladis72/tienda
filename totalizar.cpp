@@ -38,13 +38,15 @@ void totalizar::on_lineEditDescuento_textChanged(const QString &arg1)
     total = ui->lineEditImporte->text().toFloat()*(100-arg1.toFloat())/100;
     ui->lineEditTotal->setText(QString::number(total));
     descuento = ui->lineEditDescuento->text().toFloat();
+    emit on_lineEditEntrega_textChanged(ui->lineEditEntrega->text());
 }
 
 void totalizar::on_lineEditEntrega_textChanged(const QString &arg1)
 {
     float vuelta = arg1.toFloat()-ui->lineEditTotal->text().toFloat();
     ui->lineEditCambio->setText(QString::number(vuelta));
-
+    entrega = ui->lineEditEntrega->text().toFloat();
+    cambio = vuelta;
 }
 
 

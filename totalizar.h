@@ -18,7 +18,7 @@ public:
     ~totalizar();
 
     QString efectivo;
-    float descuento,total;
+    float descuento,total,entrega,cambio;
     int formaPago;
     QString facturacion;
     bool ticket;
