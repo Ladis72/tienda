@@ -1,11 +1,17 @@
 #include "configbase.h"
 #include "ui_configbase.h"
-ConfigBase::ConfigBase(QWidget *parent) :
+ConfigBase::ConfigBase(QString tabla , QWidget *parent) :
     QDialog(parent),
     ui(new Ui::ConfigBase)
 {
     ui->setupUi(this);
-    QStringList datos = base->datosConexion();
+    if(tabla == "configMaster"){
+        datos = base->datosConexionMaster();
+        datos.append("master");
+    }else{
+        datos = base->datosConexion();
+        datos.append("local");
+        }
     ui->lineEditDireccion->setText(datos.at(0));
     ui->lineEditPuerto->setText(datos.at(1));
     ui->lineEditUsuario->setText(datos.at(3));
@@ -34,5 +40,9 @@ void ConfigBase::on_pushButton_clicked()
 
 void ConfigBase::actualizarDatos()
 {
+    if(datos.at(5) == "master"){
+        base->guardarDatosConexionMaster(host,puerto,nombreBaseDatos,usuario,clave);
+    }else{
     base->guardarDatosConexion(host,puerto,nombreBaseDatos,usuario,clave);
+        }
 }

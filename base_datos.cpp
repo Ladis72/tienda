@@ -60,7 +60,38 @@ QStringList baseDatos::datosConexion()
     }
     return datos;
 }
+bool baseDatos::guardarDatosConexionMaster(QString host, QString puerto, QString baseDatos, QString usuario, QString clave)
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.prepare("UPDATE configMaster SET servidor =? , puerto =?, baseDatos =? , usuario =? , clave =? WHERE id=1");
+    consulta.bindValue(0,host);
+    consulta.bindValue(1,puerto.toInt());
+    consulta.bindValue(2,baseDatos);
+    consulta.bindValue(3,usuario);
+    consulta.bindValue(4,clave);
+    if (!consulta.exec()) {
+        QMessageBox mensaje;
+        mensaje.setText("No se han podido guardar los datos"+consulta.lastError().text());
+        mensaje.setWindowTitle("Error");
+        mensaje.exec();
+        return false;
+    }
+    return true;
+}
 
+QStringList baseDatos::datosConexionMaster()
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT * FROM configMaster");
+    consulta.first();
+    QStringList datos;
+    datos.clear();
+    qDebug() << consulta.size();
+    for (int i = 1; i < 6; ++i) {
+        datos.append(consulta.value(i).toString());
+    }
+    return datos;
+}
 bool baseDatos::base_datos_abierta(){
 
 

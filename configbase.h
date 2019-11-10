@@ -14,7 +14,7 @@ class ConfigBase : public QDialog
     Q_OBJECT
 
 public:
-    explicit ConfigBase(QWidget *parent = nullptr);
+    explicit ConfigBase(QString tabla, QWidget *parent = nullptr);
     ~ConfigBase();
 
 private slots:
@@ -28,6 +28,7 @@ private:
     QString nombreBaseDatos;
     QString usuario;
     QString clave;
+    QStringList datos;
 
     void actualizarDatos();
 };

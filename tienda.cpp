@@ -37,7 +37,6 @@ Tienda::Tienda(QWidget *parent) :
 //        }
 //    }
 //    conf->setNombreConexionesActivas(conexionesActivas);
-    this->setMaximumSize(14404,720);
 
 }
 
@@ -195,8 +194,13 @@ void Tienda::on_pushButtonTicket_clicked()
 
 void Tienda::on_pushButtonConfigDB_clicked()
 {
-    CBase = new ConfigBase(this);
+    CBase = new ConfigBase("configBase",this);
     CBase->exec();
+}
+void Tienda::on_pushButtonMaster_clicked()
+{
+    CMaster = new ConfigBase("configMaster",this);
+    CMaster->exec();
 }
 
 void Tienda::on_pushButtonPrestamos_clicked()
@@ -259,10 +263,7 @@ void Tienda::on_pushButtonTiendas_clicked()
     Sucursal->exec();
 }
 
-void Tienda::on_pushButtonMaster_clicked()
-{
 
-}
 
 void Tienda::refrescarConexiones()
 {

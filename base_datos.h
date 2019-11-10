@@ -19,6 +19,8 @@ public:
     bool base_datos_abierta();
     static bool conectar(QString host, QString puerto, QString baseDatos, QString usuario, QString clave);
     bool guardarDatosConexion(QString host, QString puerto, QString baseDatos, QString usuario, QString clave);
+    bool guardarDatosConexionMaster(QString host, QString puerto, QString baseDatos, QString usuario, QString clave);
+    QStringList datosConexionMaster();
     QStringList datosConexion();
     QSqlQuery usuarios(QSqlDatabase db);
     QSqlQuery fpago(QSqlDatabase db);

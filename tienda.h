@@ -125,7 +125,7 @@ private:
     Etiquetas *Etiq;
     Caducados *Caduca;
     ConfigTicket *CTicket;
-    ConfigBase *CBase;
+    ConfigBase *CBase, *CMaster;
     Prestamos *Prest;
     ConfiguracionOtros *ConfigOtros;
     Prestamistas *Prestamis;
@@ -136,6 +136,7 @@ private:
     Directorios *Director;
     tiendas *Sucursal;
     conexionesRemotas *conexiones;
+
     QLabel *button[];
 };
 
