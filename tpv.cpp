@@ -484,8 +484,8 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(QString::number(totalizacion->total));
         totalTicket.append(base.idFormaPago(totalizacion->efectivo));
         totalTicket.append(totalizacion->facturacion);
-        qDebug() << totalizacion->entrega;
-        qDebug() << totalizacion->cambio;
+        totalTicket.append(QString::number(totalizacion->entrega));
+        totalTicket.append(QString::number(totalizacion->cambio));
 
 //        texto << "\n\nTotal:";
 //        texto << QString::number(totalizacion->total)+"\n";

@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1040</width>
-    <height>776</height>
+    <width>1100</width>
+    <height>796</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Tienda</string>
@@ -17,9 +23,15 @@
    <iconset resource="recursos.qrc">
     <normaloff>:/imagenes/Emeicjac logo.jpg</normaloff>:/imagenes/Emeicjac logo.jpg</iconset>
   </property>
+  <property name="documentMode">
+   <bool>false</bool>
+  </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="1">
+    <property name="sizeConstraint">
+     <enum>QLayout::SetMinimumSize</enum>
+    </property>
+    <item row="0" column="0">
      <widget class="QTabWidget" name="tab">
       <property name="currentIndex">
        <number>0</number>
@@ -40,6 +52,9 @@
        <layout class="QGridLayout" name="gridLayout_3">
         <item row="1" column="0">
          <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetMinimumSize</enum>
+          </property>
           <item>
            <widget class="QPushButton" name="ventasButton">
             <property name="text">
@@ -398,14 +413,7 @@
       </widget>
      </widget>
     </item>
-    <item row="2" column="1">
-     <widget class="QPushButton" name="pushButtonConectar">
-      <property name="text">
-       <string>Conectar</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1">
+    <item row="1" column="0">
      <widget class="QLabel" name="logo">
       <property name="text">
        <string/>
@@ -415,6 +423,16 @@
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QPushButton" name="pushButtonConectar">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="text">
+       <string>Conectar</string>
       </property>
      </widget>
     </item>

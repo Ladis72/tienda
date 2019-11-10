@@ -19,7 +19,7 @@ private:
     QSqlQuery consulta;
 
     QString fecha,hora,ticket,total,fPago;
-    QString uds,producto,precio,dto,totalLinea;
+    QString uds,producto,precio,dto,totalLinea,entrega,cambio;
 };
 
 #endif // IMPRIMIRTICKET_H

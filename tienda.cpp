@@ -5,7 +5,6 @@
 #include <QDebug>
 #include <QMessageBox>
 
-
 Tienda::Tienda(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::Tienda)
@@ -38,6 +37,7 @@ Tienda::Tienda(QWidget *parent) :
 //        }
 //    }
 //    conf->setNombreConexionesActivas(conexionesActivas);
+    this->setMaximumSize(14404,720);
 
 }
 

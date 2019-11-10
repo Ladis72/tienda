@@ -779,7 +779,7 @@ bool baseDatos::nuevoTicketTmp(int orden, int cliente, int vendedor)
 bool baseDatos::grabarTicket(QString serie , QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("INSERT INTO "+serie+" VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    consulta.prepare("INSERT INTO "+serie+" VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     //consulta.bindValue(0,serie);
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i,datos.at(i));
