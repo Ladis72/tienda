@@ -54,7 +54,7 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     texto << "Forma de pago. "+fPago;
     texto << "\n";
     texto << "Entrega: "+entrega+"\n";
-    texto << "bambio:  "+cambio;
+    texto << "Cambio:  "+cambio;
     texto << "\n\n\n";
     texto << confTicket.at(1);
     texto << "\n\n\n\n";
