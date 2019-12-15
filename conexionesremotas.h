@@ -21,6 +21,7 @@ public:
     QSqlQuery tiendas;
     QSqlQuery conexiones;
 
+    QString conexionMaster();
 signals:
 
 public slots:

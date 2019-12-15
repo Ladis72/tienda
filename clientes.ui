@@ -382,6 +382,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="pushButtonBorrar">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>Borrar</string>
        </property>

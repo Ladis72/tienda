@@ -5,11 +5,13 @@
 #include <QMessageBox>
 #include <QKeyEvent>
 #include <QStandardItemModel>
+#include <QLabel>
 #include "base_datos.h"
 #include "buscarproducto.h"
 #include "totalizar.h"
 #include "clientes.h"
 #include "formateo.h"
+#include "visorimagenes.h"
 
 namespace Ui {
 class Tpv;
@@ -73,6 +75,7 @@ private:
     QSqlTableModel *modeloTicket;
     QStandardItemModel *modeloTicketPendiente;
     Clientes *clien;
+    VisorImagenes *visor;
 
 
     void keyPressEvent(QKeyEvent *e);
@@ -90,11 +93,13 @@ private:
     QStringList recopilarBasesIvas();
     QString formatearCadena(QString cadena, int tamano);
     void datosProducto(QString IdProducto);
-
+    void mostrarFoto();
 
 
 signals:
     void cerrar_tpv();
 };
+
+
 
 #endif // TPV_H

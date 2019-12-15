@@ -21,6 +21,7 @@ public:
     bool guardarDatosConexion(QString host, QString puerto, QString baseDatos, QString usuario, QString clave);
     bool guardarDatosConexionMaster(QString host, QString puerto, QString baseDatos, QString usuario, QString clave);
     QStringList datosConexionMaster();
+    QStringList datosConexionLocal();
     QStringList datosConexion();
     QSqlQuery usuarios(QSqlDatabase db);
     QSqlQuery fpago(QSqlDatabase db);
@@ -110,10 +111,11 @@ public:
 //Funciones GENERALISTAS
     QSqlQuery devolverTablaCompleta(QString nombreTabla);
     QSqlQuery ejecutarSentencia(QString sentencia);
+    QSqlQuery ejecutarSentencia(QString sentencia , QSqlDatabase db);
     double ESdesdeFecha(QString fecha, QString hora);
     bool existeDatoEnTabla(QSqlDatabase db, QString tabla, QString columna, QString dato);
     void insertarEnTabla(QSqlDatabase db , QString tabla , QStringList datos);
-    void vaciarTabla(QString tabla);
+    void vaciarTabla(QString tabla , QSqlDatabase db);
 
 //Funciones LOTES
     QString idLote(QString cod, QString lote, QString fecha);//Devuelve el id del lote igual o 0 si no existe
@@ -138,6 +140,8 @@ public:
     bool guardarDirectorios(QStringList directorios);
     QStringList cargarDirectorios();
     QString devolverDirectorio(QString tipo);
+    QString nombreConexionMaster();
+    QString nombreConexionLocal();
 
 private:
 

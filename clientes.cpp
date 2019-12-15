@@ -8,6 +8,20 @@ Clientes::Clientes(QWidget *parent) :
     ui(new Ui::Clientes)
 {
     ui->setupUi(this);
+
+    nombreConexionMaster = base.nombreConexionMaster();
+    nombreConexionLocal = base.nombreConexionLocal();
+    qDebug() << nombreConexionMaster;
+    if (!QSqlDatabase::database(nombreConexionMaster).isOpen()) {
+        qDebug() << "MASTER abierta" << nombreConexionMaster;
+        ui->pushButtonNuevo->setEnabled(false);
+
+        qDebug() << "MASTER abierta" << nombreConexionMaster;
+        ui->pushButtonModificar->setEnabled(false);
+        qDebug() << "MASTER abierta" << nombreConexionMaster;
+    }
+    QStringList co = QSqlDatabase::connectionNames();
+    qDebug() << "ConnectoonNames: " << co;
     modeloTabla = new QSqlQueryModel;
     recargarTabla();
 
@@ -38,7 +52,22 @@ Clientes::Clientes(QWidget *parent , QString codigo) :
     QDialog(parent),
     ui(new Ui::Clientes)
 {
+
     ui->setupUi(this);
+    nombreConexionMaster = base.nombreConexionMaster();
+    nombreConexionLocal = base.nombreConexionLocal();
+    qDebug() << nombreConexionMaster;
+    if (!QSqlDatabase::database(nombreConexionMaster).isOpen()) {
+        qDebug() << "MASTER abierta" << nombreConexionMaster;
+        ui->pushButtonNuevo->setEnabled(false);
+
+        qDebug() << "MASTER abierta" << nombreConexionMaster;
+        ui->pushButtonModificar->setEnabled(false);
+        qDebug() << "MASTER abierta" << nombreConexionMaster;
+    }
+    QStringList co = QSqlDatabase::connectionNames();
+    qDebug() << "ConnectoonNames: " << co;
+
     modeloTabla = new QSqlQueryModel;
     recargarTabla();
 
@@ -64,6 +93,7 @@ Clientes::Clientes(QWidget *parent , QString codigo) :
     borrarFormulario();
     ui->lineEditCod->setText(codigo);
     ui->lineEditCod->setEnabled(false);
+
 }
 
 Clientes::~Clientes()
@@ -73,7 +103,8 @@ Clientes::~Clientes()
 
 void Clientes::recargarTabla()
 {
-    modeloTabla->setQuery("SELECT * FROM clientes",QSqlDatabase::database("DB"));
+    modeloTabla->setQuery("SELECT * FROM clientes",QSqlDatabase::database(nombreConexionLocal));
+    //modeloTabla->setQuery("SELECT * FROM clientes",QSqlDatabase::database("DB"));
     mapper.setModel(modeloTabla);
 }
 
@@ -131,7 +162,7 @@ void Clientes::cargarCompras()
 {
     modeloCompras.clear();
     if (ui->radioButtonMeses->isChecked()) {
-        modeloCompras.setQuery("SELECT year(fecha), month(fecha) , sum(total) FROM tienda.tickets where cliente = "+ui->lineEditCod->text()+" group by year(fecha) , month(fecha) order by year(fecha) desc , month(fecha) desc; ",QSqlDatabase::database("DB"));
+        modeloCompras.setQuery("SELECT year(fecha), month(fecha) , sum(total) FROM tienda.tickets where cliente = "+ui->lineEditCod->text()+" group by year(fecha) , month(fecha) order by year(fecha) desc , month(fecha) desc; ",QSqlDatabase::database(nombreConexionLocal));
         modeloCompras.setHeaderData(0,Qt::Horizontal,"Año");
         modeloCompras.setHeaderData(1,Qt::Horizontal,"Mes");
         modeloCompras.setHeaderData(2,Qt::Horizontal,"Cantidad");
@@ -140,7 +171,7 @@ void Clientes::cargarCompras()
         return;
     }
     if (ui->radioButtonAnos->isChecked()) {
-        modeloCompras.setQuery("SELECT year(fecha) , sum(total) FROM tienda.tickets where cliente = "+ui->lineEditCod->text()+" group by year(fecha)  order by year(fecha) desc ; ",QSqlDatabase::database("DB"));
+        modeloCompras.setQuery("SELECT year(fecha) , sum(total) FROM tienda.tickets where cliente = "+ui->lineEditCod->text()+" group by year(fecha)  order by year(fecha) desc ; ",QSqlDatabase::database(nombreConexionLocal));
         modeloCompras.setHeaderData(0,Qt::Horizontal,"Año");
         modeloCompras.setHeaderData(1,Qt::Horizontal,"Cantidad");
         ui->tableView->setModel(&modeloCompras);
@@ -148,7 +179,7 @@ void Clientes::cargarCompras()
         return;
     }
     if (ui->radioButtonFechas->isChecked()) {
-        modeloCompras.setQuery("select sum(total) FROM tienda.tickets where cliente = "+ui->lineEditCod->text()+" and fecha between '"+ui->dateEditDesde->date().toString("yyyy-MM-dd")+"' and '"+ui->dateEditHasta->date().toString("yyyy-MM-dd")+"';",QSqlDatabase::database("DB"));
+        modeloCompras.setQuery("select sum(total) FROM tienda.tickets where cliente = "+ui->lineEditCod->text()+" and fecha between '"+ui->dateEditDesde->date().toString("yyyy-MM-dd")+"' and '"+ui->dateEditHasta->date().toString("yyyy-MM-dd")+"';",QSqlDatabase::database(nombreConexionLocal));
         modeloCompras.setHeaderData(0,Qt::Horizontal,"Cantidad");
         ui->tableView->setModel(&modeloCompras);
         ui->tableView->resizeColumnsToContents();
@@ -171,7 +202,7 @@ void Clientes::on_pushButtonSiguiente_clicked()
 
 void Clientes::on_pushButtonNuevo_clicked()
 {
-    if(base.existeDatoEnTabla(QSqlDatabase::database("DB"),"clientes","idProveedor",ui->lineEditCod->text())){
+    if(base.existeDatoEnTabla(QSqlDatabase::database(nombreConexionMaster),"clientes","idCliente",ui->lineEditCod->text())){
         QMessageBox::warning(this, "ATENCION",
                               "El registro ya existe");
         return;
@@ -179,11 +210,19 @@ void Clientes::on_pushButtonNuevo_clicked()
 
 
     QStringList datos = recogerDatosFormulario();
-    if (base.crearCliente(QSqlDatabase::database("DB"),datos)) {
-        QMessageBox::about(this,"Atención", "Artículo creado con éxito");
+    if (base.crearCliente(QSqlDatabase::database(nombreConexionMaster),datos)) {
+        QMessageBox::about(this,"Atención", "Cliente creado con éxito en MASTER");
     } else {
-        QMessageBox::warning(this,"Error","No se ha podido crear el Cliente");
+        QMessageBox::warning(this,"Error","No se ha podido crear el Cliente en MASTER");
+        return;
     }
+    if (base.crearCliente(QSqlDatabase::database(nombreConexionLocal),datos)) {
+        QMessageBox::about(this,"Atención", "Cliente creado con éxito en LOCAL");
+    } else {
+        QMessageBox::warning(this,"Error","No se ha podido crear el Cliente en LOCAL");
+        return;
+    }
+
     recargarTabla();
 
 }
@@ -200,17 +239,32 @@ void Clientes::on_pushButtonModificar_clicked()
     msgBox.setDefaultButton(QMessageBox::Ok);
     int resp = msgBox.exec();
     if (resp == QMessageBox::Ok) {
-       if(base.modificarCliente(QSqlDatabase::database("DB"),datos,ui->lineEditCod->text())){
+       if(base.modificarCliente(QSqlDatabase::database(nombreConexionMaster),datos,ui->lineEditCod->text())){
            msgBox.setText("Guardado con exito");
-           msgBox.setInformativeText("El registro se ha modificado correctamente");
+           msgBox.setInformativeText("El registro se ha modificado correctamente en MASTER");
            msgBox.setStandardButtons(QMessageBox::Ok);
            msgBox.exec();
+
+       }else {
+           msgBox.setText("Error al guardar");
+           msgBox.setInformativeText("Revise los datos del formulario o contacte con el administrador");
+           msgBox.setStandardButtons(QMessageBox::Ok);
+           msgBox.exec();
+           return;
        }
-    }else {
+       if(base.modificarCliente(QSqlDatabase::database(nombreConexionLocal),datos,ui->lineEditCod->text())){
+           msgBox.setText("Guardado con exito");
+           msgBox.setInformativeText("El registro se ha modificado correctamente en LOCAL");
+           msgBox.setStandardButtons(QMessageBox::Ok);
+           msgBox.exec();
+       }else {
         msgBox.setText("Error al guardar");
         msgBox.setInformativeText("Revise los datos del formulario o contacte con el administrador");
         msgBox.setStandardButtons(QMessageBox::Ok);
-        msgBox.exec();    }
+        msgBox.exec();
+       return;
+       }
+    }
     recargarTabla();
     mapper.setCurrentIndex(i);
     refrescarBotones(i);
@@ -225,7 +279,7 @@ void Clientes::on_pushButtonBorrar_clicked()
     msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
     msgBox.setDefaultButton(QMessageBox::Cancel);
     if (msgBox.exec() == QMessageBox::Ok) {
-        if (base.borrarCliente(QSqlDatabase::database("DB"),ui->lineEditCod->text().toInt())) {
+        if (base.borrarCliente(QSqlDatabase::database(nombreConexionLocal),ui->lineEditCod->text().toInt())) {
             msgBox.setText("Borrado");
             msgBox.setInformativeText("El cliente se ha borrado con éxito");
             msgBox.setStandardButtons(QMessageBox::Ok);
@@ -246,7 +300,7 @@ void Clientes::on_pushButtonBorrar_clicked()
 
 void Clientes::on_lineEditNombre_returnPressed()
 {
-    consulta = base.buscarEnTabla(QSqlDatabase::database("DB"),"clientes","nombre", ui->lineEditNombre->text());
+    consulta = base.buscarEnTabla(QSqlDatabase::database(nombreConexionLocal),"clientes","nombre", ui->lineEditNombre->text());
     consulta.first();
     qDebug() << consulta.lastError().text();
     BuscarProducto *buscar = new BuscarProducto(this,consulta);

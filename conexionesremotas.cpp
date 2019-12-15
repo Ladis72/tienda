@@ -69,3 +69,9 @@ QStringList conexionesRemotas::listaOnLine()
     }
     return listaConexionesActivas;
 }
+
+QString conexionesRemotas::conexionMaster()
+{
+    QString nombreConexionMaster = base->nombreConexionMaster();
+    return nombreConexionMaster;
+}

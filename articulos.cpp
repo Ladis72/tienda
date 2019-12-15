@@ -73,7 +73,7 @@ void Articulos::refrescarBotones(int i)
 
     ui->labelFoto->setPixmap(imagenAjustada);
     ui->labelNombrePrecio->setText(ui->lineEditDesc->text()+ "        "+ui->lineEditPvp->text());
-    ui->lineEditStock->setText(base.sumarStockArticulo(ui->lineEditCod->text(),"DB"));
+    ui->lineEditStock->setText(base.sumarStockArticulo(ui->lineEditCod->text(),conf->getConexionLocal()));
 
     cargarVentas();
     cargarCompras();
@@ -152,7 +152,8 @@ QStringList Articulos::recogerDatosFormulario()
 
 void Articulos::recargarTabla()
 {
-    modeloTabla->setQuery("SELECT * FROM articulos",QSqlDatabase::database("DB"));
+    qDebug() << conf->getConexionLocal();
+    modeloTabla->setQuery("SELECT * FROM articulos",QSqlDatabase::database(conf->getConexionLocal()));
     mapper.setModel(modeloTabla);
 }
 
@@ -160,21 +161,21 @@ void Articulos::cargarCompras(){
     modeloCompras.clear();
     if (ui->radioButtonFacturas->isChecked()) {
         modeloCompras.setQuery("SELECT `nDocumento` , `pedidos`.`idProveedor` , `cantidad` , `bonificacion` , `costo` , `descuento1`, `pedidos`.`fechaPedido` FROM `lineaspedido` JOIN `pedidos` on `nDocumento` = `pedidos`.`npedido` WHERE `cod` = '"
-                               +ui->lineEditCod->text()+"' ORDER BY `pedidos`.`fechaPedido` DESC",QSqlDatabase::database("DB"));
+                               +ui->lineEditCod->text()+"' ORDER BY `pedidos`.`fechaPedido` DESC",QSqlDatabase::database(conf->getConexionLocal()));
         qDebug() << modeloCompras.lastError();
         ui->tableViewCompras->setModel(&modeloCompras);
         ui->tableViewCompras->resizeColumnsToContents();
     }
     if (ui->radioButtonMeses->isChecked()) {
         modeloCompras.setQuery("SELECT YEAR(pedidos.fechaPedido) , MONTH(pedidos.fechaPedido) , sum(cantidad) , sum(bonificacion) FROM lineaspedido JOIN pedidos ON nDocumento = pedidos.npedido WHERE cod = '"
-                               +ui->lineEditCod->text()+"' GROUP BY YEAR(pedidos.fechaPedido) DESC , MONTH(pedidos.fechaPedido) DESC ",QSqlDatabase::database("DB"));
+                               +ui->lineEditCod->text()+"' GROUP BY YEAR(pedidos.fechaPedido) DESC , MONTH(pedidos.fechaPedido) DESC ",QSqlDatabase::database(conf->getConexionLocal()));
         qDebug() << modeloCompras.lastError();
         ui->tableViewCompras->setModel(&modeloCompras);
         ui->tableViewCompras->resizeColumnsToContents();
     }
     if (ui->radioButtonAnos->isChecked()) {
         modeloCompras.setQuery("SELECT YEAR(pedidos.fechaPedido) , sum(cantidad) , sum(bonificacion) FROM lineaspedido JOIN pedidos ON nDocumento = pedidos.npedido WHERE cod = '"
-                +ui->lineEditCod->text()+"' GROUP BY YEAR(pedidos.fechaPedido) DESC",QSqlDatabase::database("DB"));
+                +ui->lineEditCod->text()+"' GROUP BY YEAR(pedidos.fechaPedido) DESC",QSqlDatabase::database(conf->getConexionLocal()));
         ui->tableViewCompras->setModel(&modeloCompras);
         ui->tableViewCompras->resizeColumnsToContents();
     }
@@ -182,7 +183,7 @@ void Articulos::cargarCompras(){
 
 void Articulos::cargarCodAux()
 {
-    modeloAux = new QSqlTableModel(this,QSqlDatabase::database("DB"));
+    modeloAux = new QSqlTableModel(this,QSqlDatabase::database(conf->getConexionLocal()));
     modeloAux->setTable("codaux");
     modeloAux->setEditStrategy(QSqlTableModel::OnRowChange);
     modeloAux->setFilter("cod ="+ui->lineEditCod->text());
@@ -251,7 +252,7 @@ void Articulos::cargarVentas()
 {
     modeloVentas.clear();
     if(ui->radioButtonVentasMes->isChecked()){
-        modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , MONTH(fecha) , sum(cantidad) from lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' GROUP BY YEAR(fecha) desc , MONTH(fecha) desc",QSqlDatabase::database("DB"));
+        modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , MONTH(fecha) , sum(cantidad) from lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' GROUP BY YEAR(fecha) desc , MONTH(fecha) desc",QSqlDatabase::database(conf->getConexionLocal()));
         qDebug() << modeloVentas.lastError();
         modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
         modeloVentas.setHeaderData(1,Qt::Horizontal,"Año");
@@ -263,7 +264,7 @@ void Articulos::cargarVentas()
     }
     if(ui->radioButtonVentasDia->isChecked()){
 
-        modeloVentas.setQuery("SELECT descripcion , fecha , sum(cantidad) FROM lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' group by fecha desc",QSqlDatabase::database("DB"));
+        modeloVentas.setQuery("SELECT descripcion , fecha , sum(cantidad) FROM lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' group by fecha desc",QSqlDatabase::database(conf->getConexionLocal()));
         qDebug() << modeloVentas.lastError();
         modeloVentas.setHeaderData(0,Qt::Horizontal,"Producto");
         modeloVentas.setHeaderData(1,Qt::Horizontal,"Fecha");
@@ -274,7 +275,7 @@ void Articulos::cargarVentas()
     if(ui->radioButtonVentasAno->isChecked()){
         modeloVentas.clear();
 
-        modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , sum(cantidad) from lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' GROUP BY YEAR(fecha) desc",QSqlDatabase::database("DB"));
+        modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , sum(cantidad) from lineasticket WHERE cod = '"+ui->lineEditCod->text()+"' GROUP BY YEAR(fecha) desc",QSqlDatabase::database(conf->getConexionLocal()));
 
         qDebug() << modeloVentas.lastError();
         modeloVentas.setHeaderData(0,Qt::Horizontal,"Artculo");
@@ -343,7 +344,7 @@ void Articulos::on_pushButtonModificar_clicked()
          msgBox.setDefaultButton(QMessageBox::Ok);
          int resp = msgBox.exec();
          if(resp == QMessageBox::Ok){
-        if (base.modificarArticulo(QSqlDatabase::database("DB") , datos , ui->lineEditCod->text())){
+        if (base.modificarArticulo(QSqlDatabase::database(conf->getConexionLocal()) , datos , ui->lineEditCod->text())){
                 msgBox.setText("Guardado con exito");
                 msgBox.setInformativeText("El registro se ha modificado correctamente");
                 msgBox.setStandardButtons(QMessageBox::Ok);
@@ -372,7 +373,7 @@ void Articulos::on_pushButtonBorrar_clicked()
      msgBox.setDefaultButton(QMessageBox::Ok);
      int resp = msgBox.exec();
      if(resp == QMessageBox::Ok){
-    if (base.borrarArticulo(QSqlDatabase::database("DB") , ui->lineEditCod->text())){
+    if (base.borrarArticulo(QSqlDatabase::database(conf->getConexionLocal()) , ui->lineEditCod->text())){
             msgBox.setText("Borrado con exito");
             msgBox.setInformativeText("El registro se ha borrado correctamente");
             msgBox.setStandardButtons(QMessageBox::Ok);
@@ -432,7 +433,7 @@ void Articulos::on_lineEditCodFabricante_textChanged(const QString &arg1)
 
 void Articulos::on_lineEditDesc_returnPressed()
 {
-    consulta = base.buscarEnTabla(QSqlDatabase::database("DB"),"articulos","descripcion", ui->lineEditDesc->text());
+    consulta = base.buscarEnTabla(QSqlDatabase::database(conf->getConexionLocal()),"articulos","descripcion", ui->lineEditDesc->text());
     consulta.first();
     qDebug() << consulta.lastError().text();
     BuscarProducto *buscar = new BuscarProducto(this,consulta);
@@ -459,7 +460,7 @@ void Articulos::on_lineEditCod_returnPressed()
     }
         qDebug() << "MAL";
         QString cod = base.codigoDesdeAux(ui->lineEditCod->text());
-        consulta = base.consulta_producto("DB",cod);
+        consulta = base.consulta_producto(conf->getConexionLocal(),cod);
         consulta.first();
         if (consulta.numRowsAffected() == 1) {
             ui->lineEditCod->setText(consulta.value(0).toString());
@@ -474,7 +475,7 @@ void Articulos::on_lineEditCod_returnPressed()
         qDebug() << "Entrando en buscar";
         qDebug() << "Lista conexiones:" << listaConexionesRemotas.length();
         if(listaConexionesRemotas.isEmpty()){
-            listaConexionesRemotas = crearConexionesRemotas(base.tiendas(QSqlDatabase::database("DB")));
+            listaConexionesRemotas = crearConexionesRemotas(base.tiendas(QSqlDatabase::database(conf->getConexionLocal())));
             qDebug() << "Lista conexiones remotas vacia." << listaConexionesRemotas;
 
         }
@@ -497,7 +498,7 @@ void Articulos::on_lineEditCod_returnPressed()
                 msgbox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
                 if(msgbox.exec() == QMessageBox::Ok){
                 qDebug() << "Valor devuelto";
-                base.insertarArticulo(QSqlDatabase::database("DB"), datos);
+                base.insertarArticulo(QSqlDatabase::database(conf->getConexionLocal()), datos);
                 recargarTabla();
                 emit on_lineEditCod_returnPressed();
                 return;
@@ -534,7 +535,7 @@ void Articulos::on_pushButton_2_clicked()
 
 void Articulos::on_pushButtonNuevo_clicked()
 {
-    consulta = base.consulta_producto("DB", ui->lineEditCod->text());
+    consulta = base.consulta_producto(conf->getConexionLocal(), ui->lineEditCod->text());
     if(consulta.numRowsAffected() > 0){
         QMessageBox::warning(this, "ATENCION",
                               "El registro ya existe");
@@ -543,7 +544,7 @@ void Articulos::on_pushButtonNuevo_clicked()
 
 
     QStringList datos = recogerDatosFormulario();
-    if (base.insertarArticulo(QSqlDatabase::database("DB"),datos)) {
+    if (base.insertarArticulo(QSqlDatabase::database(conf->getConexionLocal()),datos)) {
         QMessageBox::about(this,"Atención", "Artículo creado con éxito");
     } else {
         QMessageBox::warning(this,"Error","No se ha podido crear el artículo");
@@ -675,7 +676,7 @@ void Articulos::on_pushButtonVerFactura_clicked()
 void Articulos::on_checkBoxRemoto_stateChanged(int arg1)
 {
     if( remoto == false && arg1 == 2){
-//        QSqlQuery consultaRemota = base.tiendas(QSqlDatabase::database("DB"));
+//        QSqlQuery consultaRemota = base.tiendas(QSqlDatabase::database(conf->getConexionLocal()));
 //        listaConexionesRemotas = crearConexionesRemotas(consultaRemota);
 //        qDebug() << listaConexionesRemotas;
 //        remoto = true;

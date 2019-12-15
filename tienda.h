@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 
+#include "base_datos.h"
 #include "configuracion.h"
 #include "tpv.h"
 #include "tabwidget.h"
@@ -37,6 +38,7 @@
 #include "directorios.h"
 #include "tiendas.h"
 #include "conexionesremotas.h"
+#include "actualizarclientes.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -48,10 +50,11 @@ class Tienda : public QMainWindow
     Q_OBJECT
     
 public:
-    explicit Tienda(QWidget *parent = 0);
+    explicit Tienda(QWidget *parent = nullptr);
     ~Tienda();
 
     QStringList listaConexiones , conexionesActivas;
+    QString conexionMaster;
     
 private slots:
     void on_ventasButton_clicked();
@@ -95,13 +98,15 @@ private slots:
 
     void on_pushButtonTiendas_clicked();
 
-    void on_pushButtonMaster_clicked();
-
     void refrescarConexiones();
 
     void on_pushButtonConectar_clicked();
 
+    void on_pushButtonActualizarClientes_clicked();
+
+
 private:
+    baseDatos base;
     Ui::Tienda *ui;
     Tpv *T;
     Ususarios *U;
@@ -125,7 +130,7 @@ private:
     Etiquetas *Etiq;
     Caducados *Caduca;
     ConfigTicket *CTicket;
-    ConfigBase *CBase, *CMaster;
+    ConfigBase *CBase;
     Prestamos *Prest;
     ConfiguracionOtros *ConfigOtros;
     Prestamistas *Prestamis;
@@ -136,6 +141,7 @@ private:
     Directorios *Director;
     tiendas *Sucursal;
     conexionesRemotas *conexiones;
+    ActualizarClientes *actClientes;
 
     QLabel *button[];
 };

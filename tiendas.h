@@ -3,6 +3,10 @@
 
 #include <QDialog>
 #include "base_datos.h"
+#include "conexionesremotas.h"
+#include "configuracion.h"
+
+extern Configuracion *conf;
 
 namespace Ui {
 class tiendas;
@@ -29,6 +33,10 @@ private slots:
 
     void on_pushButtonRefrescar_clicked();
 
+    void on_checkBoxMaster_stateChanged(int arg1);
+
+    void on_checkBoxLocal_stateChanged(int arg1);
+
 private:
     Ui::tiendas *ui;
     baseDatos *base;
@@ -39,6 +47,7 @@ private:
     void refrescarBotones(int i);
     void borrarFormulario();
     QStringList recogerDatos();
+    QString nombreConexionMaster;
 };
 
 #endif // TIENDAS_H

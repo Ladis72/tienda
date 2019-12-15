@@ -279,6 +279,12 @@ void Tpv::datosProducto(QString IdProducto)
 
 }
 
+void Tpv::mostrarFoto()
+{
+    VisorImagenes *visor = new VisorImagenes(consulta.value(14).toString());
+    visor->showMaximized();
+}
+
 void Tpv::on_lineEdit_cod_returnPressed(){
 
    consulta = base.consulta_producto("DB",ui->lineEdit_cod->text());

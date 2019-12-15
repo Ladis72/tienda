@@ -2,9 +2,11 @@
 #define CLIENTES_H
 #include "base_datos.h"
 #include "buscarproducto.h"
+#include "configuracion.h"
 
 #include <QDialog>
 
+extern Configuracion *conf;
 namespace Ui {
 class Clientes;
 }
@@ -52,6 +54,8 @@ private:
     QSqlQueryModel modeloCompras;
     QDataWidgetMapper mapper;
     QSqlQuery consulta;
+    QString nombreConexionMaster;
+    QString nombreConexionLocal;
 
 
     void recargarTabla();

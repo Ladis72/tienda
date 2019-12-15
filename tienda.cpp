@@ -10,7 +10,15 @@ Tienda::Tienda(QWidget *parent) :
     ui(new Ui::Tienda)
 {
     ui->setupUi(this);
-    qDebug() << conf->usuario;
+    QStringList datos = base.datosConexionLocal();
+    if(datos.isEmpty()){
+        createConnection("localhost","3306","tienda","root","meganizado","DB");
+        conf->setConexionLocal("DB");
+    }else {
+        createConnection(datos.at(1),"3306","tienda",datos.at(2),datos.at(3),datos.at(0));
+        conf->setConexionLocal(datos.at(0));
+    }
+
     QPixmap logo;
     logo.load("./documentos/logo.jpg");
     ui->logo->setPixmap(logo);
@@ -97,6 +105,10 @@ void Tienda::on_pushButtonFormasPago_clicked()
 
 void Tienda::on_pushButton_3_clicked()
 {
+    if (!QSqlDatabase::database(conf->getConexionMaster()).isOpen()) {
+        QMessageBox::warning(this,"No hay definida una tienda MASTER","Los cambios que realice no serán guardados \n"
+                                                                      "Debe especificar una tienda master y estar conectado para operar");
+    }
     Cli = new Clientes(this);
     Cli->show();
 }
@@ -197,11 +209,7 @@ void Tienda::on_pushButtonConfigDB_clicked()
     CBase = new ConfigBase("configBase",this);
     CBase->exec();
 }
-void Tienda::on_pushButtonMaster_clicked()
-{
-    CMaster = new ConfigBase("configMaster",this);
-    CMaster->exec();
-}
+
 
 void Tienda::on_pushButtonPrestamos_clicked()
 {
@@ -259,6 +267,7 @@ void Tienda::on_pushButtonInformes_clicked()
 
 void Tienda::on_pushButtonTiendas_clicked()
 {
+
     Sucursal = new tiendas(this);
     Sucursal->exec();
 }
@@ -289,9 +298,18 @@ void Tienda::refrescarConexiones()
         }
     }
     conf->setNombreConexionesActivas(conexionesActivas);
+    conf->setConexionMaster(conexiones->conexionMaster());
 }
 
 void Tienda::on_pushButtonConectar_clicked()
 {
     refrescarConexiones();
 }
+
+void Tienda::on_pushButtonActualizarClientes_clicked()
+{
+    ActualizarClientes *actClientes = new ActualizarClientes(this);
+    actClientes->exec();
+}
+
+

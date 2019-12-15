@@ -92,6 +92,24 @@ QStringList baseDatos::datosConexionMaster()
     }
     return datos;
 }
+
+QStringList baseDatos::datosConexionLocal()
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT nombre , ip , usuario , password FROM tiendas WHERE local = 1");
+    consulta.first();
+    QStringList datos;
+    datos.clear();
+    if(!consulta.isValid()){
+        return datos;
+    }
+
+    qDebug() << consulta.size();
+    for (int i = 0; i < 4; ++i) {
+        datos.append(consulta.value(i).toString());
+    }
+    return datos;
+}
 bool baseDatos::base_datos_abierta(){
 
 
@@ -565,7 +583,7 @@ bool baseDatos::insertarEtiqueta(QString etiqueta)
 bool baseDatos::modificarTienda(QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("UPDATE tiendas SET nombre = ? , direccion = ? , ciudad = ? , telefono = ? , whatsapp = ? , email = ? , ip = ? , usuario = ? , password = ? WHERE id = ?");
+    consulta.prepare("UPDATE tiendas SET nombre = ? , direccion = ? , ciudad = ? , telefono = ? , whatsapp = ? , email = ? , ip = ? , usuario = ? , password = ? , master = ? , local = ? WHERE id = ?");
     consulta.bindValue(0,datos.at(1));
     consulta.bindValue(1,datos.at(2));
     consulta.bindValue(2,datos.at(3));
@@ -575,7 +593,9 @@ bool baseDatos::modificarTienda(QStringList datos)
     consulta.bindValue(6,datos.at(7));
     consulta.bindValue(7,datos.at(8));
     consulta.bindValue(8,datos.at(9));
-    consulta.bindValue(9,datos.at(0));
+    consulta.bindValue(9,datos.at(10));
+    consulta.bindValue(10,datos.at(11));
+    consulta.bindValue(11,datos.at(0));
     if(consulta.exec()){
         return true;
     }
@@ -597,7 +617,7 @@ bool baseDatos::borrarTienda(QString dato)
 bool baseDatos::crearTienda(QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("INSERT INTO tiendas (id, nombre, direccion, ciudad, telefono, whatsapp, email, ip, usuario, password) VALUES (? , ? , ? , ? , ? , ? , ? , ? , ? ,?)");
+    consulta.prepare("INSERT INTO tiendas (id, nombre, direccion, ciudad, telefono, whatsapp, email, ip, usuario, password, master) VALUES (? , ? , ? , ? , ? , ? , ? , ? , ? ,?,?)");
         qDebug() << datos.length();
     for (int i = 0; i < datos.length() ;i++) {
         consulta.bindValue(i,datos.at(i));
@@ -613,7 +633,7 @@ bool baseDatos::crearTienda(QStringList datos)
 QSqlQuery baseDatos::tiendas(QSqlDatabase db)
 {
     QSqlQuery consulta(db);
-    if (!consulta.exec("SELECT * FROM tiendas")){
+    if (!consulta.exec("SELECT * FROM tiendas WHERE local != '1'")){
         qDebug() << consulta.lastError();
     }
     return consulta;
@@ -867,7 +887,12 @@ bool baseDatos::modificarCliente(QSqlDatabase db, QStringList datos, QString dat
     consulta.bindValue(12,datos.at(12));
     consulta.bindValue(13,datos.at(13));
     consulta.bindValue(14,dato.toInt());
-
+    QString texto = QString("UPDATE clientes SET idCliente = '%1' , nombre = '%2' , apellidos = '%3' , direccion = '%4' , cp = '%5' , "
+                    "localidad = '%6' , provincia = '%7' , nif = '%8' , telefono = '%9' , telefono2 = '%10' , mail = '%11' , descuento = '%12' , fechaAlta = '%13' , notas = '%14'"
+                    " WHERE idCliente = '%15'").arg(datos.at(0)).arg(datos.at(1)).arg(datos.at(2)).arg(datos.at(3)).arg(datos.at(4)).arg(datos.at(5)).arg(datos.at(6))
+            .arg(datos.at(7)).arg(datos.at(8)).arg(datos.at(9)).arg(datos.at(10)).arg(datos.at(11)).arg(datos.at(12)).arg(datos.at(13))
+            .arg(dato);
+    qDebug() << texto;
     if (!consulta.exec()) {
         db.rollback();
         return false;
@@ -917,6 +942,8 @@ bool baseDatos::crearCliente(QSqlDatabase db, QStringList datos)
         return false;
     } else {
         db.commit();
+        qDebug() << consulta.executedQuery();
+
         qDebug() << "Articulo insertado";
         return true;
     }
@@ -962,9 +989,9 @@ void baseDatos::insertarEnTabla(QSqlDatabase db, QString tabla, QStringList dato
     qDebug() << consulta.lastError();
 }
 
-void baseDatos::vaciarTabla(QString tabla)
+void baseDatos::vaciarTabla(QString tabla, QSqlDatabase db)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(db);
     consulta.exec("TRUNCATE "+tabla);
 }
 
@@ -1323,6 +1350,14 @@ QSqlQuery baseDatos::ejecutarSentencia(QString sentencia)
     return consulta;
 }
 
+QSqlQuery baseDatos::ejecutarSentencia(QString sentencia, QSqlDatabase db)
+{
+    QSqlQuery consulta(db);
+    consulta.exec(sentencia);
+    qDebug() << consulta.lastError();
+    return consulta;
+}
+
 QSqlQuery baseDatos::recuperarPedidos()
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
@@ -1527,7 +1562,7 @@ bool baseDatos::guardarDirectorios(QStringList directorios)
     consulta.bindValue(1,i);
     if(!consulta.exec()){
         return false;
-    };
+    }
     }
     return true;
 }
@@ -1554,6 +1589,28 @@ QString baseDatos::devolverDirectorio(QString tipo)
     qDebug() << consulta.lastError();
     consulta.first();
     return consulta.record().value(0).toString();
+}
+
+QString baseDatos::nombreConexionMaster()
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT * FROM tiendas where master = '1'");
+    if(consulta.numRowsAffected() < 1){
+        return "";
+    }
+    consulta.first();
+    return consulta.record().value("nombre").toString();
+}
+
+QString baseDatos::nombreConexionLocal()
+{
+    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    consulta.exec("SELECT * FROM tiendas where local = '1'");
+    if(consulta.numRowsAffected() < 1){
+        return "DB";
+    }
+    consulta.first();
+    return consulta.record().value("nombre").toString();
 }
 
 

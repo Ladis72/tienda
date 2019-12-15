@@ -6,6 +6,7 @@ tiendas::tiendas(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::tiendas)
 {
+    nombreConexionMaster = conf->getConexionMaster();
     ui->setupUi(this);
     modeloTabla = new QSqlQueryModel;
     recargarTabla();
@@ -20,9 +21,12 @@ tiendas::tiendas(QWidget *parent) :
     mapper.addMapping(ui->lineEditIP,7);
     mapper.addMapping(ui->lineEditUsusario,8);
     mapper.addMapping(ui->lineEditPassword,9);
+    mapper.addMapping(ui->checkBoxMaster,10);
+    mapper.addMapping(ui->checkBoxLocal,11);
 
     mapper.toFirst();
     refrescarBotones(mapper.currentIndex());
+
 
 }
 
@@ -91,6 +95,15 @@ QStringList tiendas::recogerDatos()
     listaDatos.append(ui->lineEditIP->text());
     listaDatos.append(ui->lineEditUsusario->text());
     listaDatos.append(ui->lineEditPassword->text());
+    if(ui->checkBoxMaster->isChecked()){
+        listaDatos.append("1");
+    }else {
+        listaDatos.append("0");
+    }if(ui->checkBoxLocal->isChecked()){
+        listaDatos.append("1");
+    }else {
+        listaDatos.append("0");
+    }
     return listaDatos;
 }
 
@@ -119,6 +132,9 @@ void tiendas::on_pushButtonModificar_clicked()
         msgBox.setInformativeText("El registro se ha modificado correctamente");
         msgBox.setStandardButtons(QMessageBox::Ok);
         msgBox.exec();
+        if (ui->checkBoxMaster->isChecked()) {
+            conf->setConexionMaster(base->nombreConexionMaster());
+        }
 }else{
     msgBox.setText("Error al guardar");
     msgBox.setInformativeText("Revise los datos del formulario o contacte con el administrador");
@@ -161,4 +177,14 @@ void tiendas::on_pushButtonBorrar_clicked()
 void tiendas::on_pushButtonRefrescar_clicked()
 {
     mapper.revert();
+}
+
+void tiendas::on_checkBoxMaster_stateChanged(int arg1)
+{
+    qDebug() << base->nombreConexionMaster();
+}
+
+void tiendas::on_checkBoxLocal_stateChanged(int arg1)
+{
+
 }
