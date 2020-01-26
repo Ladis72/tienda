@@ -158,7 +158,6 @@ void Salidas::on_pushButtonEnviar_clicked()
     case QMessageBox::Cancel:
         qDebug() << "cancelado";
         return;
-        break;
     default:
         break;
     }

@@ -15,6 +15,7 @@ TEMPLATE = app
 SOURCES += main.cpp\
     actualizarclientes.cpp \
     conexionesremotas.cpp \
+    generarvales.cpp \
         tienda.cpp \
     tpv.cpp \
     base_datos.cpp \
@@ -70,6 +71,7 @@ SOURCES += main.cpp\
 HEADERS  += tienda.h \
     actualizarclientes.h \
     conexionesremotas.h \
+    generarvales.h \
     tpv.h \
     base_datos.h \
     conexion.h \
@@ -125,6 +127,7 @@ HEADERS  += tienda.h \
 FORMS    += tienda.ui \
     actualizarclientes.ui \
     copiaseguridad.ui \
+    generarvales.ui \
     tpv.ui \
     buscarproducto.ui \
     tabwidget.ui \

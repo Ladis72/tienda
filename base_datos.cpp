@@ -1,6 +1,8 @@
 #include "base_datos.h"
 #include <QDebug>
 #include <QMessageBox>
+#include <QDate>
+
 
 baseDatos::baseDatos()
 {
@@ -388,6 +390,7 @@ bool baseDatos::descontarArticulo(QString cod, int uds)
         qDebug() << "No hay lotes de ese artículo";
         crearLote(cod,"","2000-01-01",QString::number(0-uds));
     }
+    return true;
 }
 
 
@@ -467,6 +470,23 @@ bool baseDatos::modificarFotoArticulo(QString foto, QString dato)
     }
 }
 
+QSqlQuery baseDatos::ventasClientes(QString nombreConexion, QDate fechaI, QDate fechaF)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+    consulta.exec("SELECT cliente , sum(total) FROM tickets WHERE fecha BETWEEN '"+fechaI.toString("yyyy-MM-01")+
+                  "' and '"+fechaF.toString("yyyy-MM-"+QString::number(fechaF.daysInMonth()))+"' GROUP BY cliente");
+    qDebug() << fechaI.toString("yyyy-MM-01");
+    //consulta.bindValue(0,fechaI.toString("yyyy-MM-01"));
+    qDebug() << fechaF.toString("yyyy-MM-"+QString::number(fechaF.daysInMonth()));
+    //consulta.bindValue(1,fechaF.toString("yyyy-MM-"+QString::number(fechaF.daysInMonth())));
+    //if (consulta.exec()) {
+        qDebug() << consulta.numRowsAffected();
+        return consulta;
+    //}
+    //qDebug() << consulta.lastError();
+    //return consulta;
+}
+
 QString baseDatos::nombreFamilia(QString id)
 {
 
@@ -539,8 +559,6 @@ QString baseDatos::etiquetaCliente(QString idCliente)
     }
     return "Sin asignar";
 }
-
-
 
 QString baseDatos::nombreFormaPago(QString id)
 {
@@ -1415,16 +1433,28 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds)
     qDebug() << consulta.numRowsAffected();
     if(consulta.numRowsAffected() == 0){
         qDebug() << "Pasa por filas = 0";
+        QString udsString = QString::number(uds);
+        consulta.exec("INSERT INTO lotes (ean , lote ,fecha , cantidad) VALUES ('"+cod+"','','"+fecha+"','-"+udsString+"')");
+        qDebug() << consulta.lastError() << "Sin lotes";
         return;
     }
 
     consulta.first();
     QString id = consulta.record().value(0).toString();
     qDebug() << id;
-    if (consulta.record().value(1).toInt() <= uds) {
-        consulta.exec("DELETE FROM lotes WHERE id = '"+id+"'");
+    if (consulta.record().value(1).toInt() == uds) {
+        consulta.exec("DELETE * FROM lotes WHERE id = '"+id+"'");
         consulta.exec("UPDATE articulos SET stock= (SELECT sum(cantidad) FROM lotes WHERE ean = '"+cod+"') where articulos.cod = '"+cod+"'");
-        consulta.lastError();
+        qDebug() << consulta.lastError() << "==";
+    }
+    if (consulta.record().value(1).toInt() < uds){
+        int resto = uds-consulta.record().value(1).toInt();
+        consulta.exec("DELETE FROM lotes WHERE id = '"+id+"'");
+        qDebug() << consulta.lastError() << "1<";
+
+        consulta.exec("UPDATE articulos SET stock = (SELECT sum(cantidad) FROM lotes WHERE ean = '"+cod+"') where articulos.cod = '"+cod+"'");
+        qDebug() << consulta.lastError() << "2<";
+        disminuirLote(cod,fecha,resto);
         return;
     }
     int descontarUds = consulta.record().value(1).toInt();
@@ -1498,9 +1528,9 @@ QSqlQuery baseDatos::estadisticasVentaProductos(QString nPrimerTicket , QString 
     return consulta;
 }
 
-QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final)
+QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final , QString nombreDB)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(nombreDB));
     consulta.prepare("SELECT descripcion , sum(cantidad) FROM lineasticket WHERE concat_ws('/',fecha,hora) >= ? AND concat_ws('/',fecha,hora) <= ? group by cod asc");
     consulta.bindValue(0,inicio);
     consulta.bindValue(1,final);

@@ -39,6 +39,7 @@
 #include "tiendas.h"
 #include "conexionesremotas.h"
 #include "actualizarclientes.h"
+#include "generarvales.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -105,6 +106,8 @@ private slots:
     void on_pushButtonActualizarClientes_clicked();
 
 
+    void on_pushButtonGenerarVales_clicked();
+
 private:
     baseDatos base;
     Ui::Tienda *ui;
@@ -142,6 +145,7 @@ private:
     tiendas *Sucursal;
     conexionesRemotas *conexiones;
     ActualizarClientes *actClientes;
+    GenerarVales *genVales;
 
     QLabel *button[];
 };

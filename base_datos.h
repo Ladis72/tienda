@@ -26,10 +26,11 @@ public:
     QSqlQuery usuarios(QSqlDatabase db);
     QSqlQuery fpago(QSqlDatabase db);
     QSqlDatabase conexion();
+
+//FUNCIONES ARTÍCULOS
     QSqlQuery consulta_producto(QString nombreConnexion, QString cod);
     QSqlQuery buscarProducto (QSqlDatabase db, QString tabla, QString nombre);
     bool insertarUsuario(QSqlDatabase db, QStringList datos);
-    QSqlQuery buscarEnTabla(QSqlDatabase db, QString tabla, QString campo, QString dato);
     bool modificarUsuaruio(QSqlDatabase db, QStringList datos, QString dato);
     bool modificarFotoUsusario(QString foto, int id);
     bool modificarArticulo(QSqlDatabase db, QStringList datos, QString dato);
@@ -37,9 +38,15 @@ public:
     bool descontarArticulo(QString cod, int uds);
     bool actualizarFechaVentaArticulo(QString cod, QString fecha);
     bool actualizarArticulosDesdeCompras(QStringList datos);
+    bool modificarFotoArticulo(QString foto, QString dato);
+
+//FUNCIONES CLIENTES
+
+    QSqlQuery ventasClientes(QString nombreConexion , QDate fechaI , QDate fechaF);
+//FUNCIONES USUARIOS
+
     bool borrarUsusario(QSqlDatabase db, int dato);
     bool borrarArticulo(QSqlDatabase db, QString dato);
-    bool modificarFotoArticulo(QString foto, QString dato);
     QString nombreFamilia(QString id);
     QString nombreFabricante(QString id);
     QString nombreUsusario(QString id);
@@ -116,6 +123,8 @@ public:
     bool existeDatoEnTabla(QSqlDatabase db, QString tabla, QString columna, QString dato);
     void insertarEnTabla(QSqlDatabase db , QString tabla , QStringList datos);
     void vaciarTabla(QString tabla , QSqlDatabase db);
+    QSqlQuery buscarEnTabla(QSqlDatabase db, QString tabla, QString campo, QString dato);
+
 
 //Funciones LOTES
     QString idLote(QString cod, QString lote, QString fecha);//Devuelve el id del lote igual o 0 si no existe
@@ -130,7 +139,7 @@ public:
 //Funciones LISTADOS
     QString ticketCercanoFecha(QString tabla, QString fecha, QString cuando);
     QSqlQuery estadisticasVentaProductos(QString nPrimerTicket , QString nUltimoTicket, QString nPrimerTicketB, QString nUltimoTicketB);
-    QSqlQuery listadoVentaArticulos(QString inicio , QString final);
+    QSqlQuery listadoVentaArticulos(QString inicio , QString final, QString nombreDB);
     QSqlQuery listadoMovimientosEfectivo(QString inicio , QString final);
     QSqlQuery listadoCaducados(QString desde , QString hasta);
 

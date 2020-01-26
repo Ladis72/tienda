@@ -14,11 +14,11 @@ class totalizar : public QDialog
     Q_OBJECT
     
 public:
-    explicit totalizar(QString datos, QWidget *parent = 0);
+    explicit totalizar(QString datos, QWidget *parent = nullptr);
     ~totalizar();
 
     QString efectivo;
-    float descuento,total,entrega,cambio;
+    double descuento,total,entrega,cambio;
     int formaPago;
     QString facturacion;
     bool ticket;

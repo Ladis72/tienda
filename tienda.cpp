@@ -18,6 +18,12 @@ Tienda::Tienda(QWidget *parent) :
         createConnection(datos.at(1),"3306","tienda",datos.at(2),datos.at(3),datos.at(0));
         conf->setConexionLocal(datos.at(0));
     }
+    QString conexionMaster = base.nombreConexionMaster();
+    conf->setConexionMaster(conexionMaster);
+    if (conf->getConexionMaster() != conf->getConexionLocal()) {
+       ui->pushButtonGenerarVales->setEnabled(false);
+       ui->pushButtonActualizarClientes->setEnabled(false);
+    }
 
     QPixmap logo;
     logo.load("./documentos/logo.jpg");
@@ -25,26 +31,6 @@ Tienda::Tienda(QWidget *parent) :
 
     conexiones = new conexionesRemotas(this);
     ui->statusBar->addPermanentWidget(ui->pushButtonConectar);
-
-//    refrescarConexiones();
-//    QLabel *button[conexiones->lista().length()];
-//    for (int i = 0;i < conexiones->lista().length() ;i++ ) {
-//        button[i] = new QLabel(conexiones->lista().at(i));
-//        ui->statusBar->addWidget(button[i]);
-//    }
-//    ui->statusBar->addWidget(ui->pushButtonConectar);
-//    QStringList conexionesActivas;
-//    QStringList conn = conexiones->crear();
-//    conf->setNombreconexiones(conexiones->lista());
-//    for (int i = 0 ; i < conn.length() ; i=i+2 ) {
-//        if(conn.at(i+1) == "0"){
-//            button[i/2]->setStyleSheet("QLabel {background-color : red}");
-//        }else{
-//            button[i/2]->setStyleSheet("QLabel {background-color : green}");
-//            conexionesActivas << conn.at(i);
-//        }
-//    }
-//    conf->setNombreConexionesActivas(conexionesActivas);
 
 }
 
@@ -313,3 +299,13 @@ void Tienda::on_pushButtonActualizarClientes_clicked()
 }
 
 
+
+void Tienda::on_pushButtonGenerarVales_clicked()
+{
+//    if(conf->getNombreConexionesActivas().isEmpty() || conf->getNombreConexionesActivas() != conf->getNombreConexiones()){
+//        QMessageBox::information(this,"No se puede generar ahora","Para generar los vales deben estar todos los ordenadores conectados.");
+//        return;
+//    }
+    genVales = new GenerarVales(this);
+    genVales->exec();
+}

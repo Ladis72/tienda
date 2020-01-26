@@ -286,10 +286,10 @@
         <string>Operaciones</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_4">
-        <item row="0" column="2">
-         <widget class="QPushButton" name="pushButtonFacturas">
+        <item row="0" column="3">
+         <widget class="QPushButton" name="pushButtonCaducados">
           <property name="text">
-           <string>Facturas</string>
+           <string>Caducados</string>
           </property>
          </widget>
         </item>
@@ -300,10 +300,10 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="3">
-         <widget class="QPushButton" name="pushButtonCaducados">
+        <item row="0" column="2">
+         <widget class="QPushButton" name="pushButtonFacturas">
           <property name="text">
-           <string>Caducados</string>
+           <string>Facturas</string>
           </property>
          </widget>
         </item>
@@ -311,6 +311,13 @@
          <widget class="QPushButton" name="pushButtonTickets">
           <property name="text">
            <string>Tickets</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="4">
+         <widget class="QPushButton" name="pushButtonGenerarVales">
+          <property name="text">
+           <string>Generar vales</string>
           </property>
          </widget>
         </item>

@@ -7,7 +7,7 @@ totalizar::totalizar(QString datos, QWidget *parent) :
 {
     ui->setupUi(this);
     ui->lineEditImporte->setText(datos);
-    total = ui->lineEditImporte->text().toFloat()*(100-ui->lineEditDescuento->text().toFloat())/100;
+    total = ui->lineEditImporte->text().toDouble()*(100-ui->lineEditDescuento->text().toDouble())/100;
     ui->lineEditTotal->setText(QString::number(total));
     descuento = 0;
     fpago = base->fpago(QSqlDatabase::database("DB"));
@@ -35,17 +35,17 @@ void totalizar::on_pushButtonTicket_clicked()
 
 void totalizar::on_lineEditDescuento_textChanged(const QString &arg1)
 {
-    total = ui->lineEditImporte->text().toFloat()*(100-arg1.toFloat())/100;
+    total = ui->lineEditImporte->text().toDouble()*(100-arg1.toDouble())/100;
     ui->lineEditTotal->setText(QString::number(total));
-    descuento = ui->lineEditDescuento->text().toFloat();
+    descuento = ui->lineEditDescuento->text().toDouble();
     emit on_lineEditEntrega_textChanged(ui->lineEditEntrega->text());
 }
 
 void totalizar::on_lineEditEntrega_textChanged(const QString &arg1)
 {
-    float vuelta = arg1.toFloat()-ui->lineEditTotal->text().toFloat();
+    double vuelta = arg1.toDouble()-ui->lineEditTotal->text().toDouble();
     ui->lineEditCambio->setText(QString::number(vuelta));
-    entrega = ui->lineEditEntrega->text().toFloat();
+    entrega = ui->lineEditEntrega->text().toDouble();
     cambio = vuelta;
 }
 
