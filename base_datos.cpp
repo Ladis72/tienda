@@ -1443,9 +1443,11 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds)
     QString id = consulta.record().value(0).toString();
     qDebug() << id;
     if (consulta.record().value(1).toInt() == uds) {
-        consulta.exec("DELETE * FROM lotes WHERE id = '"+id+"'");
+        consulta.exec("DELETE FROM lotes WHERE id LIKE '"+id+"'");
+        qDebug() << consulta.lastError() << "== borrando";
         consulta.exec("UPDATE articulos SET stock= (SELECT sum(cantidad) FROM lotes WHERE ean = '"+cod+"') where articulos.cod = '"+cod+"'");
         qDebug() << consulta.lastError() << "==";
+        return;
     }
     if (consulta.record().value(1).toInt() < uds){
         int resto = uds-consulta.record().value(1).toInt();
