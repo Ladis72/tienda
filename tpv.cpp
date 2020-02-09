@@ -584,7 +584,17 @@ void Tpv::on_lineEdit_cod_cliente_editingFinished()
     ui->lineEdit_nobre_cliente->setText(nombreCliente);
         }
     descuentoCliente = base.descuentoCliente(ui->lineEdit_cod_cliente->text());
-    qDebug() << descuentoCliente;
+    double vale = base.valeCliente(conf->getConexionLocal(),ui->lineEdit_cod_cliente->text());
+    if (vale > 0) {
+        ui->labelVale->setNum(vale);
+        ui->pushButtonVale->setEnabled(true);
+    }else {
+        ui->labelVale->setNum(0);
+        ui->pushButtonVale->setEnabled(false);
+}
+
+
+    ui->lineEdit_cod->setFocus();
 }
 
 void Tpv::on_lineEdit_nobre_cliente_returnPressed()
@@ -708,3 +718,8 @@ void Tpv::on_btn_preTicket_clicked()
         system(ch);
 }
 
+
+void Tpv::on_pushButtonVale_clicked()
+{
+
+}

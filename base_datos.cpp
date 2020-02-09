@@ -484,7 +484,19 @@ QSqlQuery baseDatos::ventasClientes(QString nombreConexion, QDate fechaI, QDate 
         return consulta;
     //}
     //qDebug() << consulta.lastError();
-    //return consulta;
+        //return consulta;
+}
+
+double baseDatos::valeCliente(QString nombreConexion , QString idCLiente)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+    consulta.exec("SELECT cantidad FROM vales WHERE idCLiente ='"+idCLiente+"' AND estado = 1");
+    qDebug() << consulta.lastError();
+    if(consulta.numRowsAffected() > 0){
+    consulta.first();
+    return consulta.value(0).toDouble();
+    }
+    return 0;
 }
 
 QString baseDatos::nombreFamilia(QString id)

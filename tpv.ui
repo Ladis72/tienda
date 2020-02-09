@@ -23,19 +23,6 @@
    <string>TPV</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_3">
-   <item row="0" column="2">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>40</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
    <item row="0" column="1">
     <widget class="QGroupBox" name="groupBox_cliente">
      <property name="maximumSize">
@@ -48,19 +35,6 @@
       <string>Datos del cliente</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_cod_cliente">
-        <property name="text">
-         <string>Cod.</string>
-        </property>
-        <property name="buddy">
-         <cstring>lineEdit_cod_cliente</cstring>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2">
-       <widget class="QLineEdit" name="lineEdit_nobre_cliente"/>
-      </item>
       <item row="0" column="2">
        <widget class="QLabel" name="label_nombr_cliente">
         <property name="text">
@@ -68,6 +42,23 @@
         </property>
         <property name="buddy">
          <cstring>lineEdit_nobre_cliente</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="6">
+       <widget class="QLabel" name="labelVale">
+        <property name="text">
+         <string>0</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_cod_cliente">
+        <property name="text">
+         <string>Cod.</string>
+        </property>
+        <property name="buddy">
+         <cstring>lineEdit_cod_cliente</cstring>
         </property>
        </widget>
       </item>
@@ -81,6 +72,26 @@
         </property>
         <property name="maxLength">
          <number>9</number>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLineEdit" name="lineEdit_nobre_cliente"/>
+      </item>
+      <item row="0" column="3">
+       <widget class="QLabel" name="labelAcumulado">
+        <property name="text">
+         <string>Acumulado</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3" colspan="4">
+       <widget class="QPushButton" name="pushButtonVale">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Usar vale</string>
         </property>
        </widget>
       </item>

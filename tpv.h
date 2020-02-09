@@ -59,6 +59,9 @@ private slots:
 
     void on_btn_preTicket_clicked();
 
+
+    void on_pushButtonVale_clicked();
+
 private:
     int ticket;
     int ticketActual;

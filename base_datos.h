@@ -43,6 +43,8 @@ public:
 //FUNCIONES CLIENTES
 
     QSqlQuery ventasClientes(QString nombreConexion , QDate fechaI , QDate fechaF);
+    double valeCliente(QString nombreConexion, QString idCLiente);
+
 //FUNCIONES USUARIOS
 
     bool borrarUsusario(QSqlDatabase db, int dato);
