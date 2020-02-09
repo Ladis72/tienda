@@ -23,11 +23,14 @@ public:
 private slots:
     void on_pushButtonGenerar_clicked();
 
+    void on_spinBox_valueChanged(int arg1);
+
 private:
     Ui::GenerarVales *ui;
     baseDatos base;
     QStringList tiendas;
     QString master , fechaI , fechaF;
+    int descuento;
 };
 
 #endif // GENERARVALES_H

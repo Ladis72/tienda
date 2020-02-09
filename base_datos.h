@@ -44,6 +44,7 @@ public:
 
     QSqlQuery ventasClientes(QString nombreConexion , QDate fechaI , QDate fechaF);
     double valeCliente(QString nombreConexion, QString idCLiente);
+    bool caducarVales(QString nombreConexion);
 
 //FUNCIONES USUARIOS
 

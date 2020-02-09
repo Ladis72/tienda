@@ -22,6 +22,7 @@ GenerarVales::~GenerarVales()
 
 void GenerarVales::on_pushButtonGenerar_clicked()
 {
+
     //Comprobar fecha correcta
     ui->label->setText("Comprobando la fecha");
     ui->progressBar->setValue(5);
@@ -41,6 +42,12 @@ void GenerarVales::on_pushButtonGenerar_clicked()
         return;
     }
     qDebug() << fechaI;
+
+    //Marcar como caducados los vales no usados
+    bool caducar = base.caducarVales(conf->getConexionLocal());
+    for (int i = 0;i < tiendas.length() ;i++ ) {
+        caducar = base.caducarVales(tiendas.at(1));
+    }
 
     //Vaciar tabla temporal de compras de clientes
     ui->label->setText("Vaciando datos antiguos");
@@ -73,7 +80,6 @@ void GenerarVales::on_pushButtonGenerar_clicked()
         compras.first();
 
         for (int i = 0; i < compras.numRowsAffected() ;i++ ) {
-            //QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
             consulta.prepare("INSERT INTO comprasClienteTMP VALUES (NULL, ? , ? , ?)");
             consulta.bindValue(0,compras.record().value(0).toString());
             consulta.bindValue(1,compras.record().value(1).toString());
@@ -95,7 +101,7 @@ void GenerarVales::on_pushButtonGenerar_clicked()
     for (int i = 0; i < comprasTotal.numRowsAffected() ;i++ ) {
         vales.prepare("INSERT INTO vales VALUES (NULL, ? , ? , 1 , ? , NULL)");
         vales.bindValue(0, comprasTotal.record().value(1));
-        vales.bindValue(1, comprasTotal.record().value(4));
+        vales.bindValue(1, comprasTotal.record().value(4).toDouble()*descuento/100);
         vales.bindValue(2, comprasTotal.record().value(3));
         if (!vales.exec()) {
             qDebug() << vales.lastError();
@@ -110,7 +116,7 @@ void GenerarVales::on_pushButtonGenerar_clicked()
         for (int i = 0; i < comprasTotal.numRowsAffected() ;i++ ) {
             valesRemotos.prepare("INSERT INTO vales VALUES (NULL, ? , ? , 1 , ? , NULL)");
             valesRemotos.bindValue(0, comprasTotal.record().value(1));
-            valesRemotos.bindValue(1, comprasTotal.record().value(4));
+            valesRemotos.bindValue(1, comprasTotal.record().value(4).toDouble()*descuento/100);
             valesRemotos.bindValue(2, comprasTotal.record().value(3));
             if (!valesRemotos.exec()) {
                 qDebug() << vales.lastError();
@@ -118,4 +124,10 @@ void GenerarVales::on_pushButtonGenerar_clicked()
             comprasTotal.next();
     }
     }
+
+}
+
+void GenerarVales::on_spinBox_valueChanged(int arg1)
+{
+    descuento = arg1;
 }

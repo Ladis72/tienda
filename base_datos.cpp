@@ -499,6 +499,16 @@ double baseDatos::valeCliente(QString nombreConexion , QString idCLiente)
     return 0;
 }
 
+bool baseDatos::caducarVales(QString nombreConexion)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+    consulta.exec("UPDATE vales SET estado = 0 WHERE estado = 1");
+    if (consulta.isValid()) {
+        return true;
+    }
+    return false;
+}
+
 QString baseDatos::nombreFamilia(QString id)
 {
 
