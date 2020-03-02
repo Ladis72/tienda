@@ -1,11 +1,12 @@
 #include "totalizar.h"
 #include "ui_totalizar.h"
 
-totalizar::totalizar(QString datos, QWidget *parent) :
+totalizar::totalizar(QString datos, double vale, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::totalizar)
 {
     ui->setupUi(this);
+    valeUsado = false;
     ui->lineEditImporte->setText(datos);
     total = ui->lineEditImporte->text().toDouble()*(100-ui->lineEditDescuento->text().toDouble())/100;
     ui->lineEditTotal->setText(QString::number(total));
@@ -21,6 +22,12 @@ totalizar::totalizar(QString datos, QWidget *parent) :
     ticket = false;
     entrega = 0;
     cambio = 0;
+    cantVale = vale;
+    qDebug() << cantVale;
+    if (cantVale > 0) {
+        ui->checkBoxVale->setChecked(true);
+        ui->lineEditVale->setText(QString::number(cantVale));
+    }
 }
 
 totalizar::~totalizar()
@@ -101,4 +108,18 @@ void totalizar::on_pushButtonFactura_clicked()
     ticket = true;
     factura = true;
     emit accept();
+}
+
+void totalizar::on_checkBoxVale_stateChanged(int arg1)
+{
+    if (arg1 > 0) {
+        total = ui->lineEditImporte->text().toDouble()*(100-ui->lineEditDescuento->text().toDouble())/100-cantVale;
+        ui->lineEditTotal->setText(QString::number(total));
+        valeUsado = true;
+    }else{
+        total = ui->lineEditImporte->text().toDouble()*(100-ui->lineEditDescuento->text().toDouble())/100;
+        ui->lineEditTotal->setText(QString::number(total));
+        valeUsado = false;
+    }
+    qDebug() << arg1;
 }

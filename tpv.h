@@ -12,6 +12,9 @@
 #include "clientes.h"
 #include "formateo.h"
 #include "visorimagenes.h"
+#include "configuracion.h"
+
+extern Configuracion *conf;
 
 namespace Ui {
 class Tpv;
@@ -59,15 +62,17 @@ private slots:
 
     void on_btn_preTicket_clicked();
 
-
-    void on_pushButtonVale_clicked();
+    void usarVale(int ticket , int idVale , double cantVale);
 
 private:
     int ticket;
     int ticketActual;
     int usuario;
     int cliente;
-    double descuentoCliente;
+    int idVale;
+    double descuentoCliente , vale;
+    QStringList listaConexionesRemotas;
+    QString conexionLocal;
     Formateo classFormatear;
     Ui::Tpv *ui;
     QSqlDatabase db;

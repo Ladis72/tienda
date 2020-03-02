@@ -405,11 +405,6 @@ void Tpv::on_lineEdit_desc_returnPressed()
 
 void Tpv::on_btn_cobrar_clicked()
 {
-//    QFile cajon("/dev/lp0");
-//    cajon.open(QIODevice::WriteOnly);
-//    QTextStream codigoApertura(&cajon);
-//    codigoApertura << char(0x1B) << char(0x70) << char(0x30);
-//    cajon.close();
     QStringList confTicket = base.recuperarConfigTicket();
     QFile cajon(confTicket.at(3));
     qDebug() << confTicket.at(3);
@@ -424,7 +419,7 @@ void Tpv::on_btn_cobrar_clicked()
     }
     cajon.close();
     qDebug() << "Finalizado apertura cajon";
-    totalizacion = new totalizar(QString::number(calcularPrecioTotal()),this);
+    totalizacion = new totalizar(QString::number(calcularPrecioTotal()), vale , this);
 
     QStringList lineaTicket,totalTicket;
     totalTicket.clear();
@@ -484,6 +479,9 @@ void Tpv::on_btn_cobrar_clicked()
                 base.descontarArticulo(lineaTicket.at(1),lineaTicket.at(3).toInt());
             }
             base.actualizarFechaVentaArticulo(lineaTicket.at(1),QDate::currentDate().toString("yyyy-MM-dd"));
+            if (totalizacion->valeUsado) {
+                usarVale(ticket,idVale,vale);
+            }
         }
         totalTicket.append(recopilarDatosTicket());
         totalTicket.append(QString::number(totalizacion->descuento));
@@ -493,12 +491,6 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(QString::number(totalizacion->entrega));
         totalTicket.append(QString::number(totalizacion->cambio));
 
-//        texto << "\n\nTotal:";
-//        texto << QString::number(totalizacion->total)+"\n";
-//        texto << totalizacion->efectivo;
-//        texto << "\n\n\n     GRACIAS POR SU VISITA\n";
-//        texto << "\n\n\n\n";
-//        texto << char(0x1D) << char(0x56) << char(0x30);
         QString serie;
         serie = "ticketss";
         if (totalizacion->facturacion == "0") {
@@ -567,11 +559,10 @@ void Tpv::on_lineEdit_cod_cliente_editingFinished()
     if(nombreCliente == "Sin asignar"){
         QMessageBox *msgbox = new QMessageBox(this);
         msgbox->setText("Crear cliente");
-        msgbox->setInformativeText("Ese cliente no existe. /n¿Desea Crearlo?");
+        msgbox->setInformativeText("Ese cliente no existe. \n¿Desea Crearlo?");
         msgbox->setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-        msgbox->setDefaultButton(QMessageBox::Ok);
-        int resp = msgbox->exec();
-        if( resp == QMessageBox::Ok){
+        msgbox->setDefaultButton(QMessageBox::Cancel);
+        if( msgbox->exec() == QMessageBox::Ok){
             clien = new Clientes(this,ui->lineEdit_cod_cliente->text());
             clien->exec();
             ui->lineEdit_nobre_cliente->setText(base.nombreCliente(ui->lineEdit_cod_cliente->text()));
@@ -584,13 +575,14 @@ void Tpv::on_lineEdit_cod_cliente_editingFinished()
     ui->lineEdit_nobre_cliente->setText(nombreCliente);
         }
     descuentoCliente = base.descuentoCliente(ui->lineEdit_cod_cliente->text());
-    double vale = base.valeCliente(conf->getConexionLocal(),ui->lineEdit_cod_cliente->text());
+    vale = base.valeCliente(conf->getConexionLocal(),ui->lineEdit_cod_cliente->text());
+    qDebug() << vale;
     if (vale > 0) {
         ui->labelVale->setNum(vale);
-        ui->pushButtonVale->setEnabled(true);
+        idVale = base.idVale(conf->getConexionLocal(),ui->lineEdit_cod_cliente->text());
     }else {
         ui->labelVale->setNum(0);
-        ui->pushButtonVale->setEnabled(false);
+        idVale = 0;
 }
 
 
@@ -718,8 +710,30 @@ void Tpv::on_btn_preTicket_clicked()
         system(ch);
 }
 
-
-void Tpv::on_pushButtonVale_clicked()
+void Tpv::usarVale(int ticket, int idVale, double cantVale)
 {
+    QStringList lineaTicket;
+    lineaTicket.clear();
+    lineaTicket.append(QString::number(ticket));
+    lineaTicket.append("9999999999999");
+    lineaTicket.append("Vale fidelidad");
+    lineaTicket.append("1");
+    lineaTicket.append("0");
+    lineaTicket.append(QString::number(cantVale));
+    lineaTicket.append("0");
+    lineaTicket.append(QString::number(cantVale));
+    lineaTicket.append(QDate::currentDate().toString("yyyy-MM-dd"));
+    lineaTicket.append(QTime::currentTime().toString("hh:mm"));
+    base.grabarLineaTicket(lineaTicket);
+
+    listaConexionesRemotas = conf->getNombreConexiones();
+    qDebug() << listaConexionesRemotas;
+    conexionLocal = conf->getConexionLocal();
+    qDebug() << conexionLocal;
+    if (base.usarVale(conexionLocal,idVale)) {
+        qDebug() << "Vale usado";
+    }else {
+        qDebug() << "Error al usar el vale";
+        }
 
 }

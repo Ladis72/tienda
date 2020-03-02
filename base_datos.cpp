@@ -509,6 +509,28 @@ bool baseDatos::caducarVales(QString nombreConexion)
     return false;
 }
 
+int baseDatos::idVale(QString nombreConexion, QString idCliente)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+    consulta.exec("SELECT idVales FROM vales WHERE idCliente='"+idCliente+"' AND estado = 1");
+    if(consulta.numRowsAffected() > 0){
+    consulta.first();
+    return consulta.value(0).toInt();
+    }
+    return 0;
+}
+
+bool baseDatos::usarVale(QString nombreConexion, int idVale)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+    consulta.prepare("UPDATE vales SET estado = 2 WHERE idvales = ?");
+    consulta.bindValue(0,idVale);
+    if (consulta.exec()) {
+        return true;
+    }
+    return false;
+}
+
 QString baseDatos::nombreFamilia(QString id)
 {
 
