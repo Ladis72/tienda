@@ -7,7 +7,7 @@ GenerarVales::GenerarVales(QWidget *parent) :
     ui(new Ui::GenerarVales)
 {
     ui->setupUi(this);
-    QStringList tiendas = conf->getNombreConexiones();
+    tiendas = conf->getNombreConexiones();
     qDebug() << tiendas;
     QString master = conf->getConexionMaster();
     qDebug() << master;
@@ -78,7 +78,8 @@ void GenerarVales::on_pushButtonGenerar_clicked()
     for (int i = 0;i < tiendas.length() ;i++ ) {
         QSqlQuery compras = base.ventasClientes(tiendas.at(i),fecha,fecha);
         compras.first();
-
+        qDebug() << compras.lastError();
+    //QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
         for (int i = 0; i < compras.numRowsAffected() ;i++ ) {
             consulta.prepare("INSERT INTO comprasClienteTMP VALUES (NULL, ? , ? , ?)");
             consulta.bindValue(0,compras.record().value(0).toString());
