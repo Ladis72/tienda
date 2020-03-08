@@ -479,9 +479,9 @@ void Tpv::on_btn_cobrar_clicked()
                 base.descontarArticulo(lineaTicket.at(1),lineaTicket.at(3).toInt());
             }
             base.actualizarFechaVentaArticulo(lineaTicket.at(1),QDate::currentDate().toString("yyyy-MM-dd"));
-            if (totalizacion->valeUsado) {
-                usarVale(ticket,idVale,vale);
-            }
+        }
+        if (totalizacion->valeUsado) {
+        usarVale(ticket,idVale,vale);
         }
         totalTicket.append(recopilarDatosTicket());
         totalTicket.append(QString::number(totalizacion->descuento));
@@ -735,5 +735,13 @@ void Tpv::usarVale(int ticket, int idVale, double cantVale)
     }else {
         qDebug() << "Error al usar el vale";
         }
+    for (int i  = 0 ; i < listaConexionesRemotas.length() ; i++ ) {
+        if (!base.usarVale(listaConexionesRemotas.at(i),idVale)) {
+            qDebug() << "Error al marcar vale en tienda " << listaConexionesRemotas.at(i);
+            base.valesPendientesMarcar(conexionLocal,listaConexionesRemotas.at(i),idVale);
+        }else {
+            qDebug() << "Vale marcado en tienda " << listaConexionesRemotas.at(i);
+}
+    }
 
 }

@@ -531,6 +531,47 @@ bool baseDatos::usarVale(QString nombreConexion, int idVale)
     return false;
 }
 
+bool baseDatos::valesPendientesMarcar(QString nombreConexion, QString tienda, int idVale)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+    consulta.prepare("INSERT INTO valesPendientesMarcar (idVale , tienda) VALUES (?,?)");
+    consulta.bindValue(0,idVale);
+    consulta.bindValue(1,tienda);
+    if (consulta.exec()) {
+        return true;
+    }
+    qDebug() << consulta.lastError();
+    return false;
+}
+
+bool baseDatos::hayValesPendientesMarcar(QString nombreConexion)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+    consulta.exec("SELECT * FROM valesPendientesMarcar");
+    if (consulta.numRowsAffected() > 0) {
+        return true;
+    }
+    return false;
+}
+
+QSqlQuery baseDatos::valesPendientes(QString nombreConexion)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+    consulta.exec("SELECT * FROM valesPendientesMarcar");
+    return consulta;
+}
+
+bool baseDatos::borrarValePendiente(QString nombreConexion, int vale)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+    consulta.prepare("DELETE * FROM valesPendientesMarcar WHERE idVale = ?");
+    consulta.bindValue(0,vale);
+    if(!consulta.isValid()){
+        return false;
+    }
+    return true;
+}
+
 QString baseDatos::nombreFamilia(QString id)
 {
 

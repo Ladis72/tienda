@@ -32,6 +32,9 @@ Tienda::Tienda(QWidget *parent) :
     conexiones = new conexionesRemotas(this);
     ui->statusBar->addPermanentWidget(ui->pushButtonConectar);
 
+    sincroVales = new QPushButton("Sincro vales",this);
+    connect(sincroVales,SIGNAL(clicked()),this,SLOT(sincronizarVales()));
+    comprobarVales();
 }
 
 Tienda::~Tienda()
@@ -308,4 +311,31 @@ void Tienda::on_pushButtonGenerarVales_clicked()
 //    }
     genVales = new GenerarVales(this);
     genVales->exec();
+}
+
+void Tienda::sincronizarVales()
+{
+    QSqlQuery vales = base.valesPendientes(conf->getConexionLocal());
+    for (int i = 0 ;i < vales.numRowsAffected() ; i++ ) {
+        if (base.usarVale(vales.record().value(2).toString(),vales.record().value(1).toInt())) {
+            base.borrarValePendiente(conf->getConexionLocal(),vales.record().value(1).toInt());
+        }
+    }
+    qDebug() << "Sincronizando vales";
+    comprobarVales();
+}
+
+void Tienda::comprobarVales()
+{
+    if(base.hayValesPendientesMarcar(conf->getConexionLocal())){
+
+        QPalette pal = sincroVales->palette();
+        pal.setColor(QPalette::Button,QColor(Qt::red));
+        sincroVales->setAutoFillBackground(true);
+        sincroVales->setPalette(pal);
+        sincroVales->update();
+        ui->statusBar->addPermanentWidget(sincroVales);
+        return;
+    }
+
 }

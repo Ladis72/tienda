@@ -107,8 +107,12 @@ private slots:
 
 
     void on_pushButtonGenerarVales_clicked();
+    void sincronizarVales();
+    void comprobarVales();
 
 private:
+    QPushButton *sincroVales;
+
     baseDatos base;
     Ui::Tienda *ui;
     Tpv *T;
