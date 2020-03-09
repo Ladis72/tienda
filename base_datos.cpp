@@ -1497,6 +1497,18 @@ int baseDatos::unidadesLote(QString idLote){
     return 0;
 }
 
+bool baseDatos::borrarLotesArticulo(QString nombreConexion, QString codigo)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+    consulta.prepare("DELETE * FROM lotes WHERE ean = ?");
+    consulta.bindValue(0,codigo);
+    if (consulta.exec()) {
+        return true;
+    }
+    qDebug() << consulta.lastError();
+    return false;
+}
+
 void baseDatos::aumentarLote(QString idLote, int uds)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));

@@ -143,7 +143,7 @@ public:
     QSqlQuery lotesProducto(QString cod, QString nombreConnexion);
     QString sumarStockArticulo(QString id, QString nombreConnexion);
     int unidadesLote(QString idLote);
-
+    bool borrarLotesArticulo(QString nombreConexion, QString codigo);
 
 //Funciones LISTADOS
     QString ticketCercanoFecha(QString tabla, QString fecha, QString cuando);

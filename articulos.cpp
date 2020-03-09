@@ -373,6 +373,7 @@ void Articulos::on_pushButtonBorrar_clicked()
      msgBox.setDefaultButton(QMessageBox::Ok);
      int resp = msgBox.exec();
      if(resp == QMessageBox::Ok){
+    base.borrarLotesArticulo(conf->getConexionLocal(),ui->lineEditCod->text());
     if (base.borrarArticulo(QSqlDatabase::database(conf->getConexionLocal()) , ui->lineEditCod->text())){
             msgBox.setText("Borrado con exito");
             msgBox.setInformativeText("El registro se ha borrado correctamente");
