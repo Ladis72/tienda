@@ -337,5 +337,5 @@ void Tienda::comprobarVales()
         ui->statusBar->addPermanentWidget(sincroVales);
         return;
     }
-
+    sincroVales->hide();
 }
