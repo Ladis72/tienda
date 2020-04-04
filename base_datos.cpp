@@ -522,12 +522,14 @@ int baseDatos::idVale(QString nombreConexion, QString idCliente)
 
 bool baseDatos::usarVale(QString nombreConexion, int idVale)
 {
+    qDebug() << nombreConexion << "  " << idVale;
     QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
     consulta.prepare("UPDATE vales SET estado = 2 WHERE idvales = ?");
     consulta.bindValue(0,idVale);
     if (consulta.exec()) {
         return true;
     }
+    qDebug() << consulta.lastError();
     return false;
 }
 
@@ -558,17 +560,22 @@ QSqlQuery baseDatos::valesPendientes(QString nombreConexion)
 {
     QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
     consulta.exec("SELECT * FROM valesPendientesMarcar");
+    consulta.first();
     return consulta;
 }
 
 bool baseDatos::borrarValePendiente(QString nombreConexion, int vale)
 {
+    qDebug() << nombreConexion << "   " << vale;
     QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-    consulta.prepare("DELETE * FROM valesPendientesMarcar WHERE idVale = ?");
+    consulta.prepare("DELETE FROM valesPendientesMarcar WHERE id = ?");
     consulta.bindValue(0,vale);
-    if(!consulta.isValid()){
+    if(!consulta.exec()){
+        qDebug() << consulta.lastError();
         return false;
     }
+    qDebug() << consulta.lastError();
+    qDebug() << consulta.numRowsAffected();
     return true;
 }
 
