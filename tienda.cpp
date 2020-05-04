@@ -318,7 +318,7 @@ void Tienda::sincronizarVales()
     QSqlQuery vales = base.valesPendientes(conf->getConexionLocal());
     for (int i = 0 ;i < vales.numRowsAffected() ; i++ ) {
         if (base.usarVale(vales.record().value(2).toString(),vales.record().value(1).toInt())) {
-            base.borrarValePendiente(conf->getConexionLocal(),vales.record().value(1).toInt());
+            qDebug() << base.borrarValePendiente(conf->getConexionLocal(),vales.record().value(0).toInt());
         }
     }
     qDebug() << "Sincronizando vales";
