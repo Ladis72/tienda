@@ -206,7 +206,7 @@ void Tpv::ticketNuevo(int ticketnuevo)
 int Tpv::ticketActualizado()
 {
     ticketActual = base.maxTicketPendiente(QSqlDatabase::database("DB"));
-
+    return ticketActual;
 }
 
 QStringList Tpv::recopilarDatosTicket()
@@ -548,6 +548,8 @@ void Tpv::on_btn_modificar_clicked()
 
     ticketActual = base.maxTicketPendiente(QSqlDatabase::database("DB"))+1;
     actualizarParrillaVentas();
+    ui->lineEdit_cod_cliente->setText("1");
+    emit on_lineEdit_cod_cliente_editingFinished();
     ui->lineEdit_cod->clear();
     ui->lineEdit_cod->setFocus();
 }
@@ -721,7 +723,7 @@ void Tpv::usarVale(int ticket, int idVale, double cantVale)
     lineaTicket.append("0");
     lineaTicket.append(QString::number(cantVale));
     lineaTicket.append("0");
-    lineaTicket.append(QString::number(cantVale));
+    lineaTicket.append("-"+QString::number(cantVale));
     lineaTicket.append(QDate::currentDate().toString("yyyy-MM-dd"));
     lineaTicket.append(QTime::currentTime().toString("hh:mm"));
     base.grabarLineaTicket(lineaTicket);

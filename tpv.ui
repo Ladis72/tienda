@@ -604,6 +604,7 @@
  </widget>
  <tabstops>
   <tabstop>lineEdit_cod_cliente</tabstop>
+  <tabstop>lineEdit_nobre_cliente</tabstop>
   <tabstop>lineEdit_cod</tabstop>
   <tabstop>lineEdit_desc</tabstop>
   <tabstop>lineEdit_Uds</tabstop>
@@ -618,7 +619,8 @@
   <tabstop>lineEdit_6</tabstop>
   <tabstop>tableView</tabstop>
   <tabstop>tableViewTicketsPendientes</tabstop>
-  <tabstop>lineEdit_nobre_cliente</tabstop>
+  <tabstop>comboBox_vendedor</tabstop>
+  <tabstop>btn_preTicket</tabstop>
  </tabstops>
  <resources/>
  <connections>

@@ -20,6 +20,7 @@ totalizar::totalizar(QString datos, double vale, QWidget *parent) :
     efectivo = ui->comboBox->currentText();
     facturacion = "0";
     ticket = false;
+    factura = false;
     entrega = 0;
     cambio = 0;
     cantVale = vale;
@@ -100,6 +101,7 @@ void totalizar::keyPressEvent(QKeyEvent *e)
 void totalizar::on_pushButtonCobrar_clicked()
 {
     ticket = false;
+    factura =false;
     emit accept();
 }
 
