@@ -16,6 +16,9 @@ SOURCES += main.cpp\
     actualizarclientes.cpp \
     conexionesremotas.cpp \
     generarvales.cpp \
+    imprimirfacturaproveedor.cpp \
+    imprimirpedido.cpp \
+    informes1.cpp \
         tienda.cpp \
     tpv.cpp \
     base_datos.cpp \
@@ -72,6 +75,9 @@ HEADERS  += tienda.h \
     actualizarclientes.h \
     conexionesremotas.h \
     generarvales.h \
+    imprimirfacturaproveedor.h \
+    imprimirpedido.h \
+    informes1.h \
     tpv.h \
     base_datos.h \
     conexion.h \

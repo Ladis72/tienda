@@ -1,5 +1,6 @@
 #include "pedidos.h"
 #include "ui_pedidos.h"
+#include "imprimirpedido.h"
 
 #include <QDebug>
 #include <QMessageBox>
@@ -12,6 +13,7 @@ pedidos::pedidos(QString idPed, QString proveedor, QString ndoc, QWidget *parent
 {
     ui->setupUi(this);
 
+    proveedorNombre = proveedor;
     ui->labelProveedor->setText(proveedor);
     ui->labelDocumento->setText(ndoc);
     modeloPedido = new QSqlQueryModel(this);
@@ -320,4 +322,18 @@ void pedidos::on_leBon_textChanged(const QString &arg1)
 void pedidos::on_lePvp_textChanged(const QString &arg1)
 {
     ui->leTotalLinea->setText(calcularTotalLinea());
+}
+
+void pedidos::on_pushButtonImprimir_clicked()
+{
+    QString tienda = conf->getConexionLocal();
+    QStringList cabecera;
+    cabecera.clear();
+    cabecera << nDoc;
+    cabecera << proveedorNombre;
+    cabecera << ui->leTotalBase->text();
+    cabecera << ui->leTotalIva->text();
+    cabecera << ui->leTotalRe->text();
+    cabecera << ui->leTotal->text();
+    imprimirPedido pedido(tienda , cabecera , modeloPedido);
 }

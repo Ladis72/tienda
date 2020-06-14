@@ -2,6 +2,7 @@
 #include "ui_articulos.h"
 #include "caducados.h"
 #include "conexion.h"
+#include "imprimirfacturaproveedor.h"
 
 #include <QDir>
 #include <QMessageBox>
@@ -669,9 +670,16 @@ void ClickableLabel::mousePressEvent(QMouseEvent *event)
 
 void Articulos::on_pushButtonVerFactura_clicked()
 {
+    if(nFactura.isEmpty()){
+        QMessageBox::information(this,"No hay factura seleccionada","Seleccione una factura antes de usar esta opcion");
+        return;
+    }
+    QStringList datos;
+    imprimirFacturaProveedor facturaHtml(conf->getConexionLocal(),datos,nFactura);
 
-    VisorFacturas *factura = new VisorFacturas(nFactura,this);
-    factura->show();
+//    VisorFacturas *factura = new VisorFacturas(nFactura,this);
+//    factura->show();
+
 }
 
 void Articulos::on_checkBoxRemoto_stateChanged(int arg1)

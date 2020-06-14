@@ -522,14 +522,12 @@ int baseDatos::idVale(QString nombreConexion, QString idCliente)
 
 bool baseDatos::usarVale(QString nombreConexion, int idVale)
 {
-    qDebug() << nombreConexion << "  " << idVale;
     QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
     consulta.prepare("UPDATE vales SET estado = 2 WHERE idvales = ?");
     consulta.bindValue(0,idVale);
     if (consulta.exec()) {
         return true;
     }
-    qDebug() << consulta.lastError();
     return false;
 }
 
@@ -560,22 +558,17 @@ QSqlQuery baseDatos::valesPendientes(QString nombreConexion)
 {
     QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
     consulta.exec("SELECT * FROM valesPendientesMarcar");
-    consulta.first();
     return consulta;
 }
 
 bool baseDatos::borrarValePendiente(QString nombreConexion, int vale)
 {
-    qDebug() << nombreConexion << "   " << vale;
     QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-    consulta.prepare("DELETE FROM valesPendientesMarcar WHERE id = ?");
+    consulta.prepare("DELETE * FROM valesPendientesMarcar WHERE idVale = ?");
     consulta.bindValue(0,vale);
-    if(!consulta.exec()){
-        qDebug() << consulta.lastError();
+    if(!consulta.isValid()){
         return false;
     }
-    qDebug() << consulta.lastError();
-    qDebug() << consulta.numRowsAffected();
     return true;
 }
 
@@ -1290,6 +1283,25 @@ QStringList baseDatos::listadoPrestamistas()
         prestamistas << consulta.value("nombre").toString();
     }
     return prestamistas;
+}
+
+QStringList baseDatos::datosFactura(QSqlDatabase db , QString nFactura)
+{
+    QStringList datos;
+    datos.clear();
+    QSqlQuery consulta(db);
+    consulta.prepare("SELECT * FROM facturas WHERE nFactura = ?");
+    consulta.bindValue(0,nFactura);
+    if (!consulta.exec()) {
+        datos.append("ERROR");
+        return datos;
+    }
+    consulta.first();
+    QSqlRecord resultado = consulta.record();
+    for (int i = 1;i < resultado.count() ;i++ ) {
+        datos << resultado.value(i).toString();
+    }
+    return datos;
 }
 
 float baseDatos::sumarIvasPedido(QString idPedido, QString tipoIva)

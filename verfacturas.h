@@ -7,7 +7,10 @@
 
 #include "base_datos.h"
 #include "visorfacturas.h"
+#include "configuracion.h"
 
+
+extern Configuracion *conf;
 
 namespace Ui {
 class VerFacturas;
@@ -43,6 +46,7 @@ private:
     QString idProveedor , fechaInicial , fechaFinal , idFactura;
     QStandardItemModel *modeloTabla;
     QString tipoDocumento;
+    QStringList datos;
 };
 
 #endif // VERFACTURAS_H

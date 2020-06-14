@@ -1,7 +1,7 @@
 #include "listadoventas.h"
 #include "ui_listadoventas.h"
+#include "informes1.h"
 #include <qstandarditemmodel.h>
-#include "qtrpt.h"
 
 ListadoVentas::ListadoVentas(QWidget *parent) :
     QDialog(parent),
@@ -10,6 +10,7 @@ ListadoVentas::ListadoVentas(QWidget *parent) :
     ui->setupUi(this);
     ui->dateEditDesde->setDate(QDate::currentDate());
     ui->dateEditHasta->setDate(QDate::currentDate());
+    modeloTabla = new QStandardItemModel(this);
 
 }
 
@@ -23,7 +24,6 @@ void ListadoVentas::on_pushButtonVer_clicked()
     QString fechaI,fechaF;
     fechaF = ui->dateEditHasta->text();
     fechaI = ui->dateEditDesde->text();
-    modeloTabla = new QStandardItemModel(this);
     QSqlQuery ventasA = base->ventasEntreFechas(fechaI,fechaF,"tickets");
     int i = 0;
     while (ventasA.next()) {
@@ -121,22 +121,10 @@ void ListadoVentas::keyPressEvent(QKeyEvent *e)
 
 void ListadoVentas::on_pushButtonImprimir_clicked()
 {
-    QtRPT *informe = new QtRPT(this);
-    informe->recordCount.append(modeloTabla->rowCount());
-    QString informeDir = base->devolverDirectorio("ventas");
-    informe->loadReport(informeDir);
 
-    connect(informe, &QtRPT::setValue, [&](const int recNo,
-            const QString paramName,
-            QVariant &paramValue,
-            const int reportPage) {
-        (void) reportPage;
-        if(paramName == "Fecha"){
-            paramValue = modeloTabla->item(recNo,0)->text();
-        }
-        if(paramName == "Cantidad"){
-            paramValue = modeloTabla->item(recNo,1)->text();
-        }
-    });
-    informe->printExec();
+    if (ui->tableView->isColumnHidden(2)) {
+        modeloTabla->removeColumn(2);
+    }
+    QString tienda = conf->getConexionLocal();
+    informes1 informeVentas(tienda,ui->dateEditDesde->text(),ui->dateEditHasta->text(),modeloTabla);
 }

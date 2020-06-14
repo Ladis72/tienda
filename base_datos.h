@@ -115,6 +115,7 @@ public:
     bool pasarLineaPedidoAHistorico(QStringList datos);
     bool modificarLineaPedido(QStringList datos);
     QStringList listadoPrestamistas();
+    QStringList datosFactura(QSqlDatabase db, QString nFactura);
 
 //Funciones CAJAS
     QSqlQuery ventas(QString fecha);
