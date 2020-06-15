@@ -26,6 +26,8 @@ public:
     QSqlQuery usuarios(QSqlDatabase db);
     QSqlQuery fpago(QSqlDatabase db);
     QSqlDatabase conexion();
+    QStringList datosTiendaLocal(QString db);
+
 
 //FUNCIONES ARTÍCULOS
     QSqlQuery consulta_producto(QString nombreConnexion, QString cod);

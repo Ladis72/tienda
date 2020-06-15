@@ -634,10 +634,10 @@ QString baseDatos::etiquetaCliente(QString idCliente)
     consulta.exec();
     if (consulta.first() == true) {
         QString cliente="";
-        cliente += consulta.value(1).toString()+" "+consulta.value(2).toString()+"\n";
-        cliente += consulta.value(3).toString()+"\n";
-        cliente += consulta.value(4).toString()+"  "+consulta.value(5).toString()+"\n";
-        cliente += consulta.value(6).toString()+"\n";
+        cliente += consulta.value(1).toString()+" "+consulta.value(2).toString()+"<br>";
+        cliente += consulta.value(3).toString()+"<br>";
+        cliente += consulta.value(4).toString()+"  "+consulta.value(5).toString()+"<br>";
+        cliente += consulta.value(6).toString()+"<br>";
         cliente += "N.I.F: "+consulta.value(7).toString();
         return cliente;
 
@@ -1761,7 +1761,24 @@ QString baseDatos::nombreConexionLocal()
     return consulta.record().value("nombre").toString();
 }
 
-
+QStringList baseDatos::datosTiendaLocal(QString db){
+    QStringList datos;
+    QSqlQuery consulta(QSqlDatabase::database(db));
+    consulta.exec("SELECT * FROM tiendas WHERE local = '1'");
+    consulta.first();
+    if (consulta.numRowsAffected() < 1) {
+        QMessageBox msg;
+        msg.setText("Error");
+        msg.setInformativeText("No se ha podido recuperar los datos de la tienda");
+        msg.exec();
+        return datos;
+    }
+    QSqlRecord resultado = consulta.record();
+    for(int i = 0; i < resultado.count(); i++){
+        datos << resultado.value(i).toString();
+    }
+    return datos;
+}
 
 
 
