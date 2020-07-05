@@ -207,3 +207,51 @@ void Etiquetas::on_pushButton_3_clicked()
     }
     return;
 }
+
+void Etiquetas::imprimirHtml()
+{
+    QStandardItemModel *modeloImpresionHtml = new QStandardItemModel;
+    modeloImpresionHtml->clear();
+    for (int i = 0 ;i < modelo->rowCount() ;i++ ) {
+            QStandardItem *nombreHtml = new QStandardItem(modelo->item(i,1)->text());
+            modeloImpresionHtml->setItem(i,0,nombreHtml);
+            QStandardItem *pvpHtml = new QStandardItem(modelo->item(i,2)->text());
+            modeloImpresionHtml->setItem(i,1,pvpHtml);
+            QString formato = modelo->item(i,3)->text();
+            QString formatoEtiqueta;
+            if(formato == "Uds"){
+                formatoEtiqueta = "Precio / ud \n";
+                double pvp = classFormatear.redondear(modelo->item(i,2)->text().toDouble()/modelo->item(i,4)->text().toDouble(),3);
+                formatoEtiqueta += QString::number(pvp);
+            }
+            if(formato == "Peso"){
+                formatoEtiqueta = "Precio / Kg \n";
+                double pvp = classFormatear.redondear(modelo->item(i,2)->text().toDouble()*1000/modelo->item(i,4)->text().toDouble(),3);
+                formatoEtiqueta += QString::number(pvp);
+            }
+            if(formato == "Volumen"){
+                formatoEtiqueta = "Precio / L \n";
+                double pvp = classFormatear.redondear(modelo->item(i,2)->text().toDouble()*1000/modelo->item(i,4)->text().toDouble(),3);
+                formatoEtiqueta += QString::number(pvp);
+            }
+            if(formato == "No definido"){
+                formatoEtiqueta = "--- / --- \n";
+            }
+            QStandardItem *formatoHtml = new QStandardItem(formatoEtiqueta);
+            modeloImpresionHtml->setItem(i,2,formatoHtml);
+        }
+   QFile fichero("./documentos/Etiquetas.html");
+   fichero.open(QIODevice::WriteOnly);
+   QTextStream pagina(&fichero);
+   QString html = "<!DOCTYPE html>"
+                 "<html>"
+                    "<head>"
+                   "<meta http-equiv='content-type' content='text/html; charset=UTF-8'>"
+                   "<title>Etiquetas lineales</title>"
+                  "</head>"
+                  "<body dir='ltr' style='  max-width:21.59cm;margin-top:1cm; margin-bottom:1cm; margin-left:2cm; margin-right:1cm; '>"
+                  " <table class='Tabla1' style='width: 19cm;' cellspacing='0' cellpadding='0' border='1'>"
+                  "     <colgroup><col width='123'><col width='89'><col width='123'><col width='89'><col width='123'><col width='89'><col width='123'><col width='89'></colgroup>"
+                  "     <tbody>";
+
+}

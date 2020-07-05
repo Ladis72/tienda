@@ -34,6 +34,8 @@ private slots:
 
     void on_pushButton_3_clicked();
 
+    void imprimirHtml();
+
 private:
     Ui::Etiquetas *ui;
     QStandardItemModel *modelo;

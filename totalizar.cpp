@@ -82,6 +82,9 @@ void totalizar::keyPressEvent(QKeyEvent *e)
         this->setStyleSheet("background-color:#DEDEDE;");
         break;
     case Qt::Key_F2:
+        if (ui->comboBox->currentText() == "Visa") {
+            break;
+        }
         facturacion = "1";
         qDebug() << "F2 pulsada";
         emit on_pushButtonCobrar_clicked();

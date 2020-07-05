@@ -152,7 +152,7 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent) : QObject(par
         pagina << datosTienda.at(i)+"<br>";
     }
     pagina << "20.196.639-V</td>";
-    pagina << "<td style='text-align: center; background-color: white;'><img src='logo.jpg' alt='Logo' title='Logo' style='width: 175px; height: 175px;'><br>emeicjac.com</td>";
+    pagina << "<td style='text-align: center; background-color: white;'><img src='logo.jpg' alt='Logo' title='Logo' style='width: 175px; height: 175px;'>emeicjac.com</td>";
     pagina << "<td style='text-align: center; background-color: white;'>"+cliente+
           "</td>"
         "</tr>"
