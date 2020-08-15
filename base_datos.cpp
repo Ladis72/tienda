@@ -564,9 +564,9 @@ QSqlQuery baseDatos::valesPendientes(QString nombreConexion)
 bool baseDatos::borrarValePendiente(QString nombreConexion, int vale)
 {
     QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-    consulta.prepare("DELETE * FROM valesPendientesMarcar WHERE idVale = ?");
+    consulta.prepare("DELETE FROM valesPendientesMarcar WHERE idVale LIKE ?");
     consulta.bindValue(0,vale);
-    if(!consulta.isValid()){
+    if(!consulta.exec()){
         return false;
     }
     return true;
