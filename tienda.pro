@@ -13,6 +13,7 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
+    ClickableLabel.cpp \
     actualizarclientes.cpp \
     conexionesremotas.cpp \
     generarvales.cpp \
@@ -72,6 +73,7 @@ SOURCES += main.cpp\
     comprasventasremoto.cpp
 
 HEADERS  += tienda.h \
+    ClickableLabel.h \
     actualizarclientes.h \
     conexionesremotas.h \
     generarvales.h \

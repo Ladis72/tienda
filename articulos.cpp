@@ -651,20 +651,20 @@ void Articulos::mostrarFoto()
 
 
 
-ClickableLabel::ClickableLabel(QWidget *parent, Qt::WindowFlags f) : QLabel(parent)
-{
+//ClickableLabel::ClickableLabel(QWidget *parent, Qt::WindowFlags f) : QLabel(parent)
+//{
 
-}
+//}
 
-ClickableLabel::~ClickableLabel()
-{
+//ClickableLabel::~ClickableLabel()
+//{
 
-}
+//}
 
-void ClickableLabel::mousePressEvent(QMouseEvent *event)
-{
-    emit clicked();
-}
+//void ClickableLabel::mousePressEvent(QMouseEvent *event)
+//{
+//    emit clicked();
+//}
 
 
 

@@ -13,6 +13,7 @@
 #include "formateo.h"
 #include "visorimagenes.h"
 #include "configuracion.h"
+#include "ClickableLabel.h"
 
 extern Configuracion *conf;
 
@@ -107,7 +108,6 @@ private:
 signals:
     void cerrar_tpv();
 };
-
 
 
 #endif // TPV_H

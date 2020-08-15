@@ -502,6 +502,7 @@ void QtRPT::drawFields(RptFieldObject *fieldObject, int bandTop, bool draw) {
             qreal pointX4 = left_+1;  //
             qreal pointY4 = height_/2+top_;
 
+
             QPainterPath path;
             path.moveTo (pointX1, pointY1);
             path.lineTo (pointX2, pointY2);

@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QDate>
 #include <QString>
+#include <QDir>
 
 Tpv::Tpv(QWidget *parent) :
     QWidget(parent),
@@ -25,6 +26,10 @@ Tpv::Tpv(QWidget *parent) :
     ui->tableViewTicketsPendientes->hideColumn(0);
     ui->lineEdit_cod_cliente->setText("1");
     emit on_lineEdit_cod_cliente_editingFinished();
+
+    ClickableLabel *fotoHR = new ClickableLabel(ui->labelFoto);
+    fotoHR->setMaximumSize(200,200);
+    connect(fotoHR,SIGNAL(clicked()),this,SLOT(mostrarFoto()));
 
 
 }
@@ -281,7 +286,9 @@ void Tpv::datosProducto(QString IdProducto)
 
 void Tpv::mostrarFoto()
 {
-    VisorImagenes *visor = new VisorImagenes(consulta.value(14).toString());
+    //VisorImagenes *visor = new VisorImagenes(consulta.value(14).toString());
+    VisorImagenes *visor = new VisorImagenes(ui->labelFoto->text());
+    qDebug() << ui->labelFoto->text();
     visor->showMaximized();
 }
 
@@ -317,7 +324,10 @@ void Tpv::on_lineEdit_cod_returnPressed(){
        //totalLinea = redondear(totalLinea,2);
        totalLinea = classFormatear.redondear(totalLinea,2);
        linea << QString::number(totalLinea);
-
+       QString fichero = QDir::currentPath() + "/" + consulta.value("foto").toString();
+       QImage foto(fichero);
+       QPixmap imagen = QPixmap::fromImage(foto);
+       ui->labelFoto->setPixmap(imagen.scaled(200,200));
        if(ui->tableView->rowAt(0) < 0){
            ticketNuevo(base.maxTicketPendiente(QSqlDatabase::database("DB"))+1);
        }
