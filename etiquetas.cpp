@@ -23,7 +23,7 @@ Etiquetas::~Etiquetas()
 
 void Etiquetas::on_pushButtonImprimir_clicked()
 {
-
+imprimirHtml();
 QStandardItemModel *modeloImpresion = new QStandardItemModel();
 modeloImpresion->clear();
 int contadorfila = 0;
@@ -248,10 +248,63 @@ void Etiquetas::imprimirHtml()
                     "<head>"
                    "<meta http-equiv='content-type' content='text/html; charset=UTF-8'>"
                    "<title>Etiquetas lineales</title>"
+                  "<link type='text/css' rel='stylesheet' href='bootstrap.min.css' title='estilo'>"
                   "</head>"
-                  "<body dir='ltr' style='  max-width:21.59cm;margin-top:1cm; margin-bottom:1cm; margin-left:2cm; margin-right:1cm; '>"
-                  " <table class='Tabla1' style='width: 19cm;' cellspacing='0' cellpadding='0' border='1'>"
-                  "     <colgroup><col width='123'><col width='89'><col width='123'><col width='89'><col width='123'><col width='89'><col width='123'><col width='89'></colgroup>"
-                  "     <tbody>";
+                 "<table style='widht = 20cm;' cellspacing='0' cellpadding='0' border='0'>"
+                 "<colgroup><col width='120'><col width='90'><col width='120'><col width='90'><col width='120'><col width='90'></colgroup>"
+                "<tbody>";
+   pagina << html;
+   //for (int i = 0;i < modeloImpresionHtml->rowCount() ;i++ ) {
+       for (int i = 0;i < 130 ;i=i+3 ) {
+       pagina << "<tr style='vertical-align: top; max-height: 50px; background-color: white;'>"
+                 "<td colspan='2' class='Tabla1_A1'>"
+                             "<p class='P1'>"+modeloImpresionHtml->item(i,0)->text()+"</p>"
+                           "</td>";
+       pagina << "<td colspan='2' class='Tabla1_A1'>"
+               "<p class='P1'>"+modeloImpresionHtml->item(i+1,0)->text()+"</p>"
+             "</td>"
+                 "<td colspan='2' class='Tabla1_A1'>"
+                 "<p class='P1'>"+modeloImpresionHtml->item(i+2,0)->text()+"</p>"
+                 "</td>"
+//                 "<td colspan='2' class='Tabla1_A1'>"
+//                             "<p class='P1'>"+modeloImpresionHtml->item(i+3,0)->text()+"</p>"
+//                           "</td>"
+                         "</tr>";
+       pagina << "<tr>"
+                 "<td style='text-align:center; vertical-align: top; width:2.5cm;'  class='Tabla1_A1'>"
+                 "<h1 class='P1'>"+modeloImpresionHtml->item(i,1)->text()+"</h1>"
+                 "</td>"
+                 "<td style='text-align: right; width:2.5cm; ' class='Tabla1_A1'>"
+                   "<p class='P1'>"+modeloImpresionHtml->item(i,2)->text()+"</p>"
+                 "</td>"
+                 "<td style='text-align:center; vertical-align: top; width:2.5cm;'  class='Tabla1_A1'>"
+                   "<h1 class='P1'>"+modeloImpresionHtml->item(i+1,1)->text()+"</h1>"
+                 "</td>"
+                 "<td style='text-align:right; width:2.5cm; ' class='Tabla1_A1'>"
+                   "<p class='P1'>"+modeloImpresionHtml->item(i+1,2)->text()+"</p>"
+                 "</td>"
+                 "<td style='text-align:center; vertical-align: top; width:2.5cm;'  class='Tabla1_A1'>"
+                   "<h1 class='P1'>"+modeloImpresionHtml->item(i+2,1)->text()+"</h1>"
+                 "</td>"
+                 "<td style='text-align:right; width:2.5cm; ' class='Tabla1_A1'>"
+                   "<p class='P1'>"+modeloImpresionHtml->item(i+2,2)->text()+"</p>"
+                 "</td>"
+//                 "<td style='text-align:left;width:2.5cm; ' class='Tabla1_A1'>"
+//                   "<h1 class='P2'>"+modeloImpresionHtml->item(i+3,1)->text()+"</h1>"
+//                 "</td>"
+//                 "<td style='text-align:left;width:2.5cm; ' class='Tabla1_A1'>"
+//                 "<p class='P1'>"+modeloImpresionHtml->item(i+3,2)->text()+"<br>"
+//                 "</td>"
+               "</tr>";
+
+   }
+   pagina << "</tbody>"
+             "</table>"
+             "<br>"
+           "</div>"
+         "</body>"
+       "</html>";
+          fichero.close();
+          system("firefox "+QCoreApplication::applicationDirPath().toLocal8Bit()+"/documentos/Etiquetas.html");
 
 }

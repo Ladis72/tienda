@@ -24,8 +24,41 @@
        <string>Compras</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_3">
-       <item row="0" column="0">
+       <item row="1" column="0">
         <widget class="QTableView" name="tableViewCompras"/>
+       </item>
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="groupBoxCompras">
+         <property name="title">
+          <string>Fechas</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QRadioButton" name="radioButtonComprasDia">
+            <property name="text">
+             <string>Día</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radioButtonComprasMes">
+            <property name="text">
+             <string>Mes</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radioButtonComprasano">
+            <property name="text">
+             <string>Año</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -35,6 +68,39 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_2">
        <item row="0" column="0">
+        <widget class="QGroupBox" name="groupBoxVentas">
+         <property name="title">
+          <string>Fechas</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QRadioButton" name="radioButtonVentasDia">
+            <property name="text">
+             <string>Día</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radioButtonVentaMes">
+            <property name="text">
+             <string>Mes</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radioButtonVentasAno">
+            <property name="text">
+             <string>Año</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="1" column="0">
         <widget class="QTableView" name="tableViewVentas"/>
        </item>
       </layout>

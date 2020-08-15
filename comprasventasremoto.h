@@ -16,11 +16,26 @@ public:
     explicit comprasVentasRemoto(QSqlDatabase base , QString ean ,QWidget *parent = nullptr);
     ~comprasVentasRemoto();
 
+private slots:
+    void on_radioButtonVentasDia_clicked();
+
+    void on_radioButtonVentaMes_clicked();
+
+    void on_radioButtonVentasAno_clicked();
+
+    void on_radioButtonComprasDia_clicked();
+
+    void on_radioButtonComprasMes_clicked();
+
+    void on_radioButtonComprasano_clicked();
+
 private:
     Ui::comprasVentasRemoto *ui;
 
-    QSqlQueryModel *modeloVentas;
-    QSqlQueryModel *modeloCompras;
+    QSqlQueryModel modeloVentas;
+    QSqlQueryModel modeloCompras;
+    QString codigo;
+    QSqlDatabase db;
 };
 
 #endif // COMPRASVENTASREMOTO_H
