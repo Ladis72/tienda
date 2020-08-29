@@ -40,6 +40,7 @@ limitations under the License.
 #include "CommonClasses.h"
 #include "RptSql.h"
 #include "Barcode.h"
+#include <QPainterPath>
 
 /*!
  \namespace QtRptName
