@@ -65,6 +65,8 @@ private slots:
 
     void usarVale(int ticket , int idVale , double cantVale);
 
+    void mostrarFoto();
+
 private:
     int ticket;
     int ticketActual;
@@ -102,7 +104,7 @@ private:
     QStringList recopilarBasesIvas();
     QString formatearCadena(QString cadena, int tamano);
     void datosProducto(QString IdProducto);
-    void mostrarFoto();
+    //void mostrarFoto();
 
 
 signals:

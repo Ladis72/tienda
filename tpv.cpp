@@ -8,12 +8,16 @@
 #include <QDate>
 #include <QString>
 #include <QDir>
+#include <QtConcurrent/QtConcurrent>
 
 Tpv::Tpv(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Tpv)
 {
     ui->setupUi(this);
+    ClickableLabel *fotoHR = new ClickableLabel(ui->labelFoto);
+    fotoHR->setMaximumSize(200,200);
+    connect(fotoHR,SIGNAL(clicked()),this,SLOT(mostrarFoto()));
     ticketActual = ticketActualizado();
     ticket = base.obtenerNumeroUltimoTicket(QSqlDatabase::database("DB"))+1;
     llenar_usuarios(QSqlDatabase::database("DB"));
@@ -27,9 +31,6 @@ Tpv::Tpv(QWidget *parent) :
     ui->lineEdit_cod_cliente->setText("1");
     emit on_lineEdit_cod_cliente_editingFinished();
 
-    ClickableLabel *fotoHR = new ClickableLabel(ui->labelFoto);
-    fotoHR->setMaximumSize(200,200);
-    connect(fotoHR,SIGNAL(clicked()),this,SLOT(mostrarFoto()));
 
 
 }
@@ -281,14 +282,21 @@ void Tpv::datosProducto(QString IdProducto)
     QSqlQuery tmp = base.ejecutarSentencia("SELECT fecha FROM lotes WHERE ean = "+IdProducto+" ORDER BY fecha asc");
     tmp.first();
     ui->labelFecha->setText(tmp.value(0).toString());
+    consulta = base.consulta_producto("DB",IdProducto);
+    consulta.first();
+    QString fichero = QDir::currentPath() + "/" + consulta.value("foto").toString();
+    QImage foto(fichero);
+    QPixmap imagen = QPixmap::fromImage(foto);
+    ui->labelFoto->setPixmap(imagen.scaled(200,200));
 
+    ui->textInfo->setText(consulta.value("notas").toString());
 }
 
 void Tpv::mostrarFoto()
 {
     //VisorImagenes *visor = new VisorImagenes(consulta.value(14).toString());
+    qDebug() << ui->labelFoto->text() << "Click en foto";
     VisorImagenes *visor = new VisorImagenes(ui->labelFoto->text());
-    qDebug() << ui->labelFoto->text();
     visor->showMaximized();
 }
 
@@ -324,10 +332,7 @@ void Tpv::on_lineEdit_cod_returnPressed(){
        //totalLinea = redondear(totalLinea,2);
        totalLinea = classFormatear.redondear(totalLinea,2);
        linea << QString::number(totalLinea);
-       QString fichero = QDir::currentPath() + "/" + consulta.value("foto").toString();
-       QImage foto(fichero);
-       QPixmap imagen = QPixmap::fromImage(foto);
-       ui->labelFoto->setPixmap(imagen.scaled(200,200));
+
        if(ui->tableView->rowAt(0) < 0){
            ticketNuevo(base.maxTicketPendiente(QSqlDatabase::database("DB"))+1);
        }
@@ -757,3 +762,18 @@ void Tpv::usarVale(int ticket, int idVale, double cantVale)
     }
 
 }
+//ClickableLabel::ClickableLabel(QWidget *parent, Qt::WindowFlags f) : QLabel(parent)
+//{
+
+//}
+
+//ClickableLabel::~ClickableLabel()
+//{
+
+//}
+
+//void ClickableLabel::mousePressEvent(QMouseEvent *event)
+//{
+//    emit clicked();
+//}
+
