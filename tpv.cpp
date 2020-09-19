@@ -321,13 +321,13 @@ void Tpv::on_lineEdit_cod_returnPressed(){
             }else{
            linea << ui->lineEdit_precio->text();
        }
-       if(ui->lineEdit_descuento->text() == "0"){
-           qDebug() << "Descuento en line 0";
-           linea << QString::number(descuentoCliente);
+//       if(ui->lineEdit_descuento->text() == "0"){
+//           qDebug() << "Descuento en line 0";
+//           linea << QString::number(descuentoCliente);
 
-           }else{
+//           }else{
             linea << ui->lineEdit_descuento->text();
-       }
+//       }
        double totalLinea = linea.at(4).toDouble()*linea.at(2).toDouble()*(1-linea.at(5).toDouble()/100);
        //totalLinea = redondear(totalLinea,2);
        totalLinea = classFormatear.redondear(totalLinea,2);

@@ -102,7 +102,7 @@ void GenerarVales::on_pushButtonGenerar_clicked()
     for (int i = 0; i < comprasTotal.numRowsAffected() ;i++ ) {
         vales.prepare("INSERT INTO vales VALUES (NULL, ? , ? , 1 , ? , NULL)");
         vales.bindValue(0, comprasTotal.record().value(1));
-        vales.bindValue(1, comprasTotal.record().value(4).toDouble()*descuento/100);
+        vales.bindValue(1, comprasTotal.record().value(4).toDouble()*descuentoCliente(comprasTotal.record().value(1).toInt())/100);
         vales.bindValue(2, comprasTotal.record().value(3));
         if (!vales.exec()) {
             qDebug() << vales.lastError();
@@ -117,7 +117,7 @@ void GenerarVales::on_pushButtonGenerar_clicked()
         for (int i = 0; i < comprasTotal.numRowsAffected() ;i++ ) {
             valesRemotos.prepare("INSERT INTO vales VALUES (NULL, ? , ? , 1 , ? , NULL)");
             valesRemotos.bindValue(0, comprasTotal.record().value(1));
-            valesRemotos.bindValue(1, comprasTotal.record().value(4).toDouble()*descuento/100);
+            valesRemotos.bindValue(1, comprasTotal.record().value(4).toDouble()*descuentoCliente(comprasTotal.record().value(1).toInt())/100);
             valesRemotos.bindValue(2, comprasTotal.record().value(3));
             if (!valesRemotos.exec()) {
                 qDebug() << vales.lastError();
@@ -128,7 +128,10 @@ void GenerarVales::on_pushButtonGenerar_clicked()
 
 }
 
-void GenerarVales::on_spinBox_valueChanged(int arg1)
+
+double GenerarVales::descuentoCliente(int idCliente)
 {
-    descuento = arg1;
+    double descuento = base.descuentoCliente(QString::number(idCliente));
+    qDebug() << idCliente << "  " << descuento;
+    return descuento;
 }

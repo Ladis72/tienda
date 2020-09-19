@@ -23,7 +23,7 @@ public:
 private slots:
     void on_pushButtonGenerar_clicked();
 
-    void on_spinBox_valueChanged(int arg1);
+    double descuentoCliente(int idCliente);
 
 private:
     Ui::GenerarVales *ui;
