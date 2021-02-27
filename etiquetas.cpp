@@ -23,8 +23,8 @@ Etiquetas::~Etiquetas()
 
 void Etiquetas::on_pushButtonImprimir_clicked()
 {
-imprimirHtml();
-QStandardItemModel *modeloImpresion = new QStandardItemModel();
+//imprimirHtml();
+QStandardItemModel * modeloImpresion = new QStandardItemModel();
 modeloImpresion->clear();
 int contadorfila = 0;
 int contadorcolumna = 0;
