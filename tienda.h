@@ -109,6 +109,7 @@ private slots:
     void on_pushButtonGenerarVales_clicked();
     void sincronizarVales();
     void comprobarVales();
+    void keyPressEvent(QKeyEvent *e);
 
 private:
     QPushButton *sincroVales;

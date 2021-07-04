@@ -341,3 +341,13 @@ void Tienda::comprobarVales()
     }
     sincroVales->hide();
 }
+
+void Tienda::keyPressEvent(QKeyEvent *e)
+{
+    if (e->key() == Qt::Key_F11) {
+        if (ui->listadoVentasButton->isEnabled()) {
+            ui->listadoVentasButton->setEnabled(false);
+        } else {ui->listadoVentasButton->setEnabled(true);
+        }
+    }
+}
