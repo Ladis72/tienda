@@ -36,6 +36,8 @@ private:
     QStandardItemModel *modeloTabla;
     void sumarVentas(QStandardItemModel *modelo);
     void keyPressEvent(QKeyEvent *e);
+    QString fechaI,fechaF;
+
 };
 
 #endif // LISTADOVENTAS_H

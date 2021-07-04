@@ -21,7 +21,7 @@ ListadoVentas::~ListadoVentas()
 
 void ListadoVentas::on_pushButtonVer_clicked()
 {
-    QString fechaI,fechaF;
+    modeloTabla->clear();
     fechaF = ui->dateEditHasta->text();
     fechaI = ui->dateEditDesde->text();
     QSqlQuery ventasA = base->ventasEntreFechas(fechaI,fechaF,"tickets");
