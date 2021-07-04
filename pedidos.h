@@ -5,6 +5,9 @@
 #include "base_datos.h"
 #include "buscarproducto.h"
 #include "articulos.h"
+#include "configuracion.h"
+
+extern Configuracion *conf;
 
 
 namespace Ui {
@@ -50,6 +53,12 @@ private slots:
 
     void on_dateEdit_editingFinished();
 
+    void on_leBon_textChanged(const QString &arg1);
+
+    void on_lePvp_textChanged(const QString &arg1);
+
+    void on_pushButtonImprimir_clicked();
+
 private:
     Ui::pedidos *ui;
 
@@ -59,7 +68,7 @@ private:
     void borrarLineEdits();
     void contarLineas();
     void contarArticulos();
-    QString idPedido, nDoc , idProveedor;
+    QString idPedido, nDoc , idProveedor , proveedorNombre;
     baseDatos base;
     QSqlQueryModel *modeloPedido;
     QSqlQuery consulta;

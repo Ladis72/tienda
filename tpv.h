@@ -5,11 +5,17 @@
 #include <QMessageBox>
 #include <QKeyEvent>
 #include <QStandardItemModel>
+#include <QLabel>
 #include "base_datos.h"
 #include "buscarproducto.h"
 #include "totalizar.h"
 #include "clientes.h"
 #include "formateo.h"
+#include "visorimagenes.h"
+#include "configuracion.h"
+#include "ClickableLabel.h"
+
+extern Configuracion *conf;
 
 namespace Ui {
 class Tpv;
@@ -21,7 +27,7 @@ class Tpv : public QWidget
     Q_OBJECT
     
 public:
-    explicit Tpv(QWidget *parent = 0);
+    explicit Tpv(QWidget *parent = nullptr);
     ~Tpv();
 
 
@@ -57,12 +63,19 @@ private slots:
 
     void on_btn_preTicket_clicked();
 
+    void usarVale(int ticket , int idVale , double cantVale);
+
+    void mostrarFoto();
+
 private:
     int ticket;
     int ticketActual;
     int usuario;
     int cliente;
-    double descuentoCliente;
+    int idVale;
+    double descuentoCliente , vale;
+    QStringList listaConexionesRemotas;
+    QString conexionLocal;
     Formateo classFormatear;
     Ui::Tpv *ui;
     QSqlDatabase db;
@@ -73,6 +86,7 @@ private:
     QSqlTableModel *modeloTicket;
     QStandardItemModel *modeloTicketPendiente;
     Clientes *clien;
+    VisorImagenes *visor;
 
 
     void keyPressEvent(QKeyEvent *e);
@@ -90,11 +104,12 @@ private:
     QStringList recopilarBasesIvas();
     QString formatearCadena(QString cadena, int tamano);
     void datosProducto(QString IdProducto);
-
+    //void mostrarFoto();
 
 
 signals:
     void cerrar_tpv();
 };
+
 
 #endif // TPV_H

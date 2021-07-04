@@ -156,6 +156,23 @@
      </property>
     </widget>
    </item>
+   <item row="3" column="1" colspan="3">
+    <widget class="QLabel" name="labelTotal2">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
    <item row="1" column="0" colspan="4">
     <widget class="QTableView" name="tableView">
      <property name="minimumSize">
@@ -179,23 +196,6 @@
      <attribute name="verticalHeaderVisible">
       <bool>false</bool>
      </attribute>
-    </widget>
-   </item>
-   <item row="3" column="1" colspan="3">
-    <widget class="QLabel" name="labelTotal2">
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string/>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
     </widget>
    </item>
   </layout>

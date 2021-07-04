@@ -7,7 +7,7 @@ Stock::Stock(QString cod ,QWidget *parent) :
 {
     DateEditDelegate *dateDelegate =new DateEditDelegate;
     ui->setupUi(this);
-    QSqlQuery producto(base->consulta_producto(QSqlDatabase::database("DB"),cod));
+    QSqlQuery producto(base->consulta_producto("DB",cod));
     producto.first();
     codProducto = producto.value(0).toString();
     ui->label->setText(producto.value(1).toString());

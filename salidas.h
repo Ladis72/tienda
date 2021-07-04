@@ -15,7 +15,7 @@ class Salidas : public QDialog
     Q_OBJECT
 
 public:
-    explicit Salidas(QWidget *parent = 0);
+    explicit Salidas(QWidget *parent = nullptr);
     ~Salidas();
 
 private slots:
@@ -31,6 +31,11 @@ private slots:
 
     void on_tableView_clicked(const QModelIndex &index);
 
+
+    void on_comboBoxDestino_activated(const QString &arg1);
+
+    void on_pushButtonActualizar_clicked();
+
 private:
     Ui::Salidas *ui;
     baseDatos *base;
@@ -39,6 +44,7 @@ private:
     QString codSeleccionado;
     void actualizarTabla();
     Articulos *articulo;
+    void llenarComboTiendas();
 
 };
 

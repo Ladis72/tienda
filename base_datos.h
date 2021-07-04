@@ -19,14 +19,20 @@ public:
     bool base_datos_abierta();
     static bool conectar(QString host, QString puerto, QString baseDatos, QString usuario, QString clave);
     bool guardarDatosConexion(QString host, QString puerto, QString baseDatos, QString usuario, QString clave);
+    bool guardarDatosConexionMaster(QString host, QString puerto, QString baseDatos, QString usuario, QString clave);
+    QStringList datosConexionMaster();
+    QStringList datosConexionLocal();
     QStringList datosConexion();
     QSqlQuery usuarios(QSqlDatabase db);
     QSqlQuery fpago(QSqlDatabase db);
     QSqlDatabase conexion();
-    QSqlQuery consulta_producto(QSqlDatabase db, QString cod);
+    QStringList datosTiendaLocal(QString db);
+
+
+//FUNCIONES ARTÍCULOS
+    QSqlQuery consulta_producto(QString nombreConnexion, QString cod);
     QSqlQuery buscarProducto (QSqlDatabase db, QString tabla, QString nombre);
     bool insertarUsuario(QSqlDatabase db, QStringList datos);
-    QSqlQuery buscarEnTabla(QSqlDatabase db, QString tabla, QString campo, QString dato);
     bool modificarUsuaruio(QSqlDatabase db, QStringList datos, QString dato);
     bool modificarFotoUsusario(QString foto, int id);
     bool modificarArticulo(QSqlDatabase db, QStringList datos, QString dato);
@@ -34,9 +40,24 @@ public:
     bool descontarArticulo(QString cod, int uds);
     bool actualizarFechaVentaArticulo(QString cod, QString fecha);
     bool actualizarArticulosDesdeCompras(QStringList datos);
+    bool modificarFotoArticulo(QString foto, QString dato);
+
+//FUNCIONES CLIENTES
+
+    QSqlQuery ventasClientes(QString nombreConexion , QDate fechaI , QDate fechaF);
+    double valeCliente(QString nombreConexion, QString idCLiente);
+    bool caducarVales(QString nombreConexion);
+    int idVale(QString nombreConexion , QString idCliente);
+    bool usarVale(QString nombreConexion , int idVale);
+    bool valesPendientesMarcar(QString nombreConexion , QString tienda , int idVale);
+    bool hayValesPendientesMarcar(QString nombreConexion);
+    QSqlQuery valesPendientes(QString nombreConexion);
+    bool borrarValePendiente(QString nombreConexion, int vale);
+
+//FUNCIONES USUARIOS
+
     bool borrarUsusario(QSqlDatabase db, int dato);
     bool borrarArticulo(QSqlDatabase db, QString dato);
-    bool modificarFotoArticulo(QString foto, QString dato);
     QString nombreFamilia(QString id);
     QString nombreFabricante(QString id);
     QString nombreUsusario(QString id);
@@ -45,10 +66,16 @@ public:
     QString nombreFormaPago(QString id);
     QString idFormaPago(QString fpago);
     bool insertarEtiqueta(QString etiqueta);
+    bool modificarTienda(QStringList datos);
+    bool borrarTienda(QString dato);
+    bool crearTienda(QStringList datos);
+    QSqlQuery tiendas(QSqlDatabase db);
+    int idTiendaDesdeNombre(QSqlDatabase db , QString nombreTienda);
 //Funciones PROVEEDORES
     QString nombreProveedor(QString id);
     QString idProveedor(QString nombre);
     bool modificarProveedor(QSqlDatabase db, QStringList datos, QString dato);
+    bool borrarProveedor(QSqlDatabase db , QString dato);
     QString descuentoProveedor(QString proveedor);
     QStringList listadoProveedores();
     QString codigoParaNuevoProveedor();
@@ -90,6 +117,7 @@ public:
     bool pasarLineaPedidoAHistorico(QStringList datos);
     bool modificarLineaPedido(QStringList datos);
     QStringList listadoPrestamistas();
+    QStringList datosFactura(QSqlDatabase db, QString nFactura);
 
 //Funciones CAJAS
     QSqlQuery ventas(QString fecha);
@@ -102,32 +130,39 @@ public:
 //Funciones GENERALISTAS
     QSqlQuery devolverTablaCompleta(QString nombreTabla);
     QSqlQuery ejecutarSentencia(QString sentencia);
+    QSqlQuery ejecutarSentencia(QString sentencia , QSqlDatabase db);
     double ESdesdeFecha(QString fecha, QString hora);
     bool existeDatoEnTabla(QSqlDatabase db, QString tabla, QString columna, QString dato);
     void insertarEnTabla(QSqlDatabase db , QString tabla , QStringList datos);
-    void vaciarTabla(QString tabla);
+    void vaciarTabla(QString tabla , QSqlDatabase db);
+    QSqlQuery buscarEnTabla(QSqlDatabase db, QString tabla, QString campo, QString dato);
+
 
 //Funciones LOTES
     QString idLote(QString cod, QString lote, QString fecha);//Devuelve el id del lote igual o 0 si no existe
     void aumentarLote(QString idLote, int uds);
     void disminuirLote(QString cod, QString fecha , int uds);
     void crearLote(QString ean,QString lote,QString fecha,QString uds);
-    QSqlQuery lotesProducto(QString cod);
-    QString sumarStockArticulo(QString id);
+    QSqlQuery lotesProducto(QString cod, QString nombreConnexion);
+    QString sumarStockArticulo(QString id, QString nombreConnexion);
     int unidadesLote(QString idLote);
-
+    bool borrarLotesArticulo(QString nombreConexion, QString codigo);
 
 //Funciones LISTADOS
     QString ticketCercanoFecha(QString tabla, QString fecha, QString cuando);
     QSqlQuery estadisticasVentaProductos(QString nPrimerTicket , QString nUltimoTicket, QString nPrimerTicketB, QString nUltimoTicketB);
-    QSqlQuery listadoVentaArticulos(QString inicio , QString final);
+    QSqlQuery listadoVentaArticulos(QString inicio , QString final, QString nombreDB);
     QSqlQuery listadoMovimientosEfectivo(QString inicio , QString final);
     QSqlQuery listadoCaducados(QString desde , QString hasta);
 
 //Funciones de configuración
     QString leerConfiguracion();
     bool GuardarConfiguracion(int datos);
-
+    bool guardarDirectorios(QStringList directorios);
+    QStringList cargarDirectorios();
+    QString devolverDirectorio(QString tipo);
+    QString nombreConexionMaster();
+    QString nombreConexionLocal();
 
 private:
 

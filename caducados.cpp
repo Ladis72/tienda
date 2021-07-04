@@ -26,11 +26,11 @@ Caducados::~Caducados()
 
 void Caducados::on_lineEditCodigo_returnPressed()
 {
-    consulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->lineEditCodigo->text());
+    consulta = base.consulta_producto("DB",ui->lineEditCodigo->text());
     consulta.first();
     if (!consulta.isValid()) {
         QString cod = base.codigoDesdeAux(ui->lineEditCodigo->text());
-        consulta = base.consulta_producto(QSqlDatabase::database("DB"),cod);
+        consulta = base.consulta_producto("DB",cod);
         consulta.first();
     }
     if (consulta.numRowsAffected() == 1 ) {
@@ -44,7 +44,7 @@ void Caducados::llenarComboFechas(QString id)
     ui->comboBox->clear();
     ui->comboBox->addItem("Selecciona uno");
 
-    consulta = base.lotesProducto(id);
+    consulta = base.lotesProducto(id,"DB");
     while (consulta.next()) {
         ui->comboBox->addItem(consulta.value("fecha").toString());
     }
@@ -63,7 +63,7 @@ void Caducados::on_pushButton_clicked()
     }
     base.disminuirLote(ui->lineEditCodigo->text(),ui->comboBox->currentText(),ui->spinBox->value());
     QString sentencia;
-    QSqlQuery precioConsulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->lineEditCodigo->text());
+    QSqlQuery precioConsulta = base.consulta_producto("DB",ui->lineEditCodigo->text());
     precioConsulta.first();
     QString precio = precioConsulta.value("pvp").toString();
     qDebug() << precio;

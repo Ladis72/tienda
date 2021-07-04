@@ -11,6 +11,7 @@ EntradaMercancia::EntradaMercancia(QWidget *parent) :
     mTablaEntradas = new QSqlTableModel(this,QSqlDatabase::database("DB"));
     mTablaEntradas->setTable("entradaGenero_tmp");
     ui->tableView->hideColumn(0);
+    llenarComboTiendas();
     actualizarTabla();
     codSeleccionado="";
 }
@@ -26,6 +27,7 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
         QString cod = mTablaEntradas->record(i).value(1).toString();
         QString fechaCaducidad = mTablaEntradas->record(i).value(5).toString();
         QString uds = mTablaEntradas->record(i).value(4).toString();
+        QString idTienda = mTablaEntradas->record(i).value(7).toString();
 
 
 
@@ -70,7 +72,7 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
     QString codigo = mTablaEntradas->record(i).value(1).toString();
     QString precio = mTablaEntradas->record(i).value(6).toString();
     QString descripcion = mTablaEntradas->record(i).value(3).toString();
-    QSqlQuery cambios = base->consulta_producto(QSqlDatabase::database("DB"),codigo);
+    QSqlQuery cambios = base->consulta_producto("DB",codigo);
     cambios.first();
     QString precioAnterior = cambios.value("pvp").toString();
     QString descripcionAnterior = cambios.value("descripcion").toString();
@@ -79,25 +81,39 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
       qDebug() << tmp.lastError();
     }
     }
-    base->vaciarTabla("entradaGenero_tmp");
+    QSqlQuery tmp = base->ejecutarSentencia("INSERT INTO entradaGenero (cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp , idTienda) "
+                                            "SELECT entradaGenero_tmp.cod, entradaGenero_tmp.fechaEntrada, entradaGenero_tmp.descripcion, entradaGenero_tmp.cantidad, entradaGenero_tmp.fechaCaducidad, entradaGenero_tmp.pvp , entradaGenero_tmp.idTienda"
+                                                      " FROM entradaGenero_tmp WHERE entradaGenero_tmp.idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxProcedencia->currentText())));
+    base->ejecutarSentencia("DELETE FROM entradaGenero_tmp WHERE idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxProcedencia->currentText())));
     actualizarTabla();
 }
 
 void EntradaMercancia::actualizarTabla()
 {
+    mTablaEntradas->setFilter("idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxProcedencia->currentText())));
     mTablaEntradas->setSort(3,Qt::AscendingOrder);
     mTablaEntradas->select();
     ui->tableView->setModel(mTablaEntradas);
     ui->tableView->resizeColumnsToContents();
 }
 
+void EntradaMercancia::llenarComboTiendas()
+{
+    QSqlQuery listaCombo = base->tiendas(QSqlDatabase::database("DB"));
+    listaCombo.first();
+    do{
+        ui->comboBoxProcedencia->addItem(listaCombo.value("nombre").toString());
+    }while (listaCombo.next());
+
+}
+
 void EntradaMercancia::on_lineEditCod_returnPressed()
 {
-    consulta = base->consulta_producto(QSqlDatabase::database("DB"),ui->lineEditCod->text());
+    consulta = base->consulta_producto("DB",ui->lineEditCod->text());
     consulta.first();
     if(!consulta.isValid()){
         QString cod = base->codigoDesdeAux(ui->lineEditCod->text());
-        consulta = base->consulta_producto(QSqlDatabase::database("DB"),cod);
+        consulta = base->consulta_producto("DB",cod);
         consulta.first();
     }
     if(consulta.numRowsAffected() ==1){
@@ -137,9 +153,10 @@ void EntradaMercancia::on_pushButtonAgregarLinea_clicked()
     datos.append(ui->lineEditUds->text());
     datos.append(ui->dateEditCaducidad->text());
     datos.append(ui->lineEditPVP->text());
+    datos.append(QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxProcedencia->currentText())));
     base->insertarEnTabla(QSqlDatabase::database("DB"),"entradaGenero_tmp",datos);
 
-    mTablaEntradas->select();
+    //mTablaEntradas->select();
     ui->lineEditCod->clear();
     ui->lineEditDesc->clear();
     ui->lineEditPVP->clear();
@@ -182,4 +199,9 @@ void EntradaMercancia::on_dateEditCaducidad_editingFinished()
         ui->dateEditCaducidad->setFocus();
         ui->dateEditCaducidad->setDate(QDate::currentDate());
     }
+}
+
+void EntradaMercancia::on_comboBoxProcedencia_activated(const QString &arg1)
+{
+    actualizarTabla();
 }

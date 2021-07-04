@@ -604,6 +604,16 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="pushButtonCerrar">
+       <property name="text">
+        <string>Cerrar</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer name="horizontalSpacer_3">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -617,9 +627,9 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButtonCerrar">
+      <widget class="QPushButton" name="pushButtonImprimir">
        <property name="text">
-        <string>Cerrar</string>
+        <string>Imprimir</string>
        </property>
        <property name="autoDefault">
         <bool>false</bool>
@@ -651,7 +661,6 @@
   <tabstop>pushButtonAnadir</tabstop>
   <tabstop>pushButtonModificar</tabstop>
   <tabstop>pushButtonBorrar</tabstop>
-  <tabstop>pushButtonCerrar</tabstop>
   <tabstop>leTotalBase</tabstop>
   <tabstop>leTotal</tabstop>
   <tabstop>leTotalRe</tabstop>

@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 
+#include "base_datos.h"
 #include "configuracion.h"
 #include "tpv.h"
 #include "tabwidget.h"
@@ -33,6 +34,12 @@
 #include "listadosalidas.h"
 #include "listadoarqueos.h"
 #include "listadocaducados.h"
+#include "formatos.h"
+#include "directorios.h"
+#include "tiendas.h"
+#include "conexionesremotas.h"
+#include "actualizarclientes.h"
+#include "generarvales.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -44,10 +51,11 @@ class Tienda : public QMainWindow
     Q_OBJECT
     
 public:
-    explicit Tienda(QWidget *parent = 0);
+    explicit Tienda(QWidget *parent = nullptr);
     ~Tienda();
 
-
+    QStringList listaConexiones , conexionesActivas;
+    QString conexionMaster;
     
 private slots:
     void on_ventasButton_clicked();
@@ -85,7 +93,28 @@ private slots:
     void on_pushButtonListadoArqueos_clicked();
     void on_pushButtonCaducados_2_clicked();
 
+    void on_pushButtonFormatos_clicked();
+
+    void on_pushButtonInformes_clicked();
+
+    void on_pushButtonTiendas_clicked();
+
+    void refrescarConexiones();
+
+    void on_pushButtonConectar_clicked();
+
+    void on_pushButtonActualizarClientes_clicked();
+
+
+    void on_pushButtonGenerarVales_clicked();
+    void sincronizarVales();
+    void comprobarVales();
+    void keyPressEvent(QKeyEvent *e);
+
 private:
+    QPushButton *sincroVales;
+
+    baseDatos base;
     Ui::Tienda *ui;
     Tpv *T;
     Ususarios *U;
@@ -116,6 +145,14 @@ private:
     ListadoSalidas *ListSalidas;
     ListadoArqueos *ListaArqueos;
     ListadoCaducados *ListaCaducados;
+    Formatos *Format;
+    Directorios *Director;
+    tiendas *Sucursal;
+    conexionesRemotas *conexiones;
+    ActualizarClientes *actClientes;
+    GenerarVales *genVales;
+
+    QLabel *button[];
 };
 
 #endif // TIENDA_H

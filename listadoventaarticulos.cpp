@@ -37,7 +37,7 @@ void ListadoVentaArticulos::on_pushButtonVer_clicked()
     QString inicio = ui->dateTimeEditDesde->dateTime().toString("yyyy-MM-dd'/'HH:mm:ss");
     QString final = ui->dateTimeEditHasta->dateTime().toString("yyyy-MM-dd'/'HH:mm:ss");
     QSqlQueryModel *modeloListado = new QSqlQueryModel;
-    modeloListado->setQuery(base.listadoVentaArticulos(inicio,final));
+    modeloListado->setQuery(base.listadoVentaArticulos(inicio,final,conf->getConexionLocal()));
     QSortFilterProxyModel *proxyModel = new QSortFilterProxyModel;
     proxyModel->setSourceModel(modeloListado);
     ui->tableView->setModel(proxyModel);

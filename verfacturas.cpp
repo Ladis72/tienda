@@ -1,5 +1,6 @@
 #include "verfacturas.h"
 #include "ui_verfacturas.h"
+#include "imprimirfacturaproveedor.h"
 #include <QMessageBox>
 #include <QStandardItemModel>
 
@@ -12,6 +13,8 @@ VerFacturas::VerFacturas(QString docType, QWidget *parent) :
     tipoDocumento = docType;
     llenarProveedores();
     llenarTabla();
+    ui->dateEditDesde->setDate(QDate::currentDate());
+    ui->dateEditHasta->setDate(QDate::currentDate());
     idFactura="";
 }
 
@@ -83,6 +86,7 @@ void VerFacturas::llenarTabla()
         resultado.next();
     }
     QStringList etiquetas;
+
     if(tipoDocumento == "facturas"){
     etiquetas << "Nº Factura" << "Fecha" << "Proveedor" << "Base" << "I.V.A" << "R.E." << "Total" << "Fecha vencimiento" << "Pagada";
     }else{
@@ -120,14 +124,23 @@ void VerFacturas::on_tableView_doubleClicked(const QModelIndex &index)
     if (idFactura == "") {
         return;
     }
-    VisorFacturas *visor = new VisorFacturas(idFactura,this);
-    visor->show();
+
+    imprimirFacturaProveedor factura(conf->getConexionLocal(),datos,idFactura);
+
+//    VisorFacturas *visor = new VisorFacturas(idFactura,this);
+//    visor->show();
 }
 
 void VerFacturas::on_tableView_clicked(const QModelIndex &index)
 {
     QModelIndex indice = modeloTabla->index(index.row(),0);
     idFactura = modeloTabla->data(indice,Qt::EditRole).toString();
+    datos.clear();
+    for (int i = 0 ; i < modeloTabla->columnCount() ;i++ ) {
+        indice = modeloTabla->index(index.row(),i);
+        datos << modeloTabla->data(indice,Qt::EditRole).toString();
+    }
+
 
 }
 
@@ -136,6 +149,8 @@ void VerFacturas::on_pushButtonVerFactura_clicked()
     if (idFactura == "") {
         return;
     }
-    VisorFacturas *visor = new VisorFacturas(idFactura,this);
-    visor->show();
+
+    imprimirFacturaProveedor factura(conf->getConexionLocal(),datos,idFactura);
+//    VisorFacturas *visor = new VisorFacturas(idFactura,this);
+//    visor->show();
 }

@@ -6,6 +6,9 @@
 #include <QStandardItemModel>
 #include <QKeyEvent>
 #include "base_datos.h"
+#include "configuracion.h"
+
+extern Configuracion *conf;
 
 namespace Ui {
 class ListadoVentas;

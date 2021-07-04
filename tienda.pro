@@ -13,6 +13,13 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
+    ClickableLabel.cpp \
+    actualizarclientes.cpp \
+    conexionesremotas.cpp \
+    generarvales.cpp \
+    imprimirfacturaproveedor.cpp \
+    imprimirpedido.cpp \
+    informes1.cpp \
         tienda.cpp \
     tpv.cpp \
     base_datos.cpp \
@@ -59,9 +66,20 @@ SOURCES += main.cpp\
     prestamistas.cpp \
     listadosalidas.cpp \
     listadoarqueos.cpp \
-    listadocaducados.cpp
+    listadocaducados.cpp \
+    formatos.cpp \
+    directorios.cpp \
+    tiendas.cpp \
+    comprasventasremoto.cpp
 
 HEADERS  += tienda.h \
+    ClickableLabel.h \
+    actualizarclientes.h \
+    conexionesremotas.h \
+    generarvales.h \
+    imprimirfacturaproveedor.h \
+    imprimirpedido.h \
+    informes1.h \
     tpv.h \
     base_datos.h \
     conexion.h \
@@ -108,9 +126,16 @@ HEADERS  += tienda.h \
     prestamistas.h \
     listadosalidas.h \
     listadoarqueos.h \
-    listadocaducados.h
+    listadocaducados.h \
+    formatos.h \
+    directorios.h \
+    tiendas.h \
+    comprasventasremoto.h
 
 FORMS    += tienda.ui \
+    actualizarclientes.ui \
+    copiaseguridad.ui \
+    generarvales.ui \
     tpv.ui \
     buscarproducto.ui \
     tabwidget.ui \
@@ -150,7 +175,12 @@ FORMS    += tienda.ui \
     prestamistas.ui \
     listadosalidas.ui \
     listadoarqueos.ui \
-    listadocaducados.ui
+    listadocaducados.ui \
+    formatos.ui \
+    directorios.ui \
+    tiendas.ui \
+    comprasventasremoto.ui \
+    comprasventasremoto.ui
 include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
 RESOURCES += \

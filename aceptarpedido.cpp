@@ -128,7 +128,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
 
 
         //Comprobar cambio de nombre o PVP y actualizar artículos
-        consulta = base.consulta_producto(QSqlDatabase::database("DB"),ean);
+        consulta = base.consulta_producto("DB",ean);
         consulta.first();
         QString descripcionAnterior = consulta.value("descripcion").toString();
         QString precioAnterior = consulta.value("pvp").toString();
@@ -148,6 +148,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
                     base.insertarEtiqueta(ean);
                 }
             }
+
         case 1:
             if (precioAnterior != QString::number(pvp)) {
                 base.insertarEtiqueta(ean);

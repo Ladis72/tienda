@@ -1,20 +1,40 @@
-#include "tienda.h"
+﻿#include "tienda.h"
 #include "ui_tienda.h"
 #include "conexion.h"
+
 #include <QDebug>
 #include <QMessageBox>
-
 
 Tienda::Tienda(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::Tienda)
 {
     ui->setupUi(this);
-    qDebug() << conf->usuario;
+    QStringList datos = base.datosConexionLocal();
+    if(datos.isEmpty()){
+        createConnection("localhost","3306","tienda","root","meganizado","DB");
+        conf->setConexionLocal("DB");
+    }else {
+        createConnection(datos.at(1),"3306","tienda",datos.at(2),datos.at(3),datos.at(0));
+        conf->setConexionLocal(datos.at(0));
+    }
+    QString conexionMaster = base.nombreConexionMaster();
+    conf->setConexionMaster(conexionMaster);
+    if (conf->getConexionMaster() != conf->getConexionLocal()) {
+       ui->pushButtonGenerarVales->setEnabled(false);
+       ui->pushButtonActualizarClientes->setEnabled(false);
+    }
+
     QPixmap logo;
     logo.load("./documentos/logo.jpg");
     ui->logo->setPixmap(logo);
 
+    conexiones = new conexionesRemotas(this);
+    ui->statusBar->addPermanentWidget(ui->pushButtonConectar);
+
+    sincroVales = new QPushButton("Sincro vales",this);
+    connect(sincroVales,SIGNAL(clicked()),this,SLOT(sincronizarVales()));
+    comprobarVales();
 }
 
 Tienda::~Tienda()
@@ -74,6 +94,10 @@ void Tienda::on_pushButtonFormasPago_clicked()
 
 void Tienda::on_pushButton_3_clicked()
 {
+    if (!QSqlDatabase::database(conf->getConexionMaster()).isOpen()) {
+        QMessageBox::warning(this,"No hay definida una tienda MASTER","Los cambios que realice no serán guardados \n"
+                                                                      "Debe especificar una tienda master y estar conectado para operar");
+    }
     Cli = new Clientes(this);
     Cli->show();
 }
@@ -171,9 +195,10 @@ void Tienda::on_pushButtonTicket_clicked()
 
 void Tienda::on_pushButtonConfigDB_clicked()
 {
-    CBase = new ConfigBase(this);
+    CBase = new ConfigBase("configBase",this);
     CBase->exec();
 }
+
 
 void Tienda::on_pushButtonPrestamos_clicked()
 {
@@ -215,4 +240,114 @@ void Tienda::on_pushButtonCaducados_2_clicked()
 {
     ListaCaducados = new ListadoCaducados(this);
     ListaCaducados->exec();
+}
+
+void Tienda::on_pushButtonFormatos_clicked()
+{
+    Format = new Formatos(this);
+    Format->exec();
+}
+
+void Tienda::on_pushButtonInformes_clicked()
+{
+    Director = new Directorios(this);
+    Director->exec();
+}
+
+void Tienda::on_pushButtonTiendas_clicked()
+{
+
+    Sucursal = new tiendas(this);
+    Sucursal->exec();
+}
+
+
+
+void Tienda::refrescarConexiones()
+{
+    foreach (QLabel* lab, ui->statusBar->findChildren<QLabel*>()){
+        lab->deleteLater();
+    }
+    QLabel *button[conexiones->lista().length()];
+    for (int i = 0;i < conexiones->lista().length() ;i++ ) {
+        button[i] = new QLabel(conexiones->lista().at(i));
+        ui->statusBar->insertWidget(i,button[i]);
+    }
+    QStringList conexionesActivas;
+    QStringList conn;
+    conn.clear();
+    conn = conexiones->crear();
+    conf->setNombreconexiones(conexiones->lista());
+    for (int i = 0 ; i < conn.length() ; i=i+2 ) {
+        if(conn.at(i+1) == "0"){
+            button[i/2]->setStyleSheet("QLabel {background-color : red}");
+        }else{
+            button[i/2]->setStyleSheet("QLabel {background-color : green}");
+            conexionesActivas << conn.at(i);
+        }
+    }
+    conf->setNombreConexionesActivas(conexionesActivas);
+    conf->setConexionMaster(conexiones->conexionMaster());
+}
+
+void Tienda::on_pushButtonConectar_clicked()
+{
+    refrescarConexiones();
+}
+
+void Tienda::on_pushButtonActualizarClientes_clicked()
+{
+    ActualizarClientes *actClientes = new ActualizarClientes(this);
+    actClientes->exec();
+}
+
+
+
+void Tienda::on_pushButtonGenerarVales_clicked()
+{
+//    if(conf->getNombreConexionesActivas().isEmpty() || conf->getNombreConexionesActivas() != conf->getNombreConexiones()){
+//        QMessageBox::information(this,"No se puede generar ahora","Para generar los vales deben estar todos los ordenadores conectados.");
+//        return;
+//    }
+    genVales = new GenerarVales(this);
+    genVales->exec();
+}
+
+void Tienda::sincronizarVales()
+{
+    QSqlQuery vales = base.valesPendientes(conf->getConexionLocal());
+    vales.first();
+    for (int i = 0 ;i < vales.numRowsAffected() ; i++ ) {
+        if (base.usarVale(vales.record().value(2).toString(),vales.record().value(1).toInt())) {
+            base.borrarValePendiente(conf->getConexionLocal(),vales.record().value(1).toInt());
+        }
+        vales.next();
+    }
+    qDebug() << "Sincronizando vales";
+    comprobarVales();
+}
+
+void Tienda::comprobarVales()
+{
+    if(base.hayValesPendientesMarcar(conf->getConexionLocal())){
+
+        QPalette pal = sincroVales->palette();
+        pal.setColor(QPalette::Button,QColor(Qt::red));
+        sincroVales->setAutoFillBackground(true);
+        sincroVales->setPalette(pal);
+        sincroVales->update();
+        ui->statusBar->addPermanentWidget(sincroVales);
+        return;
+    }
+    sincroVales->hide();
+}
+
+void Tienda::keyPressEvent(QKeyEvent *e)
+{
+    if (e->key() == Qt::Key_F11) {
+        if (ui->listadoVentasButton->isEnabled()) {
+            ui->listadoVentasButton->setEnabled(false);
+        } else {ui->listadoVentasButton->setEnabled(true);
+        }
+    }
 }

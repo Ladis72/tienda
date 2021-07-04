@@ -59,10 +59,14 @@ void HistoricoTickets::mostrarTickets()
         }
         QStandardItem *itemPagado = new QStandardItem(pagado);
         vistaTickets->setItem(i,14,itemPagado);
+        QStandardItem *itemEntrega = new QStandardItem(listaTickets->record(i).value(15).toString());
+        vistaTickets->setItem(i,15,itemEntrega);
+        QStandardItem *itemCambio = new QStandardItem(listaTickets->record(i).value(16).toString());
+        vistaTickets->setItem(i,16,itemCambio);
 
     }
     QStringList etiquetas;
-    etiquetas << "Ticket" << "Vendedor" << "Cliente" << "Fecha" << "Hora" << "" << "" << "" << "" << "" << "" << "Dto" << "Total" << "F. Pago" << "Pagado";
+    etiquetas << "Ticket" << "Vendedor" << "Cliente" << "Fecha" << "Hora" << "" << "" << "" << "" << "" << "" << "Dto" << "Total" << "F. Pago" << "Pagado" << "Entrega" << "Cambio";
     qDebug() << etiquetas;
     vistaTickets->setHorizontalHeaderLabels(etiquetas);
     ui->tableViewTickets->setModel(vistaTickets);

@@ -1,5 +1,6 @@
 #include "pedidos.h"
 #include "ui_pedidos.h"
+#include "imprimirpedido.h"
 
 #include <QDebug>
 #include <QMessageBox>
@@ -12,6 +13,7 @@ pedidos::pedidos(QString idPed, QString proveedor, QString ndoc, QWidget *parent
 {
     ui->setupUi(this);
 
+    proveedorNombre = proveedor;
     ui->labelProveedor->setText(proveedor);
     ui->labelDocumento->setText(ndoc);
     modeloPedido = new QSqlQueryModel(this);
@@ -37,9 +39,10 @@ void pedidos::on_leCod_editingFinished()
 QString pedidos::calcularTotalLinea()
 {
     double total = ui->lePvt->text().toDouble()*ui->leUds->text().toDouble()*((100-ui->leDescuento->text().toDouble())/100);
-    double costo = ui->leTotalLinea->text().toDouble()/(ui->leUds->text().toDouble()+ui->leBon->text().toDouble())*(1+ui->leIva->text().toDouble()/100);
-    int margen = qFloor(1-(costo/ui->lePvp->text().toDouble())*100);
-    ui->leMargen->setText(QString::number(margen));
+    double venta = (ui->leUds->text().toDouble()+ui->leBon->text().toDouble()) * ui->lePvp->text().toDouble();
+    double margen = (venta-total)/venta*100;
+    //int margen = qFloor(1-(costo/ui->lePvp->text().toDouble())*100);
+    ui->leMargen->setText(QString::number(margen,'f',2));
     return QString::number(total);
 
 }
@@ -163,7 +166,11 @@ void pedidos::on_pushButtonAnadir_clicked()
     datos.append(ui->leCod->text());
     datos.append(ui->leDescripcion->text());
     datos.append(ui->leUds->text());
-    datos.append(ui->leBon->text());
+    if (ui->leBon->text().isEmpty()) {
+        datos.append("0");
+    }else{
+        datos.append(ui->leBon->text());
+    }
     datos.append(ui->leLote->text());
     datos.append(ui->dateEdit->date().toString("yyyy-MM-dd"));
     datos.append(ui->lePvt->text());
@@ -196,11 +203,11 @@ void pedidos::on_pushButtonAnadir_clicked()
 
 void pedidos::on_leCod_returnPressed()
 {
-    consulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->leCod->text());
+    consulta = base.consulta_producto("DB",ui->leCod->text());
     consulta.first();
     if(!consulta.isValid()){
            QString cod = base.codigoDesdeAux(ui->leCod->text());
-           consulta = base.consulta_producto(QSqlDatabase::database("DB"),cod);
+           consulta = base.consulta_producto("DB",cod);
            consulta.first();
        }
     if (consulta.numRowsAffected() == 1) {
@@ -305,4 +312,28 @@ void pedidos::on_dateEdit_editingFinished()
         ui->dateEdit->setFocus();
         ui->dateEdit->setDate(QDate::currentDate());
     }
+}
+
+void pedidos::on_leBon_textChanged(const QString &arg1)
+{
+    ui->leTotalLinea->setText(calcularTotalLinea());
+}
+
+void pedidos::on_lePvp_textChanged(const QString &arg1)
+{
+    ui->leTotalLinea->setText(calcularTotalLinea());
+}
+
+void pedidos::on_pushButtonImprimir_clicked()
+{
+    QString tienda = conf->getConexionLocal();
+    QStringList cabecera;
+    cabecera.clear();
+    cabecera << nDoc;
+    cabecera << proveedorNombre;
+    cabecera << ui->leTotalBase->text();
+    cabecera << ui->leTotalIva->text();
+    cabecera << ui->leTotalRe->text();
+    cabecera << ui->leTotal->text();
+    imprimirPedido pedido(tienda , cabecera , modeloPedido);
 }

@@ -1,19 +1,26 @@
 #ifndef ARTICULOS_H
 #define ARTICULOS_H
 
+#include "configuracion.h"
 #include "base_datos.h"
 #include "buscarproducto.h"
+#include "conexionesremotas.h"
 
 #include "familias.h"
 #include "fabricantes.h"
 #include "stock.h"
 #include "visorimagenes.h"
 #include "visorfacturas.h"
+#include "comprasventasremoto.h"
+#include "ClickableLabel.h"
 
 
 #include <QDialog>
 #include <QLabel>
+#include <QKeyEvent>
+#include <QTreeWidget>
 
+extern Configuracion *conf;
 namespace Ui {
 class Articulos;
 }
@@ -23,7 +30,7 @@ class Articulos : public QDialog
     Q_OBJECT
     
 public:
-    explicit Articulos(QWidget *parent = 0);
+    explicit Articulos(QWidget *parent = nullptr);
     ~Articulos();
     void borrarFormulario();
 
@@ -88,6 +95,11 @@ private slots:
 
     void on_pushButtonVerFactura_clicked();
 
+    void on_checkBoxRemoto_stateChanged(int arg1);
+
+
+    void on_treeWidgetStockTiendas_itemDoubleClicked(QTreeWidgetItem *item, int column);
+
 private:
     Ui::Articulos *ui;
 
@@ -97,11 +109,15 @@ private:
     QSqlQueryModel modeloCompras;
     QSqlTableModel *modeloAux;
     QDataWidgetMapper mapper;
-    QSqlQuery consulta;
+    QSqlQuery consulta , consultaRemota;
     Stock *stock;
     VisorImagenes *visor;
     VisorFacturas *factura;
+    comprasVentasRemoto *cvr;
     QString nFactura , idProveedor;
+    conexionesRemotas *conexiones;
+    QStringList listaConexionesRemotas;
+    bool remoto;
 
     //Familias *F;
 
@@ -110,23 +126,16 @@ private:
     void recargarTabla();
     void cargarVentas();
     bool eventFilter(QObject *obj, QEvent *event);
+    void keyPressEvent(QKeyEvent *e);
     void cargarCompras();
     void cargarCodAux();
-};
-
-class ClickableLabel : public QLabel {
-    Q_OBJECT
-
-public:
-    explicit ClickableLabel(QWidget* parent = Q_NULLPTR, Qt::WindowFlags f = Qt::WindowFlags());
-    ~ClickableLabel();
-
-signals:
-    void clicked();
-
-protected:
-    void mousePressEvent(QMouseEvent* event);
+    void llenarComboFormatos();
+    void llenarStockRemoto(QString ean);
+    static QStringList crearConexionesRemotas(QSqlQuery consultaRemota);
 
 };
+
+
+
 
 #endif // ARTICULOS_H

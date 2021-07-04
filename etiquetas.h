@@ -5,6 +5,7 @@
 #include <QStandardItemModel>
 #include "base_datos.h"
 #include "buscarproducto.h"
+#include "formateo.h"
 
 
 
@@ -33,12 +34,15 @@ private slots:
 
     void on_pushButton_3_clicked();
 
+    void imprimirHtml();
+
 private:
     Ui::Etiquetas *ui;
     QStandardItemModel *modelo;
     baseDatos *base;
     BuscarProducto *buscarProducto;
     QString articuloSeleccionado;
+    Formateo classFormatear;
 
     void llenarModelo();
 };

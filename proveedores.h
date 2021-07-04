@@ -5,6 +5,7 @@
 #include "formaspago.h"
 
 #include <QDialog>
+#include <QKeyEvent>
 
 namespace Ui {
 class Proveedores;
@@ -43,6 +44,8 @@ private slots:
 
     void on_radioButtonComprasAnos_clicked();
 
+    void on_pushButtonBorrar_clicked();
+
 private:
     Ui::Proveedores *ui;
 
@@ -60,6 +63,7 @@ private:
     void refrescarBotones(int i);
     QStringList recogerDatosFormulario();
     void cargarCompras();
+    void keyPressEvent(QKeyEvent *e);
 };
 
 #endif // PROVEEDORES_H

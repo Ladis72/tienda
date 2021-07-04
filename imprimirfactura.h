@@ -3,12 +3,15 @@
 
 #include <qstandarditemmodel.h>
 #include "base_datos.h"
+#include "configuracion.h"
+
+extern Configuracion *conf;
 
 class ImprimirFactura : public QObject
 {
     Q_OBJECT
 public:
-    explicit ImprimirFactura(QString nTicket , QObject *parent = 0);
+    explicit ImprimirFactura(QString nTicket , QObject *parent = nullptr);
 private:
     QStandardItemModel *modeloTabla;
     QSqlQuery consulta;

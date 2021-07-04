@@ -4,7 +4,9 @@
 #include <QDialog>
 #include <QStandardItemModel>
 #include "base_datos.h"
+#include "configuracion.h"
 
+extern Configuracion *conf;
 namespace Ui {
 class ListadoVentaArticulos;
 }

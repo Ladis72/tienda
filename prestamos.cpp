@@ -44,11 +44,11 @@ void Prestamos::on_lineEditCod_textChanged(const QString &arg1)
 
 void Prestamos::on_lineEditEan_returnPressed()
 {
-    consulta = base->consulta_producto(QSqlDatabase::database("DB"),ui->lineEditEan->text());
+    consulta = base->consulta_producto("DB",ui->lineEditEan->text());
     consulta.first();
     if (!consulta.isValid()) {
         QString cod = base->codigoDesdeAux(ui->lineEditEan->text());
-        consulta = base->consulta_producto(QSqlDatabase::database("DB"),cod);
+        consulta = base->consulta_producto("DB",cod);
         consulta.first();
     }
     if (consulta.numRowsAffected() == 1 ) {

@@ -13,6 +13,8 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     hora = consulta.value(4).toString();
     total = consulta.value(12).toString();
     fPago = base.nombreFormaPago(consulta.value(13).toString());
+    entrega = consulta.value(15).toString();
+    cambio = consulta.value(16).toString();
     QStringList confTicket = base.recuperarConfigTicket();
     if (formato == "ticket") {
 
@@ -50,6 +52,9 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     texto << "\n\n";
     texto << "Total: "+total+"\n";
     texto << "Forma de pago. "+fPago;
+    texto << "\n";
+    texto << "Entrega: "+entrega+"\n";
+    texto << "Cambio:  "+cambio;
     texto << "\n\n\n";
     texto << confTicket.at(1);
     texto << "\n\n\n\n";

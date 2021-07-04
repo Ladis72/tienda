@@ -7,12 +7,17 @@
 #include <QDebug>
 #include <QDate>
 #include <QString>
+#include <QDir>
+#include <QtConcurrent/QtConcurrent>
 
 Tpv::Tpv(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Tpv)
 {
     ui->setupUi(this);
+    ClickableLabel *fotoHR = new ClickableLabel(ui->labelFoto);
+    fotoHR->setMaximumSize(200,200);
+    connect(fotoHR,SIGNAL(clicked()),this,SLOT(mostrarFoto()));
     ticketActual = ticketActualizado();
     ticket = base.obtenerNumeroUltimoTicket(QSqlDatabase::database("DB"))+1;
     llenar_usuarios(QSqlDatabase::database("DB"));
@@ -25,6 +30,7 @@ Tpv::Tpv(QWidget *parent) :
     ui->tableViewTicketsPendientes->hideColumn(0);
     ui->lineEdit_cod_cliente->setText("1");
     emit on_lineEdit_cod_cliente_editingFinished();
+
 
 
 }
@@ -206,7 +212,7 @@ void Tpv::ticketNuevo(int ticketnuevo)
 int Tpv::ticketActualizado()
 {
     ticketActual = base.maxTicketPendiente(QSqlDatabase::database("DB"));
-
+    return ticketActual;
 }
 
 QStringList Tpv::recopilarDatosTicket()
@@ -272,20 +278,35 @@ QString Tpv::formatearCadena(QString cadena, int tamano)
 
 void Tpv::datosProducto(QString IdProducto)
 {
-    ui->labelStock->setText(base.sumarStockArticulo(IdProducto));
+    ui->labelStock->setText(base.sumarStockArticulo(IdProducto,"DB"));
     QSqlQuery tmp = base.ejecutarSentencia("SELECT fecha FROM lotes WHERE ean = "+IdProducto+" ORDER BY fecha asc");
     tmp.first();
     ui->labelFecha->setText(tmp.value(0).toString());
+    consulta = base.consulta_producto("DB",IdProducto);
+    consulta.first();
+    QString fichero = QDir::currentPath() + "/" + consulta.value("foto").toString();
+    QImage foto(fichero);
+    QPixmap imagen = QPixmap::fromImage(foto);
+    ui->labelFoto->setPixmap(imagen.scaled(200,200));
 
+    ui->textInfo->setText(consulta.value("notas").toString());
+}
+
+void Tpv::mostrarFoto()
+{
+    //VisorImagenes *visor = new VisorImagenes(consulta.value(14).toString());
+    qDebug() << ui->labelFoto->text() << "Click en foto";
+    VisorImagenes *visor = new VisorImagenes(ui->labelFoto->text());
+    visor->showMaximized();
 }
 
 void Tpv::on_lineEdit_cod_returnPressed(){
 
-   consulta = base.consulta_producto(QSqlDatabase::database("DB"),ui->lineEdit_cod->text());
+   consulta = base.consulta_producto("DB",ui->lineEdit_cod->text());
    consulta.first();
    if(!consulta.isValid()){
        QString cod = base.codigoDesdeAux(ui->lineEdit_cod->text());
-       consulta = base.consulta_producto(QSqlDatabase::database("DB"),cod);
+       consulta = base.consulta_producto("DB",cod);
        consulta.first();
    }
    if (consulta.numRowsAffected() == 1) {
@@ -300,13 +321,13 @@ void Tpv::on_lineEdit_cod_returnPressed(){
             }else{
            linea << ui->lineEdit_precio->text();
        }
-       if(ui->lineEdit_descuento->text() == "0"){
-           qDebug() << "Descuento en line 0";
-           linea << QString::number(descuentoCliente);
+//       if(ui->lineEdit_descuento->text() == "0"){
+//           qDebug() << "Descuento en line 0";
+//           linea << QString::number(descuentoCliente);
 
-           }else{
+//           }else{
             linea << ui->lineEdit_descuento->text();
-       }
+//       }
        double totalLinea = linea.at(4).toDouble()*linea.at(2).toDouble()*(1-linea.at(5).toDouble()/100);
        //totalLinea = redondear(totalLinea,2);
        totalLinea = classFormatear.redondear(totalLinea,2);
@@ -399,11 +420,6 @@ void Tpv::on_lineEdit_desc_returnPressed()
 
 void Tpv::on_btn_cobrar_clicked()
 {
-//    QFile cajon("/dev/lp0");
-//    cajon.open(QIODevice::WriteOnly);
-//    QTextStream codigoApertura(&cajon);
-//    codigoApertura << char(0x1B) << char(0x70) << char(0x30);
-//    cajon.close();
     QStringList confTicket = base.recuperarConfigTicket();
     QFile cajon(confTicket.at(3));
     qDebug() << confTicket.at(3);
@@ -418,7 +434,7 @@ void Tpv::on_btn_cobrar_clicked()
     }
     cajon.close();
     qDebug() << "Finalizado apertura cajon";
-    totalizacion = new totalizar(QString::number(calcularPrecioTotal()),this);
+    totalizacion = new totalizar(QString::number(calcularPrecioTotal()), vale , this);
 
     QStringList lineaTicket,totalTicket;
     totalTicket.clear();
@@ -447,16 +463,16 @@ void Tpv::on_btn_cobrar_clicked()
             dato = formatearCadena(dato,3);
             qDebug() << dato;
             dato = lineaTicket.at(2);
-            dato = formatearCadena(dato,23);
+            dato = formatearCadena(dato,20);
             qDebug() << dato;
             dato = lineaTicket.at(5);
             dato = formatearCadena(dato,6);
             dato.clear();
             dato = lineaTicket.at(6);
-            dato = formatearCadena(dato,2);
+            dato = formatearCadena(dato,3);
             dato.clear();
             dato = lineaTicket.at(7);
-            dato = formatearCadena(dato,6);
+            dato = formatearCadena(" "+dato,6);
             dato.clear();
             qDebug() << lineaTicket;
             base.grabarLineaTicket(lineaTicket);
@@ -479,18 +495,17 @@ void Tpv::on_btn_cobrar_clicked()
             }
             base.actualizarFechaVentaArticulo(lineaTicket.at(1),QDate::currentDate().toString("yyyy-MM-dd"));
         }
+        if (totalizacion->valeUsado) {
+        usarVale(ticket,idVale,vale);
+        }
         totalTicket.append(recopilarDatosTicket());
         totalTicket.append(QString::number(totalizacion->descuento));
         totalTicket.append(QString::number(totalizacion->total));
         totalTicket.append(base.idFormaPago(totalizacion->efectivo));
         totalTicket.append(totalizacion->facturacion);
+        totalTicket.append(QString::number(totalizacion->entrega));
+        totalTicket.append(QString::number(totalizacion->cambio));
 
-//        texto << "\n\nTotal:";
-//        texto << QString::number(totalizacion->total)+"\n";
-//        texto << totalizacion->efectivo;
-//        texto << "\n\n\n     GRACIAS POR SU VISITA\n";
-//        texto << "\n\n\n\n";
-//        texto << char(0x1D) << char(0x56) << char(0x30);
         QString serie;
         serie = "ticketss";
         if (totalizacion->facturacion == "0") {
@@ -548,6 +563,8 @@ void Tpv::on_btn_modificar_clicked()
 
     ticketActual = base.maxTicketPendiente(QSqlDatabase::database("DB"))+1;
     actualizarParrillaVentas();
+    ui->lineEdit_cod_cliente->setText("1");
+    emit on_lineEdit_cod_cliente_editingFinished();
     ui->lineEdit_cod->clear();
     ui->lineEdit_cod->setFocus();
 }
@@ -559,11 +576,10 @@ void Tpv::on_lineEdit_cod_cliente_editingFinished()
     if(nombreCliente == "Sin asignar"){
         QMessageBox *msgbox = new QMessageBox(this);
         msgbox->setText("Crear cliente");
-        msgbox->setInformativeText("Ese cliente no existe. /n¿Desea Crearlo?");
+        msgbox->setInformativeText("Ese cliente no existe. \n¿Desea Crearlo?");
         msgbox->setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-        msgbox->setDefaultButton(QMessageBox::Ok);
-        int resp = msgbox->exec();
-        if( resp == QMessageBox::Ok){
+        msgbox->setDefaultButton(QMessageBox::Cancel);
+        if( msgbox->exec() == QMessageBox::Ok){
             clien = new Clientes(this,ui->lineEdit_cod_cliente->text());
             clien->exec();
             ui->lineEdit_nobre_cliente->setText(base.nombreCliente(ui->lineEdit_cod_cliente->text()));
@@ -576,7 +592,18 @@ void Tpv::on_lineEdit_cod_cliente_editingFinished()
     ui->lineEdit_nobre_cliente->setText(nombreCliente);
         }
     descuentoCliente = base.descuentoCliente(ui->lineEdit_cod_cliente->text());
-    qDebug() << descuentoCliente;
+    vale = base.valeCliente(conf->getConexionLocal(),ui->lineEdit_cod_cliente->text());
+    qDebug() << vale;
+    if (vale > 0) {
+        ui->labelVale->setNum(vale);
+        idVale = base.idVale(conf->getConexionLocal(),ui->lineEdit_cod_cliente->text());
+    }else {
+        ui->labelVale->setNum(0);
+        idVale = 0;
+}
+
+
+    ui->lineEdit_cod->setFocus();
 }
 
 void Tpv::on_lineEdit_nobre_cliente_returnPressed()
@@ -699,4 +726,54 @@ void Tpv::on_btn_preTicket_clicked()
         const char* ch = imprimir.toLocal8Bit().constData();
         system(ch);
 }
+
+void Tpv::usarVale(int ticket, int idVale, double cantVale)
+{
+    QStringList lineaTicket;
+    lineaTicket.clear();
+    lineaTicket.append(QString::number(ticket));
+    lineaTicket.append("9999999999999");
+    lineaTicket.append("Vale fidelidad");
+    lineaTicket.append("1");
+    lineaTicket.append("0");
+    lineaTicket.append(QString::number(cantVale));
+    lineaTicket.append("0");
+    lineaTicket.append("-"+QString::number(cantVale));
+    lineaTicket.append(QDate::currentDate().toString("yyyy-MM-dd"));
+    lineaTicket.append(QTime::currentTime().toString("hh:mm"));
+    base.grabarLineaTicket(lineaTicket);
+
+    listaConexionesRemotas = conf->getNombreConexiones();
+    qDebug() << listaConexionesRemotas;
+    conexionLocal = conf->getConexionLocal();
+    qDebug() << conexionLocal;
+    if (base.usarVale(conexionLocal,idVale)) {
+        qDebug() << "Vale usado";
+    }else {
+        qDebug() << "Error al usar el vale";
+        }
+    for (int i  = 0 ; i < listaConexionesRemotas.length() ; i++ ) {
+        if (!base.usarVale(listaConexionesRemotas.at(i),idVale)) {
+            qDebug() << "Error al marcar vale en tienda " << listaConexionesRemotas.at(i);
+            base.valesPendientesMarcar(conexionLocal,listaConexionesRemotas.at(i),idVale);
+        }else {
+            qDebug() << "Vale marcado en tienda " << listaConexionesRemotas.at(i);
+}
+    }
+
+}
+//ClickableLabel::ClickableLabel(QWidget *parent, Qt::WindowFlags f) : QLabel(parent)
+//{
+
+//}
+
+//ClickableLabel::~ClickableLabel()
+//{
+
+//}
+
+//void ClickableLabel::mousePressEvent(QMouseEvent *event)
+//{
+//    emit clicked();
+//}
 

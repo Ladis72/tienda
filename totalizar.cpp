@@ -1,13 +1,14 @@
 #include "totalizar.h"
 #include "ui_totalizar.h"
 
-totalizar::totalizar(QString datos, QWidget *parent) :
+totalizar::totalizar(QString datos, double vale, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::totalizar)
 {
     ui->setupUi(this);
+    valeUsado = false;
     ui->lineEditImporte->setText(datos);
-    total = ui->lineEditImporte->text().toFloat()*(100-ui->lineEditDescuento->text().toFloat())/100;
+    total = ui->lineEditImporte->text().toDouble()*(100-ui->lineEditDescuento->text().toDouble())/100;
     ui->lineEditTotal->setText(QString::number(total));
     descuento = 0;
     fpago = base->fpago(QSqlDatabase::database("DB"));
@@ -19,6 +20,15 @@ totalizar::totalizar(QString datos, QWidget *parent) :
     efectivo = ui->comboBox->currentText();
     facturacion = "0";
     ticket = false;
+    factura = false;
+    entrega = 0;
+    cambio = 0;
+    cantVale = vale;
+    qDebug() << cantVale;
+    if (cantVale > 0) {
+        ui->checkBoxVale->setChecked(true);
+        ui->lineEditVale->setText(QString::number(cantVale));
+    }
 }
 
 totalizar::~totalizar()
@@ -35,16 +45,18 @@ void totalizar::on_pushButtonTicket_clicked()
 
 void totalizar::on_lineEditDescuento_textChanged(const QString &arg1)
 {
-    total = ui->lineEditImporte->text().toFloat()*(100-arg1.toFloat())/100;
+    total = ui->lineEditImporte->text().toDouble()*(100-arg1.toDouble())/100;
     ui->lineEditTotal->setText(QString::number(total));
-    descuento = ui->lineEditDescuento->text().toFloat();
+    descuento = ui->lineEditDescuento->text().toDouble();
+    emit on_lineEditEntrega_textChanged(ui->lineEditEntrega->text());
 }
 
 void totalizar::on_lineEditEntrega_textChanged(const QString &arg1)
 {
-    float vuelta = arg1.toFloat()-ui->lineEditTotal->text().toFloat();
+    double vuelta = arg1.toDouble()-ui->lineEditTotal->text().toDouble();
     ui->lineEditCambio->setText(QString::number(vuelta));
-
+    entrega = ui->lineEditEntrega->text().toDouble();
+    cambio = vuelta;
 }
 
 
@@ -70,6 +82,9 @@ void totalizar::keyPressEvent(QKeyEvent *e)
         this->setStyleSheet("background-color:#DEDEDE;");
         break;
     case Qt::Key_F2:
+        if (ui->comboBox->currentText() == "Visa") {
+            break;
+        }
         facturacion = "1";
         qDebug() << "F2 pulsada";
         emit on_pushButtonCobrar_clicked();
@@ -89,6 +104,7 @@ void totalizar::keyPressEvent(QKeyEvent *e)
 void totalizar::on_pushButtonCobrar_clicked()
 {
     ticket = false;
+    factura =false;
     emit accept();
 }
 
@@ -97,4 +113,18 @@ void totalizar::on_pushButtonFactura_clicked()
     ticket = true;
     factura = true;
     emit accept();
+}
+
+void totalizar::on_checkBoxVale_stateChanged(int arg1)
+{
+    if (arg1 > 0) {
+        total = ui->lineEditImporte->text().toDouble()*(100-ui->lineEditDescuento->text().toDouble())/100-cantVale;
+        ui->lineEditTotal->setText(QString::number(total));
+        valeUsado = true;
+    }else{
+        total = ui->lineEditImporte->text().toDouble()*(100-ui->lineEditDescuento->text().toDouble())/100;
+        ui->lineEditTotal->setText(QString::number(total));
+        valeUsado = false;
+    }
+    qDebug() << arg1;
 }
