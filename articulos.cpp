@@ -467,6 +467,7 @@ void Articulos::on_lineEditCod_returnPressed()
         if (consulta.numRowsAffected() == 1) {
             ui->lineEditCod->setText(consulta.value(0).toString());
             emit on_lineEditCod_returnPressed();
+            return;
                 }
     QMessageBox msgbox;
     msgbox.setText("NO SE ENCUENTRA EL ARTÍCULO");
