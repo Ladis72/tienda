@@ -72,11 +72,13 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
 //    QString imprimir = "less ./ticket.txt >> "+confTicket.at(3);
 //    const char* ch = imprimir.toLocal8Bit().constData();
 //    system(ch);
+    impresora.open(QIODevice::ReadOnly);
     QTextDocument docImp;
     QPrinter impresoraDefecto;
     impresoraDefecto.setPrinterName(confTicket.at(3));
     docImp.setPlainText(texto.readAll());
     docImp.print(&impresoraDefecto);
+    qDebug() << docImp.toPlainText();
     return;
     }
 
