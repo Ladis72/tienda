@@ -2,6 +2,7 @@
 #include <QFile>
 #include <QDate>
 #include "qtrpt.h"
+#include <QTextDocument>
 
 
 
@@ -68,9 +69,14 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     //texto << confTicket.at(4);
     texto << "\n\n";
     impresora.close();
-    QString imprimir = "less ./ticket.txt >> "+confTicket.at(3);
-    const char* ch = imprimir.toLocal8Bit().constData();
-    system(ch);
+//    QString imprimir = "less ./ticket.txt >> "+confTicket.at(3);
+//    const char* ch = imprimir.toLocal8Bit().constData();
+//    system(ch);
+    QTextDocument docImp;
+    QPrinter impresoraDefecto;
+    impresoraDefecto.setPrinterName(confTicket.at(3));
+    docImp.setPlainText(texto.readAll());
+    docImp.print(&impresoraDefecto);
     return;
     }
 

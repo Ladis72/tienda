@@ -23,6 +23,8 @@ private slots:
 
     void on_checkBoxPromo_toggled(bool checked);
 
+    void on_pushButton_clicked();
+
 private:
     Ui::ConfigTicket *ui;
     baseDatos *base;

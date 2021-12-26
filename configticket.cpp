@@ -1,5 +1,7 @@
 #include "configticket.h"
 #include "ui_configticket.h"
+#include <QPrintDialog>
+#include <QPrinter>
 
 ConfigTicket::ConfigTicket(QWidget *parent) :
     QDialog(parent),
@@ -54,3 +56,14 @@ void ConfigTicket::on_checkBoxPromo_toggled(bool checked)
 {
     ui->plainTextEditPromo->setEnabled(checked);
 }
+
+void ConfigTicket::on_pushButton_clicked()
+{
+    QPrinter impresora;
+    QPrintDialog dlgImpresora(&impresora,this);
+    if (!dlgImpresora.exec()) {
+        return;
+    }
+    ui->lineEditCola->setText(impresora.printerName());
+}
+
