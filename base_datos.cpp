@@ -1484,9 +1484,9 @@ QSqlQuery baseDatos::recuperarPedidos()
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.exec("SELECT * FROM albaranes_tmp");
-    if (consulta.isValid()) {
+    //if (consulta.isValid()) {
         return consulta;
-    }
+    //}
     qDebug() << consulta.lastError().text();
     
 }
