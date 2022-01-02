@@ -11,8 +11,9 @@ BuscarProducto::BuscarProducto(QWidget *parent, QSqlQuery query) :
    // QSqlQueryModel *modelo = new QSqlQueryModel;
     modelo.setQuery(query);
     ui->tableView->setModel(&modelo);
-    ui->tableView->hideColumn(3);
-    for (int i = 5; i < 14; ++i) ui->tableView->hideColumn(i);
+    //ui->tableView->hideColumn(3);
+    for (int i = 3; i < 21; ++i) ui->tableView->hideColumn(i);
+    ui->tableView->hideColumn(22);
     ui->tableView->setColumnWidth(1,600);
 }
 

@@ -435,7 +435,7 @@ void Articulos::on_lineEditCodFabricante_textChanged(const QString &arg1)
 
 void Articulos::on_lineEditDesc_returnPressed()
 {
-    consulta = base.buscarEnTabla(QSqlDatabase::database(conf->getConexionLocal()),"articulos","descripcion", ui->lineEditDesc->text());
+    consulta = base.buscarProducto(QSqlDatabase::database(conf->getConexionLocal()),"articulos", ui->lineEditDesc->text());
     consulta.first();
     qDebug() << consulta.lastError().text();
     BuscarProducto *buscar = new BuscarProducto(this,consulta);

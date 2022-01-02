@@ -164,7 +164,8 @@ QSqlQuery baseDatos::buscarProducto(QSqlDatabase db, QString tabla, QString nomb
 {
     if (db.isOpen()) {
         QSqlQuery consulta(db);
-        consulta.exec("SELECT * FROM "+tabla+" WHERE descripcion LIKE '%"+nombre+"%' ORDER BY descripcion");
+        //consulta.exec("SELECT * FROM "+tabla+" WHERE descripcion LIKE '%"+nombre+"%' ORDER BY descripcion");
+        consulta.exec("SELECT * , SUM(lotes.cantidad) FROM articulos LEFT JOIN lotes ON articulos.cod=lotes.ean WHERE articulos.descripcion LIKE '%"+nombre+"%' GROUP BY articulos.cod");
         return consulta;
 
     }
