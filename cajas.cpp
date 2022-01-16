@@ -186,8 +186,12 @@ void Cajas::ventas()
 {
     QSqlQuery resultado = base->ventasDesdeUltimoArqueo(fechaUltimoArqueo,horaUltimoArqueo,"tickets");
     resultado.first();
-    ventasEfectivo = resultado.value(0).toDouble();
-    resultado.next();
+    ventasEfectivo=0;
+    if (resultado.value("fpago") == 1) {
+        ventasEfectivo = resultado.value(0).toDouble();
+        resultado.next();
+    }
+
     ventasTarjeta = resultado.value(0).toDouble();
     ui->label_ventasTarjeta->setText(QString::number(ventasTarjeta));
     nTarjetas = base->nTarjetasDesdeUltimoArqueo(fechaUltimoArqueo,horaUltimoArqueo);
