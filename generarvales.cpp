@@ -91,7 +91,7 @@ void GenerarVales::on_pushButtonGenerar_clicked()
             qDebug() << compras.record().value(0) << " = " << compras.record().value(1);
             compras.next();
         }
-    ui->progressBar->setValue(ui->progressBar->value()+30/tiendas.length());
+    ui->progressBar->setValue(ui->progressBar->value()+30+(20*(i+1)));
     }
 
     //Generar vales locales
@@ -125,6 +125,8 @@ void GenerarVales::on_pushButtonGenerar_clicked()
             comprasTotal.next();
     }
     }
+    ui->label->setText("Finalizado");
+    ui->progressBar->setValue(100);
 
 }
 
