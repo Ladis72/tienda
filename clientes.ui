@@ -6,16 +6,93 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1055</width>
-    <height>551</height>
+    <width>1061</width>
+    <height>651</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Clientes</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <item>
-    <widget class="QTabWidget" name="tabWidget">
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="2" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="pushButtonNuevo">
+       <property name="text">
+        <string>Nuevo</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonBorrar">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Borrar</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonModificar">
+       <property name="text">
+        <string>Modificar</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonReffrescar">
+       <property name="text">
+        <string>Refrescar</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonAnterior">
+       <property name="text">
+        <string>Anterior</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonSiguiente">
+       <property name="text">
+        <string>Siguiente</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonCerrar">
+       <property name="text">
+        <string>Cerrar</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <widget class="QTabWidget" name="tabWidgetProductos">
      <property name="currentIndex">
       <number>1</number>
      </property>
@@ -250,21 +327,6 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="2" colspan="2">
-         <widget class="QLabel" name="labelNombreCliente">
-          <property name="font">
-           <font>
-            <family>Bitstream Charter</family>
-            <pointsize>14</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Nombre cliente</string>
-          </property>
-         </widget>
-        </item>
         <item row="5" column="2">
          <widget class="QLabel" name="label_6">
           <property name="text">
@@ -288,8 +350,15 @@
       <attribute name="title">
        <string>Ventas</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="3" column="1">
+        <widget class="QTableView" name="tableView2">
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="3">
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
           <string>Periodo</string>
@@ -359,98 +428,50 @@
            </spacer>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButtonVerProductos">
+           <widget class="QPushButton" name="pushButtonVerProductos2">
             <property name="text">
              <string>Ver productos</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonVerProductos">
+            <property name="text">
+             <string>Ver tickets</string>
             </property>
            </widget>
           </item>
          </layout>
         </widget>
        </item>
-       <item>
+       <item row="4" column="1">
+        <widget class="QTableView" name="tableViewDetalleTicket"/>
+       </item>
+       <item row="3" column="0" rowspan="2">
         <widget class="QTableView" name="tableView"/>
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="Productos">
+      <attribute name="title">
+       <string>Productos</string>
+      </attribute>
+     </widget>
     </widget>
    </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QPushButton" name="pushButtonNuevo">
-       <property name="text">
-        <string>Nuevo</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonBorrar">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Borrar</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonModificar">
-       <property name="text">
-        <string>Modificar</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonReffrescar">
-       <property name="text">
-        <string>Refrescar</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonAnterior">
-       <property name="text">
-        <string>Anterior</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonSiguiente">
-       <property name="text">
-        <string>Siguiente</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonCerrar">
-       <property name="text">
-        <string>Cerrar</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
+   <item row="0" column="0">
+    <widget class="QLabel" name="labelNombreCliente">
+     <property name="font">
+      <font>
+       <family>Bitstream Charter</family>
+       <pointsize>14</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Nombre cliente</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

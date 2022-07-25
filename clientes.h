@@ -3,8 +3,10 @@
 #include "base_datos.h"
 #include "buscarproducto.h"
 #include "configuracion.h"
+#include "qdatetime.h"
 
 #include <QDialog>
+
 
 extern Configuracion *conf;
 namespace Ui {
@@ -46,6 +48,12 @@ private slots:
 
     void on_dateEditDesde_userDateChanged(const QDate &date);
 
+    void on_pushButtonVerProductos_clicked();
+
+    void on_tableView_clicked(const QModelIndex &index);
+
+    void on_tableView2_doubleClicked(const QModelIndex &index);
+
 private:
     Ui::Clientes *ui;
 
@@ -56,6 +64,10 @@ private:
     QSqlQuery consulta;
     QString nombreConexionMaster;
     QString nombreConexionLocal;
+    QString fechaI , fechaF;
+    QSqlQueryModel *listaTickets;
+    QSqlQueryModel *ticket;
+    QString nTicket;
 
 
     void recargarTabla();

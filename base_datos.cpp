@@ -573,6 +573,22 @@ bool baseDatos::borrarValePendiente(QString nombreConexion, int vale)
     return true;
 }
 
+QSqlQuery baseDatos::tickesPorCLiente(QString nombreConexion, QString fechaI, QString fechaF, QString idCliente)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+//    consulta.exec("SELECT * FROM tickets WHERE cliente = '"+idCliente+"' AND fecha BETWEEN '"+fechaI+"' AND '"+fechaF+"'");
+//    consulta.bindValue(0,idCliente.toUInt());
+//    consulta.bindValue(1,fechaI);
+//    consulta.bindValue(2,fechaF);
+    if (consulta.exec("SELECT * FROM tickets WHERE cliente = '"+idCliente+"' AND fecha BETWEEN '"+fechaI+"' AND '"+fechaF+"'")) {
+        qDebug() << consulta.lastQuery() << consulta.boundValue(0).toString()<< consulta.boundValue(1).toString()<< consulta.boundValue(2).toString();
+        consulta.first();
+        return consulta;
+    }
+    qDebug() << consulta.lastError();
+    return consulta;
+}
+
 QString baseDatos::nombreFamilia(QString id)
 {
 

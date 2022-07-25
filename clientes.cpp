@@ -2,6 +2,7 @@
 #include "ui_clientes.h"
 
 #include <QMessageBox>
+#include <QStandardItemModel>
 
 Clientes::Clientes(QWidget *parent) :
     QDialog(parent),
@@ -46,6 +47,10 @@ Clientes::Clientes(QWidget *parent) :
     ui->lineEditCod->installEventFilter(this);
     ui->dateEditDesde->setDate(QDate::currentDate());
     ui->dateEditHasta->setDate(QDate::currentDate());
+
+    listaTickets = new QSqlQueryModel;
+    ticket = new QSqlQueryModel;
+    nTicket = "";
 }
 
 Clientes::Clientes(QWidget *parent , QString codigo) :
@@ -355,3 +360,96 @@ void Clientes::on_dateEditDesde_userDateChanged(const QDate &date)
     cargarCompras();
 
 }
+
+void Clientes::on_pushButtonVerProductos_clicked()
+{
+
+}
+
+
+void Clientes::on_tableView_clicked(const QModelIndex &index)
+{
+
+    if(ui->radioButtonAnos->isChecked()){
+        QModelIndex indice = modeloCompras.index(index.row(),0);
+        QString dato = modeloCompras.data(indice,Qt::DisplayRole).toString();
+        fechaI = dato+"-01-01";
+        fechaF = dato+"-12-31";
+    }
+    if (ui->radioButtonMeses->isChecked()) {
+        QModelIndex indiceAno = modeloCompras.index(index.row(),0);
+        QString ano = modeloCompras.data(indiceAno,Qt::DisplayRole).toString();
+        QModelIndex indiceMes = modeloCompras.index(index.row(),1);
+        QString mes = modeloCompras.data(indiceMes,Qt::DisplayRole).toString();
+        fechaI = ano+"-"+mes+"-01";
+        QDate fecha(ano.toInt(),mes.toInt(),1);
+        fechaF = ano+"-"+mes+"-"+QString::number(fecha.daysInMonth());
+    }
+    if (ui->radioButtonFechas->isChecked()) {
+        fechaI = ui->dateEditDesde->date().toString("yyyy-MM-dd");
+        fechaF = ui->dateEditHasta->date().toString("yyyy-MM-dd");
+    }
+    qDebug() << fechaI << "    " << fechaF;
+    //QSqlQueryModel *listaTickets = new QSqlQueryModel;
+    //QSqlQuery listaTickes2 = base.tickesPorCLiente(nombreConexionLocal,fechaI,fechaF,ui->lineEditCod->text());
+    listaTickets->setQuery(base.tickesPorCLiente(nombreConexionLocal,fechaI,fechaF,ui->lineEditCod->text()));
+    qDebug() << listaTickets->rowCount();
+    QStandardItemModel *vistaTickets = new QStandardItemModel(listaTickets->rowCount(),listaTickets->columnCount());
+
+    for (int i = 0;i < listaTickets->rowCount() ; i++) {
+        QStandardItem *itemTicket = new QStandardItem(listaTickets->record(i).value(0).toString());
+        vistaTickets->setItem(i,0,itemTicket);
+        QString nombreUsusario = listaTickets->record(i).value(1).toString();
+        QStandardItem *itemUsuario = new QStandardItem(base.nombreUsusario(nombreUsusario));
+        vistaTickets->setItem(i,1,itemUsuario);
+//        QStandardItem *itemCliente = new QStandardItem(base.nombreCliente(listaTickets->record(i).value(2).toString()));
+//        vistaTickets->setItem(i,2,itemCliente);
+        QStandardItem *itemFecha = new QStandardItem(listaTickets->record(i).value(3).toString());
+        QStandardItem *itemHora = new QStandardItem(listaTickets->record(i).value(4).toString());
+        vistaTickets->setItem(i,3,itemFecha);
+        vistaTickets->setItem(i,4,itemHora);
+        QStandardItem *itemDescuento = new QStandardItem(listaTickets->record(i).value(11).toString());
+        vistaTickets->setItem(i,11,itemDescuento);
+        QStandardItem *itemTotal = new QStandardItem(listaTickets->record(i).value(12).toString());
+        vistaTickets->setItem(i,12,itemTotal);
+        QStandardItem *itemFormaPago = new QStandardItem(base.nombreFormaPago(listaTickets->record(i).value(13).toString()));
+        vistaTickets->setItem(i,13,itemFormaPago);
+        QString pagado;
+        if (listaTickets->record(i).value(14).toString() == "1") {
+            pagado = "Si";
+        } else {pagado = "No";
+        }
+        QStandardItem *itemPagado = new QStandardItem(pagado);
+        vistaTickets->setItem(i,14,itemPagado);
+        QStandardItem *itemEntrega = new QStandardItem(listaTickets->record(i).value(15).toString());
+        vistaTickets->setItem(i,15,itemEntrega);
+        QStandardItem *itemCambio = new QStandardItem(listaTickets->record(i).value(16).toString());
+        vistaTickets->setItem(i,16,itemCambio);
+    }
+    QStringList etiquetas;
+    etiquetas << "Ticket" << "Vendedor" << "" << "Fecha" << "Hora" << "" << "" << "" << "" << "" << "" << "Dto" << "Total" << "F. Pago" << "Pagado" << "Entrega" << "Cambio";
+    qDebug() << etiquetas;
+    vistaTickets->setHorizontalHeaderLabels(etiquetas);
+    ui->tableView2->setModel(vistaTickets);
+    ui->tableView2->hideColumn(2);
+    for (int i = 5; i < 11; ++i) {
+        ui->tableView2->hideColumn(i);
+    }
+    ui->tableView2->resizeColumnsToContents();
+}
+
+
+void Clientes::on_tableView2_doubleClicked(const QModelIndex &index)
+{
+    QModelIndex indice = listaTickets->index(index.row(),0);
+    nTicket = listaTickets->data(indice,Qt::EditRole).toString();
+    ticket->setQuery("SELECT * FROM lineasticket WHERE nticket = "+nTicket,QSqlDatabase::database("DB"));
+
+
+    ui->tableViewDetalleTicket->setModel(ticket);
+    ui->tableViewDetalleTicket->hideColumn(0);
+    ui->tableViewDetalleTicket->hideColumn(1);
+    ui->tableViewDetalleTicket->hideColumn(2);
+    ui->tableViewDetalleTicket->resizeColumnsToContents();
+}
+

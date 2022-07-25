@@ -53,6 +53,7 @@ public:
     bool hayValesPendientesMarcar(QString nombreConexion);
     QSqlQuery valesPendientes(QString nombreConexion);
     bool borrarValePendiente(QString nombreConexion, int vale);
+    QSqlQuery tickesPorCLiente(QString nombreConexion , QString fechaI , QString fechaF , QString idCliente);
 
 //FUNCIONES USUARIOS
 
