@@ -42,6 +42,7 @@ public:
     bool actualizarArticulosDesdeCompras(QStringList datos);
     bool modificarFotoArticulo(QString foto, QString dato);
 
+
 //FUNCIONES CLIENTES
 
     QSqlQuery ventasClientes(QString nombreConexion , QDate fechaI , QDate fechaF);
@@ -54,6 +55,8 @@ public:
     QSqlQuery valesPendientes(QString nombreConexion);
     bool borrarValePendiente(QString nombreConexion, int vale);
     QSqlQuery tickesPorCLiente(QString nombreConexion , QString fechaI , QString fechaF , QString idCliente);
+    QSqlQuery productosPorClienteCantidad(QString nombreConexion , QString idCliente);
+    QSqlQuery productosPorClienteFecha(QString nombreConexion , QString idCliente);
 
 //FUNCIONES USUARIOS
 

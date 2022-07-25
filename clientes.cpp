@@ -2,27 +2,30 @@
 #include "ui_clientes.h"
 
 #include <QMessageBox>
-#include <QStandardItemModel>
 
 Clientes::Clientes(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Clientes)
 {
     ui->setupUi(this);
+    listaProductos = new QSqlQueryModel;
 
+    listaTickets = new QSqlQueryModel;
+    ticket = new QSqlQueryModel;
+    vistaTickets = new QStandardItemModel;
+    nTicket = "";
     nombreConexionMaster = base.nombreConexionMaster();
     nombreConexionLocal = base.nombreConexionLocal();
     qDebug() << nombreConexionMaster;
     if (!QSqlDatabase::database(nombreConexionMaster).isOpen()) {
-        qDebug() << "MASTER abierta" << nombreConexionMaster;
+        qDebug() << "MASTER cerrada" << nombreConexionMaster;
         ui->pushButtonNuevo->setEnabled(false);
-
-        qDebug() << "MASTER abierta" << nombreConexionMaster;
         ui->pushButtonModificar->setEnabled(false);
-        qDebug() << "MASTER abierta" << nombreConexionMaster;
+        qDebug() << "MASTER cerrada" << nombreConexionMaster;
     }
-    QStringList co = QSqlDatabase::connectionNames();
-    qDebug() << "ConnectoonNames: " << co;
+    listaConexionesRemotas = conf->getNombreConexionesActivas();
+    listaConexionesRemotas.insert(0,nombreConexionLocal);
+    qDebug() << "ConnectionNames: " << listaConexionesRemotas;
     modeloTabla = new QSqlQueryModel;
     recargarTabla();
 
@@ -48,9 +51,7 @@ Clientes::Clientes(QWidget *parent) :
     ui->dateEditDesde->setDate(QDate::currentDate());
     ui->dateEditHasta->setDate(QDate::currentDate());
 
-    listaTickets = new QSqlQueryModel;
-    ticket = new QSqlQueryModel;
-    nTicket = "";
+
 }
 
 Clientes::Clientes(QWidget *parent , QString codigo) :
@@ -165,7 +166,11 @@ void Clientes::refrescarBotones(int i)
 
 void Clientes::cargarCompras()
 {
+    listaTickets->clear();
+    ticket->clear();
     modeloCompras.clear();
+    vistaTickets->clear();
+    listaProductos->clear();
     if (ui->radioButtonMeses->isChecked()) {
         modeloCompras.setQuery("SELECT year(fecha), month(fecha) , sum(total) FROM tienda.tickets where cliente = "+ui->lineEditCod->text()+" group by year(fecha) , month(fecha) order by year(fecha) desc , month(fecha) desc; ",QSqlDatabase::database(nombreConexionLocal));
         modeloCompras.setHeaderData(0,Qt::Horizontal,"Año");
@@ -345,6 +350,7 @@ void Clientes::on_radioButtonAnos_clicked()
 
 void Clientes::on_radioButtonFechas_clicked()
 {
+
     cargarCompras();
 
 }
@@ -369,7 +375,7 @@ void Clientes::on_pushButtonVerProductos_clicked()
 
 void Clientes::on_tableView_clicked(const QModelIndex &index)
 {
-
+    vistaTickets->clear();
     if(ui->radioButtonAnos->isChecked()){
         QModelIndex indice = modeloCompras.index(index.row(),0);
         QString dato = modeloCompras.data(indice,Qt::DisplayRole).toString();
@@ -390,59 +396,65 @@ void Clientes::on_tableView_clicked(const QModelIndex &index)
         fechaF = ui->dateEditHasta->date().toString("yyyy-MM-dd");
     }
     qDebug() << fechaI << "    " << fechaF;
-    //QSqlQueryModel *listaTickets = new QSqlQueryModel;
-    //QSqlQuery listaTickes2 = base.tickesPorCLiente(nombreConexionLocal,fechaI,fechaF,ui->lineEditCod->text());
-    listaTickets->setQuery(base.tickesPorCLiente(nombreConexionLocal,fechaI,fechaF,ui->lineEditCod->text()));
+
+    for (int c = 0 ; c < listaConexionesRemotas.length() ; c++ ) {
+
+    listaTickets->setQuery(base.tickesPorCLiente(listaConexionesRemotas.at(c),fechaI,fechaF,ui->lineEditCod->text()));
     qDebug() << listaTickets->rowCount();
-    QStandardItemModel *vistaTickets = new QStandardItemModel(listaTickets->rowCount(),listaTickets->columnCount());
 
     for (int i = 0;i < listaTickets->rowCount() ; i++) {
+        listaItems.clear();
+
         QStandardItem *itemTicket = new QStandardItem(listaTickets->record(i).value(0).toString());
-        vistaTickets->setItem(i,0,itemTicket);
+        listaItems << itemTicket;
         QString nombreUsusario = listaTickets->record(i).value(1).toString();
         QStandardItem *itemUsuario = new QStandardItem(base.nombreUsusario(nombreUsusario));
-        vistaTickets->setItem(i,1,itemUsuario);
-//        QStandardItem *itemCliente = new QStandardItem(base.nombreCliente(listaTickets->record(i).value(2).toString()));
-//        vistaTickets->setItem(i,2,itemCliente);
+        listaItems << itemUsuario;
+
+
         QStandardItem *itemFecha = new QStandardItem(listaTickets->record(i).value(3).toString());
         QStandardItem *itemHora = new QStandardItem(listaTickets->record(i).value(4).toString());
-        vistaTickets->setItem(i,3,itemFecha);
-        vistaTickets->setItem(i,4,itemHora);
+        listaItems << itemFecha;
+        listaItems << itemHora;
+
         QStandardItem *itemDescuento = new QStandardItem(listaTickets->record(i).value(11).toString());
-        vistaTickets->setItem(i,11,itemDescuento);
+        listaItems << itemDescuento;
+
         QStandardItem *itemTotal = new QStandardItem(listaTickets->record(i).value(12).toString());
-        vistaTickets->setItem(i,12,itemTotal);
+        listaItems << itemTotal;
         QStandardItem *itemFormaPago = new QStandardItem(base.nombreFormaPago(listaTickets->record(i).value(13).toString()));
-        vistaTickets->setItem(i,13,itemFormaPago);
+        listaItems << itemFormaPago;
         QString pagado;
         if (listaTickets->record(i).value(14).toString() == "1") {
             pagado = "Si";
         } else {pagado = "No";
         }
         QStandardItem *itemPagado = new QStandardItem(pagado);
-        vistaTickets->setItem(i,14,itemPagado);
+        listaItems << itemPagado;
         QStandardItem *itemEntrega = new QStandardItem(listaTickets->record(i).value(15).toString());
-        vistaTickets->setItem(i,15,itemEntrega);
+        listaItems << itemEntrega;
         QStandardItem *itemCambio = new QStandardItem(listaTickets->record(i).value(16).toString());
-        vistaTickets->setItem(i,16,itemCambio);
+        listaItems << itemCambio;
+        QStandardItem *itemTienda = new QStandardItem(listaConexionesRemotas.at(c));
+        listaItems << itemTienda;
+        vistaTickets->appendRow(listaItems);
+    }
     }
     QStringList etiquetas;
-    etiquetas << "Ticket" << "Vendedor" << "" << "Fecha" << "Hora" << "" << "" << "" << "" << "" << "" << "Dto" << "Total" << "F. Pago" << "Pagado" << "Entrega" << "Cambio";
+    etiquetas << "Ticket" << "Vendedor" <<  "Fecha" << "Hora" << "Dto" << "Total" << "F. Pago" << "Pagado" << "Entrega" << "Cambio" << "Tienda";
     qDebug() << etiquetas;
     vistaTickets->setHorizontalHeaderLabels(etiquetas);
     ui->tableView2->setModel(vistaTickets);
-    ui->tableView2->hideColumn(2);
-    for (int i = 5; i < 11; ++i) {
-        ui->tableView2->hideColumn(i);
-    }
+    ui->tableView2->setSortingEnabled(true);
+    ui->tableView2->sortByColumn(2,Qt::DescendingOrder);
     ui->tableView2->resizeColumnsToContents();
 }
 
 
 void Clientes::on_tableView2_doubleClicked(const QModelIndex &index)
 {
-    QModelIndex indice = listaTickets->index(index.row(),0);
-    nTicket = listaTickets->data(indice,Qt::EditRole).toString();
+    QModelIndex indice = vistaTickets->index(index.row(),0);
+    nTicket = vistaTickets->data(indice,Qt::EditRole).toString();
     ticket->setQuery("SELECT * FROM lineasticket WHERE nticket = "+nTicket,QSqlDatabase::database("DB"));
 
 
@@ -451,5 +463,26 @@ void Clientes::on_tableView2_doubleClicked(const QModelIndex &index)
     ui->tableViewDetalleTicket->hideColumn(1);
     ui->tableViewDetalleTicket->hideColumn(2);
     ui->tableViewDetalleTicket->resizeColumnsToContents();
+}
+
+
+void Clientes::on_radioButtonCantidad_clicked()
+{
+    listaProductos->clear();
+    qDebug() << "Ver productos";
+    listaProductos->setQuery(base.productosPorClienteCantidad(listaConexionesRemotas.at(0), ui->lineEditCod->text()));
+    listaProductos->lastError().text();
+    ui->tableViewProductos->setModel(listaProductos);
+    ui->tableViewProductos->resizeColumnsToContents();
+}
+
+
+void Clientes::on_radioButtonFecha_clicked()
+{
+    listaProductos->clear();
+    listaProductos->setQuery(base.productosPorClienteFecha(listaConexionesRemotas.at(0), ui->lineEditCod->text()));
+    listaProductos->lastError().text();
+    ui->tableViewProductos->setModel(listaProductos);
+    ui->tableViewProductos->resizeColumnsToContents();
 }
 

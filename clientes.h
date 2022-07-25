@@ -6,6 +6,9 @@
 #include "qdatetime.h"
 
 #include <QDialog>
+#include <QStandardItemModel>
+#include <QList>
+
 
 
 extern Configuracion *conf;
@@ -54,6 +57,11 @@ private slots:
 
     void on_tableView2_doubleClicked(const QModelIndex &index);
 
+
+    void on_radioButtonCantidad_clicked();
+
+    void on_radioButtonFecha_clicked();
+
 private:
     Ui::Clientes *ui;
 
@@ -68,6 +76,13 @@ private:
     QSqlQueryModel *listaTickets;
     QSqlQueryModel *ticket;
     QString nTicket;
+    QStandardItemModel *vistaTickets;
+    QStringList listaConexionesRemotas;
+    QList<QStandardItem*> listaItems;
+    QStandardItemModel *vistaArticulosVendido;
+    QSqlQueryModel *listaProductos;
+
+
 
 
     void recargarTabla();

@@ -576,16 +576,38 @@ bool baseDatos::borrarValePendiente(QString nombreConexion, int vale)
 QSqlQuery baseDatos::tickesPorCLiente(QString nombreConexion, QString fechaI, QString fechaF, QString idCliente)
 {
     QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-//    consulta.exec("SELECT * FROM tickets WHERE cliente = '"+idCliente+"' AND fecha BETWEEN '"+fechaI+"' AND '"+fechaF+"'");
-//    consulta.bindValue(0,idCliente.toUInt());
-//    consulta.bindValue(1,fechaI);
-//    consulta.bindValue(2,fechaF);
+
     if (consulta.exec("SELECT * FROM tickets WHERE cliente = '"+idCliente+"' AND fecha BETWEEN '"+fechaI+"' AND '"+fechaF+"'")) {
         qDebug() << consulta.lastQuery() << consulta.boundValue(0).toString()<< consulta.boundValue(1).toString()<< consulta.boundValue(2).toString();
         consulta.first();
         return consulta;
     }
     qDebug() << consulta.lastError();
+    return consulta;
+}
+
+QSqlQuery baseDatos::productosPorClienteCantidad(QString nombreConexion, QString idCliente)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+    if(!consulta.exec("SELECT cod , descripcion , SUM(cantidad) FROM lineasticket JOIN tickets ON lineasticket.nticket = tickets.ticket "
+                     "AND tickets.cliente = '"+idCliente+"' GROUP BY cod ORDER BY SUM(cantidad) DESC ")){
+        qDebug() << consulta.lastError();
+    }
+    consulta.first();
+    qDebug() << consulta.numRowsAffected();
+    return consulta;
+
+}
+
+QSqlQuery baseDatos::productosPorClienteFecha(QString nombreConexion, QString idCliente)
+{
+    QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+    if(!consulta.exec("SELECT cod , descripcion , cantidad , lineasticket.fecha FROM lineasticket JOIN tickets ON lineasticket.nticket = tickets.ticket"
+                      " AND tickets.cliente = '"+idCliente+"' ORDER BY tickets.fecha DESC  ")){
+        qDebug() << consulta.lastError();
+    }
+    consulta.first();
+    qDebug() << consulta.numRowsAffected();
     return consulta;
 }
 
