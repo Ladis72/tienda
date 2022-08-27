@@ -5,6 +5,10 @@
 #include <QKeyEvent>
 #include "base_datos.h"
 #include "dateeditdelegate.h"
+#include "configuracion.h"
+
+extern Configuracion *conf;
+
 namespace Ui {
 class Stock;
 }
@@ -32,6 +36,8 @@ private:
     QString codProducto;
     QSqlTableModel *modeloLotes;
     int filaSeleccionada;
+    QSqlQuery producto;
+
     void keyPressEvent(QKeyEvent *e);
 };
 

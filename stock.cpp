@@ -7,11 +7,11 @@ Stock::Stock(QString cod ,QWidget *parent) :
 {
     DateEditDelegate *dateDelegate =new DateEditDelegate;
     ui->setupUi(this);
-    QSqlQuery producto(base->consulta_producto("DB",cod));
+    producto = base->consulta_producto(conf->getConexionLocal(),cod);
     producto.first();
     codProducto = producto.value(0).toString();
     ui->label->setText(producto.value(1).toString());
-    modeloLotes = new QSqlTableModel(this,QSqlDatabase::database("DB"));
+    modeloLotes = new QSqlTableModel(this,QSqlDatabase::database(conf->getConexionLocal()));
     modeloLotes->setTable("lotes");
     modeloLotes->setEditStrategy(QSqlTableModel::OnManualSubmit);
     modeloLotes->setFilter("ean = '"+codProducto+"'");

@@ -152,6 +152,7 @@ QSqlDatabase baseDatos::conexion()
 
 QSqlQuery baseDatos::consulta_producto(QString nombreConnexion, QString cod)
 {
+    qDebug() << "Nombre conexion" << nombreConnexion;
     if(QSqlDatabase::database(nombreConnexion).isOpen()){
         QSqlQuery consulta(QSqlDatabase::database(nombreConnexion));
         consulta.exec("SELECT * FROM articulos WHERE cod LIKE '"+cod+"'");
