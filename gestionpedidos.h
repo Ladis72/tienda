@@ -35,6 +35,8 @@ private slots:
 
     void on_pushButtonAceptar_clicked();
 
+    void on_tableView_doubleClicked(const QModelIndex &index);
+
 private:
     Ui::GestionPedidos *ui;
     baseDatos *base;

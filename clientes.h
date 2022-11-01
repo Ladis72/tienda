@@ -1,10 +1,9 @@
 #ifndef CLIENTES_H
 #define CLIENTES_H
 #include "base_datos.h"
-#include "buscarproducto.h"
 #include "configuracion.h"
 #include "qdatetime.h"
-
+#include "buscarproducto.h"
 #include <QDialog>
 #include <QStandardItemModel>
 #include <QList>

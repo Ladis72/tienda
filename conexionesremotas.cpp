@@ -29,6 +29,8 @@ QStringList conexionesRemotas::crear()
 
         conexiones.next();
     }
+
+    qDebug() << "Lista online" << listaConexionesRemotas.size();
     return listaConexionesRemotas;
 
 }
@@ -44,6 +46,7 @@ QStringList conexionesRemotas::lista()
         listaOrdenadoresRemotos.append(tiendas.value("nombre").toString());
         tiendas.next();
     }
+    qDebug() << "Lista ordenadores remotos :" << listaOrdenadoresRemotos;
     return listaOrdenadoresRemotos;
 }
 

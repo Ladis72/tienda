@@ -146,3 +146,9 @@ void GestionPedidos::on_pushButtonAceptar_clicked()
     }
     llenarTablaPedidos();
 }
+
+void GestionPedidos::on_tableView_doubleClicked(const QModelIndex &index)
+{
+    emit on_pushButtonGestionar_clicked();
+}
+
