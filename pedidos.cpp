@@ -41,7 +41,6 @@ QString pedidos::calcularTotalLinea()
     double total = ui->lePvt->text().toDouble()*ui->leUds->text().toDouble()*((100-ui->leDescuento->text().toDouble())/100);
     double venta = (ui->leUds->text().toDouble()+ui->leBon->text().toDouble()) * ui->lePvp->text().toDouble();
     double margen = (venta-total)/venta*100;
-    //int margen = qFloor(1-(costo/ui->lePvp->text().toDouble())*100);
     ui->leMargen->setText(QString::number(margen,'f',2));
     return QString::number(total);
 
