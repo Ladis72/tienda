@@ -1,6 +1,5 @@
 #include "imprimirfactura.h"
-#include "qtrpt.h"
-
+#include <QFile>
 #include <QCoreApplication>
 
 ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent) : QObject(parent)
@@ -47,80 +46,7 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent) : QObject(par
 
         ++i;
     }
-//    QtRPT *informe = new QtRPT();
-//    informe->recordCount.append(modeloTabla->rowCount());
 
-//    QString informeDir = base.devolverDirectorio("factura");
-//    informe->loadReport(informeDir);
-//    connect(informe, &QtRPT::setValue, [&](const int recNo,
-//            const QString paramName,
-//            QVariant &paramValue,
-//            const int reportPage) {
-//        (void) reportPage;
-//        if(paramName == "fecha"){
-//            paramValue = fecha;
-//        }
-//        if(paramName == "cliente"){
-//            paramValue = cliente;
-//        }
-//        if(paramName == "cantidad"){
-//            paramValue = modeloTabla->item(recNo,0)->text();
-//        }
-//        if(paramName == "producto"){
-//            paramValue = modeloTabla->item(recNo,1)->text();
-//        }
-//        if(paramName == "iva"){
-//            paramValue = modeloTabla->item(recNo,3)->text();
-//        }
-//        if(paramName == "precio"){
-//            paramValue = modeloTabla->item(recNo,2)->text();
-//        }
-//        if(paramName == "dto"){
-//            paramValue = modeloTabla->item(recNo,4)->text();
-//        }
-//        if(paramName == "totalLinea"){
-//            paramValue = modeloTabla->item(recNo,5)->text();
-//        }
-//        if(paramName == "nFactura"){
-//            paramValue = ticket;
-//        }
-//        if(paramName == "base21"){
-//            paramValue = base21;
-//        }
-//        if(paramName == "IVA21"){
-//            paramValue = iva21;
-//        }
-//        if(paramName == "base10"){
-//            paramValue = base10;
-//        }
-//        if(paramName == "IVA10"){
-//            paramValue = iva10;
-//        }if(paramName == "base4"){
-//            paramValue = base4;
-//        }
-//        if(paramName == "IVA4"){
-//            paramValue = iva4;
-//        }
-//        if(paramName == "total21"){
-//            paramValue = base21.toDouble()+iva21.toDouble();
-//        }
-//        if(paramName == "total10"){
-//            paramValue = base10.toDouble()+iva10.toDouble();
-//        }
-//        if(paramName == "total4"){
-//            paramValue = base4.toDouble()+iva4.toDouble();
-//        }
-//        if(paramName == "totalBase"){
-//            paramValue = base21.toDouble()+base10.toDouble()+base4.toDouble();
-//        }
-//        if(paramName == "totalIVA"){
-//            paramValue = iva4.toDouble()+iva21.toDouble()+iva10.toDouble();
-//        }
-//        if(paramName == "total"){
-//            paramValue = totalFactura;
-//        }
-//    });
-//    informe->printExec();
     QFile fichero("./documentos/FacturaCliente.html");
     fichero.open(QIODevice::WriteOnly);
     QTextStream pagina(&fichero);
