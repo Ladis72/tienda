@@ -62,18 +62,26 @@ void pedidos::llenarTablaPedido(QString idPedido)
     ui->leIva10->setText(QString::number(base.sumarIvasPedido(idPedido,"10")));
     ui->leIva21->setText(QString::number(base.sumarIvasPedido(idPedido,"21")));
     ui->leIva4->setText(QString::number(base.sumarIvasPedido(idPedido,"4")));
+    ui->leIva5->setText(QString::number(base.sumarIvasPedido(idPedido,"5")));
+    ui->leIva0->setText(QString::number(base.sumarIvasPedido(idPedido,"0")));
+    ui->leRe0->setText(QString::number(base.sumarRePedido(idPedido,"0")));
+    ui->leRe5->setText(QString::number(base.sumarRePedido(idPedido,"5")));
     ui->leRe4->setText(QString::number(base.sumarRePedido(idPedido,"4")));
     ui->leRe10->setText(QString::number(base.sumarRePedido(idPedido,"10")));
     ui->leRe21->setText(QString::number(base.sumarRePedido(idPedido,"21")));
+    ui->leBase0->setText(QString::number(base.sumarBasesPedido(idPedido,"0")));
     ui->leBase4->setText(QString::number(base.sumarBasesPedido(idPedido,"4")));
+    ui->leBase5->setText(QString::number(base.sumarBasesPedido(idPedido,"5")));
     ui->leBase10->setText(QString::number(base.sumarBasesPedido(idPedido,"10")));
     ui->leBase21->setText(QString::number(base.sumarBasesPedido(idPedido,"21")));
+    ui->leTotal0->setText(QString::number(ui->leBase0->text().toDouble()+ui->leIva0->text().toDouble()+ui->leRe0->text().toDouble()));
     ui->leTotal4->setText(QString::number(ui->leBase4->text().toDouble()+ui->leIva4->text().toDouble()+ui->leRe4->text().toDouble()));
+    ui->leTotal5->setText(QString::number(ui->leBase5->text().toDouble()+ui->leIva5->text().toDouble()+ui->leRe5->text().toDouble()));
     ui->leTotal10->setText(QString::number(ui->leBase10->text().toDouble()+ui->leIva10->text().toDouble()+ui->leRe10->text().toDouble()));
     ui->leTotal21->setText(QString::number(ui->leBase21->text().toDouble()+ui->leIva21->text().toDouble()+ui->leRe21->text().toDouble()));
-    ui->leTotalBase->setText(QString::number(ui->leBase4->text().toDouble()+ui->leBase10->text().toDouble()+ui->leBase21->text().toDouble()));
-    ui->leTotalIva->setText(QString::number(ui->leIva4->text().toDouble()+ui->leIva10->text().toDouble()+ui->leIva21->text().toDouble()));
-    ui->leTotalRe->setText(QString::number(ui->leRe4->text().toDouble()+ui->leRe10->text().toDouble()+ui->leRe21->text().toDouble()));
+    ui->leTotalBase->setText(QString::number(ui->leBase0->text().toDouble()+ui->leBase4->text().toDouble()+ui->leBase5->text().toDouble()+ui->leBase10->text().toDouble()+ui->leBase21->text().toDouble()));
+    ui->leTotalIva->setText(QString::number(ui->leIva0->text().toDouble()+ui->leIva4->text().toDouble()+ui->leIva5->text().toDouble()+ui->leIva10->text().toDouble()+ui->leIva21->text().toDouble()));
+    ui->leTotalRe->setText(QString::number(ui->leRe0->text().toDouble()+ui->leRe4->text().toDouble()+ui->leRe5->text().toDouble()+ui->leRe10->text().toDouble()+ui->leRe21->text().toDouble()));
     ui->leTotal->setText(QString::number(ui->leTotalBase->text().toDouble()+ui->leTotalIva->text().toDouble()+ui->leTotalRe->text().toDouble()));
 
 }
@@ -153,6 +161,12 @@ void pedidos::on_pushButtonAnadir_clicked()
             break;
         case 4:
             re = baseTotal*0.5/100;
+            break;
+        case 5:
+            re = baseTotal*0.625/100;
+            break;
+        case 0:
+            re = 0;
             break;
         default:
             re = 0;
@@ -297,7 +311,7 @@ void pedidos::on_pushButtonModificar_clicked()
 
 void pedidos::on_leIva_editingFinished()
 {
-    if (ui->leIva->text() != "4" && ui->leIva->text() != "10" && ui->leIva->text() != "21") {
+    if (ui->leIva->text() != "4" && ui->leIva->text() != "10" && ui->leIva->text() != "21" && ui->leIva->text() != "5" && ui->leIva->text() != "0") {
         QMessageBox::information(this,"Error en el IVA","Ha escrito un IVA diferente de los permitidos");
         ui->leIva->clear();
         ui->leIva->setFocus();
