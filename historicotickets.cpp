@@ -32,7 +32,7 @@ void HistoricoTickets::mostrarTickets()
     horaI = ui->dateTimeEditDesde->time().toString("HH:mm:ss");
     horaF = ui->dateTimeEditHasta->time().toString("HH:mm:ss");
     listaTickets->setQuery("SELECT * FROM tickets WHERE concat_ws('/',fecha,hora) >='"+fechaI+"/"+horaI+"' AND "
-                                                      "concat_ws('/',fecha,hora) <= '"+fechaF+"/"+horaF+"'",QSqlDatabase::database("DB"));
+                                                      "concat_ws('/',fecha,hora) <= '"+fechaF+"/"+horaF+"'",QSqlDatabase::database(conf->getConexionLocal()));
     QStandardItemModel *vistaTickets = new QStandardItemModel(listaTickets->rowCount(),listaTickets->columnCount());
     for (int i = 0; i < listaTickets->rowCount(); ++i) {
         QStandardItem *itemTicket = new QStandardItem(listaTickets->record(i).value(0).toString());
@@ -46,31 +46,31 @@ void HistoricoTickets::mostrarTickets()
         QStandardItem *itemHora = new QStandardItem(listaTickets->record(i).value(4).toString());
         vistaTickets->setItem(i,3,itemFecha);
         vistaTickets->setItem(i,4,itemHora);
-        QStandardItem *itemDescuento = new QStandardItem(listaTickets->record(i).value(11).toString());
-        vistaTickets->setItem(i,11,itemDescuento);
-        QStandardItem *itemTotal = new QStandardItem(listaTickets->record(i).value(12).toString());
-        vistaTickets->setItem(i,12,itemTotal);
-        QStandardItem *itemFormaPago = new QStandardItem(base.nombreFormaPago(listaTickets->record(i).value(13).toString()));
-        vistaTickets->setItem(i,13,itemFormaPago);
+        QStandardItem *itemDescuento = new QStandardItem(listaTickets->record(i).value(15).toString());
+        vistaTickets->setItem(i,15,itemDescuento);
+        QStandardItem *itemTotal = new QStandardItem(listaTickets->record(i).value(16).toString());
+        vistaTickets->setItem(i,16,itemTotal);
+        QStandardItem *itemFormaPago = new QStandardItem(base.nombreFormaPago(listaTickets->record(i).value(17).toString()));
+        vistaTickets->setItem(i,17,itemFormaPago);
         QString pagado;
-        if (listaTickets->record(i).value(14).toString() == "1") {
+        if (listaTickets->record(i).value(18).toString() == "1") {
             pagado = "Si";
         } else {pagado = "No";
         }
         QStandardItem *itemPagado = new QStandardItem(pagado);
-        vistaTickets->setItem(i,14,itemPagado);
-        QStandardItem *itemEntrega = new QStandardItem(listaTickets->record(i).value(15).toString());
-        vistaTickets->setItem(i,15,itemEntrega);
-        QStandardItem *itemCambio = new QStandardItem(listaTickets->record(i).value(16).toString());
-        vistaTickets->setItem(i,16,itemCambio);
+        vistaTickets->setItem(i,18,itemPagado);
+        QStandardItem *itemEntrega = new QStandardItem(listaTickets->record(i).value(19).toString());
+        vistaTickets->setItem(i,19,itemEntrega);
+        QStandardItem *itemCambio = new QStandardItem(listaTickets->record(i).value(20).toString());
+        vistaTickets->setItem(i,20,itemCambio);
 
     }
     QStringList etiquetas;
-    etiquetas << "Ticket" << "Vendedor" << "Cliente" << "Fecha" << "Hora" << "" << "" << "" << "" << "" << "" << "Dto" << "Total" << "F. Pago" << "Pagado" << "Entrega" << "Cambio";
+    etiquetas << "Ticket" << "Vendedor" << "Cliente" << "Fecha" << "Hora" << "" << "" << "" << "" << "" << "" << "" << "" << "" << "" << "Dto" << "Total" << "F. Pago" << "Pagado" << "Entrega" << "Cambio";
     qDebug() << etiquetas;
     vistaTickets->setHorizontalHeaderLabels(etiquetas);
     ui->tableViewTickets->setModel(vistaTickets);
-    for (int i = 5; i < 11; ++i) {
+    for (int i = 5; i < 15; ++i) {
         ui->tableViewTickets->hideColumn(i);
     }
     ui->tableViewTickets->resizeColumnsToContents();

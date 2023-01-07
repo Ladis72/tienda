@@ -1436,24 +1436,24 @@ bool baseDatos::pasarLineaPedidoAHistorico(QStringList datos)
     return false;
 }
 
-QSqlQuery baseDatos::ventas(QString fecha)
+QSqlQuery baseDatos::ventas(QString fecha, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT sum(total) , fpago FROM tickets WHERE fecha = '"+fecha+"' group by fecha , fpago");
     return consulta;
 }
 
-QSqlQuery baseDatos::ventasPorUsusario(QString fecha)
+QSqlQuery baseDatos::ventasPorUsusario(QString fecha, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT sum(total) , usuario FROM tickets WHERE fecha = '"+fecha+"' group by fecha , usuario");
     return consulta;
 }
 
 
-QSqlQuery baseDatos::ventasDesdeUltimoArqueo(QString fechaI, QString horaI, QString tabla)
+QSqlQuery baseDatos::ventasDesdeUltimoArqueo(QString fechaI, QString horaI, QString tabla, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT sum(total) , fpago FROM "+tabla+" WHERE concat_ws('/',fecha , hora) >= '"+fechaI+"/"+horaI+"' group by fpago");
     consulta.first();
     return consulta;
@@ -1479,9 +1479,9 @@ bool baseDatos::grabarArqueo(QStringList datos)
     return false;
 }
 
-QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF, QString tabla)
+QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF, QString tabla, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("SELECT fecha , SUM(total) FROM "+tabla+" WHERE fecha >= ? AND fecha <= ? GROUP BY fecha");
     consulta.bindValue(0,fechaI);
     consulta.bindValue(1,FechaF);

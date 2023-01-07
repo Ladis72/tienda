@@ -24,7 +24,7 @@ void ListadoVentas::on_pushButtonVer_clicked()
     modeloTabla->clear();
     fechaF = ui->dateEditHasta->text();
     fechaI = ui->dateEditDesde->text();
-    QSqlQuery ventasA = base->ventasEntreFechas(fechaI,fechaF,"tickets");
+    QSqlQuery ventasA = base->ventasEntreFechas(fechaI,fechaF,"tickets", conf->getConexionLocal());
     int i = 0;
     while (ventasA.next()) {
         QStandardItem *itemFecha = new QStandardItem(ventasA.value(0).toString());
@@ -35,7 +35,7 @@ void ListadoVentas::on_pushButtonVer_clicked()
     }
     for (int i = 0; i < modeloTabla->rowCount(); ++i) {
         QString fecha = modeloTabla->item(i,0)->text();
-        QSqlQuery ventasB = base->ventasEntreFechas(fecha,fecha,"ticketss");
+        QSqlQuery ventasB = base->ventasEntreFechas(fecha,fecha,"ticketss", conf->getConexionLocal());
         ventasB.first();
         QStandardItem *itemVentas = new QStandardItem(ventasB.value(1).toString());
         modeloTabla->setItem(i,2,itemVentas);
@@ -57,7 +57,7 @@ void ListadoVentas::on_tableView_activated(const QModelIndex &index)
 
     QModelIndex indice = modeloTabla->index(index.row(),0);
     QString fecha = modeloTabla->data(indice,Qt::DisplayRole).toString();
-    QSqlQuery ventasFormaPago = base->ventas(fecha);
+    QSqlQuery ventasFormaPago = base->ventas(fecha, conf->getConexionLocal());
 
     QStandardItemModel *modeloFPago = new QStandardItemModel;
     int i = 0;
@@ -74,7 +74,7 @@ void ListadoVentas::on_tableView_activated(const QModelIndex &index)
     ui->tableViewFPago->setModel(modeloFPago);
 
     QStandardItemModel *modeloUsuario = new QStandardItemModel;
-    QSqlQuery ventasPorUsusario = base->ventasPorUsusario(fecha);
+    QSqlQuery ventasPorUsusario = base->ventasPorUsusario(fecha, conf->getConexionLocal());
     i=0;
     while (ventasPorUsusario.next()) {
         QString usuario = base->nombreUsusario(ventasPorUsusario.value(1).toString());

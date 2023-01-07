@@ -6,6 +6,7 @@
 #include "imprimirticket.h"
 #include "imprimirfactura.h"
 
+extern Configuracion *conf;
 namespace Ui {
 class HistoricoTickets;
 }
