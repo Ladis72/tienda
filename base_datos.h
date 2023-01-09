@@ -124,12 +124,12 @@ public:
     QStringList datosFactura(QSqlDatabase db, QString nFactura);
 
 //Funciones CAJAS
-    QSqlQuery ventas(QString fecha);
+    QSqlQuery ventas(QString fecha, QString base);
     QSqlQuery ventasPorUsusario(QString fecha);
     QSqlQuery ventasDesdeUltimoArqueo(QString fechaI, QString horaI, QString tabla, QString base);
     QSqlQuery recuperarDatosUltimoArqueo();
     bool grabarArqueo(QStringList datos);
-    QSqlQuery ventasEntreFechas(QString fechaI , QString FechaF, QString tabla);
+    QSqlQuery ventasEntreFechas(QString fechaI , QString FechaF, QString tabla, QString base);
     int nTarjetasDesdeUltimoArqueo(QString fechaI , QString horaI);
 //Funciones GENERALISTAS
     QSqlQuery devolverTablaCompleta(QString nombreTabla);
