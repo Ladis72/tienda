@@ -4,7 +4,9 @@
 #include <QDialog>
 #include <QScreen>
 #include "base_datos.h"
+#include "configuracion.h"
 
+extern Configuracion *conf;
 namespace Ui {
 class VisorFacturas;
 }

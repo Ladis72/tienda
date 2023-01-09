@@ -4,6 +4,9 @@
 #include <QDialog>
 #include "base_datos.h"
 #include "cambiodatosproducto.h"
+#include "configuracion.h"
+
+extern Configuracion *conf;
 
 namespace Ui {
 class AceptarPedido;

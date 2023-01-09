@@ -461,7 +461,7 @@ void Articulos::on_lineEditCod_returnPressed()
         }
     }
         qDebug() << "MAL";
-        QString cod = base.codigoDesdeAux(ui->lineEditCod->text());
+        QString cod = base.codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
         consulta = base.consulta_producto(conf->getConexionLocal(),cod);
         consulta.first();
         if (consulta.numRowsAffected() == 1) {
@@ -621,7 +621,7 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index)
     if(ui->radioButtonFacturas->isChecked()){
     QModelIndex indice=modeloCompras.index(index.row(),1);
     idProveedor = modeloCompras.data(indice,Qt::EditRole).toString();
-    ui->labelProveedor->setText(base.nombreProveedor(idProveedor));
+    ui->labelProveedor->setText(base.nombreProveedor(idProveedor,conf->getConexionLocal()));
     indice = modeloCompras.index(index.row(),0);
     nFactura = modeloCompras.data(indice,Qt::EditRole).toString();
     }
@@ -629,7 +629,7 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index)
 
 void Articulos::on_pushButtonEtiqueta_clicked()
 {
-    base.insertarEtiqueta(ui->lineEditCod->text());
+    base.insertarEtiqueta(conf->getConexionLocal(), ui->lineEditCod->text());
 }
 
 void Articulos::on_pushButtonCaducados_clicked()

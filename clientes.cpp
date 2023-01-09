@@ -408,7 +408,7 @@ void Clientes::on_tableView_clicked(const QModelIndex &index)
         QStandardItem *itemTicket = new QStandardItem(listaTickets->record(i).value(0).toString());
         listaItems << itemTicket;
         QString nombreUsusario = listaTickets->record(i).value(1).toString();
-        QStandardItem *itemUsuario = new QStandardItem(base.nombreUsusario(nombreUsusario));
+        QStandardItem *itemUsuario = new QStandardItem(base.nombreUsusario(nombreUsusario, conf->getConexionLocal()));
         listaItems << itemUsuario;
 
 
@@ -422,7 +422,7 @@ void Clientes::on_tableView_clicked(const QModelIndex &index)
 
         QStandardItem *itemTotal = new QStandardItem(listaTickets->record(i).value(12).toString());
         listaItems << itemTotal;
-        QStandardItem *itemFormaPago = new QStandardItem(base.nombreFormaPago(listaTickets->record(i).value(13).toString()));
+        QStandardItem *itemFormaPago = new QStandardItem(base.nombreFormaPago(listaTickets->record(i).value(13).toString(),conf->getConexionLocal()));
         listaItems << itemFormaPago;
         QString pagado;
         if (listaTickets->record(i).value(14).toString() == "1") {

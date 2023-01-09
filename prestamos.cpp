@@ -44,10 +44,10 @@ void Prestamos::on_lineEditCod_textChanged(const QString &arg1)
 
 void Prestamos::on_lineEditEan_returnPressed()
 {
-    consulta = base->consulta_producto("DB",ui->lineEditEan->text());
+    consulta = base->consulta_producto(conf->getConexionLocal(), ui->lineEditEan->text());
     consulta.first();
     if (!consulta.isValid()) {
-        QString cod = base->codigoDesdeAux(ui->lineEditEan->text());
+        QString cod = base->codigoDesdeAux(conf->getConexionLocal(), ui->lineEditEan->text());
         consulta = base->consulta_producto("DB",cod);
         consulta.first();
     }
@@ -60,7 +60,7 @@ void Prestamos::on_lineEditEan_returnPressed()
 
 void Prestamos::on_pushButtonProcesar_clicked()
 {
-    QString idLote = base->idLote(ui->lineEditEan->text(),"",ui->dateEdit->text());
+    QString idLote = base->idLote(conf->getConexionLocal(), ui->lineEditEan->text(),"",ui->dateEdit->text());
     if (idLote == "0" && ui->spinBox->value() < 0) {
         QMessageBox msgBox;
         msgBox.setText("Parece que no hay en el almacen un producto con esos datos");
@@ -77,7 +77,7 @@ void Prestamos::on_pushButtonProcesar_clicked()
         }
     }
     QSqlQuery datosLote;
-    datosLote = base->ejecutarSentencia("SELECT cantidad FROM lotes WHERE id ='"+idLote+"'");
+    datosLote = base->ejecutarSentencia("SELECT cantidad FROM lotes WHERE id ='"+idLote+"'", conf->getConexionLocal());
     datosLote.first();
     int resto = datosLote.record().value("cantidad").toInt() - ui->spinBox->value();
     if (resto < 0 && ui->spinBox->value() < 0) {
@@ -106,12 +106,12 @@ void Prestamos::on_pushButtonProcesar_clicked()
     qDebug() << datos;
     if (datos.at(4) < 0) {
         base->descontarArticulo(datos.at(0),abs(datos.at(4).toInt()));
-    } else {QString idLote = base->idLote(datos.at(0),"",ui->dateEdit->date().toString("yyyy-MM-dd"));
+    } else {QString idLote = base->idLote(conf->getConexionLocal(), datos.at(0),"",ui->dateEdit->date().toString("yyyy-MM-dd"));
         if (idLote != "0") {
-            base->aumentarLote(idLote,datos.at(4).toInt());
+            base->aumentarLote(conf->getConexionLocal(), idLote,datos.at(4).toInt());
             qDebug() << "Error al aumentar lote especificado";
         }else{
-            base->crearLote(datos.at(0),"",ui->dateEdit->date().toString("yyyy-MM-dd"),datos.at(4));
+            base->crearLote(conf->getConexionLocal(), datos.at(0),"",ui->dateEdit->date().toString("yyyy-MM-dd"),datos.at(4));
         }
     }
     base->insertarEnTabla(QSqlDatabase::database("DB"),"prestamos",datos);
@@ -120,7 +120,7 @@ void Prestamos::on_pushButtonProcesar_clicked()
 
 void Prestamos::on_lineEditDescripcion_returnPressed()
 {
-    consulta = base->buscarEnTabla(QSqlDatabase::database("DB"),"articulos","descripcion",ui->lineEditDescripcion->text());
+    consulta = base->buscarEnTabla(QSqlDatabase::database(conf->getConexionLocal()),"articulos","descripcion",ui->lineEditDescripcion->text());
     consulta.first();
     BuscarProducto *buscar = new BuscarProducto(this,consulta);
     buscar->exec();

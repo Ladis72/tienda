@@ -32,39 +32,39 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
 
 
         // Buscar si hay lotes con unidades pendientes
-        QString idLote = base->idLote(mTablaEntradas->record(i).value(1).toString(),"","2000-01-01");
+        QString idLote = base->idLote(conf->getConexionLocal(), mTablaEntradas->record(i).value(1).toString(),"","2000-01-01");
         qDebug() << "IDLOTE "+ idLote;
         if (idLote != "0") {
-            int pendientes = base->unidadesLote(idLote);
+            int pendientes = base->unidadesLote(conf->getConexionLocal(),idLote);
             qDebug() << "Hay lotes pendientes";
             qDebug() << "Lotes PENDIENTES "+pendientes;
             if(abs(pendientes) > uds.toInt() ){
                 qDebug() << "Hay mas pendientes que entradas";
-                base->aumentarLote(idLote,uds.toInt());
+                base->aumentarLote(conf->getConexionLocal(),idLote,uds.toInt());
             }else if (abs(pendientes) == uds.toInt()) {
                 qDebug() << "Hay los mismos pendientes que entradas";
-                base->ejecutarSentencia("DELETE FROM lotes WHERE id = '"+idLote+"'");
+                base->ejecutarSentencia("DELETE FROM lotes WHERE id = '"+idLote+"'", conf->getConexionLocal());
             }else {
                 qDebug() << "Hay mas entradas que pendientes";
-                base->ejecutarSentencia("DELETE FROM lotes WHERE id = '"+idLote+"'");
+                base->ejecutarSentencia("DELETE FROM lotes WHERE id = '"+idLote+"'", conf->getConexionLocal());
                 qDebug() << "ENTRADAS: "+uds;
                 qDebug() << "PENDIENTES: "+pendientes;
                 int unidades = uds.toInt()+pendientes;
                 qDebug() << "DIFERENCIA: "+unidades;
 
-                idLote = base->idLote(cod,"",fechaCaducidad);
+                idLote = base->idLote(conf->getConexionLocal(),cod,"",fechaCaducidad);
                 if (idLote == "0") {
-                    base->crearLote(cod,"",fechaCaducidad,QString::number(unidades));
+                    base->crearLote(conf->getConexionLocal(), cod,"",fechaCaducidad,QString::number(unidades));
                 }else {
-                    base->aumentarLote(idLote,unidades);
+                    base->aumentarLote(conf->getConexionLocal(), idLote,unidades);
                 }
             }
         }else {
-            idLote = base->idLote(cod,"",fechaCaducidad);
+            idLote = base->idLote(conf->getConexionLocal(), cod,"",fechaCaducidad);
             if (idLote == "0") {
-                base->crearLote(cod,"",fechaCaducidad,uds);
+                base->crearLote(conf->getConexionLocal(), cod,"",fechaCaducidad,uds);
             }else {
-                base->aumentarLote(idLote,uds.toInt());
+                base->aumentarLote(conf->getConexionLocal(), idLote,uds.toInt());
             }
         }
 
@@ -77,14 +77,14 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
     QString precioAnterior = cambios.value("pvp").toString();
     QString descripcionAnterior = cambios.value("descripcion").toString();
     if(!(precio == precioAnterior && descripcion == descripcionAnterior)){
-      QSqlQuery tmp = base->ejecutarSentencia("UPDATE articulos SET descripcion = '"+descripcion+"' , pvp = "+precio+" WHERE cod = '"+codigo+"'");
+      QSqlQuery tmp = base->ejecutarSentencia("UPDATE articulos SET descripcion = '"+descripcion+"' , pvp = "+precio+" WHERE cod = '"+codigo+"'", conf->getConexionLocal());
       qDebug() << tmp.lastError();
     }
     }
     QSqlQuery tmp = base->ejecutarSentencia("INSERT INTO entradaGenero (cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp , idTienda) "
                                             "SELECT entradaGenero_tmp.cod, entradaGenero_tmp.fechaEntrada, entradaGenero_tmp.descripcion, entradaGenero_tmp.cantidad, entradaGenero_tmp.fechaCaducidad, entradaGenero_tmp.pvp , entradaGenero_tmp.idTienda"
-                                                      " FROM entradaGenero_tmp WHERE entradaGenero_tmp.idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxProcedencia->currentText())));
-    base->ejecutarSentencia("DELETE FROM entradaGenero_tmp WHERE idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxProcedencia->currentText())));
+                                                      " FROM entradaGenero_tmp WHERE entradaGenero_tmp.idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxProcedencia->currentText())),conf->getConexionLocal());
+    base->ejecutarSentencia("DELETE FROM entradaGenero_tmp WHERE idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxProcedencia->currentText())), conf->getConexionLocal());
     actualizarTabla();
 }
 
@@ -112,7 +112,7 @@ void EntradaMercancia::on_lineEditCod_returnPressed()
     consulta = base->consulta_producto("DB",ui->lineEditCod->text());
     consulta.first();
     if(!consulta.isValid()){
-        QString cod = base->codigoDesdeAux(ui->lineEditCod->text());
+        QString cod = base->codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
         consulta = base->consulta_producto("DB",cod);
         consulta.first();
     }
@@ -179,7 +179,7 @@ void EntradaMercancia::on_lineEditDesc_returnPressed()
 void EntradaMercancia::on_pushButtonBorrar_clicked()
 {
     if (!codSeleccionado.isEmpty()) {
-        QSqlQuery tmp =base->ejecutarSentencia("DELETE FROM entradaGenero_tmp WHERE id = '"+codSeleccionado+"'");
+        QSqlQuery tmp =base->ejecutarSentencia("DELETE FROM entradaGenero_tmp WHERE id = '"+codSeleccionado+"'", conf->getConexionLocal());
         qDebug() << tmp.lastError();
     }
     actualizarTabla();

@@ -7,9 +7,7 @@ GestionPedidos::GestionPedidos(QWidget *parent) :
     ui(new Ui::GestionPedidos)
 {
     ui->setupUi(this);
-    pedidoSeleccionado.clear();
-    docSeleccionado.clear();
-    fecha.clear();
+    borrarVariables();
     llenarTablaPedidos();
 
 }
@@ -29,7 +27,7 @@ void GestionPedidos::on_pushButtonNuevo_clicked()
 void GestionPedidos::llenarTablaPedidos()
 {
     listaPedidos.clear();
-    QSqlQuery consultaPedidos = base->recuperarPedidos();
+    QSqlQuery consultaPedidos = base->recuperarPedidos(conf->getConexionLocal());
     consultaPedidos.first();
     QList<QStandardItem*> listaItems;
     for (int i = 0; i < consultaPedidos.numRowsAffected(); i++) {
@@ -38,25 +36,25 @@ void GestionPedidos::llenarTablaPedidos()
         //qDebug() << idPedido;
         QStandardItem *itemId = new QStandardItem(idPedido);
         listaItems.append(itemId);
-        QStandardItem *itemProveedor = new QStandardItem(base->nombreProveedor(consultaPedidos.value(1).toString()));
+        QStandardItem *itemProveedor = new QStandardItem(base->nombreProveedor(consultaPedidos.value(1).toString(),conf->getConexionLocal()));
         listaItems.append(itemProveedor);
         QStandardItem *itemAlbaran = new QStandardItem(consultaPedidos.value(2).toString());
         listaItems.append(itemAlbaran);
         QStandardItem *itemFecha = new QStandardItem(consultaPedidos.value(3).toString());
         listaItems.append(itemFecha);
-        QStandardItem *itemLineas = new QStandardItem(QString::number(base->contarLineas("lineaspedido_tmp","idPedido",idPedido)));
+        QStandardItem *itemLineas = new QStandardItem(QString::number(base->contarLineas("lineaspedido_tmp",conf->getConexionLocal(), "idPedido",idPedido)));
         listaItems.append(itemLineas);
-        float articulos = base->sumarColumna("lineaspedido_tmp","cantidad","idPedido",idPedido);
-        float bonificacion = base->sumarColumna("lineaspedido_tmp","bonificacion","idPedido",idPedido);
+        float articulos = base->sumarColumna(conf->getConexionLocal(),"lineaspedido_tmp","cantidad","idPedido",idPedido);
+        float bonificacion = base->sumarColumna(conf->getConexionLocal(),"lineaspedido_tmp","bonificacion","idPedido",idPedido);
         QStandardItem *itemArticulos = new QStandardItem(QString::number(articulos+bonificacion));
         listaItems.append(itemArticulos);
-        float baseArticulos = base->sumarColumna("lineaspedido_tmp","totalbase","idPedido",idPedido);
+        float baseArticulos = base->sumarColumna(conf->getConexionLocal(),"lineaspedido_tmp","totalbase","idPedido",idPedido);
         QStandardItem *itemBase = new QStandardItem(QString::number(baseArticulos));
         listaItems.append(itemBase);
-        float iva = base->sumarColumna("lineaspedido_tmp","iva","idPedido",idPedido);
+        float iva = base->sumarColumna(conf->getConexionLocal(), "lineaspedido_tmp","iva","idPedido",idPedido);
         QStandardItem *itemIva = new QStandardItem(QString::number(iva));
         listaItems.append(itemIva);
-        float re = base->sumarColumna("lineaspedido_tmp","re","idPedido",idPedido);
+        float re = base->sumarColumna(conf->getConexionLocal(), "lineaspedido_tmp","re","idPedido",idPedido);
         QStandardItem *itemRe = new QStandardItem(QString::number(re));
         listaItems.append(itemRe);
         QStandardItem *itemTotal = new QStandardItem(QString::number(baseArticulos+iva+re));
@@ -125,6 +123,13 @@ void GestionPedidos::on_pushButtonGestionar_clicked()
     pedidos *gestPedido = new pedidos(pedidoSeleccionado, proveedor,docSeleccionado,this);
     gestPedido->exec();
     llenarTablaPedidos();
+}
+
+void GestionPedidos::borrarVariables()
+{
+    pedidoSeleccionado.clear();
+    docSeleccionado.clear();
+    fecha.clear();
 }
 
 

@@ -32,6 +32,7 @@ private slots:
 
     void on_pushButtonGestionar_clicked();
 
+    void borrarVariables();
 
     void on_pushButtonAceptar_clicked();
 

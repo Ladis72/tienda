@@ -173,13 +173,14 @@ void Cajas::actualizarEfectivo()
 
 bool Cajas::recuperarDatosUltimoArqueo()
 {
-    QSqlQuery resultado = base->recuperarDatosUltimoArqueo();
+    QSqlQuery resultado = base->recuperarDatosUltimoArqueo(conf->getConexionLocal());
     resultado.last();
     fechaUltimoArqueo = resultado.value("fecha").toString();
     horaUltimoArqueo = resultado.value("hora").toString();
     saldoAnterior = resultado.value("efectivoReal").toDouble();
     ui->labelFUArqueo->setText(fechaUltimoArqueo+" "+horaUltimoArqueo);
     ui->labelSaldoAnterior->setText(QString::number(saldoAnterior));
+    return true;
 }
 
 void Cajas::ventas()
@@ -194,7 +195,7 @@ void Cajas::ventas()
 
     ventasTarjeta = resultado.value(0).toDouble();
     ui->label_ventasTarjeta->setText(QString::number(ventasTarjeta));
-    nTarjetas = base->nTarjetasDesdeUltimoArqueo(fechaUltimoArqueo,horaUltimoArqueo);
+    nTarjetas = base->nTarjetasDesdeUltimoArqueo(fechaUltimoArqueo,horaUltimoArqueo,conf->getConexionLocal());
     ui->labelNumeroTarjetas->setText(QString::number(nTarjetas));
     resultado = base->ventasDesdeUltimoArqueo(fechaUltimoArqueo,horaUltimoArqueo,"ticketss",conf->getConexionLocal());
     resultado.first();
@@ -208,7 +209,7 @@ void Cajas::ventas()
 
 void Cajas::ES()
 {
-    salidas = base->ESdesdeFecha(fechaUltimoArqueo,horaUltimoArqueo);
+    salidas = base->ESdesdeFecha(fechaUltimoArqueo,horaUltimoArqueo,conf->getConexionLocal());
     ui->labelEntradas->setText(QString::number(salidas));
     if(salidas < 0){
         ui->labelEntradas->setStyleSheet("color:red");
@@ -262,7 +263,7 @@ void Cajas::on_pushButtonAceptar_clicked()
     int resp = MsgBox->exec();
     switch (resp) {
     case QMessageBox::Save:
-        if(!base->grabarArqueo(datos)){
+        if(!base->grabarArqueo(datos, conf->getConexionLocal())){
             MsgBox->setText("ERROR");
             MsgBox->setInformativeText("No se ha podido grabar la información.");
 

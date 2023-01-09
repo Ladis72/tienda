@@ -4,6 +4,9 @@
 #include <QDialog>
 #include "base_datos.h"
 #include "buscarproveedor.h"
+#include "configuracion.h"
+
+extern Configuracion *conf;
 
 
 namespace Ui {

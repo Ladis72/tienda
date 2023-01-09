@@ -38,7 +38,7 @@ void HistoricoTickets::mostrarTickets()
         QStandardItem *itemTicket = new QStandardItem(listaTickets->record(i).value(0).toString());
         vistaTickets->setItem(i,0,itemTicket);
         QString nombreUsusario = listaTickets->record(i).value(1).toString();
-        QStandardItem *itemUsuario = new QStandardItem(base.nombreUsusario(nombreUsusario));
+        QStandardItem *itemUsuario = new QStandardItem(base.nombreUsusario(nombreUsusario, conf->getConexionLocal()));
         vistaTickets->setItem(i,1,itemUsuario);
         QStandardItem *itemCliente = new QStandardItem(base.nombreCliente(listaTickets->record(i).value(2).toString()));
         vistaTickets->setItem(i,2,itemCliente);
@@ -50,7 +50,7 @@ void HistoricoTickets::mostrarTickets()
         vistaTickets->setItem(i,15,itemDescuento);
         QStandardItem *itemTotal = new QStandardItem(listaTickets->record(i).value(16).toString());
         vistaTickets->setItem(i,16,itemTotal);
-        QStandardItem *itemFormaPago = new QStandardItem(base.nombreFormaPago(listaTickets->record(i).value(17).toString()));
+        QStandardItem *itemFormaPago = new QStandardItem(base.nombreFormaPago(listaTickets->record(i).value(17).toString(), conf->getConexionLocal()));
         vistaTickets->setItem(i,17,itemFormaPago);
         QString pagado;
         if (listaTickets->record(i).value(18).toString() == "1") {
@@ -119,7 +119,7 @@ void HistoricoTickets::on_pushButtonFormaPago_clicked()
         if (idFormaPago == "") {
             return;
         }
-        QSqlQuery consulta = base.ejecutarSentencia("UPDATE tickets SET fpago ='"+FP->resultado+"' WHERE ticket = '"+nTicket+"'");
+        QSqlQuery consulta = base.ejecutarSentencia("UPDATE tickets SET fpago ='"+FP->resultado+"' WHERE ticket = '"+nTicket+"'", conf->getConexionLocal());
         qDebug() << consulta.lastError();
     mostrarTickets();
     }

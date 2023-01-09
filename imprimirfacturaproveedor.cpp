@@ -45,7 +45,7 @@ imprimirFacturaProveedor::imprimirFacturaProveedor(QString tienda, QStringList c
 
 //Datos tabla
         pagina << "<tbody>";
-    QSqlQuery consulta = base->ejecutarSentencia("SELECT * FROM lineaspedido WHERE nDocumento = '"+idFactura+"'");
+    QSqlQuery consulta = base->ejecutarSentencia("SELECT * FROM lineaspedido WHERE nDocumento = '"+idFactura+"'", conf->getConexionLocal());
     consulta.first();
     for (int i = 0 ;i < consulta.numRowsAffected() ;i++ ) {
         pagina << "<tr class='table-primary'>";

@@ -25,7 +25,7 @@ void Salidas::on_lineEditCod_returnPressed()
     consulta = base->consulta_producto("DB",ui->lineEditCod->text());
     consulta.first();
     if (!consulta.isValid()) {
-        QString cod = base->codigoDesdeAux(ui->lineEditCod->text());
+        QString cod = base->codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
         consulta = base->consulta_producto("DB",cod);
         consulta.first();
     }
@@ -80,7 +80,7 @@ void Salidas::llenarComboTiendas()
 
 void Salidas::on_pushButtonAgregar_clicked()
 {
-    QString idLote = base->idLote(ui->lineEditCod->text(),"",ui->dateEditFC->text());
+    QString idLote = base->idLote(conf->getConexionLocal(), ui->lineEditCod->text(),"",ui->dateEditFC->text());
     if (idLote == "0") {
         QMessageBox msgBox;
         msgBox.setText("Parece que no hay en el almacen un producto con esos datos");
@@ -97,7 +97,7 @@ void Salidas::on_pushButtonAgregar_clicked()
         }
     }
     QSqlQuery datosLote;
-    datosLote = base->ejecutarSentencia("SELECT cantidad FROM lotes WHERE id ='"+idLote+"'");
+    datosLote = base->ejecutarSentencia("SELECT cantidad FROM lotes WHERE id ='"+idLote+"'", conf->getConexionLocal());
     datosLote.first();
     int resto = datosLote.record().value("cantidad").toInt() - ui->lineEditCantidad->text().toInt();
     if (resto < 0) {
@@ -172,20 +172,20 @@ void Salidas::on_pushButtonEnviar_clicked()
         idTienda = mTablaSalidas->record(i).value(7).toString();
 
         base->disminuirLote(cod,fechaCaducidad,uds);
-        QSqlQuery tmp = base->ejecutarSentencia("UPDATE articulos SET descripcion = '"+descripcion+"' , pvp = "+pvp+" WHERE cod = '"+cod+"'");
+        QSqlQuery tmp = base->ejecutarSentencia("UPDATE articulos SET descripcion = '"+descripcion+"' , pvp = "+pvp+" WHERE cod = '"+cod+"'", conf->getConexionLocal());
 
     }
     QSqlQuery tmp = base->ejecutarSentencia("INSERT INTO salidaGenero (cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp , idTienda) "
                                   "SELECT salidaGenero_tmp.cod, salidaGenero_tmp.fechaEntrada, salidaGenero_tmp.descripcion, salidaGenero_tmp.cantidad, salidaGenero_tmp.fechaCaducidad, salidaGenero_tmp.pvp , salidaGenero_tmp.idTienda"
-                                            " FROM salidaGenero_tmp WHERE salidaGenero_tmp.idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxDestino->currentText())));
-    base->ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxDestino->currentText())));
+                                            " FROM salidaGenero_tmp WHERE salidaGenero_tmp.idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxDestino->currentText())),conf->getConexionLocal());
+    base->ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE idTienda = "+QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),ui->comboBoxDestino->currentText())), conf->getConexionLocal());
     actualizarTabla();
 }
 
 void Salidas::on_pushButtonBorrar_clicked()
 {
     if (!codSeleccionado.isEmpty()) {
-        QSqlQuery tmp =base->ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE id = '"+codSeleccionado+"'");
+        QSqlQuery tmp =base->ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE id = '"+codSeleccionado+"'", conf->getConexionLocal());
         qDebug() << tmp.lastError();
     }
     actualizarTabla();

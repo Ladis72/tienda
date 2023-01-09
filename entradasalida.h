@@ -3,7 +3,10 @@
 
 #include <QDialog>
 #include "base_datos.h"
+#include "configuracion.h"
 #include "tiposentradassalidas.h"
+
+extern Configuracion *conf;
 
 namespace Ui {
 class EntradaSalida;

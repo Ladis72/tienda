@@ -25,7 +25,7 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent) : QObject(par
     double totalIVAS = consulta.value(10).toDouble()+consulta.value(8).toDouble()+consulta.value(6).toDouble();
     totalFactura = consulta.value(12).toString();
     cliente = base.etiquetaCliente(idCliente);
-    fPago = base.nombreFormaPago(consulta.value(13).toString());
+    fPago = base.nombreFormaPago(consulta.value(13).toString(), conf->getConexionLocal());
     consulta = base.consultarLineasTicket(ticket);
     int i = 0;
     modeloTabla = new QStandardItemModel();

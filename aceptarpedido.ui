@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>796</width>
-    <height>272</height>
+    <height>363</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -123,17 +123,17 @@
    </item>
    <item row="2" column="1">
     <layout class="QGridLayout" name="gridLayout">
-     <item row="1" column="1">
-      <widget class="QLineEdit" name="leBase21">
+     <item row="7" column="2">
+      <widget class="QLineEdit" name="leTotalIva">
        <property name="enabled">
         <bool>false</bool>
        </property>
       </widget>
      </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_7">
-       <property name="text">
-        <string>Reducido</string>
+     <item row="3" column="3">
+      <widget class="QLineEdit" name="leRe5">
+       <property name="enabled">
+        <bool>false</bool>
        </property>
       </widget>
      </item>
@@ -144,50 +144,63 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>Base</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="3">
-      <widget class="QLabel" name="label_4">
-       <property name="text">
-        <string>R.E.</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="2">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>I.V.A.</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_6">
-       <property name="text">
-        <string>General</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="label_8">
-       <property name="text">
-        <string>Super reducido</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="0">
+     <item row="7" column="0">
       <widget class="QLabel" name="label_9">
        <property name="text">
         <string>Total</string>
        </property>
       </widget>
      </item>
+     <item row="2" column="3">
+      <widget class="QLineEdit" name="leRe10">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>21</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="4" rowspan="3">
+      <widget class="Line" name="line">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QLineEdit" name="leBase5">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
      <item row="1" column="2">
       <widget class="QLineEdit" name="leIva21">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_13">
+       <property name="text">
+        <string>4</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <widget class="QLineEdit" name="leTotalBase">
        <property name="enabled">
         <bool>false</bool>
        </property>
@@ -200,10 +213,44 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="5">
-      <widget class="QLineEdit" name="leTotal21">
+     <item row="7" column="3">
+      <widget class="QLineEdit" name="leTotalRe">
        <property name="enabled">
         <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_8">
+       <property name="text">
+        <string>5</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Base</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="5">
+      <widget class="QLineEdit" name="leTotal10">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_7">
+       <property name="text">
+        <string>10</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
        </property>
       </widget>
      </item>
@@ -214,8 +261,43 @@
        </property>
       </widget>
      </item>
-     <item row="2" column="3">
-      <widget class="QLineEdit" name="leRe10">
+     <item row="3" column="2">
+      <widget class="QLineEdit" name="leIva5">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="5">
+      <widget class="QLineEdit" name="leTotal">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0" colspan="6">
+      <widget class="Line" name="line_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="5">
+      <widget class="QLineEdit" name="leTotal5">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="5">
+      <widget class="QLineEdit" name="leTotal21">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLineEdit" name="leBase21">
        <property name="enabled">
         <bool>false</bool>
        </property>
@@ -228,85 +310,88 @@
        </property>
       </widget>
      </item>
-     <item row="2" column="5">
-      <widget class="QLineEdit" name="leTotal10">
-       <property name="enabled">
-        <bool>false</bool>
+     <item row="0" column="2">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>I.V.A.</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="4" rowspan="3">
-      <widget class="Line" name="line">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QLineEdit" name="leBase4">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="2">
-      <widget class="QLineEdit" name="leIva4">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="3">
-      <widget class="QLineEdit" name="leRe4">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="5">
-      <widget class="QLineEdit" name="leTotal4">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0" colspan="6">
-      <widget class="Line" name="line_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="4">
+     <item row="7" column="4">
       <widget class="Line" name="line_3">
        <property name="orientation">
         <enum>Qt::Vertical</enum>
        </property>
       </widget>
      </item>
+     <item row="0" column="3">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>R.E.</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_14">
+       <property name="text">
+        <string>0</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QLineEdit" name="leBase4">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
      <item row="5" column="1">
-      <widget class="QLineEdit" name="leTotalBase">
+      <widget class="QLineEdit" name="leBase0">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="2">
+      <widget class="QLineEdit" name="leIva4">
        <property name="enabled">
         <bool>false</bool>
        </property>
       </widget>
      </item>
      <item row="5" column="2">
-      <widget class="QLineEdit" name="leTotalIva">
+      <widget class="QLineEdit" name="leIva0">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="3">
+      <widget class="QLineEdit" name="leRe4">
        <property name="enabled">
         <bool>false</bool>
        </property>
       </widget>
      </item>
      <item row="5" column="3">
-      <widget class="QLineEdit" name="leTotalRe">
+      <widget class="QLineEdit" name="leRe0">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="5">
+      <widget class="QLineEdit" name="leTotal4">
        <property name="enabled">
         <bool>false</bool>
        </property>
       </widget>
      </item>
      <item row="5" column="5">
-      <widget class="QLineEdit" name="leTotal">
+      <widget class="QLineEdit" name="leTotal0">
        <property name="enabled">
         <bool>false</bool>
        </property>
@@ -355,10 +440,10 @@
   <tabstop>leRe10</tabstop>
   <tabstop>leIva10</tabstop>
   <tabstop>leTotal10</tabstop>
-  <tabstop>leBase4</tabstop>
-  <tabstop>leIva4</tabstop>
-  <tabstop>leRe4</tabstop>
-  <tabstop>leTotal4</tabstop>
+  <tabstop>leBase5</tabstop>
+  <tabstop>leIva5</tabstop>
+  <tabstop>leRe5</tabstop>
+  <tabstop>leTotal5</tabstop>
   <tabstop>leTotalBase</tabstop>
   <tabstop>leTotalIva</tabstop>
   <tabstop>leTotalRe</tabstop>

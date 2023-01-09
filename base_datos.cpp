@@ -390,7 +390,7 @@ bool baseDatos::descontarArticulo(QString cod, int uds)
     }
     }else {
         qDebug() << "No hay lotes de ese artículo";
-        crearLote(cod,"","2000-01-01",QString::number(0-uds));
+        crearLote(conf->getConexionLocal(), cod,"","2000-01-01",QString::number(0-uds));
     }
     return true;
 }
@@ -640,9 +640,9 @@ QString baseDatos::nombreFabricante(QString id)
     return "Sin asignar";
 }
 
-QString baseDatos::nombreUsusario(QString id)
+QString baseDatos::nombreUsusario(QString id, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("SELECT * FROM usuarios WHERE id LIKE ?");
     consulta.bindValue(0,id);
     consulta.exec();
@@ -685,9 +685,9 @@ QString baseDatos::etiquetaCliente(QString idCliente)
     return "Sin asignar";
 }
 
-QString baseDatos::nombreFormaPago(QString id)
+QString baseDatos::nombreFormaPago(QString id, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("SELECT * FROM fpago WHERE id LIKE ?");
     consulta.bindValue(0,id);
     consulta.exec();
@@ -698,9 +698,9 @@ QString baseDatos::nombreFormaPago(QString id)
     return "Sin forma de pago asignada";
 }
 
-QString baseDatos::idFormaPago(QString fpago)
+QString baseDatos::idFormaPago(QString fpago, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("SELECT id FROM fpago WHERE tipo LIKE ?");
     consulta.bindValue(0,fpago);
     if(consulta.exec() == true){
@@ -710,9 +710,9 @@ QString baseDatos::idFormaPago(QString fpago)
     return nullptr;
 }
 
-bool baseDatos::insertarEtiqueta(QString etiqueta)
+bool baseDatos::insertarEtiqueta(QString base, QString etiqueta)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("INSERT INTO etiquetas (cod) VALUES (?)");
     consulta.bindValue(0,etiqueta);
     if (consulta.exec() == true) {
@@ -792,9 +792,9 @@ int baseDatos::idTiendaDesdeNombre(QSqlDatabase db, QString nombreTienda)
     return consulta.value(0).toInt();
 }
 
-QString baseDatos::nombreProveedor(QString id)
+QString baseDatos::nombreProveedor(QString id, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("SELECT nombre FROM proveedores WHERE idProveedor LIKE ?");
     consulta.bindValue(0,id);
     if(consulta.exec() == true){
@@ -804,9 +804,9 @@ QString baseDatos::nombreProveedor(QString id)
     return 0;
 }
 
-QString baseDatos::idProveedor(QString nombre)
+QString baseDatos::idProveedor(QString nombre, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("SELECT idProveedor FROM proveedores WHERE nombre LIKE ?");
     consulta.bindValue(0,nombre);
     if(consulta.exec() == true){
@@ -899,9 +899,9 @@ QString baseDatos::codigoParaNuevoProveedor()
     return QString::number(id);
 }
 
-QString baseDatos::codigoDesdeAux(QString aux)
+QString baseDatos::codigoDesdeAux(QString base, QString aux)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT cod FROM codaux WHERE aux = '"+aux+"'");
     consulta.first();
     return consulta.value(0).toString();
@@ -1173,10 +1173,10 @@ bool baseDatos::crearProveedor(QSqlDatabase db, QStringList datos)
     }
 }
 
-double baseDatos::sumarColumna(QString tabla, QString campo, QString campoCondicion, QString condicion)
+double baseDatos::sumarColumna(QString base, QString tabla, QString campo, QString campoCondicion, QString condicion)
 {
     if(campoCondicion.isNull()) campoCondicion = campo;
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT sum("+campo+") FROM "+tabla+" WHERE "+campoCondicion+" = '"+condicion+"'");
     qDebug() << consulta.lastError().text();
     consulta.first();
@@ -1184,19 +1184,19 @@ double baseDatos::sumarColumna(QString tabla, QString campo, QString campoCondic
 
 }
 
-int baseDatos::contarLineas(QString tabla, QString campoCondicion, QString condicion)
+int baseDatos::contarLineas(QString tabla, QString base, QString campoCondicion, QString condicion)
 {
 
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT * FROM "+tabla+" WHERE "+campoCondicion+" = '"+condicion+"'");
     qDebug() << consulta.lastError().text();
     consulta.first();
     return consulta.numRowsAffected();
 }
 
-bool baseDatos::insertarES(QStringList datos)
+bool baseDatos::insertarES(QStringList datos, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("INSERT INTO entradasSalidas VALUES (NULL,?,?,?,?,?)");
     consulta.bindValue(0,datos.at(0));
     consulta.bindValue(1,datos.at(1));
@@ -1256,9 +1256,9 @@ bool baseDatos::grabarConfiguracionTicket(QStringList configTicket)
 
 }
 
-bool baseDatos::crearPedido(QString proveedor, QString nPedido, QString fecha)
+bool baseDatos::crearPedido(QString proveedor, QString nPedido, QString fecha, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("INSERT INTO albaranes_tmp (idProveedor , npedido, fechaPedido) VALUES (?,?,?)");
     consulta.bindValue(0,proveedor);
     consulta.bindValue(1,nPedido);
@@ -1289,9 +1289,9 @@ bool baseDatos::borrarPedido(QString numeroPedido)
 
 }
 
-bool baseDatos::grabarLineaPedido(QStringList datos)
+bool baseDatos::grabarLineaPedido(QString base, QStringList datos)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("INSERT INTO lineaspedido_tmp VALUES (NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i,datos.at(i));
@@ -1300,8 +1300,8 @@ bool baseDatos::grabarLineaPedido(QStringList datos)
     qDebug() << consulta.lastError().text();
     return false;
 }
-bool baseDatos::modificarLineaPedido(QStringList datos){
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+bool baseDatos::modificarLineaPedido(QString base, QStringList datos){
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("UPDATE lineaspedido_tmp SET idPedido = ? ,"
                      "cod = ? ,descripcion = ? , cantidad = ? , bonificacion = ? , lote = ? , "
                      "fc = ? , costo = ? , descuento1 = ? ,base = ? , tipoIva = ? ,totalbase = ? ,"
@@ -1344,43 +1344,43 @@ QStringList baseDatos::datosFactura(QSqlDatabase db , QString nFactura)
     return datos;
 }
 
-float baseDatos::sumarIvasPedido(QString idPedido, QString tipoIva)
+float baseDatos::sumarIvasPedido(QString base, QString idPedido, QString tipoIva)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT sum(iva) FROM lineaspedido_tmp WHERE idPedido = '"+idPedido+"' AND tipoIva = '"+tipoIva+"'");
     consulta.first();
     return consulta.value(0).toFloat();
 }
 
-float baseDatos::sumarRePedido(QString idPedido, QString tipoIva)
+float baseDatos::sumarRePedido(QString base, QString idPedido, QString tipoIva)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT sum(re) FROM lineaspedido_tmp WHERE idPedido = '"+idPedido+"' AND tipoIva = '"+tipoIva+"'");
     consulta.first();
     return consulta.value(0).toFloat();
 }
 
-float baseDatos::sumarBasesPedido(QString idPedido, QString tipoIva)
+float baseDatos::sumarBasesPedido(QString base, QString idPedido, QString tipoIva)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT sum(totalbase) FROM lineaspedido_tmp WHERE idPedido = '"+idPedido+"' AND tipoIva = '"+tipoIva+"'");
     consulta.first();
     return consulta.value(0).toFloat();
 }
 
-bool baseDatos::borrarLineaPedido(QString idLinea)
+bool baseDatos::borrarLineaPedido(QString base, QString idLinea)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     if(consulta.exec("DELETE FROM `tienda`.`lineaspedido_tmp` WHERE `lineaspedido_tmp`.`id` = '"+idLinea+"'")){
         return true;
     }
     return false;
 }
 
-bool baseDatos::contabilizarPedido(QStringList datos)
+bool baseDatos::contabilizarPedido(QString base, QStringList datos)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("INSERT INTO pedidos VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    QSqlQuery consulta(QSqlDatabase::database(base));
+    consulta.prepare("INSERT INTO pedidos VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i,datos.at(i));
     }
@@ -1424,9 +1424,9 @@ bool baseDatos::borrarAlbaranTmp(QString idAlbaran)
 
 }
 
-bool baseDatos::pasarLineaPedidoAHistorico(QStringList datos)
+bool baseDatos::pasarLineaPedidoAHistorico(QString base, QStringList datos)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("INSERT INTO lineaspedido VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i,datos.at(i));
@@ -1443,9 +1443,9 @@ QSqlQuery baseDatos::ventas(QString fecha, QString base)
     return consulta;
 }
 
-QSqlQuery baseDatos::ventasPorUsusario(QString fecha)
+QSqlQuery baseDatos::ventasPorUsusario(QString fecha, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT sum(total) , usuario FROM tickets WHERE fecha = '"+fecha+"' group by fecha , usuario");
     return consulta;
 }
@@ -1458,16 +1458,16 @@ QSqlQuery baseDatos::ventasDesdeUltimoArqueo(QString fechaI, QString horaI, QStr
     consulta.first();
     return consulta;
 }
-QSqlQuery baseDatos::recuperarDatosUltimoArqueo()
+QSqlQuery baseDatos::recuperarDatosUltimoArqueo(QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT * FROM arqueos");
     return consulta;
 }
 
-bool baseDatos::grabarArqueo(QStringList datos)
+bool baseDatos::grabarArqueo(QStringList datos, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("INSERT INTO arqueos VALUES (NULL,?,?,?,?,?,?,?)");
     for(int i = 0; i < datos.length(); i++){
         consulta.bindValue(i,datos.at(i));
@@ -1489,9 +1489,9 @@ QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF, QString t
     return consulta;
 }
 
-int baseDatos::nTarjetasDesdeUltimoArqueo(QString fechaI , QString horaI)
+int baseDatos::nTarjetasDesdeUltimoArqueo(QString fechaI , QString horaI, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT count(total) FROM tickets WHERE concat_ws('/',fecha , hora) >= '"+fechaI+"/"+horaI+"' group by fpago");
     consulta.first();
     return consulta.value(0).toInt();
@@ -1504,9 +1504,9 @@ QSqlQuery baseDatos::devolverTablaCompleta(QString nombreTabla)
     return consulta;
 }
 
-QSqlQuery baseDatos::ejecutarSentencia(QString sentencia)
+QSqlQuery baseDatos::ejecutarSentencia(QString sentencia, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec(sentencia);
     qDebug() << consulta.lastError();
     return consulta;
@@ -1520,9 +1520,9 @@ QSqlQuery baseDatos::ejecutarSentencia(QString sentencia, QSqlDatabase db)
     return consulta;
 }
 
-QSqlQuery baseDatos::recuperarPedidos()
+QSqlQuery baseDatos::recuperarPedidos(QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT * FROM albaranes_tmp");
     if (consulta.isValid()) {
         return consulta;
@@ -1530,24 +1530,24 @@ QSqlQuery baseDatos::recuperarPedidos()
     qDebug() << consulta.lastError().text();
     
 }
-double baseDatos::ESdesdeFecha(QString fecha, QString hora){
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+double baseDatos::ESdesdeFecha(QString fecha, QString hora, QString base){
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT sum(cantidad) FROM entradasSalidas WHERE concat_ws('/',fecha,hora) >= '"+fecha+"/"+hora+"'");
     consulta.first();
     return consulta.value(0).toDouble();
 }
 
-QString baseDatos::idLote(QString cod, QString lote, QString fecha)
+QString baseDatos::idLote(QString base, QString cod, QString lote, QString fecha)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT id FROM lotes WHERE ean = '"+cod+"' AND lote = '"+lote+"' AND fecha = '"+fecha+"'");
     consulta.first();
     if(consulta.isValid()) return consulta.value(0).toString();
     return "0";
 }
 
-int baseDatos::unidadesLote(QString idLote){
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+int baseDatos::unidadesLote(QString base, QString idLote){
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT cantidad FROM lotes WHERE id ='"+idLote+"'");
     consulta.first();
     if (consulta.isValid()) {
@@ -1568,9 +1568,9 @@ bool baseDatos::borrarLotesArticulo(QString nombreConexion, QString codigo)
     return false;
 }
 
-void baseDatos::aumentarLote(QString idLote, int uds)
+void baseDatos::aumentarLote(QString base, QString idLote, int uds)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("UPDATE lotes SET cantidad = cantidad + "+QString::number(uds)+" WHERE id = '"+idLote+"'");
     if(consulta.numRowsAffected() == 1) {
         qDebug() << "Aumentar lote";
@@ -1621,9 +1621,9 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds)
     return;
 }
 
-void baseDatos::crearLote(QString ean, QString lote, QString fecha, QString uds)
+void baseDatos::crearLote(QString base, QString ean, QString lote, QString fecha, QString uds)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("INSERT INTO lotes VALUES (NULL,?,?,?,?)");
     consulta.bindValue(0,ean);
     consulta.bindValue(1,lote);

@@ -4,7 +4,9 @@
 #include <QDialog>
 #include "base_datos.h"
 #include "buscarproducto.h"
+#include "configuracion.h"
 
+extern Configuracion *conf;
 namespace Ui {
 class Caducados;
 }

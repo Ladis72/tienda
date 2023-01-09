@@ -2,10 +2,13 @@
 #define PROVEEDORES_H
 #include "base_datos.h"
 #include "buscarproveedor.h"
+#include "configuracion.h"
 #include "formaspago.h"
 
 #include <QDialog>
 #include <QKeyEvent>
+
+extern Configuracion *conf;
 
 namespace Ui {
 class Proveedores;

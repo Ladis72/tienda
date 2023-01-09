@@ -16,7 +16,7 @@ PedidoNuevo::~PedidoNuevo()
 
 void PedidoNuevo::on_lineEditIdProveedor_editingFinished()
 {
-    QString proveedor = base->nombreProveedor(ui->lineEditIdProveedor->text());
+    QString proveedor = base->nombreProveedor(ui->lineEditIdProveedor->text(), conf->getConexionLocal());
     if(!proveedor.isEmpty()) ui->lineEditProveedor->setText(proveedor);
     return;
 }
@@ -32,8 +32,8 @@ void PedidoNuevo::on_lineEditProveedor_returnPressed()
 void PedidoNuevo::on_pushButtonAceptar_clicked()
 {
     if(ui->lineEditDocumento->text().isEmpty()) return;
-    if(base->nombreProveedor(ui->lineEditIdProveedor->text()).isNull()) return;
-    if(base->crearPedido(ui->lineEditIdProveedor->text(),ui->lineEditDocumento->text(),ui->dateEditDocumento->text()));
+    if(base->nombreProveedor(ui->lineEditIdProveedor->text(),conf->getConexionLocal()).isNull()) return;
+    if(base->crearPedido(ui->lineEditIdProveedor->text(),ui->lineEditDocumento->text(),ui->dateEditDocumento->text(), conf->getConexionLocal()));
     qDebug() << "todo correcto";
 
 }

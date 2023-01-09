@@ -5,7 +5,9 @@
 #include <QString>
 #include <qstandarditemmodel.h>
 #include "base_datos.h"
+#include "configuracion.h"
 
+extern Configuracion *conf;
 
 class ImprimirTicket
 {

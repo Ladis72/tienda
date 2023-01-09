@@ -158,7 +158,7 @@ void Tpv::recuperarTicketsPendientes()
         modeloTicketPendiente->setItem(i,0,itemOrden);
         QStandardItem *itemCliente = new QStandardItem(base.nombreCliente(listaTicketsPendientes.value(1).toString()));
         modeloTicketPendiente->setItem(i,1,itemCliente);
-        QStandardItem *itemVendedor = new QStandardItem(base.nombreUsusario(listaTicketsPendientes.value(2).toString()));
+        QStandardItem *itemVendedor = new QStandardItem(base.nombreUsusario(listaTicketsPendientes.value(2).toString(), conf->getConexionLocal()));
         modeloTicketPendiente->setItem(i,2,itemVendedor);
         QStandardItem *itemCodCliente = new QStandardItem(listaTicketsPendientes.value(1).toString());
         modeloTicketPendiente->setItem(i,3,itemCodCliente);
@@ -279,7 +279,7 @@ QString Tpv::formatearCadena(QString cadena, int tamano)
 void Tpv::datosProducto(QString IdProducto)
 {
     ui->labelStock->setText(base.sumarStockArticulo(IdProducto,"DB"));
-    QSqlQuery tmp = base.ejecutarSentencia("SELECT fecha FROM lotes WHERE ean = "+IdProducto+" ORDER BY fecha asc");
+    QSqlQuery tmp = base.ejecutarSentencia("SELECT fecha FROM lotes WHERE ean = "+IdProducto+" ORDER BY fecha asc", conf->getConexionLocal());
     tmp.first();
     ui->labelFecha->setText(tmp.value(0).toString());
     consulta = base.consulta_producto("DB",IdProducto);
@@ -305,7 +305,7 @@ void Tpv::on_lineEdit_cod_returnPressed(){
    consulta = base.consulta_producto("DB",ui->lineEdit_cod->text());
    consulta.first();
    if(!consulta.isValid()){
-       QString cod = base.codigoDesdeAux(ui->lineEdit_cod->text());
+       QString cod = base.codigoDesdeAux(conf->getConexionLocal(),ui->lineEdit_cod->text());
        consulta = base.consulta_producto("DB",cod);
        consulta.first();
    }
@@ -481,13 +481,13 @@ void Tpv::on_btn_cobrar_clicked()
                 fechaCaducidad->exec();
                 QString fecha = fechaCaducidad->fecha.toString("yyyy-MM-dd");
                 QString lote = fechaCaducidad->lote;
-                QString idLote = base.idLote(lineaTicket.at(1),lote,fecha);
+                QString idLote = base.idLote(conf->getConexionLocal(), lineaTicket.at(1),lote,fecha);
                 qDebug() << lote;
                 if (idLote != "0") {
-                    base.aumentarLote(idLote,abs(lineaTicket.at(3).toInt()));
+                    base.aumentarLote(conf->getConexionLocal(), idLote,abs(lineaTicket.at(3).toInt()));
                     qDebug() << "Error al devolver el producto lote";
                 } else {
-                    base.crearLote(lineaTicket.at(1),lote,fecha,QString::number(abs(lineaTicket.at(3).toInt())));
+                    base.crearLote(conf->getConexionLocal(), lineaTicket.at(1),lote,fecha,QString::number(abs(lineaTicket.at(3).toInt())));
                     qDebug() << "Crear lote";
                 }
             }else{
@@ -501,7 +501,7 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(recopilarDatosTicket());
         totalTicket.append(QString::number(totalizacion->descuento));
         totalTicket.append(QString::number(totalizacion->total));
-        totalTicket.append(base.idFormaPago(totalizacion->efectivo));
+        totalTicket.append(base.idFormaPago(totalizacion->efectivo, conf->getConexionLocal()));
         totalTicket.append(totalizacion->facturacion);
         totalTicket.append(QString::number(totalizacion->entrega));
         totalTicket.append(QString::number(totalizacion->cambio));

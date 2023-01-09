@@ -62,7 +62,7 @@ void ListadoVentas::on_tableView_activated(const QModelIndex &index)
     QStandardItemModel *modeloFPago = new QStandardItemModel;
     int i = 0;
     while (ventasFormaPago.next()) {
-        QString fPago = base->nombreFormaPago(ventasFormaPago.value(1).toString());
+        QString fPago = base->nombreFormaPago(ventasFormaPago.value(1).toString(), conf->getConexionLocal());
         QStandardItem *itemFPago = new QStandardItem(fPago);
         modeloFPago->setItem(i,0,itemFPago);
         QStandardItem *itemVentas = new QStandardItem(ventasFormaPago.value(0).toString());
@@ -74,10 +74,10 @@ void ListadoVentas::on_tableView_activated(const QModelIndex &index)
     ui->tableViewFPago->setModel(modeloFPago);
 
     QStandardItemModel *modeloUsuario = new QStandardItemModel;
-    QSqlQuery ventasPorUsusario = base->ventasPorUsusario(fecha);
+    QSqlQuery ventasPorUsusario = base->ventasPorUsusario(fecha, conf->getConexionLocal());
     i=0;
     while (ventasPorUsusario.next()) {
-        QString usuario = base->nombreUsusario(ventasPorUsusario.value(1).toString());
+        QString usuario = base->nombreUsusario(ventasPorUsusario.value(1).toString(), conf->getConexionLocal());
         QStandardItem *itemUsuario = new QStandardItem(usuario);
         modeloUsuario->setItem(i,0,itemUsuario);
         QStandardItem *itemVentasUsusario = new QStandardItem(ventasPorUsusario.value(0).toString());

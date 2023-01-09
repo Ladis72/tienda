@@ -1,6 +1,7 @@
 ﻿#ifndef BASE_DATOS_H
 #define BASE_DATOS_H
 
+#include "configuracion.h"
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
@@ -11,6 +12,8 @@
 #include <QSqlQueryModel>
 
 #include <QDebug>
+
+extern Configuracion *conf;
 
 class baseDatos
 {
@@ -64,26 +67,26 @@ public:
     bool borrarArticulo(QSqlDatabase db, QString dato);
     QString nombreFamilia(QString id);
     QString nombreFabricante(QString id);
-    QString nombreUsusario(QString id);
+    QString nombreUsusario(QString id, QString base);
     QString nombreCliente(QString id);
     QString etiquetaCliente(QString idCliente);
-    QString nombreFormaPago(QString id);
-    QString idFormaPago(QString fpago);
-    bool insertarEtiqueta(QString etiqueta);
+    QString nombreFormaPago(QString id, QString base);
+    QString idFormaPago(QString fpago, QString base);
+    bool insertarEtiqueta(QString base, QString etiqueta);
     bool modificarTienda(QStringList datos);
     bool borrarTienda(QString dato);
     bool crearTienda(QStringList datos);
     QSqlQuery tiendas(QSqlDatabase db);
     int idTiendaDesdeNombre(QSqlDatabase db , QString nombreTienda);
 //Funciones PROVEEDORES
-    QString nombreProveedor(QString id);
-    QString idProveedor(QString nombre);
+    QString nombreProveedor(QString id, QString base);
+    QString idProveedor(QString nombre, QString base);
     bool modificarProveedor(QSqlDatabase db, QStringList datos, QString dato);
     bool borrarProveedor(QSqlDatabase db , QString dato);
     QString descuentoProveedor(QString proveedor);
     QStringList listadoProveedores();
     QString codigoParaNuevoProveedor();
-    QString codigoDesdeAux(QString aux);
+    QString codigoDesdeAux(QString base, QString aux);
 //Funciones TICKETS
     QSqlQuery datosTicket(QString nTicket);
     QSqlQuery consultarLineasTicket(QString nTicket);
@@ -99,43 +102,43 @@ public:
     bool crearCliente(QSqlDatabase db, QStringList datos);
     double descuentoCliente(QString idCliente);
     bool crearProveedor(QSqlDatabase db, QStringList datos);
-    double sumarColumna(QString tabla, QString campo, QString campoCondicion = NULL, QString condicion ="%%");
-    int contarLineas(QString tabla, QString campoCondicion = NULL, QString condicion ="%%");
-    bool insertarES(QStringList datos);
+    double sumarColumna(QString base, QString tabla, QString campo, QString campoCondicion = NULL, QString condicion ="%%");
+    int contarLineas(QString tabla, QString base , QString campoCondicion = NULL, QString condicion ="%%");
+    bool insertarES(QStringList datos, QString base);
     QStringList recuperarConfigTicket();
     bool ticketPromo();
     bool grabarConfiguracionTicket(QStringList configTicket);
 //Funciones PEDIDOS
-    QSqlQuery recuperarPedidos();
-    bool crearPedido(QString proveedor, QString nPedido, QString fecha);
+    QSqlQuery recuperarPedidos(QString base);
+    bool crearPedido(QString proveedor, QString nPedido, QString fecha, QString base);
     bool borrarPedido(QString numeroPedido);
-    bool grabarLineaPedido(QStringList datos);
-    float sumarIvasPedido(QString idPedido, QString tipoIva);
-    float sumarRePedido(QString idPedido, QString tipoIva);
-    float sumarBasesPedido(QString idPedido, QString tipoIva);
-    bool borrarLineaPedido(QString idLinea);
-    bool contabilizarPedido(QStringList datos);
+    bool grabarLineaPedido(QString base, QStringList datos);
+    float sumarIvasPedido(QString base, QString idPedido, QString tipoIva);
+    float sumarRePedido(QString base, QString idPedido, QString tipoIva);
+    float sumarBasesPedido(QString base, QString idPedido, QString tipoIva);
+    bool borrarLineaPedido(QString base, QString idLinea);
+    bool contabilizarPedido(QString base, QStringList datos);
     bool grabarFactura(QStringList datos);
     bool grabarAlbaran(QStringList datos);
     bool borrarAlbaranTmp(QString idAlbaran);
-    bool pasarLineaPedidoAHistorico(QStringList datos);
-    bool modificarLineaPedido(QStringList datos);
+    bool pasarLineaPedidoAHistorico(QString base, QStringList datos);
+    bool modificarLineaPedido(QString base, QStringList datos);
     QStringList listadoPrestamistas();
     QStringList datosFactura(QSqlDatabase db, QString nFactura);
 
 //Funciones CAJAS
     QSqlQuery ventas(QString fecha, QString base);
-    QSqlQuery ventasPorUsusario(QString fecha);
+    QSqlQuery ventasPorUsusario(QString fecha, QString base);
     QSqlQuery ventasDesdeUltimoArqueo(QString fechaI, QString horaI, QString tabla, QString base);
-    QSqlQuery recuperarDatosUltimoArqueo();
-    bool grabarArqueo(QStringList datos);
+    QSqlQuery recuperarDatosUltimoArqueo(QString base);
+    bool grabarArqueo(QStringList datos, QString base);
     QSqlQuery ventasEntreFechas(QString fechaI , QString FechaF, QString tabla, QString base);
-    int nTarjetasDesdeUltimoArqueo(QString fechaI , QString horaI);
+    int nTarjetasDesdeUltimoArqueo(QString fechaI , QString horaI, QString base);
 //Funciones GENERALISTAS
     QSqlQuery devolverTablaCompleta(QString nombreTabla);
-    QSqlQuery ejecutarSentencia(QString sentencia);
+    QSqlQuery ejecutarSentencia(QString sentencia, QString base);
     QSqlQuery ejecutarSentencia(QString sentencia , QSqlDatabase db);
-    double ESdesdeFecha(QString fecha, QString hora);
+    double ESdesdeFecha(QString fecha, QString hora, QString base);
     bool existeDatoEnTabla(QSqlDatabase db, QString tabla, QString columna, QString dato);
     void insertarEnTabla(QSqlDatabase db , QString tabla , QStringList datos);
     void vaciarTabla(QString tabla , QSqlDatabase db);
@@ -143,13 +146,13 @@ public:
 
 
 //Funciones LOTES
-    QString idLote(QString cod, QString lote, QString fecha);//Devuelve el id del lote igual o 0 si no existe
-    void aumentarLote(QString idLote, int uds);
+    QString idLote(QString base, QString cod, QString lote, QString fecha);//Devuelve el id del lote igual o 0 si no existe
+    void aumentarLote(QString base, QString idLote, int uds);
     void disminuirLote(QString cod, QString fecha , int uds);
-    void crearLote(QString ean,QString lote,QString fecha,QString uds);
+    void crearLote(QString base, QString ean,QString lote,QString fecha,QString uds);
     QSqlQuery lotesProducto(QString cod, QString nombreConnexion);
     QString sumarStockArticulo(QString id, QString nombreConnexion);
-    int unidadesLote(QString idLote);
+    int unidadesLote(QString base, QString idLote);
     bool borrarLotesArticulo(QString nombreConexion, QString codigo);
 
 //Funciones LISTADOS

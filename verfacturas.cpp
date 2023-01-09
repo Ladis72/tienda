@@ -48,14 +48,14 @@ void VerFacturas::llenarTabla()
         }
     }else{
         if(tipoDocumento == "facturas"){
-        idProveedor = base->idProveedor(ui->comboBoxProceedores->currentText());
+        idProveedor = base->idProveedor(ui->comboBoxProceedores->currentText(), conf->getConexionLocal());
         sentenciaSql = "SELECT * FROM facturas WHERE idProveedor = '"+idProveedor+"' AND fechaFactura >= '"+fechaInicial+"' AND fechaFactura <= '"+fechaFinal+"'";
         }else{
-            idProveedor = base->idProveedor(ui->comboBoxProceedores->currentText());
+            idProveedor = base->idProveedor(ui->comboBoxProceedores->currentText(), conf->getConexionLocal());
             sentenciaSql = "SELECT * FROM albaranes WHERE idProveedor = '"+idProveedor+"' AND fechaFactura >= '"+fechaInicial+"' AND fechaFactura <= '"+fechaFinal+"'";
         }}
     modeloTabla = new QStandardItemModel(this);
-    QSqlQuery resultado = base->ejecutarSentencia(sentenciaSql);
+    QSqlQuery resultado = base->ejecutarSentencia(sentenciaSql, conf->getConexionLocal());
     qDebug() << resultado.lastError() << resultado.numRowsAffected();
     resultado.first();
     for (int i = 0; i < resultado.numRowsAffected(); ++i) {
@@ -63,7 +63,7 @@ void VerFacturas::llenarTabla()
         modeloTabla->setItem(i,0,itemPedido);
         QStandardItem *itemFecha = new QStandardItem(resultado.value("fechaFactura").toString());
         modeloTabla->setItem(i,1,itemFecha);
-        QStandardItem *itemProveedor = new QStandardItem(base->nombreProveedor(resultado.value("idProveedor").toString()));
+        QStandardItem *itemProveedor = new QStandardItem(base->nombreProveedor(resultado.value("idProveedor").toString(),conf->getConexionLocal()));
         modeloTabla->setItem(i,2,itemProveedor);
         QStandardItem *itemBase = new QStandardItem(resultado.value("totalBase").toString());
         modeloTabla->setItem(i,3,itemBase);

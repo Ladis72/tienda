@@ -26,10 +26,10 @@ Caducados::~Caducados()
 
 void Caducados::on_lineEditCodigo_returnPressed()
 {
-    consulta = base.consulta_producto("DB",ui->lineEditCodigo->text());
+    consulta = base.consulta_producto(conf->getConexionLocal(), ui->lineEditCodigo->text());
     consulta.first();
     if (!consulta.isValid()) {
-        QString cod = base.codigoDesdeAux(ui->lineEditCodigo->text());
+        QString cod = base.codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCodigo->text());
         consulta = base.consulta_producto("DB",cod);
         consulta.first();
     }
@@ -69,7 +69,7 @@ void Caducados::on_pushButton_clicked()
     qDebug() << precio;
     sentencia = "INSERT INTO caducados VALUES (NULL, '"+ui->lineEditCodigo->text()+"' , '"+QString::number(ui->spinBox->value())+"' , '"+ui->lineEditDescripcion->text()+"' , '"+QDate::currentDate().toString("yyyy-MM-dd")+"' , '"+precio+"' , '"+ui->comboBox->currentText()+"')";
     qDebug() << sentencia;
-    QSqlQuery ejecutar = base.ejecutarSentencia(sentencia);
+    QSqlQuery ejecutar = base.ejecutarSentencia(sentencia, conf->getConexionLocal());
     qDebug() << ejecutar.lastError();
     //ui->lineEditCodigo->clear();
     //ui->lineEditDescripcion->clear();
@@ -91,8 +91,8 @@ void Caducados::on_lineEditDescripcion_returnPressed()
 
 void Caducados::on_comboBox_currentIndexChanged(const QString &arg1)
 {
-    QString idLote = base.idLote(ui->lineEditCodigo->text(),"",arg1);
-    int udsLote = base.unidadesLote(idLote);
+    QString idLote = base.idLote(conf->getConexionLocal(), ui->lineEditCodigo->text(),"",arg1);
+    int udsLote = base.unidadesLote(conf->getConexionLocal(), idLote);
     if (arg1 == "Desconocido") {
         ui->spinBox->setMaximum(1000);
         ui->spinBox->setMinimum(0);

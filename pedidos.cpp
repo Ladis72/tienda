@@ -7,6 +7,9 @@
 #include <QInputDialog>
 #include <QtMath>
 
+extern Configuracion *conf;
+
+
 pedidos::pedidos(QString idPed, QString proveedor, QString ndoc, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::pedidos)
@@ -21,7 +24,7 @@ pedidos::pedidos(QString idPed, QString proveedor, QString ndoc, QWidget *parent
     lineaSeleccionada="";
     nDoc = ndoc;
     idPedido = idPed;
-    idProveedor = base.idProveedor(proveedor);
+    idProveedor = base.idProveedor(proveedor, conf->getConexionLocal());
     llenarTablaPedido(idPed);
     editando = false;
 }
@@ -48,7 +51,7 @@ QString pedidos::calcularTotalLinea()
 
 void pedidos::llenarTablaPedido(QString idPedido)
 {
-    modeloPedido->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = '%1'").arg(idPedido),QSqlDatabase::database("DB"));
+    modeloPedido->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = '%1'").arg(idPedido),QSqlDatabase::database(conf->getConexionLocal()));
     ui->tableView->setModel(modeloPedido);
     ui->tableView->hideColumn(0);
     ui->tableView->hideColumn(1);
@@ -59,21 +62,21 @@ void pedidos::llenarTablaPedido(QString idPedido)
 
     contarArticulos();
     contarLineas();
-    ui->leIva10->setText(QString::number(base.sumarIvasPedido(idPedido,"10")));
-    ui->leIva21->setText(QString::number(base.sumarIvasPedido(idPedido,"21")));
-    ui->leIva4->setText(QString::number(base.sumarIvasPedido(idPedido,"4")));
-    ui->leIva5->setText(QString::number(base.sumarIvasPedido(idPedido,"5")));
-    ui->leIva0->setText(QString::number(base.sumarIvasPedido(idPedido,"0")));
-    ui->leRe0->setText(QString::number(base.sumarRePedido(idPedido,"0")));
-    ui->leRe5->setText(QString::number(base.sumarRePedido(idPedido,"5")));
-    ui->leRe4->setText(QString::number(base.sumarRePedido(idPedido,"4")));
-    ui->leRe10->setText(QString::number(base.sumarRePedido(idPedido,"10")));
-    ui->leRe21->setText(QString::number(base.sumarRePedido(idPedido,"21")));
-    ui->leBase0->setText(QString::number(base.sumarBasesPedido(idPedido,"0")));
-    ui->leBase4->setText(QString::number(base.sumarBasesPedido(idPedido,"4")));
-    ui->leBase5->setText(QString::number(base.sumarBasesPedido(idPedido,"5")));
-    ui->leBase10->setText(QString::number(base.sumarBasesPedido(idPedido,"10")));
-    ui->leBase21->setText(QString::number(base.sumarBasesPedido(idPedido,"21")));
+    ui->leIva10->setText(QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido,"10")));
+    ui->leIva21->setText(QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido,"21")));
+    ui->leIva4->setText(QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido,"4")));
+    ui->leIva5->setText(QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido,"5")));
+    ui->leIva0->setText(QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido,"0")));
+    ui->leRe0->setText(QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido,"0")));
+    ui->leRe5->setText(QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido,"5")));
+    ui->leRe4->setText(QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido,"4")));
+    ui->leRe10->setText(QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido,"10")));
+    ui->leRe21->setText(QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido,"21")));
+    ui->leBase0->setText(QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido,"0")));
+    ui->leBase4->setText(QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido,"4")));
+    ui->leBase5->setText(QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido,"5")));
+    ui->leBase10->setText(QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido,"10")));
+    ui->leBase21->setText(QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido,"21")));
     ui->leTotal0->setText(QString::number(ui->leBase0->text().toDouble()+ui->leIva0->text().toDouble()+ui->leRe0->text().toDouble()));
     ui->leTotal4->setText(QString::number(ui->leBase4->text().toDouble()+ui->leIva4->text().toDouble()+ui->leRe4->text().toDouble()));
     ui->leTotal5->setText(QString::number(ui->leBase5->text().toDouble()+ui->leIva5->text().toDouble()+ui->leRe5->text().toDouble()));
@@ -111,8 +114,8 @@ void pedidos::contarLineas()
 
 void pedidos::contarArticulos()
 {
-    float articulos = base.sumarColumna("lineaspedido_tmp","cantidad","idPedido",idPedido);
-    float bonificacion = base.sumarColumna("lineaspedido_tmp","bonificacion","idPedido",idPedido);
+    float articulos = base.sumarColumna(conf->getConexionLocal(),"lineaspedido_tmp","cantidad","idPedido",idPedido);
+    float bonificacion = base.sumarColumna(conf->getConexionLocal(),"lineaspedido_tmp","bonificacion","idPedido",idPedido);
     ui->labelNArticulos->setText(QString::number(articulos+bonificacion));
 
 }
@@ -143,7 +146,7 @@ void pedidos::on_pushButtonAnadir_clicked()
     QStringList datos;
     datos.clear();
     //Comprobar de nuevo que hay un artículo con ese código
-    bool existe = base.existeDatoEnTabla(QSqlDatabase::database("DB"),"articulos","cod",ui->leCod->text());
+    bool existe = base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),"articulos","cod",ui->leCod->text());
     if(existe == true){
         float baseTotal = ui->leTotalLinea->text().toFloat();
         int tipoIva = ui->leIva->text().toInt();
@@ -196,9 +199,9 @@ void pedidos::on_pushButtonAnadir_clicked()
     datos.append(ui->lePvp->text());
     if (editando == true) {
         datos.append(lineaSeleccionada);
-        base.modificarLineaPedido(datos);
+        base.modificarLineaPedido(conf->getConexionLocal(),datos);
     }else{
-        base.grabarLineaPedido(datos);
+        base.grabarLineaPedido(conf->getConexionLocal(), datos);
     }
     llenarTablaPedido(idPedido);
     }else{
@@ -216,11 +219,11 @@ void pedidos::on_pushButtonAnadir_clicked()
 
 void pedidos::on_leCod_returnPressed()
 {
-    consulta = base.consulta_producto("DB",ui->leCod->text());
+    consulta = base.consulta_producto(conf->getConexionLocal(),ui->leCod->text());
     consulta.first();
     if(!consulta.isValid()){
-           QString cod = base.codigoDesdeAux(ui->leCod->text());
-           consulta = base.consulta_producto("DB",cod);
+           QString cod = base.codigoDesdeAux(conf->getConexionLocal(),ui->leCod->text());
+           consulta = base.consulta_producto(conf->getConexionLocal(), cod);
            consulta.first();
        }
     if (consulta.numRowsAffected() == 1) {
@@ -260,7 +263,7 @@ void pedidos::on_pushButtonBorrar_clicked()
         QMessageBox::information(this,"ATENCIÓN","Primero debe seleccionar una linea para poder borrarla");
         return;
     }
-    base.borrarLineaPedido(lineaSeleccionada);
+    base.borrarLineaPedido(conf->getConexionLocal(), lineaSeleccionada);
     llenarTablaPedido(idPedido);
 }
 
@@ -294,7 +297,7 @@ void pedidos::on_tableView_clicked(const QModelIndex &index)
 
 void pedidos::on_leDescripcion_returnPressed()
 {
-    consulta = base.buscarProducto(QSqlDatabase::database("DB"),"articulos",ui->leDescripcion->text());
+    consulta = base.buscarProducto(QSqlDatabase::database(conf->getConexionLocal()),"articulos",ui->leDescripcion->text());
     consulta.first();
     BuscarProducto *buscar = new BuscarProducto(this,consulta);
     buscar->exec();

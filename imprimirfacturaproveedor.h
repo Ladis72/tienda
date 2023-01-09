@@ -4,6 +4,9 @@
 #include <QObject>
 #include <QStandardItemModel>
 #include "base_datos.h"
+#include "configuracion.h"
+
+extern Configuracion * conf;
 
 class imprimirFacturaProveedor
 {

@@ -125,7 +125,7 @@ informe->printExec();
 void Etiquetas::on_lineEditCod_returnPressed()
 {
     if (base->existeDatoEnTabla(QSqlDatabase::database("DB"),"articulos","cod",ui->lineEditCod->text())) {
-        base->insertarEtiqueta(ui->lineEditCod->text());
+        base->insertarEtiqueta(conf->getConexionLocal(), ui->lineEditCod->text());
         llenarModelo();
     }
 }
@@ -133,7 +133,7 @@ void Etiquetas::on_lineEditCod_returnPressed()
 void Etiquetas::llenarModelo()
 {
     modelo->clear();
-    QSqlQuery listaEtiquetas = base->ejecutarSentencia("SELECT * FROM etiquetas");
+    QSqlQuery listaEtiquetas = base->ejecutarSentencia("SELECT * FROM etiquetas", conf->getConexionLocal());
     listaEtiquetas.first();
     for (int i = 0; i < listaEtiquetas.numRowsAffected(); ++i) {
         qDebug() << "COD: " << listaEtiquetas.record().value(0).toString();
@@ -188,7 +188,7 @@ void Etiquetas::on_pushButton_2_clicked()
         aviso->setText("No se ha seleccionado ningún artículo para borrar");
         aviso->exec();
     } else {
-        base->ejecutarSentencia("DELETE FROM etiquetas WHERE cod = '"+articuloSeleccionado+"'");
+        base->ejecutarSentencia("DELETE FROM etiquetas WHERE cod = '"+articuloSeleccionado+"'", conf->getConexionLocal());
         llenarModelo();
     }
 }
@@ -202,7 +202,7 @@ void Etiquetas::on_pushButton_3_clicked()
     pregunta->setDefaultButton(QMessageBox::Cancel);
     if (pregunta->exec() == QMessageBox::Yes) {
         qDebug() << "aceptado";
-        base->ejecutarSentencia("TRUNCATE etiquetas");
+        base->ejecutarSentencia("TRUNCATE etiquetas", conf->getConexionLocal());
         llenarModelo();
     }
     return;

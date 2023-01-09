@@ -27,7 +27,7 @@ void EntradaSalida::on_pushButtonAceptar_clicked()
     datos.append(ui->comboBoxMotivo->currentText().left(ui->comboBoxMotivo->currentText().indexOf("-")));
     qDebug() << ui->comboBoxMotivo->currentText().left(ui->comboBoxMotivo->currentText().indexOf("-"));
     datos.append(ui->lineEditDescripcion->text());
-    if(base->insertarES(datos)){
+    if(base->insertarES(datos, conf->getConexionLocal())){
         msgBox.setText("Añadido con éxito");
         msgBox.setInformativeText("La información se ha almacenado");
         msgBox.exec();

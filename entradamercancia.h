@@ -6,6 +6,8 @@
 #include "buscarproducto.h"
 #include "articulos.h"
 
+extern Configuracion *conf;
+
 namespace Ui {
 class EntradaMercancia;
 }

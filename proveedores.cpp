@@ -206,7 +206,7 @@ void Proveedores::on_pushButtonModificar_clicked()
 
 void Proveedores::on_lineEditFormaPago_textChanged(const QString &arg1)
 {
-    ui->labelFPago->setText(base.nombreFormaPago(arg1));
+    ui->labelFPago->setText(base.nombreFormaPago(arg1, conf->getConexionLocal()));
 }
 
 void Proveedores::on_pushButtonFPago_clicked()
