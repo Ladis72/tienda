@@ -3,8 +3,11 @@
 
 #include <QDialog>
 #include "base_datos.h"
+#include "configuracion.h"
 #include "entradasalida.h"
 #include <QKeyEvent>
+
+extern Configuracion *conf;
 
 namespace Ui {
 class Cajas;

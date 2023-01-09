@@ -1451,9 +1451,9 @@ QSqlQuery baseDatos::ventasPorUsusario(QString fecha)
 }
 
 
-QSqlQuery baseDatos::ventasDesdeUltimoArqueo(QString fechaI, QString horaI, QString tabla)
+QSqlQuery baseDatos::ventasDesdeUltimoArqueo(QString fechaI, QString horaI, QString tabla, QString base)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT sum(total) , fpago FROM "+tabla+" WHERE concat_ws('/',fecha , hora) >= '"+fechaI+"/"+horaI+"' group by fpago");
     consulta.first();
     return consulta;
