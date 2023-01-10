@@ -19,10 +19,10 @@ Tpv::Tpv(QWidget *parent) :
     fotoHR->setMaximumSize(200,200);
     connect(fotoHR,SIGNAL(clicked()),this,SLOT(mostrarFoto()));
     ticketActual = ticketActualizado();
-    ticket = base.obtenerNumeroUltimoTicket(QSqlDatabase::database("DB"))+1;
-    llenar_usuarios(QSqlDatabase::database("DB"));
+    ticket = base.obtenerNumeroUltimoTicket(QSqlDatabase::database(conf->getConexionLocal()))+1;
+    llenar_usuarios(QSqlDatabase::database(conf->getConexionLocal()));
 
-    modeloTicket = new QSqlTableModel(this,QSqlDatabase::database("DB"));
+    modeloTicket = new QSqlTableModel(this,QSqlDatabase::database(conf->getConexionLocal()));
     cambiarTicket(ticketActual);
 
     modeloTicketPendiente = new QStandardItemModel(this);
@@ -127,7 +127,7 @@ void Tpv::calcularNumProductos()
 
 bool Tpv::actualizarLineaTicket(QList<QString> lista)
 {
-    QSqlQuery query(QSqlDatabase::database("DB"));
+    QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
     query.prepare("INSERT INTO lineasticket_tmp VALUES (NULL,?,?,?,?,?,?,?,?)");
     //query.prepare("INSERT INTO lineasticket_tmp (orden, cod, descripcion, cantidad, precio, descuento, totallinea) VALUES (?,?,?,?,?,?,?)");
     query.bindValue(0,ticketActual);
@@ -151,7 +151,7 @@ void Tpv::recuperarTicketsPendientes()
 {
     modeloTicketPendiente->clear();
     QSqlQuery listaTicketsPendientes;
-    listaTicketsPendientes = base.tcketsPendientes(QSqlDatabase::database("DB"));
+    listaTicketsPendientes = base.tcketsPendientes(QSqlDatabase::database(conf->getConexionLocal()));
     listaTicketsPendientes.first();
     for (int i = 0; i < listaTicketsPendientes.numRowsAffected(); ++i) {
         QStandardItem *itemOrden = new QStandardItem(listaTicketsPendientes.value(0).toString());
@@ -211,7 +211,7 @@ void Tpv::ticketNuevo(int ticketnuevo)
 
 int Tpv::ticketActualizado()
 {
-    ticketActual = base.maxTicketPendiente(QSqlDatabase::database("DB"));
+    ticketActual = base.maxTicketPendiente(QSqlDatabase::database(conf->getConexionLocal()));
     return ticketActual;
 }
 
@@ -233,7 +233,7 @@ QStringList Tpv::recopilarBasesIvas()
 {
     QStringList basesIvas;
     basesIvas.clear();
-    double base1=0,base2=0,base3=0;
+    double base1=0,base2=0,base3=0, base0=0,base5=5;
     for (int i = 0; i < modeloTicket->rowCount(); ++i) {
         int tipoIva = modeloTicket->record(i).value(5).toInt();
         qDebug() << tipoIva;
@@ -247,12 +247,22 @@ QStringList Tpv::recopilarBasesIvas()
         case 21:
             base3 += modeloTicket->record(i).value(8).toDouble();
             break;
+        case 0:
+            base0 += modeloTicket->record(i).value(8).toDouble();
+            break;
+        case 5:
+            base5 += modeloTicket->record(i).value(8).toDouble();
+            break;
         default:
             break;
         }
     }
+    basesIvas.append(QString::number(base0));
+    basesIvas.append("0");
     basesIvas.append(QString::number(base1/1.04));
     basesIvas.append(QString::number(base1 - (base1/1.04)));
+    basesIvas.append(QString::number(base5/1.05));
+    basesIvas.append(QString::number(base5/1.05));
     basesIvas.append(QString::number(base2/1.1));
     basesIvas.append(QString::number(base2 - (base2/1.1)));
     basesIvas.append(QString::number(base3/1.21));
@@ -278,11 +288,11 @@ QString Tpv::formatearCadena(QString cadena, int tamano)
 
 void Tpv::datosProducto(QString IdProducto)
 {
-    ui->labelStock->setText(base.sumarStockArticulo(IdProducto,"DB"));
+    ui->labelStock->setText(base.sumarStockArticulo(IdProducto,conf->getConexionLocal()));
     QSqlQuery tmp = base.ejecutarSentencia("SELECT fecha FROM lotes WHERE ean = "+IdProducto+" ORDER BY fecha asc", conf->getConexionLocal());
     tmp.first();
     ui->labelFecha->setText(tmp.value(0).toString());
-    consulta = base.consulta_producto("DB",IdProducto);
+    consulta = base.consulta_producto(conf->getConexionLocal(),IdProducto);
     consulta.first();
     QString fichero = QDir::currentPath() + "/" + consulta.value("foto").toString();
     QImage foto(fichero);
@@ -302,11 +312,11 @@ void Tpv::mostrarFoto()
 
 void Tpv::on_lineEdit_cod_returnPressed(){
 
-   consulta = base.consulta_producto("DB",ui->lineEdit_cod->text());
+   consulta = base.consulta_producto(conf->getConexionLocal(),ui->lineEdit_cod->text());
    consulta.first();
    if(!consulta.isValid()){
        QString cod = base.codigoDesdeAux(conf->getConexionLocal(),ui->lineEdit_cod->text());
-       consulta = base.consulta_producto("DB",cod);
+       consulta = base.consulta_producto(conf->getConexionLocal(),cod);
        consulta.first();
    }
    if (consulta.numRowsAffected() == 1) {
@@ -334,7 +344,7 @@ void Tpv::on_lineEdit_cod_returnPressed(){
        linea << QString::number(totalLinea);
 
        if(ui->tableView->rowAt(0) < 0){
-           ticketNuevo(base.maxTicketPendiente(QSqlDatabase::database("DB"))+1);
+           ticketNuevo(base.maxTicketPendiente(QSqlDatabase::database(conf->getConexionLocal()))+1);
        }
        actualizarLineaTicket(linea);
        actualizarParrillaVentas();
@@ -410,7 +420,7 @@ void Tpv::on_btn_borrar_clicked()
 
 void Tpv::on_lineEdit_desc_returnPressed()
 {
-    consulta = base.buscarProducto(QSqlDatabase::database("DB"),"articulos",ui->lineEdit_desc->text());
+    consulta = base.buscarProducto(QSqlDatabase::database(conf->getConexionLocal()),"articulos",ui->lineEdit_desc->text());
     consulta.first();
     BuscarProducto *buscar = new BuscarProducto(this,consulta);
     buscar->exec();
@@ -443,7 +453,7 @@ void Tpv::on_btn_cobrar_clicked()
 
         for(int i = 0; i < modeloTicket->rowCount(); i++){
             lineaTicket.clear();
-            if (totalizacion->facturacion == "1" && base.existeDatoEnTabla(QSqlDatabase::database("DB"),"ticketss","ticket",QString::number(ticket)) == false) {
+            if (totalizacion->facturacion == "1" && base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),"ticketss","ticket",QString::number(ticket)) == false) {
                 qDebug() << "Serie" << totalizacion->facturacion;
                 qDebug() << "Facturación por el B";
                 lineaTicket.append("B"+QString::number(ticket));
@@ -561,7 +571,7 @@ void Tpv::on_pushButtonBorrarTodo_clicked()
 void Tpv::on_btn_modificar_clicked()
 {
 
-    ticketActual = base.maxTicketPendiente(QSqlDatabase::database("DB"))+1;
+    ticketActual = base.maxTicketPendiente(QSqlDatabase::database(conf->getConexionLocal()))+1;
     actualizarParrillaVentas();
     ui->lineEdit_cod_cliente->setText("1");
     emit on_lineEdit_cod_cliente_editingFinished();
@@ -608,7 +618,7 @@ void Tpv::on_lineEdit_cod_cliente_editingFinished()
 
 void Tpv::on_lineEdit_nobre_cliente_returnPressed()
 {
-    consulta = base.buscarEnTabla(QSqlDatabase::database("DB"),"clientes","nombre", ui->lineEdit_nobre_cliente->text());
+    consulta = base.buscarEnTabla(QSqlDatabase::database(conf->getConexionLocal()),"clientes","nombre", ui->lineEdit_nobre_cliente->text());
     consulta.first();
     qDebug() << consulta.lastError().text();
     BuscarProducto *buscar = new BuscarProducto(this,consulta);
