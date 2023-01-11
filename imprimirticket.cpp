@@ -11,10 +11,10 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     ticket = consulta.value(0).toString();
     fecha = consulta.value(3).toString();
     hora = consulta.value(4).toString();
-    total = consulta.value(12).toString();
-    fPago = base.nombreFormaPago(consulta.value(13).toString(), conf->getConexionLocal());
-    entrega = consulta.value(15).toString();
-    cambio = consulta.value(16).toString();
+    total = consulta.value(16).toString();
+    fPago = base.nombreFormaPago(consulta.value(17).toString(), conf->getConexionLocal());
+    entrega = consulta.value(19).toString();
+    cambio = consulta.value(20).toString();
     QStringList confTicket = base.recuperarConfigTicket();
     if (formato == "ticket") {
 

@@ -1272,9 +1272,9 @@ bool baseDatos::crearPedido(QString proveedor, QString nPedido, QString fecha, Q
     }
 }
 
-bool baseDatos::borrarPedido(QString numeroPedido)
+bool baseDatos::borrarPedido(QString base, QString numeroPedido)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec(QString("SELECT id FROM albaranes_tmp WHERE id = '%1'").arg(numeroPedido));
     consulta.first();
     if(consulta.numRowsAffected() == 1){

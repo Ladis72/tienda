@@ -111,7 +111,7 @@ public:
 //Funciones PEDIDOS
     QSqlQuery recuperarPedidos(QString base);
     bool crearPedido(QString proveedor, QString nPedido, QString fecha, QString base);
-    bool borrarPedido(QString numeroPedido);
+    bool borrarPedido(QString base, QString numeroPedido);
     bool grabarLineaPedido(QString base, QStringList datos);
     float sumarIvasPedido(QString base, QString idPedido, QString tipoIva);
     float sumarRePedido(QString base, QString idPedido, QString tipoIva);

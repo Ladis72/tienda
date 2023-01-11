@@ -209,7 +209,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         if (!base.pasarLineaPedidoAHistorico(conf->getConexionLocal(), datosLineaPedido)) {
             return false;
         }else{
-            qDebug() << base.borrarPedido(idPedido);
+            qDebug() << base.borrarPedido(conf->getConexionLocal(), idPedido);
 
         }
 

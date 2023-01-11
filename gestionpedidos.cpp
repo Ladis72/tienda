@@ -108,7 +108,7 @@ void GestionPedidos::on_pushButtonBorrar_clicked()
     msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
     msgBox.setDefaultButton(QMessageBox::Ok);
     if(msgBox.exec() == QMessageBox::Ok){
-    base->borrarPedido(pedidoSeleccionado);
+    base->borrarPedido(conf->getConexionLocal(), pedidoSeleccionado);
     llenarTablaPedidos();
     pedidoSeleccionado.clear();
     }
@@ -123,6 +123,7 @@ void GestionPedidos::on_pushButtonGestionar_clicked()
     pedidos *gestPedido = new pedidos(pedidoSeleccionado, proveedor,docSeleccionado,this);
     gestPedido->exec();
     llenarTablaPedidos();
+    borrarVariables();
 }
 
 void GestionPedidos::borrarVariables()
