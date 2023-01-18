@@ -233,7 +233,7 @@ QStringList Tpv::recopilarBasesIvas()
 {
     QStringList basesIvas;
     basesIvas.clear();
-    double base1=0,base2=0,base3=0, base0=0,base5=5;
+    double base1=0,base2=0,base3=0, base0=0,base5=0;
     for (int i = 0; i < modeloTicket->rowCount(); ++i) {
         int tipoIva = modeloTicket->record(i).value(5).toInt();
         qDebug() << tipoIva;
@@ -262,7 +262,7 @@ QStringList Tpv::recopilarBasesIvas()
     basesIvas.append(QString::number(base1/1.04));
     basesIvas.append(QString::number(base1 - (base1/1.04)));
     basesIvas.append(QString::number(base5/1.05));
-    basesIvas.append(QString::number(base5/1.05));
+    basesIvas.append(QString::number(base5 - (base5/1.05)));
     basesIvas.append(QString::number(base2/1.1));
     basesIvas.append(QString::number(base2 - (base2/1.1)));
     basesIvas.append(QString::number(base3/1.21));

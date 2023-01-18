@@ -908,17 +908,17 @@ QString baseDatos::codigoDesdeAux(QString base, QString aux)
 
 }
 
-QSqlQuery baseDatos::datosTicket(QString nTicket)
+QSqlQuery baseDatos::datosTicket(QString base, QString nTicket)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT * FROM tickets WHERE ticket = '"+nTicket+"'");
     consulta.first();
     return consulta;
 }
 
-QSqlQuery baseDatos::consultarLineasTicket(QString nTicket)
+QSqlQuery baseDatos::consultarLineasTicket(QString base, QString nTicket)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT * FROM lineasticket WHERE nticket = '"+nTicket+"'");
     return consulta;
 }

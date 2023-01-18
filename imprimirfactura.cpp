@@ -1,32 +1,39 @@
 #include "imprimirfactura.h"
-#include "qtrpt.h"
+#include <QFile>
+//#include "qtrpt.h"
 
 #include <QCoreApplication>
 
 ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent) : QObject(parent)
 {
-    consulta = base.datosTicket(nTicket);
+    consulta = base.datosTicket(conf->getConexionLocal(), nTicket);
     ticket = consulta.value(0).toString();
     fecha = consulta.value(3).toString();
     hora = consulta.value(4).toString();
-    total = consulta.value(12).toString();
+    total = consulta.value(16).toString();
     idCliente = consulta.value(2).toString();
     idVendedor = consulta.value(1).toString();
-    base21 = consulta.value(9).toString();
-    iva21 = consulta.value(10).toString();
-    double t21=consulta.value(9).toDouble()+consulta.value(10).toDouble();
-    base10 = consulta.value(7).toString();
-    iva10 = consulta.value(8).toString();
-    double t10 = consulta.value(7).toDouble()+consulta.value(8).toDouble();
+    base21 = consulta.value(13).toString();
+    iva21 = consulta.value(14).toString();
+    double t21=consulta.value(13).toDouble()+consulta.value(14).toDouble();
+    base10 = consulta.value(11).toString();
+    iva10 = consulta.value(12).toString();
+    double t10 = consulta.value(11).toDouble()+consulta.value(12).toDouble();
+    base5 = consulta.value(9).toString();
+    iva5 = consulta.value(10).toString();
+    double t5 = consulta.value(9).toDouble()+consulta.value(10).toDouble();
     base4 = consulta.value(5).toString();
     iva4 = consulta.value(6).toString();
     double t4 = consulta.value(5).toDouble()+consulta.value(6).toDouble();
-    double totalBases = consulta.value(9).toDouble()+consulta.value(7).toDouble()+consulta.value(5).toDouble();
-    double totalIVAS = consulta.value(10).toDouble()+consulta.value(8).toDouble()+consulta.value(6).toDouble();
-    totalFactura = consulta.value(12).toString();
+    base0 = consulta.value(5).toString();
+    iva0 = "0";
+    double t0 = base0.toDouble();
+    double totalBases = base21.toDouble()+base10.toDouble()+base5.toDouble()+base4.toDouble()+base0.toDouble();
+    double totalIVAS = iva21.toDouble()+iva10.toDouble()+iva5.toDouble()+iva4.toDouble();
+    totalFactura = consulta.value(16).toString();
     cliente = base.etiquetaCliente(idCliente);
     fPago = base.nombreFormaPago(consulta.value(13).toString(), conf->getConexionLocal());
-    consulta = base.consultarLineasTicket(ticket);
+    consulta = base.consultarLineasTicket(conf->getConexionLocal(),ticket);
     int i = 0;
     modeloTabla = new QStandardItemModel();
     while (consulta.next()) {
@@ -186,7 +193,7 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent) : QObject(par
            "</thead>";
  pagina << "<tbody>"
            "<tr>"
-            "<td>General"
+            "<td>IVA 21"
              "</td>"
              "<td>"+base21+
              "</td>"
@@ -195,18 +202,28 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent) : QObject(par
              "<td>"+QString::number(t21)+
              "</td>"
            "</tr>"
+             "<tr>"
+               "<td>IVA 10"
+               "</td>"
+               "<td>"+base10+
+               "</td>"
+               "<td>"+iva10+
+               "</td>"
+               "<td>"+QString::number(t10)+
+               "</td>"
+             "</tr>"
+               "<tr>"
+               "<td>IVA 5"
+               "</td>"
+               "<td>"+base5+
+               "</td>"
+               "<td>"+iva5+
+               "</td>"
+               "<td>"+QString::number(t5)+
+               "</td>"
+             "</tr>"
            "<tr>"
-             "<td>Reducido"
-             "</td>"
-             "<td>"+base10+
-             "</td>"
-             "<td>"+iva10+
-             "</td>"
-             "<td>"+QString::number(t10)+
-             "</td>"
-           "</tr>"
-           "<tr>"
-             "<td>Super reducido"
+             "<td>IVA 4"
              "</td>"
              "<td>"+base4+
              "</td>"
@@ -215,6 +232,16 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent) : QObject(par
              "<td>"+QString::number(t4)+
              "</td>"
            "</tr>"
+             "<tr>"
+               "<td>IVA 0"
+               "</td>"
+               "<td>"+base0+
+               "</td>"
+               "<td>"+iva0+
+               "</td>"
+               "<td>"+QString::number(t0)+
+               "</td>"
+             "</tr>"
              "<tr>"
            "<td><b>TOTAL"
            "</td>"

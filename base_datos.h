@@ -88,8 +88,8 @@ public:
     QString codigoParaNuevoProveedor();
     QString codigoDesdeAux(QString base, QString aux);
 //Funciones TICKETS
-    QSqlQuery datosTicket(QString nTicket);
-    QSqlQuery consultarLineasTicket(QString nTicket);
+    QSqlQuery datosTicket(QString base , QString nTicket);
+    QSqlQuery consultarLineasTicket(QString base , QString nTicket);
     double obtenerNumeroUltimoTicket(QSqlDatabase db);
     QSqlQuery tcketsPendientes(QSqlDatabase db);
     int maxTicketPendiente(QSqlDatabase db);

@@ -7,7 +7,7 @@
 
 ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
 {
-    consulta = base.datosTicket(nTicket);
+    consulta = base.datosTicket(conf->getConexionLocal(),nTicket);
     ticket = consulta.value(0).toString();
     fecha = consulta.value(3).toString();
     hora = consulta.value(4).toString();
@@ -35,7 +35,7 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     texto << "UDS|  Producto            |Prec.|Dto|Total\n";
     texto << "------------------------------------------\n";
 
-    consulta = base.consultarLineasTicket(ticket);
+    consulta = base.consultarLineasTicket(conf->getConexionLocal(),ticket);
     while(consulta.next()) {
         uds = consulta.value(4).toString();
         producto = consulta.value(3).toString();
