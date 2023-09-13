@@ -68,7 +68,7 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     //texto << confTicket.at(4);
     texto << "\n\n";
     impresora.close();
-    QString imprimir = "less ./ticket.txt >> "+confTicket.at(3);
+    QString imprimir = "less ./ticket.txt: >> "+confTicket.at(3);
     const char* ch = imprimir.toLocal8Bit().constData();
     system(ch);
     return;
