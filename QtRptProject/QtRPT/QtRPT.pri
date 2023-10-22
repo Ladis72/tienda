@@ -10,7 +10,7 @@ include(../CommonFiles/CommonFiles_QtRpt.pri)
 
 INCLUDEPATH += $$PWD
 #INCLUDEPATH += $$PWD/../3rdparty/QtXlsx
-#LIBS += -L$${DEST_DIRECTORY}/lib -lQtXlsx
+#LIBS += -L -lQtXlsx
 
 SOURCES += $$PWD/qtrpt.cpp \
            $$PWD/RptSql.cpp \

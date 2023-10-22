@@ -49,7 +49,7 @@ void BarCode::drawBarcode(QPainter *painter, qreal x, qreal y, qreal width, qrea
         bc->setSymbol(m_BarcodeType);
 
         //bc.setPrimaryMessage("dprimaryMessage");  //???
-        bc->setBorderType((Zint::QZint::BorderType)m_FrameType);  //Тип обрамляющей рамки
+        //bc->setBorderType((Zint::QZint::borderType())m_FrameType);  //Тип обрамляющей рамки
         //bc->setHeight(height);
         bc->setWidth(width);
         bc->setSecurityLevel(0);
@@ -79,7 +79,7 @@ void BarCode::setFrameType(FrameTypes value) {
     m_FrameType = value;
     #ifndef NO_BARCODE
         if (bc != 0)
-            bc->setBorderType((Zint::QZint::BorderType)m_FrameType);
+            //bc->setBorderType((Zint::QZint::BorderType)m_FrameType);
         repaint();
     #endif
 }
@@ -88,7 +88,7 @@ void BarCode::setHeight(int value) {
     m_height = value;
     #ifndef NO_BARCODE
         if (bc != 0)
-            bc->setHeight(value);
+        //bc->setHeight(value);
         repaint();
     #endif
 }

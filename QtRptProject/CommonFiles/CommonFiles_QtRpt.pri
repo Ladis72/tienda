@@ -6,7 +6,7 @@ include($$PWD/../QtRPT/config.pri)
     INCLUDEPATH += $$PWD/../3rdparty/zint-2.4.4/backend_qt4
     INCLUDEPATH += $$PWD/../3rdparty/zint-2.4.4/backend
 
-    LIBS += -L$${DEST_DIRECTORY}/lib -lQtZint
+    LIBS += -L$${DEST_DIRECTORY}/libs -lQtZint
 }
 
 SOURCES += $$PWD/CommonClasses.cpp \
@@ -16,3 +16,7 @@ SOURCES += $$PWD/CommonClasses.cpp \
 HEADERS += $$PWD/CommonClasses.h \
            $$PWD/chart.h \
            $$PWD/Barcode.h
+
+DISTFILES += \
+    $$PWD/../libQtRPT.so \
+    $$PWD/../libQtZint.so
