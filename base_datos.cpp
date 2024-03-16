@@ -1524,10 +1524,10 @@ QSqlQuery baseDatos::recuperarPedidos(QString base)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT * FROM albaranes_tmp");
-    if (consulta.isValid()) {
-        return consulta;
+    if (!consulta.isValid()) {
+        qDebug() << consulta.lastError().text();
     }
-    qDebug() << consulta.lastError().text();
+    return consulta;
     
 }
 double baseDatos::ESdesdeFecha(QString fecha, QString hora, QString base){
