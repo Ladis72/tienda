@@ -111,6 +111,8 @@ private slots:
     void comprobarVales();
     void keyPressEvent(QKeyEvent *e);
 
+    void on_pushButtonCopia_clicked();
+
 private:
     QPushButton *sincroVales;
 

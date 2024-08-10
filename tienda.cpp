@@ -4,6 +4,7 @@
 
 #include <QDebug>
 #include <QMessageBox>
+#include <QFileDialog>
 
 Tienda::Tienda(QWidget *parent) :
     QMainWindow(parent),
@@ -351,3 +352,15 @@ void Tienda::keyPressEvent(QKeyEvent *e)
         }
     }
 }
+
+void Tienda::on_pushButtonCopia_clicked()
+{
+    QFileDialog *dlgCopia = new QFileDialog(this);
+    dlgCopia->exec();
+    qDebug() << "Archivo " << dlgCopia->selectedFiles();
+    qDebug() << "Directorio " << dlgCopia->directory().absolutePath();
+
+
+    //base.copiaSeguridad(QDir("/home/ladis"), "copia seguridad");
+}
+

@@ -1801,6 +1801,11 @@ QString baseDatos::nombreConexionLocal()
     return consulta.record().value("nombre").toString();
 }
 
+bool baseDatos::copiaSeguridad(QDir ruta, QString nombre)
+{
+
+}
+
 QStringList baseDatos::datosTiendaLocal(QString db){
     QStringList datos;
     QSqlQuery consulta(QSqlDatabase::database(db));

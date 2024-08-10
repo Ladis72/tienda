@@ -2,6 +2,7 @@
 #define BASE_DATOS_H
 
 #include "configuracion.h"
+#include "qdir.h"
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
@@ -170,6 +171,7 @@ public:
     QString devolverDirectorio(QString tipo);
     QString nombreConexionMaster();
     QString nombreConexionLocal();
+    bool copiaSeguridad(QDir ruta, QString nombre);
 
 private:
 

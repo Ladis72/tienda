@@ -185,3 +185,6 @@ include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
 RESOURCES += \
     recursos.qrc
+
+DISTFILES += \
+    Instalación.txt
