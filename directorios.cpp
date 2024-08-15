@@ -18,7 +18,7 @@ Directorios::~Directorios()
 void Directorios::on_pushButtonAceptar_clicked()
 {
     cargarListaLineEdit();
-    if (base->guardarDirectorios(listaDatos)) {
+    if (base->guardarDirectorios(conf->getConexionLocal(), listaDatos)) {
         qDebug() << listaDatos;
         this->close();
     }
@@ -32,6 +32,7 @@ void Directorios::llenarListaBase(QStringList lista)
     ui->lineEditCaducados->setText(lista.at(3));
     ui->lineEditArqueos->setText(lista.at(4));
     ui->lineEditMovimientos->setText(lista.at(5));
+    ui->lineEditCseg->setText(lista.at(6));
 }
 
 void Directorios::cargarListaLineEdit()
@@ -43,11 +44,12 @@ void Directorios::cargarListaLineEdit()
     listaDatos.append(ui->lineEditCaducados->text());
     listaDatos.append(ui->lineEditArqueos->text());
     listaDatos.append(ui->lineEditMovimientos->text());
+    listaDatos.append(ui->lineEditCseg->text());
 }
 
 void Directorios::cargalListaBase()
 {
-    listaDatos = base->cargarDirectorios();
+    listaDatos = base->cargarDirectorios(conf->getConexionLocal());
     llenarListaBase(listaDatos);
 }
 
@@ -91,3 +93,16 @@ void Directorios::on_toolButtonMovimientos_clicked()
     ui->lineEditMovimientos->setText(directorio);
 
 }
+
+void Directorios::on_toolButtonCseg_triggered(QAction *arg1)
+{
+
+}
+
+
+void Directorios::on_toolButtonCseg_clicked()
+{
+    QString directorio = QFileDialog::getExistingDirectory(this, "Seleccionar directorio para la copia" ,QDir::homePath(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    ui->lineEditCseg->setText(directorio);
+}
+

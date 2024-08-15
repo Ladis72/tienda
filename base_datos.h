@@ -166,8 +166,8 @@ public:
 //Funciones de configuración
     QString leerConfiguracion();
     bool GuardarConfiguracion(int datos);
-    bool guardarDirectorios(QStringList directorios);
-    QStringList cargarDirectorios();
+    bool guardarDirectorios(QString base, QStringList directorios);
+    QStringList cargarDirectorios(QString base);
     QString devolverDirectorio(QString tipo);
     QString nombreConexionMaster();
     QString nombreConexionLocal();

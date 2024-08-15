@@ -31,6 +31,10 @@ private slots:
 
     void on_toolButtonMovimientos_clicked();
 
+    void on_toolButtonCseg_triggered(QAction *arg1);
+
+    void on_toolButtonCseg_clicked();
+
 private:
     Ui::Directorios *ui;
     baseDatos *base;

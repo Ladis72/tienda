@@ -40,6 +40,10 @@ Tienda::Tienda(QWidget *parent) :
 
 Tienda::~Tienda()
 {
+    int respuesta = QMessageBox::warning(this, tr("Salir de la aplicación"),tr("Quieres hacer una copia de seguridad antes de cerrar?"), QMessageBox::Yes | QMessageBox::No);
+    if (respuesta == QMessageBox::Yes) {
+        emit on_pushButtonCopia_clicked();
+    }
     delete conf;
     delete ui;
 }
@@ -355,17 +359,17 @@ void Tienda::keyPressEvent(QKeyEvent *e)
 
 void Tienda::on_pushButtonCopia_clicked()
 {
-    QString directorio = QFileDialog::getExistingDirectory(this,
-                                                           "Elegir directorio",
-                                                           QDir::homePath(),
-                                                           QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    QString directorio = base.devolverDirectorio("copia");
+    if (directorio.isEmpty()) {
+        directorio = QFileDialog::getExistingDirectory(this,
+                                                       "Elegir directorio",
+                                                       QDir::homePath(),
+                                                       QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
-    //QFileDialog *dlgCopia = new QFileDialog(this);
-    //dlgCopia->exec();
-    //qDebug() << "Archivo " << dlgCopia->selectedFiles();
-    //QString Directorio = dlgCopia->directory().absolutePath();
+    }
     qDebug() << directorio;
-    QString nombreBackup = directorio+"/"+QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss")+".sql";
+
+    QString nombreBackup = directorio+"/"+base.nombreConexionLocal()+"-"+QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss")+".sql";
     qDebug() << nombreBackup;
 
 

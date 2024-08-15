@@ -1742,9 +1742,9 @@ bool baseDatos::GuardarConfiguracion(int datos)
     return false;
 }
 
-bool baseDatos::guardarDirectorios(QStringList directorios)
+bool baseDatos::guardarDirectorios(QString base , QStringList directorios)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("UPDATE directorios SET directorio = ? WHERE id = ?");
     for(int i = 1; i < directorios.count()+1; i++){
     consulta.bindValue(0,directorios.at(i-1));
@@ -1756,10 +1756,10 @@ bool baseDatos::guardarDirectorios(QStringList directorios)
     return true;
 }
 
-QStringList baseDatos::cargarDirectorios()
+QStringList baseDatos::cargarDirectorios(QString base)
 {
     QStringList resultado;
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.exec("SELECT directorio FROM directorios");
     consulta.first();
     for (int i = 0;i <= consulta.numRowsAffected();i++) {

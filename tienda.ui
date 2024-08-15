@@ -47,7 +47,7 @@
     <item row="1" column="0">
      <widget class="QTabWidget" name="tab">
       <property name="currentIndex">
-       <number>6</number>
+       <number>5</number>
       </property>
       <property name="iconSize">
        <size>
@@ -362,7 +362,7 @@
         <item row="0" column="0">
          <widget class="QPushButton" name="pushButtonInformes">
           <property name="text">
-           <string>Informes</string>
+           <string>Directorios</string>
           </property>
          </widget>
         </item>
