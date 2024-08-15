@@ -20,6 +20,7 @@ SOURCES += main.cpp\
     imprimirfacturaproveedor.cpp \
     imprimirpedido.cpp \
     informes1.cpp \
+    login.cpp \
         tienda.cpp \
     tpv.cpp \
     base_datos.cpp \
@@ -80,6 +81,7 @@ HEADERS  += tienda.h \
     imprimirfacturaproveedor.h \
     imprimirpedido.h \
     informes1.h \
+    login.h \
     tpv.h \
     base_datos.h \
     conexion.h \
@@ -136,6 +138,7 @@ FORMS    += tienda.ui \
     actualizarclientes.ui \
     copiaseguridad.ui \
     generarvales.ui \
+    login.ui \
     tpv.ui \
     buscarproducto.ui \
     tabwidget.ui \

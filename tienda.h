@@ -113,6 +113,8 @@ private slots:
 
     void on_pushButtonCopia_clicked();
 
+    void on_pushButtonSesion_clicked();
+
 private:
     QPushButton *sincroVales;
 
@@ -155,6 +157,8 @@ private:
     GenerarVales *genVales;
 
     QLabel *button[];
+    void cerrarAplicacion();
+
 };
 
 #endif // TIENDA_H

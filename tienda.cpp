@@ -1,4 +1,5 @@
 ﻿#include "tienda.h"
+#include "login.h"
 #include "ui_tienda.h"
 #include "conexion.h"
 
@@ -30,22 +31,44 @@ Tienda::Tienda(QWidget *parent) :
     logo.load("./documentos/logo.jpg");
     ui->logo->setPixmap(logo);
 
+
+
+
     conexiones = new conexionesRemotas(this);
     ui->statusBar->addPermanentWidget(ui->pushButtonConectar);
 
     sincroVales = new QPushButton("Sincro vales",this);
     connect(sincroVales,SIGNAL(clicked()),this,SLOT(sincronizarVales()));
     comprobarVales();
+    Login login;
+    int resultado;
+    if(login.exec() == QDialog::Accepted){
+         resultado = 1;
+    }else{
+         resultado = 0;
+    }
+    if(resultado == 0){
+        cerrarAplicacion();
+    }
+    statusBar()->showMessage(conf->getUsuario());
+    qDebug() << conf->getRol();
+
 }
 
 Tienda::~Tienda()
 {
     int respuesta = QMessageBox::warning(this, tr("Salir de la aplicación"),tr("Quieres hacer una copia de seguridad antes de cerrar?"), QMessageBox::Yes | QMessageBox::No);
     if (respuesta == QMessageBox::Yes) {
-        emit on_pushButtonCopia_clicked();
+        on_pushButtonCopia_clicked();
     }
     delete conf;
     delete ui;
+}
+
+void Tienda::cerrarAplicacion()
+{
+    qDebug() << "Pasa por aquí";
+    std::exit(0);
 }
 
 void Tienda::on_ventasButton_clicked()
@@ -374,5 +397,11 @@ void Tienda::on_pushButtonCopia_clicked()
 
 
     base.copiaSeguridad(conf->getConexionLocal(),nombreBackup);
+}
+
+
+void Tienda::on_pushButtonSesion_clicked()
+{
+
 }
 

@@ -47,7 +47,7 @@
     <item row="1" column="0">
      <widget class="QTabWidget" name="tab">
       <property name="currentIndex">
-       <number>5</number>
+       <number>6</number>
       </property>
       <property name="iconSize">
        <size>
@@ -394,6 +394,13 @@
           </property>
           <property name="text">
            <string>Conectar</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButtonSesion">
+          <property name="text">
+           <string>Cerrar sesion</string>
           </property>
          </widget>
         </item>

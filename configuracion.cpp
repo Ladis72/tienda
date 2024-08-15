@@ -2,7 +2,6 @@
 
 Configuracion::Configuracion()
 {
-    usuario ="Ladis";
 }
 
 Configuracion::~Configuracion()
@@ -48,5 +47,25 @@ QString Configuracion::getConexionLocal()
 void Configuracion::setConexionLocal(QString conn)
 {
     conexionLocal = conn;
+}
+
+QString Configuracion::getUsuario()
+{
+    return usuario;
+}
+
+void Configuracion::setUsuario(QString user)
+{
+    usuario = user;
+}
+
+int Configuracion::getRol()
+{
+    return rol;
+}
+
+void Configuracion::setRol(int setRol)
+{
+    rol = setRol;
 }
 

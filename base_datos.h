@@ -64,6 +64,7 @@ public:
 
 //FUNCIONES USUARIOS
 
+
     bool borrarUsusario(QSqlDatabase db, int dato);
     bool borrarArticulo(QSqlDatabase db, QString dato);
     QString nombreFamilia(QString id);
