@@ -1,4 +1,5 @@
 #include "base_datos.h"
+#include "qprocess.h"
 #include <QDebug>
 #include <QMessageBox>
 #include <QDate>
@@ -1801,9 +1802,29 @@ QString baseDatos::nombreConexionLocal()
     return consulta.record().value("nombre").toString();
 }
 
-bool baseDatos::copiaSeguridad(QDir ruta, QString nombre)
+bool baseDatos::copiaSeguridad(QString base , QString nombre)
 {
+    qDebug() << "Funcion copia de segurudad activada con el nombre: "+nombre;
+    QStringList argumentos;
+    argumentos << "--host="+QSqlDatabase::database(base).hostName()
+               << "--port="+QString::number(QSqlDatabase::database(base).port())
+               << "--user="+QSqlDatabase::database(base).userName()
+               << "--password="+QSqlDatabase::database(base).password()
+               << QSqlDatabase::database(base).databaseName();
+    qDebug() << argumentos;
+    QProcess *process = new QProcess();
+    process->setStandardOutputFile(nombre);
+    process->start("mysqldump", argumentos);
+    if (process->waitForFinished(-1)) {
+        qDebug() << "Compretada sin errores el backup de: "<<nombre;
+        return true;
+    } else {
+        qDebug() << "Backup error";
+        qDebug() << process->errorString();
+    }
 
+
+    return false;
 }
 
 QStringList baseDatos::datosTiendaLocal(QString db){

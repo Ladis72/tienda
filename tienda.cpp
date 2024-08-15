@@ -355,12 +355,20 @@ void Tienda::keyPressEvent(QKeyEvent *e)
 
 void Tienda::on_pushButtonCopia_clicked()
 {
-    QFileDialog *dlgCopia = new QFileDialog(this);
-    dlgCopia->exec();
-    qDebug() << "Archivo " << dlgCopia->selectedFiles();
-    qDebug() << "Directorio " << dlgCopia->directory().absolutePath();
+    QString directorio = QFileDialog::getExistingDirectory(this,
+                                                           "Elegir directorio",
+                                                           QDir::homePath(),
+                                                           QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+    //QFileDialog *dlgCopia = new QFileDialog(this);
+    //dlgCopia->exec();
+    //qDebug() << "Archivo " << dlgCopia->selectedFiles();
+    //QString Directorio = dlgCopia->directory().absolutePath();
+    qDebug() << directorio;
+    QString nombreBackup = directorio+"/"+QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss")+".sql";
+    qDebug() << nombreBackup;
 
 
-    //base.copiaSeguridad(QDir("/home/ladis"), "copia seguridad");
+    base.copiaSeguridad(conf->getConexionLocal(),nombreBackup);
 }
 

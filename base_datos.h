@@ -171,7 +171,7 @@ public:
     QString devolverDirectorio(QString tipo);
     QString nombreConexionMaster();
     QString nombreConexionLocal();
-    bool copiaSeguridad(QDir ruta, QString nombre);
+    bool copiaSeguridad(QString base, QString nombre);
 
 private:
 
