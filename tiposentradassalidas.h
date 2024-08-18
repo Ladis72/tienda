@@ -2,8 +2,8 @@
 #define TIPOSENTRADASSALIDAS_H
 
 #include <QDialog>
-#include "base_datos.h"
 #include "QMessageBox"
+#include "base_datos.h"
 
 namespace Ui {
 class TiposEntradasSalidas;
@@ -27,7 +27,6 @@ private slots:
 private:
     Ui::TiposEntradasSalidas *ui;
     QSqlTableModel *modelo;
-
 };
 
 #endif // TIPOSENTRADASSALIDAS_H

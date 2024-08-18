@@ -27,7 +27,7 @@ private:
     Ui::ListadoCaducados *ui;
 
     void llenarTabla(QString desde, QString hasta);
-    QString desde , hasta;
+    QString desde, hasta;
     QSqlQueryModel *mCaducados;
     baseDatos *base;
 };

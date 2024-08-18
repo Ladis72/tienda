@@ -5,9 +5,6 @@
 #include "base_datos.h"
 #include "buscarproducto.h"
 
-
-
-
 namespace Ui {
 class Ususarios;
 }
@@ -15,11 +12,11 @@ class Ususarios;
 class Ususarios : public QTabWidget
 {
     Q_OBJECT
-    
+
 public:
     explicit Ususarios(QWidget *parent = 0);
     ~Ususarios();
-    
+
 private slots:
     void on_pushButtonAnterior_clicked();
 

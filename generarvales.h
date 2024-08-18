@@ -29,7 +29,7 @@ private:
     Ui::GenerarVales *ui;
     baseDatos base;
     QStringList tiendas;
-    QString master , fechaI , fechaF;
+    QString master, fechaI, fechaF;
     int descuento;
 };
 

@@ -2,8 +2,8 @@
 #define CADUCIDADES_H
 
 #include <QDialog>
-#include <QSqlRelationalTableModel>
 #include <QSqlRelationalDelegate>
+#include <QSqlRelationalTableModel>
 #include "base_datos.h"
 namespace Ui {
 class Caducidades;

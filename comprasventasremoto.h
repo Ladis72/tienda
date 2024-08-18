@@ -13,7 +13,7 @@ class comprasVentasRemoto : public QWidget
     Q_OBJECT
 
 public:
-    explicit comprasVentasRemoto(QSqlDatabase base , QString ean ,QWidget *parent = nullptr);
+    explicit comprasVentasRemoto(QSqlDatabase base, QString ean, QWidget *parent = nullptr);
     ~comprasVentasRemoto();
 
 private slots:

@@ -1,13 +1,8 @@
 #include "configuracion.h"
 
-Configuracion::Configuracion()
-{
-}
+Configuracion::Configuracion() {}
 
-Configuracion::~Configuracion()
-{
-
-}
+Configuracion::~Configuracion() {}
 
 QStringList Configuracion::getNombreConexiones()
 {
@@ -68,4 +63,3 @@ void Configuracion::setRol(int setRol)
 {
     rol = setRol;
 }
-

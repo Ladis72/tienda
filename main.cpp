@@ -1,8 +1,8 @@
 
-#include "login.h"
-#include "tienda.h"
 #include "conexion.h"
 #include "configuracion.h"
+#include "login.h"
+#include "tienda.h"
 
 #include <QApplication>
 
@@ -14,9 +14,6 @@ int main(int argc, char *argv[])
     conf = new Configuracion;
     if (!createConnection())
         return 1;
-
-
-
 
     Tienda w;
     w.show();

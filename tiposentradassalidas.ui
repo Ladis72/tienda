@@ -17,7 +17,7 @@
    <item row="2" column="0">
     <widget class="QSplitter" name="splitter">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <widget class="QPushButton" name="pushButton">
       <property name="text">

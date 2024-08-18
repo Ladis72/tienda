@@ -2,9 +2,9 @@
 #define LISTADOVENTAS_H
 
 #include <QDialog>
-#include <QVBoxLayout>
-#include <QStandardItemModel>
 #include <QKeyEvent>
+#include <QStandardItemModel>
+#include <QVBoxLayout>
 #include "base_datos.h"
 #include "configuracion.h"
 
@@ -36,8 +36,7 @@ private:
     QStandardItemModel *modeloTabla;
     void sumarVentas(QStandardItemModel *modelo);
     void keyPressEvent(QKeyEvent *e);
-    QString fechaI,fechaF;
-
+    QString fechaI, fechaF;
 };
 
 #endif // LISTADOVENTAS_H

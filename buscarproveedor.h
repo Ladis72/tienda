@@ -1,7 +1,6 @@
 #ifndef BUSCARPROVEEDOR_H
 #define BUSCARPROVEEDOR_H
 
-
 #include <QDialog>
 #include "base_datos.h"
 
@@ -14,7 +13,7 @@ class BuscarProveedor : public QDialog
     Q_OBJECT
 
 public:
-    explicit BuscarProveedor(QWidget *parent , QString nombre);
+    explicit BuscarProveedor(QWidget *parent, QString nombre);
     ~BuscarProveedor();
     QString resultado;
 private slots:

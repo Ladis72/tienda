@@ -1,63 +1,59 @@
 ﻿#include "tienda.h"
+#include "conexion.h"
 #include "login.h"
 #include "ui_tienda.h"
-#include "conexion.h"
 
 #include <QDebug>
-#include <QMessageBox>
 #include <QFileDialog>
+#include <QMessageBox>
+#include <QPalette>
 
-Tienda::Tienda(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::Tienda)
+Tienda::Tienda(QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::Tienda)
 {
     ui->setupUi(this);
     QStringList datos = base.datosConexionLocal();
-    if(datos.isEmpty()){
-        createConnection("localhost","3306","tienda","root","meganizado","DB");
+    if (datos.isEmpty()) {
+        createConnection("localhost", "3306", "tienda", "root", "meganizado", "DB");
         conf->setConexionLocal("DB");
-    }else {
-        createConnection(datos.at(1),"3306","tienda",datos.at(2),datos.at(3),datos.at(0));
+    } else {
+        createConnection(datos.at(1), "3306", "tienda", datos.at(2), datos.at(3), datos.at(0));
         conf->setConexionLocal(datos.at(0));
     }
     QString conexionMaster = base.nombreConexionMaster();
     conf->setConexionMaster(conexionMaster);
     if (conf->getConexionMaster() != conf->getConexionLocal()) {
-       ui->pushButtonGenerarVales->setEnabled(false);
-       ui->pushButtonActualizarClientes->setEnabled(false);
+        ui->pushButtonGenerarVales->setEnabled(false);
+        ui->pushButtonActualizarClientes->setEnabled(false);
     }
 
     QPixmap logo;
     logo.load("./documentos/logo.jpg");
     ui->logo->setPixmap(logo);
 
-
-
-
     conexiones = new conexionesRemotas(this);
     ui->statusBar->addPermanentWidget(ui->pushButtonConectar);
 
-    sincroVales = new QPushButton("Sincro vales",this);
-    connect(sincroVales,SIGNAL(clicked()),this,SLOT(sincronizarVales()));
+    sincroVales = new QPushButton("Sincro vales", this);
+    connect(sincroVales, SIGNAL(clicked()), this, SLOT(sincronizarVales()));
     comprobarVales();
-    Login login;
-    int resultado;
-    if(login.exec() == QDialog::Accepted){
-         resultado = 1;
-    }else{
-         resultado = 0;
-    }
-    if(resultado == 0){
-        cerrarAplicacion();
-    }
-    statusBar()->showMessage(conf->getUsuario());
-    qDebug() << conf->getRol();
-
+    usuario = new QPushButton(conf->getUsuario());
+    QPalette paleta = usuario->palette();
+    paleta.setColor(QPalette::Button, QColor(Qt::green));
+    usuario->setPalette(paleta );
+    ui->statusBar->addPermanentWidget(usuario);
+    connect(usuario, SIGNAL(clicked()), this, SLOT(on_pushButtonSesion_clicked()));
+    on_pushButtonSesion_clicked();
 }
 
 Tienda::~Tienda()
 {
-    int respuesta = QMessageBox::warning(this, tr("Salir de la aplicación"),tr("Quieres hacer una copia de seguridad antes de cerrar?"), QMessageBox::Yes | QMessageBox::No);
+    int respuesta
+        = QMessageBox::warning(this,
+                               tr("Salir de la aplicación"),
+                               tr("Quieres hacer una copia de seguridad antes de cerrar?"),
+                               QMessageBox::Yes | QMessageBox::No);
     if (respuesta == QMessageBox::Yes) {
         on_pushButtonCopia_clicked();
     }
@@ -68,26 +64,29 @@ Tienda::~Tienda()
 void Tienda::cerrarAplicacion()
 {
     qDebug() << "Pasa por aquí";
-    std::exit(0);
+    this->close();
+    //std::exit(0);
 }
 
 void Tienda::on_ventasButton_clicked()
 {
-
-
-
     T = new Tpv();
     connect(T, SIGNAL(cerrar_tpv()), this, SLOT(activar_btn_tpv()));
 
     T->showMaximized();
 
     return;
-
 }
-void Tienda::activar_btn_tpv()
+
+void Tienda::permisos(int i)
 {
+    if (conf->getRol() == -1) {
+        qDebug() << "Permiso -";
+        this->close();
+    }
 
 }
+void Tienda::activar_btn_tpv() {}
 
 void Tienda::on_pushButtonUsuarios_clicked()
 {
@@ -123,8 +122,10 @@ void Tienda::on_pushButtonFormasPago_clicked()
 void Tienda::on_pushButton_3_clicked()
 {
     if (!QSqlDatabase::database(conf->getConexionMaster()).isOpen()) {
-        QMessageBox::warning(this,"No hay definida una tienda MASTER","Los cambios que realice no serán guardados \n"
-                                                                      "Debe especificar una tienda master y estar conectado para operar");
+        QMessageBox::warning(this,
+                             "No hay definida una tienda MASTER",
+                             "Los cambios que realice no serán guardados \n"
+                             "Debe especificar una tienda master y estar conectado para operar");
     }
     Cli = new Clientes(this);
     Cli->show();
@@ -168,7 +169,7 @@ void Tienda::on_pushButtonTickets_clicked()
 
 void Tienda::on_pushButtonFacturas_clicked()
 {
-    VFact = new VerFacturas("facturas",this);
+    VFact = new VerFacturas("facturas", this);
     VFact->exec();
 }
 
@@ -214,7 +215,6 @@ void Tienda::on_pushButtonCaducados_clicked()
     Caduca->exec();
 }
 
-
 void Tienda::on_pushButtonTicket_clicked()
 {
     CTicket = new ConfigTicket(this);
@@ -223,10 +223,9 @@ void Tienda::on_pushButtonTicket_clicked()
 
 void Tienda::on_pushButtonConfigDB_clicked()
 {
-    CBase = new ConfigBase("configBase",this);
+    CBase = new ConfigBase("configBase", this);
     CBase->exec();
 }
-
 
 void Tienda::on_pushButtonPrestamos_clicked()
 {
@@ -242,7 +241,7 @@ void Tienda::on_pushButtonConfiguracion_clicked()
 
 void Tienda::on_pushButtonAlbaranes_clicked()
 {
-    VFact = new VerFacturas("albaranes",this);
+    VFact = new VerFacturas("albaranes", this);
     VFact->exec();
 }
 
@@ -284,33 +283,30 @@ void Tienda::on_pushButtonInformes_clicked()
 
 void Tienda::on_pushButtonTiendas_clicked()
 {
-
     Sucursal = new tiendas(this);
     Sucursal->exec();
 }
 
-
-
 void Tienda::refrescarConexiones()
 {
-    foreach (QLabel* lab, ui->statusBar->findChildren<QLabel*>()){
+    foreach (QLabel *lab, ui->statusBar->findChildren<QLabel *>()) {
         lab->deleteLater();
     }
     QLabel *button[conexiones->lista().length()];
-    for (int i = 0;i < conexiones->lista().length() ;i++ ) {
+    for (int i = 0; i < conexiones->lista().length(); i++) {
         button[i] = new QLabel(conexiones->lista().at(i));
-        ui->statusBar->insertWidget(i,button[i]);
+        ui->statusBar->insertWidget(i, button[i]);
     }
     QStringList conexionesActivas;
     QStringList conn;
     conn.clear();
     conn = conexiones->crear();
     conf->setNombreconexiones(conexiones->lista());
-    for (int i = 0 ; i < conn.length() ; i=i+2 ) {
-        if(conn.at(i+1) == "0"){
-            button[i/2]->setStyleSheet("QLabel {background-color : red}");
-        }else{
-            button[i/2]->setStyleSheet("QLabel {background-color : green}");
+    for (int i = 0; i < conn.length(); i = i + 2) {
+        if (conn.at(i + 1) == "0") {
+            button[i / 2]->setStyleSheet("QLabel {background-color : red}");
+        } else {
+            button[i / 2]->setStyleSheet("QLabel {background-color : green}");
             conexionesActivas << conn.at(i);
         }
     }
@@ -329,14 +325,12 @@ void Tienda::on_pushButtonActualizarClientes_clicked()
     actClientes->exec();
 }
 
-
-
 void Tienda::on_pushButtonGenerarVales_clicked()
 {
-//    if(conf->getNombreConexionesActivas().isEmpty() || conf->getNombreConexionesActivas() != conf->getNombreConexiones()){
-//        QMessageBox::information(this,"No se puede generar ahora","Para generar los vales deben estar todos los ordenadores conectados.");
-//        return;
-//    }
+    //    if(conf->getNombreConexionesActivas().isEmpty() || conf->getNombreConexionesActivas() != conf->getNombreConexiones()){
+    //        QMessageBox::information(this,"No se puede generar ahora","Para generar los vales deben estar todos los ordenadores conectados.");
+    //        return;
+    //    }
     genVales = new GenerarVales(this);
     genVales->exec();
 }
@@ -345,9 +339,9 @@ void Tienda::sincronizarVales()
 {
     QSqlQuery vales = base.valesPendientes(conf->getConexionLocal());
     vales.first();
-    for (int i = 0 ;i < vales.numRowsAffected() ; i++ ) {
-        if (base.usarVale(vales.record().value(2).toString(),vales.record().value(1).toInt())) {
-            base.borrarValePendiente(conf->getConexionLocal(),vales.record().value(1).toInt());
+    for (int i = 0; i < vales.numRowsAffected(); i++) {
+        if (base.usarVale(vales.record().value(2).toString(), vales.record().value(1).toInt())) {
+            base.borrarValePendiente(conf->getConexionLocal(), vales.record().value(1).toInt());
         }
         vales.next();
     }
@@ -357,10 +351,9 @@ void Tienda::sincronizarVales()
 
 void Tienda::comprobarVales()
 {
-    if(base.hayValesPendientesMarcar(conf->getConexionLocal())){
-
+    if (base.hayValesPendientesMarcar(conf->getConexionLocal())) {
         QPalette pal = sincroVales->palette();
-        pal.setColor(QPalette::Button,QColor(Qt::red));
+        pal.setColor(QPalette::Button, QColor(Qt::red));
         sincroVales->setAutoFillBackground(true);
         sincroVales->setPalette(pal);
         sincroVales->update();
@@ -375,7 +368,8 @@ void Tienda::keyPressEvent(QKeyEvent *e)
     if (e->key() == Qt::Key_F11) {
         if (ui->listadoVentasButton->isEnabled()) {
             ui->listadoVentasButton->setEnabled(false);
-        } else {ui->listadoVentasButton->setEnabled(true);
+        } else {
+            ui->listadoVentasButton->setEnabled(true);
         }
     }
 }
@@ -387,21 +381,40 @@ void Tienda::on_pushButtonCopia_clicked()
         directorio = QFileDialog::getExistingDirectory(this,
                                                        "Elegir directorio",
                                                        QDir::homePath(),
-                                                       QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-
+                                                       QFileDialog::ShowDirsOnly
+                                                           | QFileDialog::DontResolveSymlinks);
     }
     qDebug() << directorio;
 
-    QString nombreBackup = directorio+"/"+base.nombreConexionLocal()+"-"+QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss")+".sql";
+    QString nombreBackup = directorio + "/" + base.nombreConexionLocal() + "-"
+                           + QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss") + ".sql";
     qDebug() << nombreBackup;
 
-
-    base.copiaSeguridad(conf->getConexionLocal(),nombreBackup);
+    base.copiaSeguridad(conf->getConexionLocal(), nombreBackup);
 }
 
+void Tienda::on_pushButtonSesion_clicked() {
+    conf->setUsuario(NULL);
+    conf->setRol(-1);
+    login();
 
-void Tienda::on_pushButtonSesion_clicked()
+}
+
+void Tienda::login()
 {
-
+    Login login;
+    int resultado;
+    if (login.exec() == QDialog::Accepted) {
+        resultado = 1;
+    } else {
+        resultado = 0;
+    }
+    if (resultado == 0) {
+        this->close();
+        //cerrarAplicacion();
+    }
+    usuario->setText(conf->getUsuario());
+    qDebug() << conf->getUsuario();
+    qDebug() << conf->getRol();
+    permisos(conf->getRol());
 }
-

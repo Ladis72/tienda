@@ -1,14 +1,12 @@
 #ifndef CLIENTES_H
 #define CLIENTES_H
+#include <QDialog>
+#include <QList>
+#include <QStandardItemModel>
 #include "base_datos.h"
+#include "buscarproducto.h"
 #include "configuracion.h"
 #include "qdatetime.h"
-#include "buscarproducto.h"
-#include <QDialog>
-#include <QStandardItemModel>
-#include <QList>
-
-
 
 extern Configuracion *conf;
 namespace Ui {
@@ -21,7 +19,7 @@ class Clientes : public QDialog
 
 public:
     explicit Clientes(QWidget *parent = nullptr);
-    explicit Clientes(QWidget *parent , QString codigo );
+    explicit Clientes(QWidget *parent, QString codigo);
     ~Clientes();
 
 private slots:
@@ -36,7 +34,6 @@ private slots:
     void on_pushButtonSiguiente_clicked();
 
     void on_lineEditNombre_returnPressed();
-
 
     void on_lineEditCod_editingFinished();
 
@@ -56,7 +53,6 @@ private slots:
 
     void on_tableView2_doubleClicked(const QModelIndex &index);
 
-
     void on_radioButtonCantidad_clicked();
 
     void on_radioButtonFecha_clicked();
@@ -71,18 +67,15 @@ private:
     QSqlQuery consulta;
     QString nombreConexionMaster;
     QString nombreConexionLocal;
-    QString fechaI , fechaF;
+    QString fechaI, fechaF;
     QSqlQueryModel *listaTickets;
     QSqlQueryModel *ticket;
     QString nTicket;
     QStandardItemModel *vistaTickets;
     QStringList listaConexionesRemotas;
-    QList<QStandardItem*> listaItems;
+    QList<QStandardItem *> listaItems;
     QStandardItemModel *vistaArticulosVendido;
     QSqlQueryModel *listaProductos;
-
-
-
 
     void recargarTabla();
     void borrarFormulario();
@@ -90,7 +83,6 @@ private:
     void refrescarBotones(int i);
     void cargarCompras();
     QStringList recogerDatosFormulario();
-
 };
 
 #endif // CLIENTES_H

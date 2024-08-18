@@ -1,16 +1,15 @@
 #include "dialogfecha.h"
-#include "ui_dialogfecha.h"
 #include <QMessageBox>
+#include "ui_dialogfecha.h"
 
-DialogFecha::DialogFecha(QString producto , QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::DialogFecha)
+DialogFecha::DialogFecha(QString producto, QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::DialogFecha)
 {
     ui->setupUi(this);
     ui->label->setText(producto);
     lote = "";
     ui->dateEdit->setDate(QDate::currentDate());
-
 }
 
 DialogFecha::~DialogFecha()
@@ -31,9 +30,10 @@ void DialogFecha::on_dateEdit_userDateChanged(const QDate &date)
 
 void DialogFecha::on_pushButton_clicked()
 {
-        if (fecha.isValid() && fecha > QDate::currentDate()) {
-            close();
-        }else{QMessageBox::information(this,"ERROR","La fecha no es correcta");
+    if (fecha.isValid() && fecha > QDate::currentDate()) {
+        close();
+    } else {
+        QMessageBox::information(this, "ERROR", "La fecha no es correcta");
         return;
-        }
+    }
 }

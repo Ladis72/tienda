@@ -1,17 +1,17 @@
 #include "configbase.h"
 #include "ui_configbase.h"
-ConfigBase::ConfigBase(QString tabla , QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::ConfigBase)
+ConfigBase::ConfigBase(QString tabla, QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::ConfigBase)
 {
     ui->setupUi(this);
-    if(tabla == "configMaster"){
+    if (tabla == "configMaster") {
         datos = base->datosConexionMaster();
         datos.append("master");
-    }else{
+    } else {
         datos = base->datosConexion();
         datos.append("local");
-        }
+    }
     ui->lineEditDireccion->setText(datos.at(0));
     ui->lineEditPuerto->setText(datos.at(1));
     ui->lineEditUsuario->setText(datos.at(3));
@@ -32,7 +32,7 @@ void ConfigBase::on_pushButton_clicked()
     nombreBaseDatos = ui->lineEditBaseDatos->text();
     usuario = ui->lineEditUsuario->text();
     clave = ui->lineEditClave->text();
-    if(base->conectar(host,puerto,nombreBaseDatos,usuario,clave)){
+    if (base->conectar(host, puerto, nombreBaseDatos, usuario, clave)) {
         actualizarDatos();
         close();
     }
@@ -40,9 +40,9 @@ void ConfigBase::on_pushButton_clicked()
 
 void ConfigBase::actualizarDatos()
 {
-    if(datos.at(5) == "master"){
-        base->guardarDatosConexionMaster(host,puerto,nombreBaseDatos,usuario,clave);
-    }else{
-    base->guardarDatosConexion(host,puerto,nombreBaseDatos,usuario,clave);
-        }
+    if (datos.at(5) == "master") {
+        base->guardarDatosConexionMaster(host, puerto, nombreBaseDatos, usuario, clave);
+    } else {
+        base->guardarDatosConexion(host, puerto, nombreBaseDatos, usuario, clave);
+    }
 }

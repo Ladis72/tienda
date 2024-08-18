@@ -1,14 +1,14 @@
 #include "familias.h"
-#include "ui_familias.h"
 #include <QMessageBox>
+#include "ui_familias.h"
 
-Familias::Familias(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::Familias)
+Familias::Familias(QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::Familias)
 {
     ui->setupUi(this);
 
-    modelo = new QSqlTableModel(this,QSqlDatabase::database("DB"));
+    modelo = new QSqlTableModel(this, QSqlDatabase::database("DB"));
     modelo->setTable("familias");
     modelo->setEditStrategy(QSqlTableModel::OnManualSubmit);
     modelo->select();
@@ -16,8 +16,6 @@ Familias::Familias(QWidget *parent) :
     ui->tableView->resizeColumnsToContents();
     ui->tableView->hideColumn(0);
     ui->lineEdit->setFocus();
-
-
 }
 
 Familias::~Familias()
@@ -32,9 +30,10 @@ void Familias::on_pushButtonAnadir_clicked()
 
 void Familias::on_pushButtonModificar_clicked()
 {
-    if(!modelo->submitAll()){
-        QMessageBox::warning(this, "ATENCION",
-                             "No se ha podido modificar el registro"+modelo->lastError().text());
+    if (!modelo->submitAll()) {
+        QMessageBox::warning(this,
+                             "ATENCION",
+                             "No se ha podido modificar el registro" + modelo->lastError().text());
     }
 }
 
@@ -50,12 +49,12 @@ void Familias::on_pushButtonBorrar_clicked()
 
 void Familias::on_tableView_clicked(const QModelIndex &index)
 {
-    QModelIndex indice = modelo->index(index.row(),0);
+    QModelIndex indice = modelo->index(index.row(), 0);
     resultado = modelo->data(indice).toString();
     qDebug() << resultado;
 }
 
 void Familias::on_lineEdit_textChanged(const QString &arg1)
 {
-    modelo->setFilter("descripcion LIKE '%"+ui->lineEdit->text()+"%'");
+    modelo->setFilter("descripcion LIKE '%" + ui->lineEdit->text() + "%'");
 }

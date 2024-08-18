@@ -1,23 +1,22 @@
 #ifndef ARTICULOS_H
 #define ARTICULOS_H
 
-#include "configuracion.h"
 #include "base_datos.h"
 #include "buscarproducto.h"
 #include "conexionesremotas.h"
+#include "configuracion.h"
 
-#include "familias.h"
-#include "fabricantes.h"
-#include "stock.h"
-#include "visorimagenes.h"
-#include "visorfacturas.h"
-#include "comprasventasremoto.h"
 #include "ClickableLabel.h"
-
+#include "comprasventasremoto.h"
+#include "fabricantes.h"
+#include "familias.h"
+#include "stock.h"
+#include "visorfacturas.h"
+#include "visorimagenes.h"
 
 #include <QDialog>
-#include <QLabel>
 #include <QKeyEvent>
+#include <QLabel>
 #include <QTreeWidget>
 
 extern Configuracion *conf;
@@ -28,7 +27,7 @@ class Articulos;
 class Articulos : public QDialog
 {
     Q_OBJECT
-    
+
 public:
     explicit Articulos(QWidget *parent = nullptr);
     ~Articulos();
@@ -63,13 +62,11 @@ private slots:
 
     void on_pushButtonNuevo_clicked();
 
-
     void on_radioButtonVentasDia_clicked();
 
     void on_radioButtonVentasMes_clicked();
 
     void on_radioButtonVentasAno_clicked();
-
 
     void on_radioButtonFacturas_clicked();
 
@@ -92,11 +89,9 @@ private slots:
     void on_pushButtonVer_2_clicked();
     void mostrarFoto();
 
-
     void on_pushButtonVerFactura_clicked();
 
     void on_checkBoxRemoto_stateChanged(int arg1);
-
 
     void on_treeWidgetStockTiendas_itemDoubleClicked(QTreeWidgetItem *item, int column);
 
@@ -109,12 +104,12 @@ private:
     QSqlQueryModel modeloCompras;
     QSqlTableModel *modeloAux;
     QDataWidgetMapper mapper;
-    QSqlQuery consulta , consultaRemota;
+    QSqlQuery consulta, consultaRemota;
     Stock *stock;
     VisorImagenes *visor;
     VisorFacturas *factura;
     comprasVentasRemoto *cvr;
-    QString nFactura , idProveedor;
+    QString nFactura, idProveedor;
     conexionesRemotas *conexiones;
     QStringList listaConexionesRemotas;
     bool remoto;
@@ -132,10 +127,6 @@ private:
     void llenarComboFormatos();
     void llenarStockRemoto(QString ean);
     static QStringList crearConexionesRemotas(QSqlQuery consultaRemota);
-
 };
-
-
-
 
 #endif // ARTICULOS_H

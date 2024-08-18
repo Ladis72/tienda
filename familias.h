@@ -4,7 +4,6 @@
 #include <QDialog>
 #include "base_datos.h"
 
-
 namespace Ui {
 class Familias;
 }
@@ -12,13 +11,13 @@ class Familias;
 class Familias : public QDialog
 {
     Q_OBJECT
-    
+
 public:
     explicit Familias(QWidget *parent = 0);
     ~Familias();
 
     QString resultado;
-    
+
 private slots:
     void on_pushButtonAnadir_clicked();
 

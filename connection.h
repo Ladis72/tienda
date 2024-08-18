@@ -60,12 +60,14 @@ static bool createConnection()
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
     db.setDatabaseName(":memory:");
     if (!db.open()) {
-        QMessageBox::critical(0, qApp->tr("Cannot open database"),
-            qApp->tr("Unable to establish a database connection.\n"
-                     "This example needs SQLite support. Please read "
-                     "the Qt SQL driver documentation for information how "
-                     "to build it.\n\n"
-                     "Click Cancel to exit."), QMessageBox::Cancel);
+        QMessageBox::critical(0,
+                              qApp->tr("Cannot open database"),
+                              qApp->tr("Unable to establish a database connection.\n"
+                                       "This example needs SQLite support. Please read "
+                                       "the Qt SQL driver documentation for information how "
+                                       "to build it.\n\n"
+                                       "Click Cancel to exit."),
+                              QMessageBox::Cancel);
         return false;
     }
 
@@ -79,10 +81,10 @@ static bool createConnection()
     query.exec("insert into person values(105, 'Maria', 'Papadopoulos')");
 
     query.exec("create table offices (id int primary key,"
-                                             "imagefile int,"
-                                             "location varchar(20),"
-                                             "country varchar(20),"
-                                             "description varchar(100))");
+               "imagefile int,"
+               "location varchar(20),"
+               "country varchar(20),"
+               "description varchar(100))");
     query.exec("insert into offices "
                "values(0, 0, 'Oslo', 'Norway',"
                "'Oslo is home to more than 500 000 citizens and has a "
@@ -125,8 +127,6 @@ static bool createConnection()
     query.exec("insert into images values(3, 'images/berlin.png')");
     query.exec("insert into images values(4, 'images/munich.png')");
     query.exec("insert into images values(5, 'images/beijing.png')");
-
-
 
     return true;
 }

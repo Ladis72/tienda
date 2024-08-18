@@ -1,10 +1,8 @@
 #include "conexionesremotas.h"
 #include "conexion.h"
-conexionesRemotas::conexionesRemotas(QObject *parent) : QObject(parent)
-{
-
-
-}
+conexionesRemotas::conexionesRemotas(QObject *parent)
+    : QObject(parent)
+{}
 
 QStringList conexionesRemotas::crear()
 {
@@ -12,19 +10,18 @@ QStringList conexionesRemotas::crear()
     QSqlQuery conexiones = base->tiendas(QSqlDatabase::database("DB"));
     conexiones.first();
     qDebug() << conexiones.numRowsAffected();
-    for (int i = 0; i < conexiones.numRowsAffected();++i) {
+    for (int i = 0; i < conexiones.numRowsAffected(); ++i) {
         QString host = conexiones.value("ip").toString();
         QString puerto = "3306";
         QString baseDatos = "tienda";
         QString usuario = conexiones.value("usuario").toString();
         QString constrasena = conexiones.value("password").toString();
         QString nombreConexion = conexiones.value("nombre").toString();
-        if(createConnection(host,puerto,baseDatos,usuario,constrasena,nombreConexion)){
+        if (createConnection(host, puerto, baseDatos, usuario, constrasena, nombreConexion)) {
             qDebug() << "conexion creada: " << nombreConexion;
             listaConexionesRemotas << nombreConexion << "1";
-        }else{
+        } else {
             listaConexionesRemotas << nombreConexion << "0";
-
         }
 
         conexiones.next();
@@ -32,7 +29,6 @@ QStringList conexionesRemotas::crear()
 
     qDebug() << "Lista online" << listaConexionesRemotas.size();
     return listaConexionesRemotas;
-
 }
 
 QStringList conexionesRemotas::lista()
@@ -42,7 +38,7 @@ QStringList conexionesRemotas::lista()
     tiendas.first();
     qDebug() << tiendas.numRowsAffected();
     qDebug() << tiendas.lastError();
-    for(int i = 0; i < tiendas.numRowsAffected(); ++i){
+    for (int i = 0; i < tiendas.numRowsAffected(); ++i) {
         listaOrdenadoresRemotos.append(tiendas.value("nombre").toString());
         tiendas.next();
     }
@@ -56,14 +52,14 @@ QStringList conexionesRemotas::listaOnLine()
     QSqlQuery conexiones = base->tiendas(QSqlDatabase::database("DB"));
     conexiones.first();
     qDebug() << conexiones.numRowsAffected();
-    for (int i = 0; i < conexiones.numRowsAffected();++i) {
+    for (int i = 0; i < conexiones.numRowsAffected(); ++i) {
         QString host = conexiones.value("ip").toString();
         QString puerto = "3306";
         QString baseDatos = "tienda";
         QString usuario = conexiones.value("usuario").toString();
         QString constrasena = conexiones.value("password").toString();
         QString nombreConexion = conexiones.value("nombre").toString();
-        if(createConnection(host,puerto,baseDatos,usuario,constrasena,nombreConexion)){
+        if (createConnection(host, puerto, baseDatos, usuario, constrasena, nombreConexion)) {
             qDebug() << "conexion creada: " << nombreConexion;
             listaConexionesActivas << nombreConexion;
         }

@@ -4,8 +4,8 @@
 #include <QDialog>
 #include <QKeyEvent>
 #include "base_datos.h"
-#include "dateeditdelegate.h"
 #include "configuracion.h"
+#include "dateeditdelegate.h"
 
 extern Configuracion *conf;
 

@@ -8,7 +8,6 @@
 
 extern Configuracion *conf;
 
-
 namespace Ui {
 class PedidoNuevo;
 }

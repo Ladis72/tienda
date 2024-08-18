@@ -1,19 +1,19 @@
 #ifndef TPV_H
 #define TPV_H
 
-#include <QWidget>
-#include <QMessageBox>
 #include <QKeyEvent>
-#include <QStandardItemModel>
 #include <QLabel>
+#include <QMessageBox>
+#include <QStandardItemModel>
+#include <QWidget>
+#include "ClickableLabel.h"
 #include "base_datos.h"
 #include "buscarproducto.h"
-#include "totalizar.h"
 #include "clientes.h"
-#include "formateo.h"
-#include "visorimagenes.h"
 #include "configuracion.h"
-#include "ClickableLabel.h"
+#include "formateo.h"
+#include "totalizar.h"
+#include "visorimagenes.h"
 
 extern Configuracion *conf;
 
@@ -25,17 +25,14 @@ class Tpv;
 class Tpv : public QWidget
 {
     Q_OBJECT
-    
+
 public:
     explicit Tpv(QWidget *parent = nullptr);
     ~Tpv();
 
-
-
 private slots:
     void on_btn_cerrar_clicked();
     void on_lineEdit_cod_returnPressed();
-
 
     void on_btn_anadir_clicked();
 
@@ -63,7 +60,7 @@ private slots:
 
     void on_btn_preTicket_clicked();
 
-    void usarVale(int ticket , int idVale , double cantVale);
+    void usarVale(int ticket, int idVale, double cantVale);
 
     void mostrarFoto();
 
@@ -73,7 +70,7 @@ private:
     int usuario;
     int cliente;
     int idVale;
-    double descuentoCliente , vale;
+    double descuentoCliente, vale;
     QStringList listaConexionesRemotas;
     QString conexionLocal;
     Formateo classFormatear;
@@ -87,7 +84,6 @@ private:
     QStandardItemModel *modeloTicketPendiente;
     Clientes *clien;
     VisorImagenes *visor;
-
 
     void keyPressEvent(QKeyEvent *e);
     bool llenar_usuarios(QSqlDatabase db);
@@ -106,10 +102,8 @@ private:
     void datosProducto(QString IdProducto);
     //void mostrarFoto();
 
-
 signals:
     void cerrar_tpv();
 };
-
 
 #endif // TPV_H

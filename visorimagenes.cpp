@@ -1,17 +1,17 @@
 #include "visorimagenes.h"
-#include "ui_visorimagenes.h"
 #include <QDebug>
-#include <QGraphicsScene>
-#include <QGraphicsPixmapItem>
 #include <QDir>
+#include <QGraphicsPixmapItem>
+#include <QGraphicsScene>
+#include "ui_visorimagenes.h"
 
-VisorImagenes::VisorImagenes(QString direccion ,QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::VisorImagenes)
+VisorImagenes::VisorImagenes(QString direccion, QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::VisorImagenes)
 {
     ui->setupUi(this);
 
-    QImage imagen(QDir::currentPath()+"/"+direccion);
+    QImage imagen(QDir::currentPath() + "/" + direccion);
     qDebug() << imagen;
 
     QGraphicsScene *escena = new QGraphicsScene;

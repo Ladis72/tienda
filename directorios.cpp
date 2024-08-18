@@ -1,10 +1,10 @@
 #include "directorios.h"
-#include "ui_directorios.h"
 #include <QFileDialog>
+#include "ui_directorios.h"
 
-Directorios::Directorios(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::Directorios)
+Directorios::Directorios(QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::Directorios)
 {
     ui->setupUi(this);
     cargalListaBase();
@@ -70,39 +70,34 @@ void Directorios::on_toolButtonEtiquetas_clicked()
 {
     QString directorio = QFileDialog::getOpenFileName(this);
     ui->lineEditEtiquetas->setText(directorio);
-
 }
 
 void Directorios::on_toolButtonCaducados_clicked()
 {
     QString directorio = QFileDialog::getOpenFileName(this);
     ui->lineEditCaducados->setText(directorio);
-
 }
 
 void Directorios::on_toolButtonArqueos_clicked()
 {
     QString directorio = QFileDialog::getOpenFileName(this);
     ui->lineEditArqueos->setText(directorio);
-
 }
 
 void Directorios::on_toolButtonMovimientos_clicked()
 {
     QString directorio = QFileDialog::getOpenFileName(this);
     ui->lineEditMovimientos->setText(directorio);
-
 }
 
-void Directorios::on_toolButtonCseg_triggered(QAction *arg1)
-{
-
-}
-
+void Directorios::on_toolButtonCseg_triggered(QAction *arg1) {}
 
 void Directorios::on_toolButtonCseg_clicked()
 {
-    QString directorio = QFileDialog::getExistingDirectory(this, "Seleccionar directorio para la copia" ,QDir::homePath(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    QString directorio = QFileDialog::getExistingDirectory(this,
+                                                           "Seleccionar directorio para la copia",
+                                                           QDir::homePath(),
+                                                           QFileDialog::ShowDirsOnly
+                                                               | QFileDialog::DontResolveSymlinks);
     ui->lineEditCseg->setText(directorio);
 }
-

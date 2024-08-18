@@ -2,12 +2,11 @@
 #define GESTIONPEDIDOS_H
 
 #include <QDialog>
+#include <QStandardItemModel>
+#include "aceptarpedido.h"
 #include "base_datos.h"
 #include "pedidonuevo.h"
 #include "pedidos.h"
-#include "aceptarpedido.h"
-#include <QStandardItemModel>
-
 
 namespace Ui {
 class GestionPedidos;

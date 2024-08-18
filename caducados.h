@@ -17,7 +17,7 @@ class Caducados : public QDialog
 
 public:
     explicit Caducados(QWidget *parent = 0);
-    Caducados(QString ean , QWidget *parent = 0);
+    Caducados(QString ean, QWidget *parent = 0);
     ~Caducados();
 
 private slots:

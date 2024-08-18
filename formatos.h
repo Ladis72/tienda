@@ -2,9 +2,9 @@
 #define FORMATOS_H
 
 #include <QDialog>
-#include "base_datos.h"
-#include <QMessageBox>
 #include <QKeyEvent>
+#include <QMessageBox>
+#include "base_datos.h"
 
 namespace Ui {
 class Formatos;

@@ -1,18 +1,18 @@
 #include "caducados.h"
-#include "ui_caducados.h"
-#include "QDate"
 #include <QMessageBox>
+#include "QDate"
+#include "ui_caducados.h"
 
-Caducados::Caducados(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::Caducados)
+Caducados::Caducados(QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::Caducados)
 {
     ui->setupUi(this);
 }
 
-Caducados::Caducados(QString ean, QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::Caducados)
+Caducados::Caducados(QString ean, QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::Caducados)
 {
     ui->setupUi(this);
     ui->lineEditCodigo->setText(ean);
@@ -30,10 +30,10 @@ void Caducados::on_lineEditCodigo_returnPressed()
     consulta.first();
     if (!consulta.isValid()) {
         QString cod = base.codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCodigo->text());
-        consulta = base.consulta_producto("DB",cod);
+        consulta = base.consulta_producto("DB", cod);
         consulta.first();
     }
-    if (consulta.numRowsAffected() == 1 ) {
+    if (consulta.numRowsAffected() == 1) {
         ui->lineEditDescripcion->setText(consulta.value(1).toString());
         llenarComboFechas(consulta.value(0).toString());
     }
@@ -44,7 +44,7 @@ void Caducados::llenarComboFechas(QString id)
     ui->comboBox->clear();
     ui->comboBox->addItem("Selecciona uno");
 
-    consulta = base.lotesProducto(id,"DB");
+    consulta = base.lotesProducto(id, "DB");
     while (consulta.next()) {
         ui->comboBox->addItem(consulta.value("fecha").toString());
     }
@@ -54,20 +54,29 @@ void Caducados::llenarComboFechas(QString id)
 void Caducados::on_pushButton_clicked()
 {
     if (ui->comboBox->currentText() == "Selecciona uno") {
-        QMessageBox::information(this,"Faltan datos","Selecciona la fecha adecuada del desplegable");
+        QMessageBox::information(this,
+                                 "Faltan datos",
+                                 "Selecciona la fecha adecuada del desplegable");
         return;
     }
     if (ui->lineEditCodigo->text().isEmpty() || ui->lineEditDescripcion->text().isEmpty()) {
-        QMessageBox::warning(this, "Faltan datos del producto","No hay datos en el codigo o descripción del producto");
+        QMessageBox::warning(this,
+                             "Faltan datos del producto",
+                             "No hay datos en el codigo o descripción del producto");
         return;
     }
-    base.disminuirLote(ui->lineEditCodigo->text(),ui->comboBox->currentText(),ui->spinBox->value());
+    base.disminuirLote(ui->lineEditCodigo->text(),
+                       ui->comboBox->currentText(),
+                       ui->spinBox->value());
     QString sentencia;
-    QSqlQuery precioConsulta = base.consulta_producto("DB",ui->lineEditCodigo->text());
+    QSqlQuery precioConsulta = base.consulta_producto("DB", ui->lineEditCodigo->text());
     precioConsulta.first();
     QString precio = precioConsulta.value("pvp").toString();
     qDebug() << precio;
-    sentencia = "INSERT INTO caducados VALUES (NULL, '"+ui->lineEditCodigo->text()+"' , '"+QString::number(ui->spinBox->value())+"' , '"+ui->lineEditDescripcion->text()+"' , '"+QDate::currentDate().toString("yyyy-MM-dd")+"' , '"+precio+"' , '"+ui->comboBox->currentText()+"')";
+    sentencia = "INSERT INTO caducados VALUES (NULL, '" + ui->lineEditCodigo->text() + "' , '"
+                + QString::number(ui->spinBox->value()) + "' , '" + ui->lineEditDescripcion->text()
+                + "' , '" + QDate::currentDate().toString("yyyy-MM-dd") + "' , '" + precio + "' , '"
+                + ui->comboBox->currentText() + "')";
     qDebug() << sentencia;
     QSqlQuery ejecutar = base.ejecutarSentencia(sentencia, conf->getConexionLocal());
     qDebug() << ejecutar.lastError();
@@ -81,9 +90,11 @@ void Caducados::on_pushButton_clicked()
 
 void Caducados::on_lineEditDescripcion_returnPressed()
 {
-    QSqlQuery consulta = base.buscarProducto(QSqlDatabase::database("DB"),"articulos",ui->lineEditDescripcion->text());
+    QSqlQuery consulta = base.buscarProducto(QSqlDatabase::database("DB"),
+                                             "articulos",
+                                             ui->lineEditDescripcion->text());
     consulta.first();
-    BuscarProducto *buscar = new BuscarProducto(this,consulta);
+    BuscarProducto *buscar = new BuscarProducto(this, consulta);
     buscar->exec();
     ui->lineEditCodigo->setText(buscar->resultado);
     emit on_lineEditCodigo_returnPressed();
@@ -91,12 +102,12 @@ void Caducados::on_lineEditDescripcion_returnPressed()
 
 void Caducados::on_comboBox_currentIndexChanged(const QString &arg1)
 {
-    QString idLote = base.idLote(conf->getConexionLocal(), ui->lineEditCodigo->text(),"",arg1);
+    QString idLote = base.idLote(conf->getConexionLocal(), ui->lineEditCodigo->text(), "", arg1);
     int udsLote = base.unidadesLote(conf->getConexionLocal(), idLote);
     if (arg1 == "Desconocido") {
         ui->spinBox->setMaximum(1000);
         ui->spinBox->setMinimum(0);
-    }else {
+    } else {
         ui->spinBox->setMaximum(udsLote);
         ui->spinBox->setMinimum(0);
     }

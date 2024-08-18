@@ -1,9 +1,9 @@
 #include "configticket.h"
 #include "ui_configticket.h"
 
-ConfigTicket::ConfigTicket(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::ConfigTicket)
+ConfigTicket::ConfigTicket(QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::ConfigTicket)
 {
     ui->setupUi(this);
     QStringList configuracionTicket = base->recuperarConfigTicket();
@@ -13,14 +13,13 @@ ConfigTicket::ConfigTicket(QWidget *parent) :
     if (base->ticketPromo()) {
         ui->checkBoxPromo->setChecked(true);
         ui->plainTextEditPromo->setEnabled(true);
-    }else{
+    } else {
         ui->checkBoxPromo->setChecked(false);
         ui->plainTextEditPromo->setEnabled(false);
     }
     ui->lineEditCola->setText(configuracionTicket.at(3));
     ui->lineEditCodApertura->setText(configuracionTicket.at(4));
     ui->lineEditCodCorte->setText(configuracionTicket.at(5));
-
 }
 
 ConfigTicket::~ConfigTicket()
@@ -41,7 +40,8 @@ void ConfigTicket::on_pushButtonAceptar_clicked()
     configuracionTicket.append(ui->plainTextEditPromo->toPlainText());
     if (ui->checkBoxPromo->isChecked()) {
         configuracionTicket.append("1");
-    } else {configuracionTicket.append("0");
+    } else {
+        configuracionTicket.append("0");
     }
     configuracionTicket.append(ui->lineEditCola->text());
     configuracionTicket.append(ui->lineEditCodApertura->text());

@@ -24,7 +24,7 @@
       <string>TextLabel</string>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignmentFlag::AlignCenter</set>
      </property>
     </widget>
    </item>
@@ -54,7 +54,7 @@
       <string>Fecha</string>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignmentFlag::AlignCenter</set>
      </property>
     </widget>
    </item>
@@ -64,13 +64,13 @@
       <bool>false</bool>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignmentFlag::AlignCenter</set>
      </property>
      <property name="readOnly">
       <bool>false</bool>
      </property>
      <property name="buttonSymbols">
-      <enum>QAbstractSpinBox::PlusMinus</enum>
+      <enum>QAbstractSpinBox::ButtonSymbols::PlusMinus</enum>
      </property>
      <property name="showGroupSeparator" stdset="0">
       <bool>false</bool>

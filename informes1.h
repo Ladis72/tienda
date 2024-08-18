@@ -1,8 +1,8 @@
 #ifndef INFORMES1_H
 #define INFORMES1_H
 
-#include <QObject>
 #include <QDebug>
+#include <QObject>
 #include <QStandardItemModel>
 
 class informes1

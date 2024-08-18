@@ -1,24 +1,24 @@
 #include "prestamos.h"
-#include "ui_prestamos.h"
-#include "buscarproducto.h"
 #include <QMessageBox>
+#include "buscarproducto.h"
+#include "ui_prestamos.h"
 
-Prestamos::Prestamos(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::Prestamos)
+Prestamos::Prestamos(QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::Prestamos)
 {
     ui->setupUi(this);
-    modeloPrestamos = new QSqlTableModel(this,QSqlDatabase::database("DB"));
+    modeloPrestamos = new QSqlTableModel(this, QSqlDatabase::database("DB"));
     modeloPrestamos->clear();
     modeloPrestamos->setTable("prestamos");
     modeloPrestamos->setEditStrategy(QSqlTableModel::OnManualSubmit);
-    modeloPrestamos->setHeaderData(1,Qt::Horizontal,"Cod.");
-    modeloPrestamos->setHeaderData(2,Qt::Horizontal,"Descripción");
-    modeloPrestamos->setHeaderData(3,Qt::Horizontal,"Tienda");
-    modeloPrestamos->setHeaderData(4,Qt::Horizontal,"Fecha");
-    modeloPrestamos->setHeaderData(5,Qt::Horizontal,"Cantidad");
-    modeloPrestamos->setHeaderData(6,Qt::Horizontal,"Notas");
-    modeloPrestamos->sort(2,Qt::AscendingOrder);
+    modeloPrestamos->setHeaderData(1, Qt::Horizontal, "Cod.");
+    modeloPrestamos->setHeaderData(2, Qt::Horizontal, "Descripción");
+    modeloPrestamos->setHeaderData(3, Qt::Horizontal, "Tienda");
+    modeloPrestamos->setHeaderData(4, Qt::Horizontal, "Fecha");
+    modeloPrestamos->setHeaderData(5, Qt::Horizontal, "Cantidad");
+    modeloPrestamos->setHeaderData(6, Qt::Horizontal, "Notas");
+    modeloPrestamos->sort(2, Qt::AscendingOrder);
     modeloPrestamos->select();
     ui->tableView->setModel(modeloPrestamos);
     ui->tableView->hideColumn(0);
@@ -29,17 +29,16 @@ Prestamos::Prestamos(QWidget *parent) :
 Prestamos::~Prestamos()
 {
     delete ui;
-
 }
 
 void Prestamos::on_lineEdit_textChanged(const QString &arg1)
 {
-    modeloPrestamos->setFilter("producto LIKE '%"+arg1+"%'");
+    modeloPrestamos->setFilter("producto LIKE '%" + arg1 + "%'");
 }
 
 void Prestamos::on_lineEditCod_textChanged(const QString &arg1)
 {
-    modeloPrestamos->setFilter("ean LIKE '%"+arg1+"%'");
+    modeloPrestamos->setFilter("ean LIKE '%" + arg1 + "%'");
 }
 
 void Prestamos::on_lineEditEan_returnPressed()
@@ -48,10 +47,10 @@ void Prestamos::on_lineEditEan_returnPressed()
     consulta.first();
     if (!consulta.isValid()) {
         QString cod = base->codigoDesdeAux(conf->getConexionLocal(), ui->lineEditEan->text());
-        consulta = base->consulta_producto("DB",cod);
+        consulta = base->consulta_producto("DB", cod);
         consulta.first();
     }
-    if (consulta.numRowsAffected() == 1 ) {
+    if (consulta.numRowsAffected() == 1) {
         ui->lineEditEan->setText(consulta.value(0).toString());
         ui->lineEditDescripcion->setText(consulta.value(1).toString());
         ui->spinBox->setFocus();
@@ -60,11 +59,15 @@ void Prestamos::on_lineEditEan_returnPressed()
 
 void Prestamos::on_pushButtonProcesar_clicked()
 {
-    QString idLote = base->idLote(conf->getConexionLocal(), ui->lineEditEan->text(),"",ui->dateEdit->text());
+    QString idLote = base->idLote(conf->getConexionLocal(),
+                                  ui->lineEditEan->text(),
+                                  "",
+                                  ui->dateEdit->text());
     if (idLote == "0" && ui->spinBox->value() < 0) {
         QMessageBox msgBox;
         msgBox.setText("Parece que no hay en el almacen un producto con esos datos");
-        msgBox.setInformativeText("¿Deseas continual con la operación o Cancelar y volver a comprobarlo?");
+        msgBox.setInformativeText(
+            "¿Deseas continual con la operación o Cancelar y volver a comprobarlo?");
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         int ret = msgBox.exec();
         switch (ret) {
@@ -77,13 +80,15 @@ void Prestamos::on_pushButtonProcesar_clicked()
         }
     }
     QSqlQuery datosLote;
-    datosLote = base->ejecutarSentencia("SELECT cantidad FROM lotes WHERE id ='"+idLote+"'", conf->getConexionLocal());
+    datosLote = base->ejecutarSentencia("SELECT cantidad FROM lotes WHERE id ='" + idLote + "'",
+                                        conf->getConexionLocal());
     datosLote.first();
     int resto = datosLote.record().value("cantidad").toInt() - ui->spinBox->value();
     if (resto < 0 && ui->spinBox->value() < 0) {
         QMessageBox msgBox;
         msgBox.setText("Parece que no hay en el almacen suficiente producto con esos datos");
-        msgBox.setInformativeText("¿Deseas continual con la operación o Cancelar y volver a comprobarlo?");
+        msgBox.setInformativeText(
+            "¿Deseas continual con la operación o Cancelar y volver a comprobarlo?");
         msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
         int ret = msgBox.exec();
         switch (ret) {
@@ -105,24 +110,35 @@ void Prestamos::on_pushButtonProcesar_clicked()
     datos.append(ui->lineEditNotas->text());
     qDebug() << datos;
     if (datos.at(4) < 0) {
-        base->descontarArticulo(datos.at(0),abs(datos.at(4).toInt()));
-    } else {QString idLote = base->idLote(conf->getConexionLocal(), datos.at(0),"",ui->dateEdit->date().toString("yyyy-MM-dd"));
+        base->descontarArticulo(datos.at(0), abs(datos.at(4).toInt()));
+    } else {
+        QString idLote = base->idLote(conf->getConexionLocal(),
+                                      datos.at(0),
+                                      "",
+                                      ui->dateEdit->date().toString("yyyy-MM-dd"));
         if (idLote != "0") {
-            base->aumentarLote(conf->getConexionLocal(), idLote,datos.at(4).toInt());
+            base->aumentarLote(conf->getConexionLocal(), idLote, datos.at(4).toInt());
             qDebug() << "Error al aumentar lote especificado";
-        }else{
-            base->crearLote(conf->getConexionLocal(), datos.at(0),"",ui->dateEdit->date().toString("yyyy-MM-dd"),datos.at(4));
+        } else {
+            base->crearLote(conf->getConexionLocal(),
+                            datos.at(0),
+                            "",
+                            ui->dateEdit->date().toString("yyyy-MM-dd"),
+                            datos.at(4));
         }
     }
-    base->insertarEnTabla(QSqlDatabase::database("DB"),"prestamos",datos);
+    base->insertarEnTabla(QSqlDatabase::database("DB"), "prestamos", datos);
     modeloPrestamos->select();
 }
 
 void Prestamos::on_lineEditDescripcion_returnPressed()
 {
-    consulta = base->buscarEnTabla(QSqlDatabase::database(conf->getConexionLocal()),"articulos","descripcion",ui->lineEditDescripcion->text());
+    consulta = base->buscarEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
+                                   "articulos",
+                                   "descripcion",
+                                   ui->lineEditDescripcion->text());
     consulta.first();
-    BuscarProducto *buscar = new BuscarProducto(this,consulta);
+    BuscarProducto *buscar = new BuscarProducto(this, consulta);
     buscar->exec();
     ui->lineEditEan->setText(buscar->resultado);
     emit on_lineEditEan_returnPressed();

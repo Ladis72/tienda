@@ -4,7 +4,6 @@
 #include <QDialog>
 #include "base_datos.h"
 
-
 namespace Ui {
 class ConfigBase;
 }

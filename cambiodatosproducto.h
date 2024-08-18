@@ -12,11 +12,15 @@ class CambioDatosProducto : public QDialog
     Q_OBJECT
 
 public:
-    explicit CambioDatosProducto(QString nombrePedido, QString nombreAlmacen, QString pvpPedido, QString pvpAlmacen, QWidget *parent);
+    explicit CambioDatosProducto(QString nombrePedido,
+                                 QString nombreAlmacen,
+                                 QString pvpPedido,
+                                 QString pvpAlmacen,
+                                 QWidget *parent);
 
     ~CambioDatosProducto();
     int tipoActualizacion;
-    QString nombre,pvp;
+    QString nombre, pvp;
 
 private slots:
     void on_radioButtonNombreAlmacen_clicked();

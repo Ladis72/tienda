@@ -2,10 +2,10 @@
 #define CAJAS_H
 
 #include <QDialog>
+#include <QKeyEvent>
 #include "base_datos.h"
 #include "configuracion.h"
 #include "entradasalida.h"
-#include <QKeyEvent>
 
 extern Configuracion *conf;
 
@@ -42,8 +42,6 @@ private slots:
 
     void actualizarEfectivo();
 
-
-
     void on_pushButtonRetirarDinero_clicked();
 
     void on_pushButtonAceptar_clicked();
@@ -52,7 +50,8 @@ private:
     Ui::Cajas *ui;
 
     baseDatos *base;
-    double efectivoReal, totalEfectivo, ventasEfectivo, ventasTarjeta, saldoAnterior, salidas, descuadre , ventasB;
+    double efectivoReal, totalEfectivo, ventasEfectivo, ventasTarjeta, saldoAnterior, salidas,
+        descuadre, ventasB;
     int nTarjetas;
     QString fechaUltimoArqueo, horaUltimoArqueo;
 

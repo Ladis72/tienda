@@ -25,9 +25,8 @@ private slots:
 private:
     Ui::ListadoVentaArticulos *ui;
     baseDatos base;
-    QString primerTicket,ultimoTicket;
+    QString primerTicket, ultimoTicket;
     QSqlQueryModel *modeloListado;
-
 };
 
 #endif // LISTADOVENTAARTICULOS_H

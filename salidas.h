@@ -2,12 +2,11 @@
 #define SALIDAS_H
 
 #include <QDialog>
+#include "articulos.h"
 #include "base_datos.h"
 #include "buscarproducto.h"
-#include "articulos.h"
 
 extern Configuracion *conf;
-
 
 namespace Ui {
 class Salidas;
@@ -34,7 +33,6 @@ private slots:
 
     void on_tableView_clicked(const QModelIndex &index);
 
-
     void on_comboBoxDestino_activated(const QString &arg1);
 
     void on_pushButtonActualizar_clicked();
@@ -48,7 +46,6 @@ private:
     void actualizarTabla();
     Articulos *articulo;
     void llenarComboTiendas();
-
 };
 
 #endif // SALIDAS_H

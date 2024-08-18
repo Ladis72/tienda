@@ -2,9 +2,9 @@
 #define ENTRADAMERCANCIA_H
 
 #include <QDialog>
+#include "articulos.h"
 #include "base_datos.h"
 #include "buscarproducto.h"
-#include "articulos.h"
 
 extern Configuracion *conf;
 
@@ -25,7 +25,6 @@ private slots:
 
     void on_lineEditCod_returnPressed();
 
-
     void on_pushButtonAgregarLinea_clicked();
 
     void on_lineEditDesc_returnPressed();
@@ -45,8 +44,6 @@ private:
     QSqlQuery consulta;
     QString codSeleccionado;
     Articulos *articulo;
-
-
 
     void actualizarTabla();
     void llenarComboTiendas();

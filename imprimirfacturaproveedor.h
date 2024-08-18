@@ -6,12 +6,12 @@
 #include "base_datos.h"
 #include "configuracion.h"
 
-extern Configuracion * conf;
+extern Configuracion *conf;
 
 class imprimirFacturaProveedor
 {
 public:
-    imprimirFacturaProveedor(QString tienda, QStringList cabecera , QString idFactura);
+    imprimirFacturaProveedor(QString tienda, QStringList cabecera, QString idFactura);
 
 private:
     baseDatos *base;

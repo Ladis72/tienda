@@ -2,13 +2,12 @@
 #define PEDIDOS_H
 
 #include <QDialog>
+#include "articulos.h"
 #include "base_datos.h"
 #include "buscarproducto.h"
-#include "articulos.h"
 #include "configuracion.h"
 
 extern Configuracion *conf;
-
 
 namespace Ui {
 class pedidos;
@@ -45,8 +44,6 @@ private slots:
 
     void on_leDescripcion_returnPressed();
 
-
-
     void on_pushButtonModificar_clicked();
 
     void on_leIva_editingFinished();
@@ -68,7 +65,7 @@ private:
     void borrarLineEdits();
     void contarLineas();
     void contarArticulos();
-    QString idPedido, nDoc , idProveedor , proveedorNombre;
+    QString idPedido, nDoc, idProveedor, proveedorNombre;
     baseDatos base;
     QSqlQueryModel *modeloPedido;
     QSqlQuery consulta;

@@ -3,13 +3,13 @@
 
 #include <QMessageBox>
 
-Fabricantes::Fabricantes(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::Fabricantes)
+Fabricantes::Fabricantes(QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::Fabricantes)
 {
     ui->setupUi(this);
 
-    modelo = new QSqlTableModel(this,QSqlDatabase::database("DB"));
+    modelo = new QSqlTableModel(this, QSqlDatabase::database("DB"));
     modelo->setTable("fabricantes");
     modelo->setEditStrategy(QSqlTableModel::OnManualSubmit);
     modelo->select();
@@ -17,7 +17,6 @@ Fabricantes::Fabricantes(QWidget *parent) :
     ui->tableView->resizeColumnsToContents();
     ui->tableView->hideColumn(0);
     ui->lineEdit->setFocus();
-
 }
 
 Fabricantes::~Fabricantes()
@@ -31,9 +30,10 @@ void Fabricantes::on_pushButtonAnadir_clicked()
 
 void Fabricantes::on_pushButtonModificar_clicked()
 {
-    if(!modelo->submitAll()){
-        QMessageBox::warning(this, "ATENCION",
-                             "No se ha podido modificar el registro"+modelo->lastError().text());
+    if (!modelo->submitAll()) {
+        QMessageBox::warning(this,
+                             "ATENCION",
+                             "No se ha podido modificar el registro" + modelo->lastError().text());
     }
 }
 
@@ -49,14 +49,12 @@ void Fabricantes::on_pushButtonBorrar_clicked()
 
 void Fabricantes::on_tableView_clicked(const QModelIndex &index)
 {
-    QModelIndex indice = modelo->index(index.row(),0);
+    QModelIndex indice = modelo->index(index.row(), 0);
     resultado = modelo->data(indice).toString();
     qDebug() << resultado;
 }
 
-
 void Fabricantes::on_lineEdit_textChanged(const QString &arg1)
 {
-    modelo->setFilter("nombre LIKE '%"+arg1+"%'");
-
+    modelo->setFilter("nombre LIKE '%" + arg1 + "%'");
 }

@@ -22,6 +22,7 @@ public:
     void setUsuario(QString user);
     int getRol();
     void setRol(int setRol);
+
 private:
     QStringList nombreconexiones;
     QStringList nombreconexionesActivas;

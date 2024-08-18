@@ -11,11 +11,11 @@ class Fabricantes;
 class Fabricantes : public QDialog
 {
     Q_OBJECT
-    
+
 public:
     explicit Fabricantes(QWidget *parent = 0);
     ~Fabricantes();
-    
+
     QString resultado;
 
 private slots:
@@ -35,7 +35,6 @@ private:
     Ui::Fabricantes *ui;
 
     QSqlTableModel *modelo;
-
 };
 
 #endif // FABRICANTES_H

@@ -5,7 +5,6 @@
 
 class Formateo
 {
-
 public:
     Formateo();
     double redondear(double num, int dec);

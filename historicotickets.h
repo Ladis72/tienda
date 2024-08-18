@@ -3,8 +3,8 @@
 
 #include <QDialog>
 #include "base_datos.h"
-#include "imprimirticket.h"
 #include "imprimirfactura.h"
+#include "imprimirticket.h"
 
 extern Configuracion *conf;
 
@@ -37,7 +37,6 @@ private:
     QSqlQueryModel *ticket;
     baseDatos base;
     QString nTicket;
-
 
     void mostrarTickets();
 };

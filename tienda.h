@@ -3,43 +3,43 @@
 
 #include <QMainWindow>
 
-#include "base_datos.h"
-#include "configuracion.h"
-#include "tpv.h"
-#include "tabwidget.h"
+#include "actualizarclientes.h"
 #include "articulos.h"
-#include "familias.h"
-#include "fabricantes.h"
-#include "formaspago.h"
-#include "clientes.h"
-#include "proveedores.h"
-#include "gestionpedidos.h"
-#include "cajas.h"
-#include "tiposentradassalidas.h"
-#include "entradasalida.h"
-#include "historicotickets.h"
-#include "verfacturas.h"
-#include "listadoventas.h"
-#include "listadoventaarticulos.h"
-#include "entradamercancia.h"
-#include "caducidades.h"
-#include "salidas.h"
-#include "etiquetas.h"
+#include "base_datos.h"
 #include "caducados.h"
-#include "configticket.h"
-#include "prestamos.h"
+#include "caducidades.h"
+#include "cajas.h"
+#include "clientes.h"
+#include "conexionesremotas.h"
 #include "configbase.h"
+#include "configticket.h"
+#include "configuracion.h"
 #include "configuracionotros.h"
-#include "prestamistas.h"
-#include "listadosalidas.h"
+#include "directorios.h"
+#include "entradamercancia.h"
+#include "entradasalida.h"
+#include "etiquetas.h"
+#include "fabricantes.h"
+#include "familias.h"
+#include "formaspago.h"
+#include "formatos.h"
+#include "generarvales.h"
+#include "gestionpedidos.h"
+#include "historicotickets.h"
 #include "listadoarqueos.h"
 #include "listadocaducados.h"
-#include "formatos.h"
-#include "directorios.h"
+#include "listadosalidas.h"
+#include "listadoventaarticulos.h"
+#include "listadoventas.h"
+#include "prestamistas.h"
+#include "prestamos.h"
+#include "proveedores.h"
+#include "salidas.h"
+#include "tabwidget.h"
 #include "tiendas.h"
-#include "conexionesremotas.h"
-#include "actualizarclientes.h"
-#include "generarvales.h"
+#include "tiposentradassalidas.h"
+#include "tpv.h"
+#include "verfacturas.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -49,18 +49,18 @@ class Tienda;
 class Tienda : public QMainWindow
 {
     Q_OBJECT
-    
+
 public:
     explicit Tienda(QWidget *parent = nullptr);
     ~Tienda();
 
-    QStringList listaConexiones , conexionesActivas;
+    QStringList listaConexiones, conexionesActivas;
     QString conexionMaster;
-    
+
 private slots:
     void on_ventasButton_clicked();
-
-//public slots:
+    void permisos(int i);
+    //public slots:
     void activar_btn_tpv();
 
     void on_pushButtonUsuarios_clicked();
@@ -105,7 +105,6 @@ private slots:
 
     void on_pushButtonActualizarClientes_clicked();
 
-
     void on_pushButtonGenerarVales_clicked();
     void sincronizarVales();
     void comprobarVales();
@@ -114,9 +113,12 @@ private slots:
     void on_pushButtonCopia_clicked();
 
     void on_pushButtonSesion_clicked();
+    void login();
 
 private:
     QPushButton *sincroVales;
+    QPushButton *usuario;
+    QPalette paleta;
 
     baseDatos base;
     Ui::Tienda *ui;
@@ -126,7 +128,7 @@ private:
     Familias *F;
     Fabricantes *Fab;
     FormasPago *FPago;
-    Clientes * Cli;
+    Clientes *Cli;
     Proveedores *Prov;
     GestionPedidos *GestPed;
     Cajas *caja;
@@ -158,7 +160,6 @@ private:
 
     QLabel *button[];
     void cerrarAplicacion();
-
 };
 
 #endif // TIENDA_H

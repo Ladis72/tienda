@@ -1,12 +1,14 @@
 #include "visorfacturas.h"
 #include "ui_visorfacturas.h"
 
-VisorFacturas::VisorFacturas(QString nFactura , QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::VisorFacturas)
+VisorFacturas::VisorFacturas(QString nFactura, QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::VisorFacturas)
 {
     ui->setupUi(this);
-    QSqlQuery consulta = base->ejecutarSentencia("SELECT * FROM lineaspedido WHERE nDocumento = '"+nFactura+"'", conf->getConexionLocal());
+    QSqlQuery consulta = base->ejecutarSentencia("SELECT * FROM lineaspedido WHERE nDocumento = '"
+                                                     + nFactura + "'",
+                                                 conf->getConexionLocal());
     qDebug() << consulta.lastError();
     consulta.first();
     modelo.setQuery(consulta);
@@ -17,11 +19,11 @@ VisorFacturas::VisorFacturas(QString nFactura , QWidget *parent) :
     ui->tableView->resizeColumnsToContents();
     QString tituloVentana = "Proveedor: ";
     tituloVentana += base->nombreProveedor(consulta.value(2).toString(), conf->getConexionLocal());
-    tituloVentana += " Factura: "+consulta.value(1).toString();
+    tituloVentana += " Factura: " + consulta.value(1).toString();
     this->setWindowTitle(tituloVentana);
     QScreen *monitor = QGuiApplication::primaryScreen();
 
-    this->setMinimumWidth(monitor->size().width()-100);
+    this->setMinimumWidth(monitor->size().width() - 100);
 }
 
 VisorFacturas::~VisorFacturas()

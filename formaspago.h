@@ -1,8 +1,8 @@
 #ifndef FORMASPAGO_H
 #define FORMASPAGO_H
 
-#include "base_datos.h"
 #include <QDialog>
+#include "base_datos.h"
 
 namespace Ui {
 class FormasPago;
@@ -25,7 +25,6 @@ private slots:
     void on_pushButtonBorrar_clicked();
 
     void on_tableView_clicked(const QModelIndex &index);
-
 
 private:
     Ui::FormasPago *ui;

@@ -26,7 +26,6 @@ private slots:
 private:
     Ui::ConfigTicket *ui;
     baseDatos *base;
-
 };
 
 #endif // CONFIGTICKET_H

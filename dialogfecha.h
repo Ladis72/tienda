@@ -1,8 +1,8 @@
 #ifndef DIALOGFECHA_H
 #define DIALOGFECHA_H
 
-#include <QDialog>
 #include <QDate>
+#include <QDialog>
 
 namespace Ui {
 class DialogFecha;
@@ -27,7 +27,6 @@ private slots:
 
 private:
     Ui::DialogFecha *ui;
-
 };
 
 #endif // DIALOGFECHA_H

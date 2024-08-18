@@ -18,41 +18,42 @@
 //! [0]
 static bool createConnection()
 {
-    QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL","DB");
+    QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", "DB");
     db.setHostName("localhost");
     db.setDatabaseName("tienda");
     db.setUserName("root");
     db.setPassword("meganizado");
     db.setPort(3306);
-        if(!db.open()){
+    if (!db.open()) {
         QMessageBox mensaje;
-        mensaje.setText("No se puede continuar"+db.lastError().text());
-        mensaje.setWindowTitle ("Error");
+        mensaje.setText("No se puede continuar" + db.lastError().text());
+        mensaje.setWindowTitle("Error");
         mensaje.exec();
         return false;
-        }
+    }
 
-return true;
-
-
-
+    return true;
 }
-static bool createConnection(QString host , QString puerto , QString baseDatos , QString usuario , QString clave , QString nombreConexion)
+static bool createConnection(QString host,
+                             QString puerto,
+                             QString baseDatos,
+                             QString usuario,
+                             QString clave,
+                             QString nombreConexion)
 {
-    QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL",nombreConexion);
+    QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", nombreConexion);
     db.setHostName(host);
     db.setDatabaseName(baseDatos);
     db.setUserName(usuario);
     db.setPassword(clave);
     db.setPort(puerto.toInt());
-        if(!db.open()){
+    if (!db.open()) {
         QMessageBox mensaje;
-        mensaje.setText("No se puede continuar"+db.lastError().text());
-        mensaje.setWindowTitle ("Error");
+        mensaje.setText("No se puede continuar" + db.lastError().text());
+        mensaje.setWindowTitle("Error");
         mensaje.exec();
         return false;
-        }
+    }
 
-return true;
-
+    return true;
 }

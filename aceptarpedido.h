@@ -17,7 +17,8 @@ class AceptarPedido : public QDialog
     Q_OBJECT
 
 public:
-    explicit AceptarPedido(QString pedido, QString proveedor, QString nDoc, QString fechaPedido, QWidget *parent = 0);
+    explicit AceptarPedido(
+        QString pedido, QString proveedor, QString nDoc, QString fechaPedido, QWidget *parent = 0);
     ~AceptarPedido();
     bool correcto;
 
@@ -39,7 +40,7 @@ private:
     baseDatos base;
     CambioDatosProducto *cdProducto;
     QSqlQuery consulta;
-    QString idPedido,fecha,nDoc,idProveedor;
+    QString idPedido, fecha, nDoc, idProveedor;
     double descuento;
     void llenarTabla(QString idPedido, double desc);
     QSqlQueryModel *modeloPedido;

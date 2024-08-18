@@ -1,16 +1,14 @@
 #include "formaspago.h"
-#include "ui_formaspago.h"
 #include <QMessageBox>
+#include "ui_formaspago.h"
 
-
-
-FormasPago::FormasPago(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::FormasPago)
+FormasPago::FormasPago(QWidget *parent)
+    : QDialog(parent)
+    , ui(new Ui::FormasPago)
 {
     ui->setupUi(this);
 
-    modelolista = new QSqlTableModel(this,QSqlDatabase::database("DB"));
+    modelolista = new QSqlTableModel(this, QSqlDatabase::database("DB"));
     modelolista->setTable("fpago");
     modelolista->setEditStrategy(QSqlTableModel::OnManualSubmit);
     modelolista->select();
@@ -22,14 +20,15 @@ FormasPago::FormasPago(QWidget *parent) :
 FormasPago::~FormasPago()
 {
     delete ui;
-
 }
 
 void FormasPago::on_pushButtonModificar_clicked()
 {
-    if(!modelolista->submitAll()){
-        QMessageBox::warning(this, "ATENCION",
-                             "No se ha podido modificar el registro"+modelolista->lastError().text());
+    if (!modelolista->submitAll()) {
+        QMessageBox::warning(this,
+                             "ATENCION",
+                             "No se ha podido modificar el registro"
+                                 + modelolista->lastError().text());
     }
 }
 
@@ -45,8 +44,6 @@ void FormasPago::on_pushButtonBorrar_clicked()
 
 void FormasPago::on_tableView_clicked(const QModelIndex &index)
 {
-    QModelIndex indice = modelolista->index(index.row(),0);
+    QModelIndex indice = modelolista->index(index.row(), 0);
     resultado = modelolista->data(indice).toString();
 }
-
-

@@ -3,7 +3,7 @@
  <class>Ususarios</class>
  <widget class="QTabWidget" name="Ususarios">
   <property name="windowModality">
-   <enum>Qt::WindowModal</enum>
+   <enum>Qt::WindowModality::WindowModal</enum>
   </property>
   <property name="geometry">
    <rect>
@@ -109,7 +109,7 @@
       <item row="5" column="3">
        <widget class="QLineEdit" name="lineEditClave">
         <property name="echoMode">
-         <enum>QLineEdit::Password</enum>
+         <enum>QLineEdit::EchoMode::Password</enum>
         </property>
        </widget>
       </item>
@@ -201,7 +201,7 @@
          <bool>false</bool>
         </property>
         <property name="alignment">
-         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+         <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
         </property>
        </widget>
       </item>
@@ -246,7 +246,7 @@
          <bool>true</bool>
         </property>
         <property name="alignment">
-         <set>Qt::AlignJustify|Qt::AlignVCenter</set>
+         <set>Qt::AlignmentFlag::AlignJustify|Qt::AlignmentFlag::AlignVCenter</set>
         </property>
         <property name="wordWrap">
          <bool>false</bool>
@@ -273,7 +273,7 @@
          <bool>true</bool>
         </property>
         <property name="contextMenuPolicy">
-         <enum>Qt::DefaultContextMenu</enum>
+         <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
         </property>
        </widget>
       </item>
@@ -294,7 +294,7 @@
       <item row="0" column="2">
        <spacer name="horizontalSpacer">
         <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+         <enum>Qt::Orientation::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
