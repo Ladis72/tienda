@@ -80,11 +80,66 @@ void Tienda::on_ventasButton_clicked()
 
 void Tienda::permisos(int i)
 {
-    if (conf->getRol() == -1) {
-        qDebug() << "Permiso -";
-        this->close();
-    }
+    switch (i) {
+    case 0:{
+        QList<QPushButton *> buttons = this->findChildren<QPushButton *>();
 
+        // Recorre la lista de botones y desactiva cada uno
+        foreach(QPushButton *button, buttons) {
+            button->setEnabled(true);
+        }
+        break;
+    }
+    case 1:
+        ui->pushButton_2->setDisabled(true);
+        ui->pushButtonListadoArqueos->setDisabled(true);
+        ui->pushButtonListadoMovimientos->setDisabled(true);
+        ui->pushButtonUsuarios->setDisabled(true);
+        ui->listadoVentasButton->setDisabled(true);
+        ui->pushButtonActualizarClientes->setDisabled(true);
+        break;
+
+    case 2:
+        ui->pushButton_2->setDisabled(true);
+        ui->pushButtonListadoArqueos->setDisabled(true);
+        ui->pushButtonListadoMovimientos->setDisabled(true);
+        ui->pushButtonUsuarios->setDisabled(true);
+        ui->listadoVentasButton->setDisabled(true);
+        ui->movimientosButton->setDisabled(true);
+        ui->pushButtonActualizarClientes->setDisabled(true);
+        ui->cajasButton->setDisabled(true);
+        ui->pushButtonTickets->setDisabled(true);
+        ui->pushButtonGenerarVales->setDisabled(true);
+        ui->pushButtonInformes->setDisabled(true);
+        ui->pushButtonTicket->setDisabled(true);
+        ui->pushButtonConfiguracion->setDisabled(true);
+        break;
+    case -1:{
+
+        QList<QPushButton *> buttons = this->findChildren<QPushButton *>();
+
+        // Recorre la lista de botones y desactiva cada uno
+        foreach(QPushButton *button, buttons) {
+            button->setDisabled(true);
+
+        }
+        ui->pushButtonSesion->setEnabled(true);
+        usuario->setEnabled(true);
+
+        break;
+    }
+    default:
+        QList<QPushButton *> buttons = this->findChildren<QPushButton *>();
+
+        // Recorre la lista de botones y desactiva cada uno
+        foreach(QPushButton *button, buttons) {
+            button->setDisabled(true);
+    }
+        ui->pushButtonSesion->setEnabled(true);
+        usuario->setEnabled(true);
+
+        break;
+}
 }
 void Tienda::activar_btn_tpv() {}
 

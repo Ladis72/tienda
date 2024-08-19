@@ -47,7 +47,7 @@
     <item row="1" column="0">
      <widget class="QTabWidget" name="tab">
       <property name="currentIndex">
-       <number>6</number>
+       <number>0</number>
       </property>
       <property name="iconSize">
        <size>
@@ -73,7 +73,7 @@
         <item>
          <widget class="QPushButton" name="listadoVentasButton">
           <property name="enabled">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
           <property name="text">
            <string>Cajas</string>
@@ -332,9 +332,9 @@
        </attribute>
        <layout class="QGridLayout" name="gridLayout_6">
         <item row="0" column="3">
-         <widget class="QPushButton" name="pushButtonPermisos">
+         <widget class="QPushButton" name="pushButtonActualizarClientes">
           <property name="text">
-           <string>Permisos</string>
+           <string>Actualizar clientes</string>
           </property>
          </widget>
         </item>
@@ -349,13 +349,6 @@
          <widget class="QPushButton" name="pushButtonTicket">
           <property name="text">
            <string>Tickets</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="4">
-         <widget class="QPushButton" name="pushButtonActualizarClientes">
-          <property name="text">
-           <string>Actualizar clientes</string>
           </property>
          </widget>
         </item>
