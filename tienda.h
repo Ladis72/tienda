@@ -108,8 +108,6 @@ private slots:
     void on_pushButtonGenerarVales_clicked();
     void sincronizarVales();
     void comprobarVales();
-    void keyPressEvent(QKeyEvent *e);
-
     void on_pushButtonCopia_clicked();
 
     void on_pushButtonSesion_clicked();

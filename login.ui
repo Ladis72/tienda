@@ -40,7 +40,11 @@
     <widget class="QLineEdit" name="lineEditUser"/>
    </item>
    <item row="3" column="0">
-    <widget class="QLineEdit" name="lineEditpwd"/>
+    <widget class="QLineEdit" name="lineEditpwd">
+     <property name="echoMode">
+      <enum>QLineEdit::EchoMode::Password</enum>
+     </property>
+    </widget>
    </item>
    <item row="0" column="0">
     <widget class="QLabel" name="label">

@@ -91,16 +91,23 @@ void Tienda::permisos(int i)
         break;
     }
     case 1:
-        ui->pushButton_2->setDisabled(true);
         ui->pushButtonListadoArqueos->setDisabled(true);
         ui->pushButtonListadoMovimientos->setDisabled(true);
         ui->pushButtonUsuarios->setDisabled(true);
         ui->listadoVentasButton->setDisabled(true);
         ui->pushButtonActualizarClientes->setDisabled(true);
+        ui->pushButtonTiendas->setDisabled(true);
+        ui->pushButtonEntradaSalida->setDisabled(true);
+        ui->pushButtonFormatos->setDisabled(true);
+        ui->pushButtonGenerarVales->setDisabled(true);
+        ui->tabConfig->setDisabled(true);
         break;
 
     case 2:
         ui->pushButton_2->setDisabled(true);
+        ui->pushButtonTiendas->setDisabled(true);
+        ui->pushButtonEntradaSalida->setDisabled(true);
+        ui->pushButtonFormatos->setDisabled(true);
         ui->pushButtonListadoArqueos->setDisabled(true);
         ui->pushButtonListadoMovimientos->setDisabled(true);
         ui->pushButtonUsuarios->setDisabled(true);
@@ -113,6 +120,8 @@ void Tienda::permisos(int i)
         ui->pushButtonInformes->setDisabled(true);
         ui->pushButtonTicket->setDisabled(true);
         ui->pushButtonConfiguracion->setDisabled(true);
+        ui->tabConfig->setDisabled(true);
+
         break;
     case -1:{
 
@@ -416,17 +425,6 @@ void Tienda::comprobarVales()
         return;
     }
     sincroVales->hide();
-}
-
-void Tienda::keyPressEvent(QKeyEvent *e)
-{
-    if (e->key() == Qt::Key_F11) {
-        if (ui->listadoVentasButton->isEnabled()) {
-            ui->listadoVentasButton->setEnabled(false);
-        } else {
-            ui->listadoVentasButton->setEnabled(true);
-        }
-    }
 }
 
 void Tienda::on_pushButtonCopia_clicked()
