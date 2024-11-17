@@ -33,66 +33,7 @@ AceptarPedido::~AceptarPedido()
 
 void AceptarPedido::llenarTabla(QString idPedido, double desc)
 {
-    // ui->leIva10->setText(
-    //     QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "10") * desc));
-    // ui->leIva21->setText(
-    //     QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "21") * desc));
-    // ui->leIva4->setText(
-    //     QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "4") * desc));
-    // ui->leIva5->setText(
-    //     QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "5") * desc));
-    // ui->leIva0->setText(
-    //     QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "0") * desc));
 
-    // ui->leRe0->setText(
-    //     QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "0") * desc));
-    // ui->leRe4->setText(
-    //     QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "4") * desc));
-    // ui->leRe5->setText(
-    //     QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "5") * desc));
-    // ui->leRe10->setText(
-    //     QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "10") * desc));
-    // ui->leRe21->setText(
-    //     QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "21") * desc));
-
-    // ui->leBase0->setText(
-    //     QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "0") * desc));
-    // ui->leBase4->setText(
-    //     QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "4") * desc));
-    // ui->leBase5->setText(
-    //     QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "5") * desc));
-    // ui->leBase10->setText(
-    //     QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "10") * desc));
-    // ui->leBase21->setText(
-    //     QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "21") * desc));
-
-    // ui->leTotal0->setText(QString::number(ui->leBase0->text().toDouble()));
-    // ui->leTotal4->setText(QString::number(ui->leBase4->text().toDouble()
-    //                                       + ui->leIva4->text().toDouble()
-    //                                       + ui->leRe4->text().toDouble()));
-    // ui->leTotal5->setText(QString::number(ui->leBase5->text().toDouble()
-    //                                       + ui->leIva5->text().toDouble()
-    //                                       + ui->leRe5->text().toDouble()));
-    // ui->leTotal10->setText(QString::number(ui->leBase10->text().toDouble()
-    //                                        + ui->leIva10->text().toDouble()
-    //                                        + ui->leRe10->text().toDouble()));
-    // ui->leTotal21->setText(QString::number(ui->leBase21->text().toDouble()
-    //                                        + ui->leIva21->text().toDouble()
-    //                                        + ui->leRe21->text().toDouble()));
-
-    // ui->leTotalBase->setText(
-    //     QString::number(ui->leBase0->text().toDouble() + ui->leBase4->text().toDouble()
-    //                     + ui->leBase5->text().toDouble() + ui->leBase10->text().toDouble()
-    //                     + ui->leBase21->text().toDouble()));
-    // ui->leTotalIva->setText(
-    //     QString::number(ui->leIva4->text().toDouble() + ui->leIva5->text().toDouble()
-    //                     + ui->leIva10->text().toDouble() + ui->leIva21->text().toDouble()));
-    // ui->leTotalRe->setText(
-    //     QString::number(ui->leRe4->text().toDouble() + ui->leRe5->text().toDouble()
-    //                     + ui->leRe10->text().toDouble() + ui->leRe21->text().toDouble()));
-    // ui->leTotal->setText(QString::number(ui->leTotalBase->text().toDouble()
-    //                                      + ui->leTotalIva->text().toDouble()
-    //                                      + ui->leTotalRe->text().toDouble()));
     double totalBase = 0, totalIva = 0, totalRe = 0, totalGeneral = 0;
 
 
@@ -166,7 +107,8 @@ void AceptarPedido::llenarTabla(QString idPedido, double desc)
 
 }
 
-bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
+bool AceptarPedido::
+    procesarPedido(QSqlQueryModel *modelo)
 {
     QStringList datos;
     QString idLinea, ean, descripcion, lote, fechaCaducidad, descuentoLinea, tipoIva, baseProducto,
@@ -360,6 +302,10 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     // datosPedido.append(ui->leTotalIva->text());
     // datosPedido.append(ui->leTotalRe->text());
     // datosPedido.append(ui->leTotal->text());
+    datosPedido.append(ui->leTotalBase->text());
+    datosPedido.append(ui->leTotalIva->text());
+    datosPedido.append(ui->leTotalRe->text());
+    datosPedido.append(ui->leTotal->text());
     if (ui->comboBox->currentText() == "Factura") {
         datosPedido.append(ui->lineEditNDoc->text());
     } else {
@@ -375,10 +321,10 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     datosFactura.append(ui->lineEditNDoc->text());
     datosFactura.append(fecha);
     datosFactura.append(base.idProveedor(ui->labelProveedor->text(), conf->getConexionLocal()));
-    datosFactura.append(QString::number(totalBase));
-    datosFactura.append(QString::number(totalIva));
-    datosFactura.append(QString::number(totalRe));
-    datosFactura.append(QString::number(totalGeneral));
+    datosPedido.append(ui->leTotalBase->text());
+    datosPedido.append(ui->leTotalIva->text());
+    datosPedido.append(ui->leTotalRe->text());
+    datosPedido.append(ui->leTotal->text());
 
     if (ui->comboBox->currentText() == "Factura") {
         datosFactura.append(ui->dateEditVencimiento->text());
