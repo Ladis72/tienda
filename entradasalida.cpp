@@ -49,7 +49,7 @@ void EntradaSalida::on_toolButton_clicked()
 
 void EntradaSalida::llenarCombo()
 {
-    consulta = base->devolverTablaCompleta("motivosEntrada");
+    consulta = base->devolverTablaCompleta(conf->getConexionLocal(),"motivosEntrada");
     consulta.first();
     do {
         ui->comboBoxMotivo->addItem(consulta.value("idtiposEntrada").toString() + "-"

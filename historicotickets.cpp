@@ -37,7 +37,7 @@ void HistoricoTickets::mostrarTickets()
                                + fechaF + "/" + horaF + "'",
                            QSqlDatabase::database(conf->getConexionLocal()));
     QStandardItemModel *vistaTickets = new QStandardItemModel(listaTickets->rowCount(),
-                                                              listaTickets->columnCount());
+                                                              listaTickets->columnCount()-3);
     for (int i = 0; i < listaTickets->rowCount(); ++i) {
         QStandardItem *itemTicket = new QStandardItem(listaTickets->record(i).value(0).toString());
         vistaTickets->setItem(i, 0, itemTicket);
@@ -53,37 +53,35 @@ void HistoricoTickets::mostrarTickets()
         vistaTickets->setItem(i, 3, itemFecha);
         vistaTickets->setItem(i, 4, itemHora);
         QStandardItem *itemDescuento = new QStandardItem(
-            listaTickets->record(i).value(15).toString());
-        vistaTickets->setItem(i, 15, itemDescuento);
-        QStandardItem *itemTotal = new QStandardItem(listaTickets->record(i).value(16).toString());
-        vistaTickets->setItem(i, 16, itemTotal);
+            listaTickets->record(i).value(7).toString());
+        vistaTickets->setItem(i, 5, itemDescuento);
+        QStandardItem *itemTotal = new QStandardItem(listaTickets->record(i).value(8).toString());
+        vistaTickets->setItem(i, 7, itemTotal);
         QStandardItem *itemFormaPago = new QStandardItem(
-            base.nombreFormaPago(listaTickets->record(i).value(17).toString(),
+            base.nombreFormaPago(listaTickets->record(i).value(9).toString(),
                                  conf->getConexionLocal()));
-        vistaTickets->setItem(i, 17, itemFormaPago);
+        vistaTickets->setItem(i, 6, itemFormaPago);
         QString pagado;
-        if (listaTickets->record(i).value(18).toString() == "1") {
+        if (listaTickets->record(i).value(10).toString() == "1") {
             pagado = "Si";
         } else {
             pagado = "No";
         }
-        QStandardItem *itemPagado = new QStandardItem(pagado);
-        vistaTickets->setItem(i, 18, itemPagado);
-        QStandardItem *itemEntrega = new QStandardItem(listaTickets->record(i).value(19).toString());
-        vistaTickets->setItem(i, 19, itemEntrega);
-        QStandardItem *itemCambio = new QStandardItem(listaTickets->record(i).value(20).toString());
-        vistaTickets->setItem(i, 20, itemCambio);
+        // QStandardItem *itemPagado = new QStandardItem(pagado);
+        // vistaTickets->setItem(i, 8, itemPagado);
+        QStandardItem *itemEntrega = new QStandardItem(listaTickets->record(i).value(11).toString());
+        vistaTickets->setItem(i, 8, itemEntrega);
+        QStandardItem *itemCambio = new QStandardItem(listaTickets->record(i).value(12).toString());
+        vistaTickets->setItem(i, 9, itemCambio);
     }
     QStringList etiquetas;
-    etiquetas << "Ticket" << "Vendedor" << "Cliente" << "Fecha" << "Hora" << "" << "" << "" << ""
-              << "" << "" << "" << "" << "" << "" << "Dto" << "Total" << "F. Pago" << "Pagado"
-              << "Entrega" << "Cambio";
+    etiquetas << "Ticket" << "Vendedor" << "Cliente" << "Fecha" << "Hora"  << "Dto" << "F. Pago" << "Total" << "Entrega" << "Cambio";
     qDebug() << etiquetas;
     vistaTickets->setHorizontalHeaderLabels(etiquetas);
     ui->tableViewTickets->setModel(vistaTickets);
-    for (int i = 5; i < 15; ++i) {
-        ui->tableViewTickets->hideColumn(i);
-    }
+    // for (int i = 5; i < 15; ++i) {
+    //     ui->tableViewTickets->hideColumn(i);
+    // }
     ui->tableViewTickets->resizeColumnsToContents();
 }
 

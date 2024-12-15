@@ -69,7 +69,7 @@ void AceptarPedido::llenarTabla(QString idPedido, double desc)
             QList<QStandardItem *> fila;
 
             // Obtener valores
-            int tipoIva = query.value("tipoIva").toInt();
+            double tipoIva = query.value("tipoIva").toDouble();
             double base = query.value("totalBase").toDouble();
             double iva = query.value("totalIva").toDouble();
             double re = query.value("totalRe").toDouble();
@@ -321,20 +321,20 @@ bool AceptarPedido::
     datosFactura.append(ui->lineEditNDoc->text());
     datosFactura.append(fecha);
     datosFactura.append(base.idProveedor(ui->labelProveedor->text(), conf->getConexionLocal()));
-    datosPedido.append(ui->leTotalBase->text());
-    datosPedido.append(ui->leTotalIva->text());
-    datosPedido.append(ui->leTotalRe->text());
-    datosPedido.append(ui->leTotal->text());
+    datosFactura.append(ui->leTotalBase->text());
+    datosFactura.append(ui->leTotalIva->text());
+    datosFactura.append(ui->leTotalRe->text());
+    datosFactura.append(ui->leTotal->text());
 
     if (ui->comboBox->currentText() == "Factura") {
         datosFactura.append(ui->dateEditVencimiento->text());
         datosFactura.append("0");
-        if (!base.grabarFactura(datosFactura)) {
+        if (!base.grabarFactura(conf->getConexionLocal(),datosFactura)) {
             return false;
         }
     } else {
         datosFactura.append("0");
-        if (base.grabarAlbaran(datosFactura)) {
+        if (base.grabarAlbaran(conf->getConexionLocal(),datosFactura)) {
             return false;
         }
     }

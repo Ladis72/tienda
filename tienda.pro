@@ -19,6 +19,7 @@ SOURCES += main.cpp\
     generarvales.cpp \
     imprimirfacturaproveedor.cpp \
     imprimirpedido.cpp \
+    impuestos.cpp \
     informes1.cpp \
     login.cpp \
         tienda.cpp \
@@ -80,6 +81,7 @@ HEADERS  += tienda.h \
     generarvales.h \
     imprimirfacturaproveedor.h \
     imprimirpedido.h \
+    impuestos.h \
     informes1.h \
     login.h \
     tpv.h \
@@ -138,6 +140,7 @@ FORMS    += tienda.ui \
     actualizarclientes.ui \
     copiaseguridad.ui \
     generarvales.ui \
+    impuestos.ui \
     login.ui \
     tpv.ui \
     buscarproducto.ui \
@@ -190,4 +193,5 @@ RESOURCES += \
     recursos.qrc
 
 DISTFILES += \
-    Instalación.txt
+    Instalación.txt \
+    canbiosVersiónNueva

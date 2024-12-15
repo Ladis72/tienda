@@ -164,7 +164,7 @@ void pedidos::llenarTablaPedido(QString idPedido)
         QList<QStandardItem *> fila;
 
         // Obtener valores
-        int tipoIva = query.value("tipoIva").toInt();
+        double tipoIva = query.value("tipoIva").toDouble();
         double base = query.value("totalBase").toDouble();
         double iva = query.value("totalIva").toDouble();
         double re = query.value("totalRe").toDouble();
@@ -349,9 +349,9 @@ void pedidos::on_pushButtonAnadir_clicked()
         if (existe == true) {
             // Obtener tipo de IVA desde la entrada del usuario
             QVariant tipoIva = ui->leIva->text();
-            float baseTotal = ui->leTotalLinea->text().toFloat();
-            float iva = 0.0;
-            float re = 0.0;
+            double baseTotal = ui->leTotalLinea->text().toDouble();
+            double iva = 0.0;
+            double re = 0.0;
 
             // Calcular IVA y RE desde la tabla impuestos
             qDebug() << "Tipo IVA: " << tipoIva << tipoIva.typeName();
@@ -370,7 +370,7 @@ void pedidos::on_pushButtonAnadir_clicked()
 
 
             // Continuar con la creación de la línea del pedido
-            float baseProducto = baseTotal / ui->leUds->text().toFloat();
+            double baseProducto = baseTotal / ui->leUds->text().toDouble();
             datos.append(idPedido);
             datos.append(ui->leCod->text());
             datos.append(ui->leDescripcion->text());

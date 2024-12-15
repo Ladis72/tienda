@@ -8,7 +8,7 @@ EntradaMercancia::EntradaMercancia(QWidget *parent)
     , ui(new Ui::EntradaMercancia)
 {
     ui->setupUi(this);
-    mTablaEntradas = new QSqlTableModel(this, QSqlDatabase::database("DB"));
+    mTablaEntradas = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
     mTablaEntradas->setTable("entradaGenero_tmp");
     ui->tableView->hideColumn(0);
     llenarComboTiendas();

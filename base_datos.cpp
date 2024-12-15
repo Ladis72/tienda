@@ -975,10 +975,10 @@ bool baseDatos::nuevoTicketTmp(int orden, int cliente, int vendedor)
     }
 }
 
-bool baseDatos::grabarTicket(QString serie, QStringList datos)
+bool baseDatos::grabarTicket(QString base , QString serie, QStringList datos)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("INSERT INTO " + serie + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    QSqlQuery consulta(QSqlDatabase::database(base));
+    consulta.prepare("INSERT INTO " + serie + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
     //consulta.bindValue(0,serie);
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i, datos.at(i));
@@ -1401,10 +1401,14 @@ float baseDatos::sumarBasesPedido(QString base, QString idPedido, QString tipoIv
 bool baseDatos::borrarLineaPedido(QString base, QString idLinea)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
-    if (consulta.exec("DELETE FROM `tienda`.`lineaspedido_tmp` WHERE `lineaspedido_tmp`.`id` = '"
+    if (consulta.exec("DELETE FROM `lineaspedido_tmp` WHERE `lineaspedido_tmp`.`id` = '"
                       + idLinea + "'")) {
+        qDebug() << "CORRECTO" << consulta.lastError();
+
         return true;
     }
+    qDebug() << "ERROR" << consulta.lastError();
+
     return false;
 }
 
@@ -1422,22 +1426,25 @@ bool baseDatos::contabilizarPedido(QString base, QStringList datos)
     return false;
 }
 
-bool baseDatos::grabarFactura(QStringList datos)
+bool baseDatos::grabarFactura(QString base , QStringList datos)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
+    qDebug() << datos;
     consulta.prepare("INSERT INTO facturas VALUES(NULL,?,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i, datos.at(i));
     }
-    if (consulta.exec())
+    if (consulta.exec()){
+        qDebug() << "GRABANDO FACTURA";
         return true;
-    qDebug() << consulta.lastError().text();
+    }
+    qDebug() << " ERROR GRABANDO FACTURA" << consulta.lastError().text();
     return false;
 }
 
-bool baseDatos::grabarAlbaran(QStringList datos)
+bool baseDatos::grabarAlbaran(QString base , QStringList datos)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("INSERT INTO albaranes VALUES(NULL,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i, datos.at(i));
@@ -1541,7 +1548,7 @@ int baseDatos::nTarjetasDesdeUltimoArqueo(QString fechaI, QString horaI, QString
     return consulta.value(0).toInt();
 }
 
-QSqlQuery baseDatos::devolverTablaCompleta(QString nombreTabla)
+QSqlQuery baseDatos::devolverTablaCompleta(QString base , QString nombreTabla)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.exec("SELECT * FROM " + nombreTabla);

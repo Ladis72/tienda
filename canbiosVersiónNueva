@@ -1,0 +1,88 @@
+MODIFICAR BASE DE DATOS:
+-------------------------
+Borrar columnas de pedidos:
+
+Name=base1
+Name=iva1
+Name=re1
+Name=base2
+Name=iva2
+Name=re2
+Name=base3
+Name=iva3
+Name=re3
+Name=base0
+Name=iva0
+Name=re0
+Name=base5
+Name=iva5
+Name=re5
+
+
+CREAR TABLA IMPUESTOS:
+-----------------------
+
+CREATE TABLE `impuestos` (
+        `tipoIva` TINYINT(4) NOT NULL AUTO_INCREMENT,
+        `porcentaje` DOUBLE NULL DEFAULT NULL,
+        `recargo` DOUBLE NULL DEFAULT NULL,
+        PRIMARY KEY (`tipoIva`) USING BTREE
+)
+COLLATE='latin1_swedish_ci'
+ENGINE=InnoDB
+
+
+MODIFICAR lineaspedido_tmp
+---------------------------
+
+ALTER TABLE `lineaspedido_tmp`
+        CHANGE COLUMN `tipoIva` `tipoIva` DOUBLE NOT NULL DEFAULT 0 AFTER `base`;
+
+
+
+MODIFICAR lineaspedido
+-------------------------
+
+        ALTER TABLE `lineaspedido`
+                CHANGE COLUMN `tipoIva` `tipoIva` DOUBLE NOT NULL DEFAULT 0 AFTER `base`;
+
+
+
+
+MODIFICAR lineasticket
+------------------------
+
+ALTER TABLE `lineasticket`
+        CHANGE COLUMN `iva` `iva` DOUBLE NOT NULL DEFAULT 0 AFTER `cantidad`,
+        CHANGE COLUMN `precio` `precio` DOUBLE NOT NULL DEFAULT 0 AFTER `iva`,
+        CHANGE COLUMN `descuento` `descuento` DOUBLE NOT NULL DEFAULT 0 AFTER `precio`,
+        CHANGE COLUMN `totallinea` `totallinea` DOUBLE NOT NULL DEFAULT 0 AFTER `descuento`;
+
+
+
+MODIFICAR lineasticket_tmp
+-----------------------------
+
+
+ALTER TABLE `lineasticket_tmp`
+        CHANGE COLUMN `iva` `iva` DOUBLE NOT NULL DEFAULT 0 AFTER `cantidad`,
+        CHANGE COLUMN `precio` `precio` DOUBLE NOT NULL DEFAULT 0 AFTER `iva`,
+        CHANGE COLUMN `descuento` `descuento` DOUBLE NOT NULL DEFAULT 0 AFTER `precio`,
+        CHANGE COLUMN `totallinea` `totallinea` DOUBLE NOT NULL DEFAULT 0 AFTER `descuento`;
+
+
+
+BORRAR columnas de tickes
+--------------------------
+
+ALTER TABLE `tickets`
+        CHANGE COLUMN `base0` `base` DOUBLE NOT NULL DEFAULT 0 AFTER `hora`,
+        CHANGE COLUMN `iva0` `iva` DOUBLE NOT NULL DEFAULT 0 AFTER `base`,
+        DROP COLUMN `base1`,
+        DROP COLUMN `iva1`,
+        DROP COLUMN `base5`,
+        DROP COLUMN `iva5`,
+        DROP COLUMN `base2`,
+        DROP COLUMN `iva2`,
+        DROP COLUMN `base3`,
+        DROP COLUMN `iva3`;

@@ -205,7 +205,7 @@ void Articulos::cargarCodAux()
 
 void Articulos::llenarComboFormatos()
 {
-    consulta = base.devolverTablaCompleta("formatos");
+    consulta = base.devolverTablaCompleta(conf->getConexionLocal(),"formatos");
     consulta.first();
     do {
         ui->comboBoxFormato->addItem(consulta.value("formato").toString());

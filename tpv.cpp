@@ -217,41 +217,53 @@ QStringList Tpv::recopilarDatosTicket()
 QStringList Tpv::recopilarBasesIvas()
 {
     QStringList basesIvas;
-    basesIvas.clear();
-    double base1 = 0, base2 = 0, base3 = 0, base0 = 0, base5 = 0;
+    double TotalBase, TotalIva;
+    TotalBase=0;
+    TotalIva=0;
+    // basesIvas.clear();
+    // double base1 = 0, base2 = 0, base3 = 0, base0 = 0, base5 = 0;
+    // for (int i = 0; i < modeloTicket->rowCount(); ++i) {
+    //     int tipoIva = modeloTicket->record(i).value(5).toInt();
+    //     qDebug() << tipoIva;
+    //     switch (tipoIva) {
+    //     case 4:
+    //         base1 += modeloTicket->record(i).value(8).toDouble();
+    //         break;
+    //     case 10:
+    //         base2 += modeloTicket->record(i).value(8).toDouble();
+    //         break;
+    //     case 21:
+    //         base3 += modeloTicket->record(i).value(8).toDouble();
+    //         break;
+    //     case 0:
+    //         base0 += modeloTicket->record(i).value(8).toDouble();
+    //         break;
+    //     case 5:
+    //         base5 += modeloTicket->record(i).value(8).toDouble();
+    //         break;
+    //     default:
+    //         break;
+    //     }
+    // }
+    // basesIvas.append(QString::number(base0));
+    // basesIvas.append("0");
+    // basesIvas.append(QString::number(base1 / 1.04));
+    // basesIvas.append(QString::number(base1 - (base1 / 1.04)));
+    // basesIvas.append(QString::number(base5 / 1.05));
+    // basesIvas.append(QString::number(base5 - (base5 / 1.05)));
+    // basesIvas.append(QString::number(base2 / 1.1));
+    // basesIvas.append(QString::number(base2 - (base2 / 1.1)));
+    // basesIvas.append(QString::number(base3 / 1.21));
+    // basesIvas.append(QString::number(base3 - (base3 / 1.21)));
     for (int i = 0; i < modeloTicket->rowCount(); ++i) {
-        int tipoIva = modeloTicket->record(i).value(5).toInt();
-        qDebug() << tipoIva;
-        switch (tipoIva) {
-        case 4:
-            base1 += modeloTicket->record(i).value(8).toDouble();
-            break;
-        case 10:
-            base2 += modeloTicket->record(i).value(8).toDouble();
-            break;
-        case 21:
-            base3 += modeloTicket->record(i).value(8).toDouble();
-            break;
-        case 0:
-            base0 += modeloTicket->record(i).value(8).toDouble();
-            break;
-        case 5:
-            base5 += modeloTicket->record(i).value(8).toDouble();
-            break;
-        default:
-            break;
-        }
+        double base = modeloTicket->record(i).value(8).toDouble()/(1+(modeloTicket->record(i).value(5).toDouble()/100));
+        double iva = modeloTicket->record(i).value(8).toDouble()-base;
+        TotalBase +=base;
+        TotalIva +=iva;
+
     }
-    basesIvas.append(QString::number(base0));
-    basesIvas.append("0");
-    basesIvas.append(QString::number(base1 / 1.04));
-    basesIvas.append(QString::number(base1 - (base1 / 1.04)));
-    basesIvas.append(QString::number(base5 / 1.05));
-    basesIvas.append(QString::number(base5 - (base5 / 1.05)));
-    basesIvas.append(QString::number(base2 / 1.1));
-    basesIvas.append(QString::number(base2 - (base2 / 1.1)));
-    basesIvas.append(QString::number(base3 / 1.21));
-    basesIvas.append(QString::number(base3 - (base3 / 1.21)));
+    basesIvas.append(QString::number(TotalBase));
+    basesIvas.append(QString::number(TotalIva));
 
     return basesIvas;
 }
@@ -521,7 +533,7 @@ void Tpv::on_btn_cobrar_clicked()
             ticket += 1;
         }
 
-        base.grabarTicket(serie, totalTicket);
+        base.grabarTicket(conf->getConexionLocal(), serie, totalTicket);
         qDebug() << totalTicket;
         qDebug() << serie;
 

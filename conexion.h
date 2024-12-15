@@ -20,7 +20,7 @@ static bool createConnection()
 {
     QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", "DB");
     db.setHostName("localhost");
-    db.setDatabaseName("tienda");
+    db.setDatabaseName("tiendaNueva");
     db.setUserName("root");
     db.setPassword("meganizado");
     db.setPort(3306);

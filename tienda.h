@@ -40,6 +40,7 @@
 #include "tiposentradassalidas.h"
 #include "tpv.h"
 #include "verfacturas.h"
+#include "impuestos.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -113,6 +114,8 @@ private slots:
     void on_pushButtonSesion_clicked();
     void login();
 
+    void on_pushButtonImpuestos_clicked();
+
 private:
     QPushButton *sincroVales;
     QPushButton *usuario;
@@ -155,6 +158,7 @@ private:
     conexionesRemotas *conexiones;
     ActualizarClientes *actClientes;
     GenerarVales *genVales;
+    impuestos *editatImpuestos;
 
     QLabel *button[];
     void cerrarAplicacion();

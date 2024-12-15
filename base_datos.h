@@ -98,7 +98,7 @@ public:
     QSqlQuery tcketsPendientes(QSqlDatabase db);
     int maxTicketPendiente(QSqlDatabase db);
     bool nuevoTicketTmp(int orden, int cliente, int vendedor);
-    bool grabarTicket(QString serie, QStringList datos);
+    bool grabarTicket(QString base, QString serie, QStringList datos);
     bool grabarLineaTicket(QStringList datos);
     bool borrarTicketTmp(int ticket);
     bool modificarCliente(QSqlDatabase db, QStringList datos, QString dato);
@@ -129,8 +129,8 @@ public:
     float sumarBasesPedido(QString base, QString idPedido, QString tipoIva);
     bool borrarLineaPedido(QString base, QString idLinea);
     bool contabilizarPedido(QString base, QStringList datos);
-    bool grabarFactura(QStringList datos);
-    bool grabarAlbaran(QStringList datos);
+    bool grabarFactura(QString base, QStringList datos);
+    bool grabarAlbaran(QString base, QStringList datos);
     bool borrarAlbaranTmp(QString idAlbaran);
     bool pasarLineaPedidoAHistorico(QString base, QStringList datos);
     bool modificarLineaPedido(QString base, QStringList datos);
@@ -146,7 +146,7 @@ public:
     QSqlQuery ventasEntreFechas(QString fechaI, QString FechaF, QString tabla, QString base);
     int nTarjetasDesdeUltimoArqueo(QString fechaI, QString horaI, QString base);
     //Funciones GENERALISTAS
-    QSqlQuery devolverTablaCompleta(QString nombreTabla);
+    QSqlQuery devolverTablaCompleta(QString base, QString nombreTabla);
     QSqlQuery ejecutarSentencia(QString sentencia, QString base);
     QSqlQuery ejecutarSentencia(QString sentencia, QSqlDatabase db);
     double ESdesdeFecha(QString fecha, QString hora, QString base);
