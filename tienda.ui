@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Tienda</string>
+   <string>Tienda 1.99</string>
   </property>
   <property name="windowIcon">
    <iconset resource="recursos.qrc">

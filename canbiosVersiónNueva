@@ -72,8 +72,8 @@ ALTER TABLE `lineasticket_tmp`
 
 
 
-BORRAR columnas de tickes
---------------------------
+BORRAR columnas de tickes y ticketss
+------------------------------------
 
 ALTER TABLE `tickets`
         CHANGE COLUMN `base0` `base` DOUBLE NOT NULL DEFAULT 0 AFTER `hora`,
@@ -86,3 +86,22 @@ ALTER TABLE `tickets`
         DROP COLUMN `iva2`,
         DROP COLUMN `base3`,
         DROP COLUMN `iva3`;
+
+MODIFICAR pedidos
+-------------------
+ALTER TABLE `tiendaNueva`.`pedidos`
+DROP COLUMN `re5`,
+DROP COLUMN `iva5`,
+DROP COLUMN `base5`,
+DROP COLUMN `re0`,
+DROP COLUMN `iva0`,
+DROP COLUMN `base0`,
+DROP COLUMN `re3`,
+DROP COLUMN `iva3`,
+DROP COLUMN `base3`,
+DROP COLUMN `re2`,
+DROP COLUMN `iva2`,
+DROP COLUMN `base2`,
+DROP COLUMN `re1`,
+DROP COLUMN `iva1`,
+DROP COLUMN `base1`;
