@@ -683,17 +683,6 @@ void Tpv::on_btn_preTicket_clicked()
     texto << "UDS|  Producto            |Prec.|Dto|Total\n";
     texto << "------------------------------------------\n";
 
-    //            texto << "HERBOLARIO EMEICJAC\n";
-    //            texto << "C/Perines 14 bajo\n";
-    //            texto << "Tlfn: 942-37-20-27\n";
-    //            texto << "N.I.F.: 20196639-V\n";
-    //            texto << "E-mail: emeicjac@emeicjac.com\n";
-    //            texto << "Web: emeicjac.com\n\n";
-    //            texto << QDateTime::currentDateTime().toString("dd-MMM-yyyy  HH:mm:ss");
-    //            texto << "    Ticket:" << QString::number(ticket);
-    //            texto <<"\n";
-    //            texto << "UDS | Producto            |Prec.|Dto|Total\n";
-    //            texto << "------------------------------------------\n";
     for (int i = 0; i < modeloTicket->rowCount(); i++) {
         lineaTicket.clear();
         lineaTicket.append("TICKET");
@@ -745,7 +734,7 @@ void Tpv::on_btn_preTicket_clicked()
     //texto << confTicket.at(4);
     texto << "\n\n";
     impresora.close();
-    QString imprimir = "less ./ticket.txt: >> " + confTicket.at(3);
+    QString imprimir = "cat ./ticket.txt: >> " + confTicket.at(3);
     const char *ch = imprimir.toLocal8Bit().constData();
     system(ch);
 }
