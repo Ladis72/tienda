@@ -734,7 +734,7 @@ void Tpv::on_btn_preTicket_clicked()
     //texto << confTicket.at(4);
     texto << "\n\n";
     impresora.close();
-    QString imprimir = "cat ./ticket.txt: >> " + confTicket.at(3);
+    QString imprimir = "cat ./ticket.txt >> " + confTicket.at(3);
     const char *ch = imprimir.toLocal8Bit().constData();
     system(ch);
 }
