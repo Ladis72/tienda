@@ -9,7 +9,6 @@
 #include <QSqlRecord>
 #include <QSqlTableModel>
 #include "configuracion.h"
-#include "qdir.h"
 
 #include <QDebug>
 
