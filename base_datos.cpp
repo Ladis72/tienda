@@ -1233,8 +1233,8 @@ bool baseDatos::insertarES(QStringList datos, QString base)
 QStringList baseDatos::recuperarConfigTicket()
 {
     QStringList configTicket;
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
-    if (!consulta.exec("SELECT * FROM tienda.configTicket")) {
+    QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
+    if (!consulta.exec("SELECT * FROM configTicket")) {
         qDebug() << consulta.lastError();
         return configTicket;
     }
