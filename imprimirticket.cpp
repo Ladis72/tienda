@@ -18,13 +18,7 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
         QFile impresora("ticket.txt");
         impresora.open(QIODevice::WriteOnly);
         QTextStream texto(&impresora);
-        //    texto << "\n";
-        //    texto << "HERBOLARIO EMEICJAC\n";
-        //    texto << "C/Perines 14 bajo\n";
-        //    texto << "Tlfn: 942-37-20-27\n";
-        //    texto << "N.I.F.: 20196639-V\n";
-        //    texto << "E-mail: emeicjac@emeicjac.com\n";
-        //    texto << "Web: emeicjac.com\n\n";
+
         texto << confTicket.at(0) + "\n\n";
         texto << QDate::fromString(fecha, "yyyy-MM-dd").toString("dd-MMM-yyyy") + "  " + hora
                      + "    " + "Ticket: " + ticket;
