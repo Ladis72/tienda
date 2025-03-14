@@ -107,14 +107,14 @@ void Proveedores::cargarCompras()
     modeloCompras.clear();
     if (ui->radioButtonComprasFacturas->isChecked()) {
         modeloCompras.setQuery("SELECT * FROM facturas WHERE idProveedor = '"
-                                   + ui->lineEditCod->text() + "'",
+                                   + ui->lineEditCod->text() + "' ORDER BY fechaFactura DESC",
                                QSqlDatabase::database("DB"));
         ui->tableViewCompras->setModel(&modeloCompras);
         ui->tableViewCompras->resizeColumnsToContents();
     }
     if (ui->radioButtonComprasMeses->isChecked()) {
         modeloCompras.setQuery("SELECT year(fechaFactura) , month(fechaFactura) , sum(total) FROM "
-                               "tienda.facturas where idProveedor = '"
+                               "facturas where idProveedor = '"
                                    + ui->lineEditCod->text()
                                    + "' group by year(fechaFactura) desc,"
                                      " month(fechaFactura) desc",
@@ -124,7 +124,7 @@ void Proveedores::cargarCompras()
     }
     if (ui->radioButtonComprasAnos->isChecked()) {
         modeloCompras.setQuery(
-            "SELECT year(fechaFactura) , sum(total) FROM tienda.facturas where idProveedor = '"
+            "SELECT year(fechaFactura) , sum(total) FROM facturas where idProveedor = '"
                 + ui->lineEditCod->text() + "' group by year(fechaFactura) desc",
             QSqlDatabase::database("DB"));
         ui->tableViewCompras->setModel(&modeloCompras);

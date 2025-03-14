@@ -116,7 +116,7 @@ public:
                      QString condicion = "%%");
     bool insertarES(QStringList datos, QString base);
     QStringList recuperarConfigTicket();
-    bool ticketPromo();
+    bool ticketPromo(QString base);
     bool grabarConfiguracionTicket(QStringList configTicket);
     //Funciones PEDIDOS
     QSqlQuery recuperarPedidos(QString base);
@@ -174,7 +174,7 @@ public:
                                          QString nPrimerTicketB,
                                          QString nUltimoTicketB);
     QSqlQuery listadoVentaArticulos(QString inicio, QString final, QString nombreDB);
-    QSqlQuery listadoMovimientosEfectivo(QString inicio, QString final);
+    QSqlQuery listadoMovimientosEfectivo(QString db, QString inicio, QString final);
     QSqlQuery listadoCaducados(QString desde, QString hasta);
 
     //Funciones de configuración

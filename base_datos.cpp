@@ -1248,7 +1248,7 @@ QStringList baseDatos::recuperarConfigTicket()
     return configTicket;
 }
 
-bool baseDatos::ticketPromo()
+bool baseDatos::ticketPromo(QString base)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     if (!consulta.exec("SELECT boolPromocion FROM tienda.configTicket"))
@@ -1767,7 +1767,7 @@ QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final, QStrin
     return consulta;
 }
 
-QSqlQuery baseDatos::listadoMovimientosEfectivo(QString inicio, QString final)
+QSqlQuery baseDatos::listadoMovimientosEfectivo(QString db , QString inicio, QString final)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.prepare(

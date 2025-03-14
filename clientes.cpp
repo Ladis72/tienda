@@ -170,7 +170,7 @@ void Clientes::cargarCompras()
     listaProductos->clear();
     if (ui->radioButtonMeses->isChecked()) {
         modeloCompras.setQuery(
-            "SELECT year(fecha), month(fecha) , sum(total) FROM tienda.tickets where cliente = "
+            "SELECT year(fecha), month(fecha) , sum(total) FROM tickets where cliente = "
                 + ui->lineEditCod->text()
                 + " group by year(fecha) , month(fecha) order by year(fecha) desc , month(fecha) "
                   "desc; ",
@@ -184,7 +184,7 @@ void Clientes::cargarCompras()
     }
     if (ui->radioButtonAnos->isChecked()) {
         modeloCompras
-            .setQuery("SELECT year(fecha) , sum(total) FROM tienda.tickets where cliente = "
+            .setQuery("SELECT year(fecha) , sum(total) FROM tickets where cliente = "
                           + ui->lineEditCod->text()
                           + " group by year(fecha)  order by year(fecha) desc ; ",
                       QSqlDatabase::database(nombreConexionLocal));
@@ -195,7 +195,7 @@ void Clientes::cargarCompras()
         return;
     }
     if (ui->radioButtonFechas->isChecked()) {
-        modeloCompras.setQuery("select sum(total) FROM tienda.tickets where cliente = "
+        modeloCompras.setQuery("select sum(total) FROM tickets where cliente = "
                                    + ui->lineEditCod->text() + " and fecha between '"
                                    + ui->dateEditDesde->date().toString("yyyy-MM-dd") + "' and '"
                                    + ui->dateEditHasta->date().toString("yyyy-MM-dd") + "';",
