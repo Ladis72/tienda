@@ -35,8 +35,8 @@ private slots:
 
     void on_pushButton_3_clicked();
 
-    void imprimirHtml();
     void generarPDF(const QList<QList<QString> > datos);
+    void abriPDF(const QString &ruta);
 
 private:
     Ui::Etiquetas *ui;
