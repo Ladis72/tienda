@@ -1853,7 +1853,7 @@ QString baseDatos::devolverDirectorio(QString tipo)
 
 QString baseDatos::nombreConexionMaster()
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
     consulta.exec("SELECT * FROM tiendas where master = '1'");
     if (consulta.numRowsAffected() < 1) {
         return "";
