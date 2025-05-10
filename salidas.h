@@ -46,6 +46,8 @@ private:
     void actualizarTabla();
     Articulos *articulo;
     void llenarComboTiendas();
+    int lineas;
+    double productos;
 };
 
 #endif // SALIDAS_H

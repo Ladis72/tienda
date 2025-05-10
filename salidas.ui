@@ -152,6 +152,18 @@
    <item row="0" column="1">
     <widget class="QComboBox" name="comboBoxDestino"/>
    </item>
+   <item row="0" column="2" colspan="3">
+    <widget class="QLabel" name="lbSalidas">
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>

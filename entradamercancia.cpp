@@ -8,6 +8,8 @@ EntradaMercancia::EntradaMercancia(QWidget *parent)
     , ui(new Ui::EntradaMercancia)
 {
     ui->setupUi(this);
+    lineas = 0;
+    productos = 0;
     mTablaEntradas = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
     mTablaEntradas->setTable("entradaGenero_tmp");
     ui->tableView->hideColumn(0);
@@ -113,12 +115,20 @@ void EntradaMercancia::actualizarTabla()
 {
     mTablaEntradas->setFilter(
         "idTienda = "
-        + QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),
+        + QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database(conf->getConexionLocal()),
                                                     ui->comboBoxProcedencia->currentText())));
-    mTablaEntradas->setSort(3, Qt::AscendingOrder);
+    mTablaEntradas->setSort(0, Qt::AscendingOrder);
     mTablaEntradas->select();
     ui->tableView->setModel(mTablaEntradas);
     ui->tableView->resizeColumnsToContents();
+    lineas = mTablaEntradas->rowCount();
+    productos = base->sumarColumna(conf->getConexionLocal(),
+                                   "entradaGenero_tmp",
+                                   "cantidad",
+                                   "idTienda",
+                                   QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database(conf->getConexionLocal()),
+                                                                                                                                                ui->comboBoxProcedencia->currentText())));
+    ui->lbProductos->setText("Lineas= "+QString::number(lineas)+"  Productos="+QString::number(productos));
 }
 
 void EntradaMercancia::llenarComboTiendas()

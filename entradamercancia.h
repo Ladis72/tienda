@@ -44,6 +44,8 @@ private:
     QSqlQuery consulta;
     QString codSeleccionado;
     Articulos *articulo;
+    int lineas;
+    double productos;
 
     void actualizarTabla();
     void llenarComboTiendas();

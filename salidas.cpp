@@ -7,6 +7,8 @@ Salidas::Salidas(QWidget *parent)
     , ui(new Ui::Salidas)
 {
     ui->setupUi(this);
+    lineas = 0;
+    productos = 0;
     llenarComboTiendas();
     mTablaSalidas = new QSqlTableModel(this, QSqlDatabase::database("DB"));
     mTablaSalidas->setTable("salidaGenero_tmp");
@@ -60,12 +62,19 @@ void Salidas::actualizarTabla()
         "idTienda = "
         + QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),
                                                     ui->comboBoxDestino->currentText())));
-    mTablaSalidas->setSort(3, Qt::AscendingOrder);
+    mTablaSalidas->setSort(0, Qt::AscendingOrder);
     mTablaSalidas->select();
     ui->tableView->setModel(mTablaSalidas);
     ui->tableView->hideColumn(0);
-
     ui->tableView->resizeColumnsToContents();
+    lineas = mTablaSalidas->rowCount();
+    productos = base->sumarColumna(conf->getConexionLocal(),
+                                   "salidaGenero_tmp",
+                                   "cantidad",
+                                   "idTienda",
+                                   QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database(conf->getConexionLocal()),
+                                                                             ui->comboBoxDestino->currentText())));
+    ui->lbSalidas->setText("Lineas= "+QString::number(lineas)+"  Productos="+QString::number(productos));
 }
 
 void Salidas::llenarComboTiendas()

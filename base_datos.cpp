@@ -1864,7 +1864,7 @@ QString baseDatos::nombreConexionMaster()
 
 QString baseDatos::nombreConexionLocal()
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
     consulta.exec("SELECT * FROM tiendas where local = '1'");
     if (consulta.numRowsAffected() < 1) {
         return "DB";
