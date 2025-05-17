@@ -13,6 +13,8 @@ Salidas::Salidas(QWidget *parent)
     mTablaSalidas = new QSqlTableModel(this, QSqlDatabase::database("DB"));
     mTablaSalidas->setTable("salidaGenero_tmp");
     ui->tableView->hideColumn(0);
+    connect(mTablaSalidas, &QAbstractItemModel::dataChanged, this, &Salidas::actualizarTotales);
+
     actualizarTabla();
     codSeleccionado = "";
 }
@@ -62,20 +64,13 @@ void Salidas::actualizarTabla()
         "idTienda = "
         + QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),
                                                     ui->comboBoxDestino->currentText())));
-    mTablaSalidas->setSort(0, Qt::AscendingOrder);
+    mTablaSalidas->setSort(3, Qt::AscendingOrder);
     mTablaSalidas->select();
     ui->tableView->setModel(mTablaSalidas);
     ui->tableView->hideColumn(0);
     ui->tableView->resizeColumnsToContents();
-    lineas = mTablaSalidas->rowCount();
-    productos = base->sumarColumna(conf->getConexionLocal(),
-                                   "salidaGenero_tmp",
-                                   "cantidad",
-                                   "idTienda",
-                                   QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database(conf->getConexionLocal()),
-                                                                             ui->comboBoxDestino->currentText())));
-    ui->lbSalidas->setText("Lineas= "+QString::number(lineas)+"  Productos="+QString::number(productos));
-}
+    actualizarTotales();
+    }
 
 void Salidas::llenarComboTiendas()
 {
@@ -238,4 +233,17 @@ void Salidas::on_comboBoxDestino_activated(const QString &arg1)
 void Salidas::on_pushButtonActualizar_clicked()
 {
     actualizarTabla();
+}
+
+void Salidas::actualizarTotales()
+{
+    lineas = mTablaSalidas->rowCount();
+    productos = 0;
+    for (int i = 0; i < mTablaSalidas->rowCount(); ++i) {
+        QModelIndex idx = mTablaSalidas->index(i,4);
+        double valor = mTablaSalidas->data(idx).toDouble();
+        productos += valor;
+    }
+    ui->lbSalidas->setText("Lineas= "+QString::number(lineas)+"  Productos="+QString::number(productos));
+
 }

@@ -37,6 +37,8 @@ private slots:
 
     void on_pushButtonActualizar_clicked();
 
+    void actualizarTotales();
+
 private:
     Ui::Salidas *ui;
     baseDatos *base;
