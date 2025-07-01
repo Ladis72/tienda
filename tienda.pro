@@ -6,7 +6,7 @@
 
 
 
-QT       += sql
+QT       += sql charts
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -47,6 +47,7 @@ SOURCES += main.cpp\
     configuracion.cpp \
     cambiodatosproducto.cpp \
     historicotickets.cpp \
+    ventasusuariowidget.cpp \
     verfacturas.cpp \
     listadoventas.cpp \
     dialogfecha.cpp \
@@ -109,6 +110,7 @@ HEADERS  += tienda.h \
     configuracion.h \
     cambiodatosproducto.h \
     historicotickets.h \
+    ventasusuariowidget.h \
     verfacturas.h \
     listadoventas.h \
     dialogfecha.h \
@@ -164,6 +166,7 @@ FORMS    += tienda.ui \
     aceptarpedido.ui \
     cambiodatosproducto.ui \
     historicotickets.ui \
+    ventasusuariowidget.ui \
     verfacturas.ui \
     listadoventas.ui \
     dialogfecha.ui \

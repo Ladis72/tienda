@@ -4,6 +4,7 @@
 #include <QTabWidget>
 #include "base_datos.h"
 #include "buscarproducto.h"
+#include "ventasusuariowidget.h"
 
 namespace Ui {
 class Ususarios;
@@ -52,6 +53,7 @@ private:
     void ajustarMapper();
     bool eventFilter(QObject *obj, QEvent *event);
     void borrarFormulario();
+    ventasUsuarioWidget *ventasWidget;
 };
 
 #endif // TABWIDGET_H
