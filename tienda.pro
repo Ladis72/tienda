@@ -19,6 +19,7 @@ SOURCES += main.cpp\
     actualizarclientes.cpp \
     conexionesremotas.cpp \
     generarvales.cpp \
+    graficoventaswidget.cpp \
     imprimirfacturaproveedor.cpp \
     imprimirpedido.cpp \
     impuestos.cpp \
@@ -82,6 +83,7 @@ HEADERS  += tienda.h \
     actualizarclientes.h \
     conexionesremotas.h \
     generarvales.h \
+    graficoventaswidget.h \
     imprimirfacturaproveedor.h \
     imprimirpedido.h \
     impuestos.h \

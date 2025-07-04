@@ -10,6 +10,7 @@
 #include "comprasventasremoto.h"
 #include "fabricantes.h"
 #include "familias.h"
+#include "graficoventaswidget.h"
 #include "stock.h"
 #include "visorfacturas.h"
 #include "visorimagenes.h"
@@ -18,8 +19,15 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QTreeWidget>
+#include <QList>
 
 extern Configuracion *conf;
+struct DatosGrafico {
+    QString titulo;
+    QStringList categorias;
+    QList<QList<double>> series;
+    QStringList nombresSeries;
+};
 namespace Ui {
 class Articulos;
 }
@@ -95,6 +103,7 @@ private slots:
 
     void on_treeWidgetStockTiendas_itemDoubleClicked(QTreeWidgetItem *item, int column);
 
+
 private:
     Ui::Articulos *ui;
 
@@ -113,8 +122,9 @@ private:
     conexionesRemotas *conexiones;
     QStringList listaConexionesRemotas;
     bool remoto;
-
+    GraficoVentasWidget *graficoVentas = nullptr;
     //Familias *F;
+    void cargarDatosGrafico(DatosGrafico nuevosDatos);
 
     void refrescarBotones(int i);
     QStringList recogerDatosFormulario();
@@ -126,7 +136,10 @@ private:
     void cargarCodAux();
     void llenarComboFormatos();
     void llenarStockRemoto(QString ean);
+    DatosGrafico extraerVentasPorFechas( QSqlQueryModel *modelo);
     static QStringList crearConexionesRemotas(QSqlQuery consultaRemota);
+
+
 };
 
 #endif // ARTICULOS_H

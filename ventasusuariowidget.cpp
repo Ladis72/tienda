@@ -112,7 +112,7 @@ GROUP BY
   mes,
   u.nombre
 ORDER BY
-  mes DESC;
+  mes ASC;
     )").arg(formatoFechaSQL);
 
     QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal())); // Asegúrate de que "DB" sea tu conexión
@@ -147,14 +147,14 @@ void ventasUsuarioWidget::generarGraficoDesdeTabla()
     bool columna2Visible = !ui->tableResumen->isColumnHidden(2);
 
     QBarSet *set1 = new QBarSet("Ventas");
-    QBarSet *set2 = columna2Visible ? new QBarSet("Transacciones") : nullptr;
+    QBarSet *set2 = columna2Visible ? new QBarSet("B") : nullptr;
     connect(set1, &QBarSet::hovered, this, &ventasUsuarioWidget::mostrarTooltip);
     if (set2)
         connect(set2, &QBarSet::hovered, this, &ventasUsuarioWidget::mostrarTooltip);
 
     QStringList categorias;
 
-    for (int i = 0; i < filas; ++i) {
+    for (int i = 1; i < filas; ++i) {
         categorias << modelo->data(modelo->index(i, 0)).toString();
 
         double val1 = modelo->data(modelo->index(i, 1)).toDouble();

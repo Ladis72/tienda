@@ -3,11 +3,15 @@
 #include "conexion.h"
 #include "imprimirfacturaproveedor.h"
 #include "ui_articulos.h"
+#include "graficoventaswidget.h"
 
 #include <QDir>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QtConcurrent/QtConcurrent>
+#include <QList>
+
+
 
 Articulos::Articulos(QWidget *parent)
     : QDialog(parent)
@@ -51,8 +55,10 @@ Articulos::Articulos(QWidget *parent)
     ui->lineEditCod->installEventFilter(this);
     borrarFormulario();
     ui->lineEditCod->setFocus();
+    graficoVentas = new GraficoVentasWidget(this);
+    ui->layOutVentas->addWidget(graficoVentas);
 
-    //conexiones = new conexionesRemotas();
+
 }
 
 Articulos::~Articulos()
@@ -190,7 +196,9 @@ void Articulos::cargarCompras()
         ui->tableViewCompras->setModel(&modeloCompras);
         ui->tableViewCompras->resizeColumnsToContents();
     }
+
 }
+
 
 void Articulos::cargarCodAux()
 {
@@ -233,6 +241,32 @@ void Articulos::llenarStockRemoto(QString ean)
     }
 }
 
+DatosGrafico Articulos::extraerVentasPorFechas(QSqlQueryModel *modelo)
+{
+    DatosGrafico datos;
+
+    if (!modelo || modelo->rowCount() == 0 || modelo->columnCount() < 3)
+        return datos; // modelo vacío o mal estructurado
+
+    QString nombreProducto = modelo->data(modelo->index(0, 0)).toString();
+    datos.titulo = QString("Evolución de ventas: %1").arg(nombreProducto);
+
+    QList<double> serieUnica;
+
+    for (int fila = modelo->rowCount()-1 ; fila >= 0; --fila) {
+        QString fecha = modelo->data(modelo->index(fila, 1)).toString();
+        double cantidad = modelo->data(modelo->index(fila, 2)).toDouble();
+
+        datos.categorias << fecha;
+        serieUnica << cantidad;
+    }
+
+    datos.series << serieUnica;
+    datos.nombresSeries << "Ventas uds.";
+
+    return datos;
+}
+
 QStringList Articulos::crearConexionesRemotas(QSqlQuery consultaRemota)
 {
     //    QStringList listaConexionesRemotas;
@@ -256,23 +290,53 @@ QStringList Articulos::crearConexionesRemotas(QSqlQuery consultaRemota)
     //    return listaConexionesRemotas;
 }
 
+void Articulos::cargarDatosGrafico(DatosGrafico nuevosDatos)
+{
+
+    if(!graficoVentas){
+        qDebug() << "Grafico es nullptr";
+        return;
+    }
+    QString tit = nuevosDatos.titulo;
+    QStringList cat = nuevosDatos.categorias;
+    QList<QList<double>> ser = nuevosDatos.series;
+    QStringList nomSer = nuevosDatos.nombresSeries;
+    QList<QColor> color = {Qt::darkGreen};
+    graficoVentas->configurar(tit,cat,ser,nomSer,color);
+
+}
+
+
+
+
+
 void Articulos::cargarVentas()
 {
     modeloVentas.clear();
     if (ui->radioButtonVentasMes->isChecked()) {
-        modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , MONTH(fecha) , sum(cantidad) "
+        // modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , MONTH(fecha) , sum(cantidad) "
+        //                       "from lineasticket WHERE cod = '"
+        //                           + ui->lineEditCod->text()
+        //                           + "' GROUP BY YEAR(fecha) desc , MONTH(fecha) desc",
+        //                       QSqlDatabase::database(conf->getConexionLocal()));
+        // qDebug() << modeloVentas.lastError();
+        modeloVentas.setQuery("SELECT descripcion , DATE_FORMAT(fecha, '%Y-%m') , sum(cantidad) "
                               "from lineasticket WHERE cod = '"
                                   + ui->lineEditCod->text()
                                   + "' GROUP BY YEAR(fecha) desc , MONTH(fecha) desc",
                               QSqlDatabase::database(conf->getConexionLocal()));
         qDebug() << modeloVentas.lastError();
         modeloVentas.setHeaderData(0, Qt::Horizontal, "Artculo");
-        modeloVentas.setHeaderData(1, Qt::Horizontal, "Año");
-        modeloVentas.setHeaderData(2, Qt::Horizontal, "Mes");
-        modeloVentas.setHeaderData(3, Qt::Horizontal, "Cantidad");
+        modeloVentas.setHeaderData(1, Qt::Horizontal, "Fecha");
+        modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
+        //modeloVentas.setHeaderData(3, Qt::Horizontal, "Cantidad");
 
         ui->tableViewVentas->setModel(&modeloVentas);
         ui->tableViewVentas->resizeColumnsToContents();
+        DatosGrafico nuevosDatos = extraerVentasPorFechas(&modeloVentas);
+        cargarDatosGrafico(nuevosDatos);
+
+
     }
     if (ui->radioButtonVentasDia->isChecked()) {
         modeloVentas
@@ -285,6 +349,8 @@ void Articulos::cargarVentas()
         modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
         ui->tableViewVentas->setModel(&modeloVentas);
         ui->tableViewVentas->resizeColumnsToContents();
+        DatosGrafico nuevosDatos = extraerVentasPorFechas(&modeloVentas);
+        cargarDatosGrafico(nuevosDatos);
     }
     if (ui->radioButtonVentasAno->isChecked()) {
         modeloVentas.clear();
@@ -301,6 +367,8 @@ void Articulos::cargarVentas()
 
         ui->tableViewVentas->setModel(&modeloVentas);
         ui->tableViewVentas->resizeColumnsToContents();
+        DatosGrafico nuevosDatos = extraerVentasPorFechas(&modeloVentas);
+        cargarDatosGrafico(nuevosDatos);
     }
 }
 
