@@ -112,7 +112,7 @@ GROUP BY
   mes,
   u.nombre
 ORDER BY
-  mes ASC;
+  mes DESC;
     )").arg(formatoFechaSQL);
 
     QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal())); // Asegúrate de que "DB" sea tu conexión
@@ -151,20 +151,52 @@ void ventasUsuarioWidget::generarGraficoDesdeTabla()
     connect(set1, &QBarSet::hovered, this, &ventasUsuarioWidget::mostrarTooltip);
     if (set2)
         connect(set2, &QBarSet::hovered, this, &ventasUsuarioWidget::mostrarTooltip);
-
-    QStringList categorias;
-
-    for (int i = 1; i < filas; ++i) {
-        categorias << modelo->data(modelo->index(i, 0)).toString();
-
-        double val1 = modelo->data(modelo->index(i, 1)).toDouble();
-        *set1 << val1;
-
-        if (set2) {
-            double val2 = modelo->data(modelo->index(i, 2)).toDouble();
-            *set2 << val2;
-        }
+    QString formatoFecha;
+    QString granularidad;
+    QString muestra = modelo->data(modelo->index(0,0)).toString();
+    if (muestra.contains("-")) {
+        if(muestra.size() == 7){formatoFecha = "yyyy-MM"; granularidad = "mes"; }
+        else if(muestra.size() == 10){formatoFecha = "yyyy-MM-dd"; granularidad = "dia"; }
+    }else {
+        formatoFecha = "yyyy"; granularidad = "anio";
     }
+
+    QDate fechaMin = QDate::fromString(modelo->data(modelo->index(0,0)).toString(), formatoFecha);
+    QDate fechaMax = QDate::fromString(modelo->data(modelo->index(modelo->rowCount()-1,0)).toString(),formatoFecha);
+    if (fechaMin > fechaMax) {
+        std::swap(fechaMin, fechaMax);
+    }
+    QMap<QString, double> mapaSerie1;
+    QMap<QString, double> mapaSerie2;
+    QStringList fechas;
+
+
+    for (int i = filas-1; i > -1; --i) {
+        QString fecha = modelo->data(modelo->index(i,0)).toString();
+        double cantidad = modelo->data(modelo->index(i,1)).toDouble();
+        if(set2){
+            double cantidadB = modelo->data(modelo->index(i,2)).toDouble();
+            mapaSerie2[fecha] +=cantidadB;
+        }
+        mapaSerie1[fecha] += cantidad; // += suma los datos si lla hay un registro con esa fecha
+    }
+    QDate actual = fechaMin;
+
+    while (actual <= fechaMax) {
+        QString clave = actual.toString(formatoFecha);
+        fechas << clave;
+        double cantidad = mapaSerie1.value(clave,0);
+        *set1 << cantidad ;
+        if(set2){
+            double cantidadB = mapaSerie2.value(clave,0);
+            *set2 << cantidadB;
+
+        }
+        if (granularidad == "dia") actual = actual.addDays(1);
+        else if (granularidad == "mes") actual = actual.addMonths(1);
+        else if (granularidad == "anio") actual = actual.addYears(1);
+    }
+
 
     QStackedBarSeries *series = new QStackedBarSeries();
     series->append(set1);
@@ -179,7 +211,7 @@ void ventasUsuarioWidget::generarGraficoDesdeTabla()
     chart->legend()->setAlignment(Qt::AlignBottom);
 
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
-    axisX->append(categorias);
+    axisX->append(fechas);
     chart->addAxis(axisX, Qt::AlignBottom);
     series->attachAxis(axisX);
 

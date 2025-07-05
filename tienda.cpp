@@ -44,7 +44,7 @@ Tienda::Tienda(QWidget *parent)
     usuario->setPalette(paleta );
     ui->statusBar->addPermanentWidget(usuario);
     connect(usuario, SIGNAL(clicked()), this, SLOT(on_pushButtonSesion_clicked()));
-    on_pushButtonSesion_clicked();
+    //on_pushButtonSesion_clicked();
 }
 
 Tienda::~Tienda()
