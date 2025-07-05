@@ -136,7 +136,7 @@ private:
     void cargarCodAux();
     void llenarComboFormatos();
     void llenarStockRemoto(QString ean);
-    DatosGrafico extraerVentasPorFechas( QSqlQueryModel *modelo);
+    DatosGrafico extraerVentasPorFechas(QSqlQueryModel *modelo);
     static QStringList crearConexionesRemotas(QSqlQuery consultaRemota);
 
 

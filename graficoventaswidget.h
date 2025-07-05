@@ -16,7 +16,8 @@ public:
                     const QStringList &categorias,
                     const QList<QList<double>> &series,
                     const QStringList &nombresSeries,
-                    const QList<QColor> &colores);
+                    const QList<QColor> &colores,
+                    const QString tipo = "barras");
 
 private:
     QChart *chart;

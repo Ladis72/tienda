@@ -10,6 +10,7 @@
 #include <QMessageBox>
 #include <QtConcurrent/QtConcurrent>
 #include <QList>
+#include <QDate>
 
 
 
@@ -248,18 +249,49 @@ DatosGrafico Articulos::extraerVentasPorFechas(QSqlQueryModel *modelo)
     if (!modelo || modelo->rowCount() == 0 || modelo->columnCount() < 3)
         return datos; // modelo vacío o mal estructurado
 
+
+
     QString nombreProducto = modelo->data(modelo->index(0, 0)).toString();
     datos.titulo = QString("Evolución de ventas: %1").arg(nombreProducto);
+    QString formatoFecha;
+    QString granularidad;
+    QString muestra = modelo->data(modelo->index(0,1)).toString();
+    if (muestra.contains("-")) {
+        if (muestra.size() == 7) { formatoFecha = "yyyy-MM"; granularidad = "mes"; }
+        else if (muestra.size() == 10) { formatoFecha = "yyyy-MM-dd"; granularidad = "dia"; }
+    } else {
+        formatoFecha = "yyyy"; granularidad = "ano";
+    }
 
+
+
+    QDate fechaMin = QDate::fromString(modelo->data(modelo->index(modelo->rowCount()-1,1)).toString(), formatoFecha);
+    QDate fechaMax = QDate::fromString(modelo->data(modelo->index(0,1)).toString(), formatoFecha);
     QList<double> serieUnica;
 
-    for (int fila = modelo->rowCount()-1 ; fila >= 0; --fila) {
-        QString fecha = modelo->data(modelo->index(fila, 1)).toString();
-        double cantidad = modelo->data(modelo->index(fila, 2)).toDouble();
 
-        datos.categorias << fecha;
-        serieUnica << cantidad;
+
+    QMap<QString, double> mapaDatos;
+    for (int fila = 0; fila < modelo->rowCount(); ++fila) {
+        QString fecha = modelo->data(modelo->index(fila,1)).toString();
+        double cantidad = modelo->data(modelo->index(fila,2)).toDouble();
+        mapaDatos[fecha] +=cantidad;
     }
+
+    QDate actual = fechaMin;
+
+    while (actual <= fechaMax) {
+        QString clave = actual.toString(formatoFecha);
+        double cantidad = mapaDatos.value(clave,0);
+
+        datos.categorias << clave;
+        serieUnica << cantidad;
+
+        if (granularidad == "dia") actual = actual.addDays(1);
+        else if (granularidad == "mes") actual = actual.addMonths(1);
+        else if (granularidad == "ano") actual = actual.addYears(1);
+    }
+
 
     datos.series << serieUnica;
     datos.nombresSeries << "Ventas uds.";
