@@ -1,7 +1,6 @@
 #include "imprimirticket.h"
 #include <QDate>
 #include <QFile>
-#include "qtrpt.h"
 
 ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
 {

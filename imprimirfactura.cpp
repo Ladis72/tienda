@@ -1,38 +1,27 @@
 #include "imprimirfactura.h"
 #include <QFile>
-
+#include <QTextDocument>
+#include <QPrinter>
 #include <QCoreApplication>
+#include <QProcess>
+
 
 ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent)
     : QObject(parent)
 {
-     consulta = base.datosTicket(conf->getConexionLocal(), nTicket);
-     ticket = consulta.value(0).toString();
-     fecha = consulta.value(3).toString();
-     hora = consulta.value(4).toString();
-     total = consulta.value(8).toString();
-     idCliente = consulta.value(2).toString();
-     idVendedor = consulta.value(1).toString();
-    // base21 = consulta.value(13).toString();
-    // iva21 = consulta.value(14).toString();
-    // double t21 = consulta.value(13).toDouble() + consulta.value(14).toDouble();
-    // base10 = consulta.value(11).toString();
-    // iva10 = consulta.value(12).toString();
-    // double t10 = consulta.value(11).toDouble() + consulta.value(12).toDouble();
-    // base5 = consulta.value(9).toString();
-    // iva5 = consulta.value(10).toString();
-    // double t5 = consulta.value(9).toDouble() + consulta.value(10).toDouble();
-    // base4 = consulta.value(5).toString();
-    // iva4 = consulta.value(6).toString();
-    // double t4 = consulta.value(5).toDouble() + consulta.value(6).toDouble();
-    // base0 = consulta.value(5).toString();
-    // iva0 = "0";
-    // double t0 = base0.toDouble();
-     double totalBases = consulta.value(5).toDouble();
-     double totalIVAS = consulta.value(6).toDouble();
-     totalFactura = consulta.value(8).toString();
+     consultaTicket = base.datosTicket(conf->getConexionLocal(), nTicket);
+     ticket = consultaTicket.value(0).toString();
+     fecha = consultaTicket.value(3).toString();
+     hora = consultaTicket.value(4).toString();
+     total = consultaTicket.value(8).toString();
+     idCliente = consultaTicket.value(2).toString();
+     idVendedor = consultaTicket.value(1).toString();
+
+     double totalBases = consultaTicket.value(5).toDouble();
+     double totalIVAS = consultaTicket.value(6).toDouble();
+     totalFactura = consultaTicket.value(8).toString();
      cliente = base.etiquetaCliente(idCliente);
-     fPago = base.nombreFormaPago(consulta.value(9).toString(), conf->getConexionLocal());
+     fPago = base.nombreFormaPago(consultaTicket.value(9).toString(), conf->getConexionLocal());
 
      consulta = base.consultarLineasTicket(conf->getConexionLocal(), ticket);
      int i = 0;
@@ -115,7 +104,7 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent)
                       "<td style='height: 19px; text-align: center; background-color: white;'>";
      pagina << html;
 
-     QStringList datosTienda = base.datosTiendaLocal(conf->getConexionLocal());
+     datosTienda = base.datosTiendaLocal(conf->getConexionLocal());
      for (int i = 1; i < 7; i++) {
          pagina << datosTienda.at(i) + "<br>";
      }
@@ -164,70 +153,7 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent)
          pagina << "</tr>";
      }
 
-    //           "<td>IVA 21"
-    //           "</td>"
-    //           "<td>"
-    //               + base21
-    //               + "</td>"
-    //                 "<td>"
-    //               + iva21
-    //               + "</td>"
-    //                 "<td>"
-    //               + QString::number(t21)
-    //               + "</td>"
-    //                 "</tr>"
-    //                 "<tr>"
-    //                 "<td>IVA 10"
-    //                 "</td>"
-    //                 "<td>"
-    //               + base10
-    //               + "</td>"
-    //                 "<td>"
-    //               + iva10
-    //               + "</td>"
-    //                 "<td>"
-    //               + QString::number(t10)
-    //               + "</td>"
-    //                 "</tr>"
-    //                 "<tr>"
-    //                 "<td>IVA 5"
-    //                 "</td>"
-    //                 "<td>"
-    //               + base5
-    //               + "</td>"
-    //                 "<td>"
-    //               + iva5
-    //               + "</td>"
-    //                 "<td>"
-    //               + QString::number(t5)
-    //               + "</td>"
-    //                 "</tr>"
-    //                 "<tr>"
-    //                 "<td>IVA 4"
-    //                 "</td>"
-    //                 "<td>"
-    //               + base4
-    //               + "</td>"
-    //                 "<td>"
-    //               + iva4
-    //               + "</td>"
-    //                 "<td>"
-    //               + QString::number(t4)
-    //               + "</td>"
-    //                 "</tr>"
-    //                 "<tr>"
-    //                 "<td>IVA 0"
-    //                 "</td>"
-    //                 "<td>"
-    //               + base0
-    //               + "</td>"
-    //                 "<td>"
-    //               + iva0
-    //               + "</td>"
-    //                 "<td>"
-    //               + QString::number(t0)
-    //               + "</td>"
-    //                 "</tr>"
+
     pagina <<        "<tr>"
                      "<td><b>TOTAL"
                      "</td>"
@@ -248,7 +174,136 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent)
                      "</body>"
                      "</html>";
      fichero.close();
-     system("firefox " + QCoreApplication::applicationDirPath().toLocal8Bit()
-            + "/documentos/FacturaCliente.html");
+     //system("firefox " + QCoreApplication::applicationDirPath().toLocal8Bit()
+     //       + "/documentos/FacturaCliente.html");
+     facturaPDF();
+
 
 }
+
+void ImprimirFactura::facturaPDF()
+{
+
+    QTextDocument documento;
+    QString html = R"(
+<html>
+<head>
+  <meta charset='utf-8'>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 10pt; }
+    .factura { font-size: 14pt; font-weight: bold; text-align: center; margin-bottom: 20px; }
+    table.cabecera { width: 100%; border: none; }
+    td { vertical-align: top; }
+    .cliente { font-size: 9pt; width: 33%; }
+    .logo { text-align: center; width: 33%; padding-top: 5px;}
+    .tienda { font-size: 9pt; text-align: right; width: 33%; }
+    .lineas { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    .lineas th, .lineas td { border: 1px solid black; padding: 4px; text-align: left; }
+    .totales { text-align: right; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+<div class='factura'>FACTURA Nº %NUM_FACTURA%   FECHA: %FECHA%</div>
+
+<table class='cabecera'>
+  <tr>
+    <td class='cliente'>
+      <b>Cliente:</b> %CLIENTE%<br/>
+    </td>
+    <td class='logo'>
+      <table style='width: 100%;'>
+        <tr>
+          <td style='text-align: right;'>
+            <img src=':/imagenes/Emeicjac logo.jpg' width='100'/>
+          </td>
+        </tr>
+      </table>
+    </td>
+
+    <td class='tienda'>
+      <b>Tienda:</b> %TIENDA%<br/>
+    </td>
+  </tr>
+
+</table>
+
+<table class='lineas'>
+  <tr>
+    <th>Cantidad</th>
+    <th>Descripción</th>
+    <th>Precio</th>
+    <th>Descuento</th>
+    <th>IVA</th>
+    <th>Total</th>
+  </tr>
+  %LINEAS%
+</table>
+
+<div class='totales'>
+  <p><b>Total base:</b> %BASE%</p>
+  <p><b>Total IVA:</b> %IVA%</p>
+  <p><b>Total factura:</b> %TOTAL%</p>
+</div>
+
+</body>
+</html>
+)";
+
+    QString datosTiendaLocal ="";
+    qDebug() << datosTienda.size();
+    for (int i = 1; i < 7; ++i) {
+        datosTiendaLocal += datosTienda.at(i)+"<br>";
+    }
+    html.replace("%TIENDA%", datosTiendaLocal );
+    html.replace("%CLIENTE%", cliente);
+    html.replace("%NUM_FACTURA%",ticket);
+    html.replace("%FECHA%", fecha);
+    double totalBase = 0;
+    double totalIva = 0;
+    QString lineasHTML;
+    consulta.first();
+    consulta.previous();
+    while (consulta.next()) {
+        QString cantidad = consulta.value(4).toString();
+        QString descripcion = consulta.value(3).toString();
+        QString precio = QString::number(consulta.value(6).toDouble(), 'f', 2);
+        QString descuento = QString::number(consulta.value(7).toDouble(), 'f' , 2);
+        QString tipoiva = QString::number(consulta.value(5).toDouble(), 'f' , 0)+"%";
+        QString total = QString::number(consulta.value(8).toDouble(), 'f' ,2);
+
+        double baseTMP = consulta.value(8).toDouble()/(1+ (consulta.value(5).toDouble()/100));
+        double ivaTMP = consulta.value(8).toDouble()-baseTMP;
+
+        totalBase += baseTMP;
+        totalIva += ivaTMP;
+
+
+
+        lineasHTML += QString(R"(
+        <tr>
+            <td>%1</td>
+            <td>%2</td>
+            <td>%3 €</td>
+            <td>%4 %</td>
+            <td>%5</td>
+            <td>%6 €</td>
+        </tr>
+    )").arg(cantidad, descripcion, precio, descuento, tipoiva, total);
+    }
+    html.replace("%LINEAS%", lineasHTML);
+
+    html.replace("%BASE%", QString::number(totalBase, 'f',2))+" €";
+    html.replace("%IVA%", QString::number(totalIva, 'f',2))+ " €";
+    html.replace("%TOTAL%", QString::number(totalBase + totalIva, 'f',2))+" €";
+    documento.setHtml(html);
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(base.devolverDirectorio("factura")+".pdf");
+    printer.setPageSize(QPageSize::A4);
+    printer.setPageMargins(QMargins(15,15,15,15),QPageLayout::Millimeter);
+    documento.print(&printer);
+    QProcess::startDetached("xdg-open", QStringList() << base.devolverDirectorio("factura")+".pdf");
+}
+
+
