@@ -1,5 +1,7 @@
 #include "listadocaducados.h"
-#include "qtrpt.h"
+#include "qprinter.h"
+#include "qtextdocument.h"
+#include <QProcess>
 #include "ui_listadocaducados.h"
 
 ListadoCaducados::ListadoCaducados(QWidget *parent)
@@ -7,10 +9,20 @@ ListadoCaducados::ListadoCaducados(QWidget *parent)
     , ui(new Ui::ListadoCaducados)
 {
     ui->setupUi(this);
-    desde = ui->dateEditDesde->date().toString("yyyy-MM-dd");
-    hasta = ui->dateEditHasta->date().toString("yyyy-MM-dd");
+
+
+
+
+    QDate fechaActual = QDate::currentDate();
+    QDate targetDate(fechaActual.year(),1,1);
+
+    hasta = fechaActual.toString("yyyy-MM-dd");
+    desde = targetDate.toString("yyyy-MM-dd");
+
     mCaducados = new QSqlQueryModel;
     llenarTabla(desde, hasta);
+    ui->dateEditHasta->setDate(fechaActual);
+    ui->dateEditDesde->setDate(targetDate);
 }
 
 ListadoCaducados::~ListadoCaducados()
@@ -21,69 +33,91 @@ ListadoCaducados::~ListadoCaducados()
 void ListadoCaducados::on_dateEditDesde_userDateChanged(const QDate &date)
 {
     desde = date.toString("yyyy-MM-dd");
-    emit llenarTabla(desde, hasta);
+    llenarTabla(desde, hasta);
 }
 
 void ListadoCaducados::on_dateEditHasta_userDateChanged(const QDate &date)
 {
     hasta = date.toString("yyyy-MM-dd");
-    emit llenarTabla(desde, hasta);
+    llenarTabla(desde, hasta);
 }
 
 void ListadoCaducados::on_pushButtonImprimir_clicked()
 {
-    int udsCaducadas = 0;
-    float precioUdsCaducadas = 0;
+    QTextDocument documento;
+    QString lineasHtml = "";
+    QString html = R"(
+<html>
+<head>
+  <meta charset='utf-8'>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 10pt; }
+    h2 { text-align: center; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #444; padding: 6px; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    th { background-color: #e0e0e0; }
+    tfoot td { font-weight: bold; border-top: 2px solid #000; }
+  </style>
+</head>
+<body>
+
+<h2>Resumen de Caducados entre %FECHAS%</h2>
+
+<table>
+  <thead>
+    <tr>
+    <th>Cod.</th>
+    <th>Cantidad</th>
+    <th>Producto</th>
+    <th>Fecha op.</th>
+    <th>Precio</th>
+    <th>Fecha cad.</th>    </tr>
+  </thead>
+  <tbody>
+    %LINEAS%
+  </tbody>
+  <tfoot>
+    <tr>
+      <td>Total:</td>
+      %TOTALES%
+    </tr>
+  </tfoot>
+</table>
+
+</body>
+</html>
+)";
+
+    html.replace("%FECHAS%", desde+" hasta "+hasta);
     for (int i = 0; i < mCaducados->rowCount(); ++i) {
-        int udsAct = mCaducados->record(i).value("cantidad").toInt();
-        udsCaducadas += udsAct;
-        precioUdsCaducadas += udsAct * mCaducados->record(i).value("precio").toFloat();
+        QString cod = mCaducados->data(mCaducados->index(i,1)).toString();
+        QString cantidad = mCaducados->data(mCaducados->index(i,2)).toString();
+        QString descripcion = mCaducados->data(mCaducados->index(i,3)).toString();
+        QString fecha = mCaducados->data(mCaducados->index(i,4)).toString();
+        QString precio = mCaducados->data(mCaducados->index(i,5)).toString();
+        QString fechaCad = mCaducados->data(mCaducados->index(i,6)).toString();
+
+        lineasHtml += QString("<tr><td>%1</td><td>%2</td><td>%3</td><td>%4</td><td>%5 €</td><td>%6</td></tr>").arg(
+            cod,cantidad,descripcion,fecha,precio,fechaCad);
     }
-    QtRPT *informe = new QtRPT(this);
-    informe->recordCount.append(mCaducados->rowCount());
-    QString informeDir = base->devolverDirectorio("caducados");
-    informe->loadReport(informeDir);
-    connect(informe,
-            &QtRPT::setValue,
-            [&](const int recNo,
-                const QString paramName,
-                QVariant &paramValue,
-                const int reportPage) {
-                (void) reportPage;
-                if (paramName == "desde") {
-                    paramValue = ui->dateEditDesde->text();
-                }
-                if (paramName == "hasta") {
-                    paramValue = ui->dateEditHasta->text();
-                }
-                if (paramName == "ean") {
-                    paramValue = mCaducados->record(recNo).value("cod").toString();
-                }
-                if (paramName == "uds") {
-                    paramValue = mCaducados->record(recNo).value("cantidad").toString();
-                }
-                if (paramName == "producto") {
-                    paramValue = mCaducados->record(recNo).value("descripcion").toString();
-                }
-                if (paramName == "fecha") {
-                    paramValue = mCaducados->record(recNo).value("fecha").toString();
-                }
-                if (paramName == "precio") {
-                    paramValue = mCaducados->record(recNo).value("precio").toString();
-                }
-                if (paramName == "sumUds") {
-                    paramValue = udsCaducadas;
-                }
-                if (paramName == "sumPrecio") {
-                    paramValue = precioUdsCaducadas;
-                }
-            });
-    informe->printExec();
+    html.replace("%LINEAS%",lineasHtml);
+
+    documento.setHtml(html);
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName("./documentos/ListadoCaducados.pdf");
+    documento.print(&printer);
+
+    // Mostrarlo
+    QProcess::startDetached("xdg-open", QStringList() << "./documentos/ListadoCaducados.pdf");
+
 }
 
 void ListadoCaducados::llenarTabla(QString desde, QString hasta)
 {
-    mCaducados->setQuery(base->listadoCaducados(desde, hasta));
+    mCaducados->setQuery(base->listadoCaducados(conf->getConexionLocal(),desde, hasta));
     ui->tableView->setModel(mCaducados);
     ui->tableView->resizeColumnsToContents();
     ui->tableView->hideColumn(0);

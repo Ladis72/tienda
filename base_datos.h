@@ -175,7 +175,7 @@ public:
                                          QString nUltimoTicketB);
     QSqlQuery listadoVentaArticulos(QString inicio, QString final, QString nombreDB);
     QSqlQuery listadoMovimientosEfectivo(QString db, QString inicio, QString final);
-    QSqlQuery listadoCaducados(QString desde, QString hasta);
+    QSqlQuery listadoCaducados(QString base, QString desde, QString hasta);
 
     //Funciones de configuración
     QString leerConfiguracion();

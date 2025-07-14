@@ -1769,7 +1769,7 @@ QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final, QStrin
 
 QSqlQuery baseDatos::listadoMovimientosEfectivo(QString db , QString inicio, QString final)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(db));
     consulta.prepare(
         "SELECT fecha , hora , cantidad , motivosEntrada.descripcion , entradasSalidas.descripcion "
         "FROM entradasSalidas left join motivosEntrada on entradasSalidas.idTiposRentrada = "
@@ -1782,9 +1782,9 @@ QSqlQuery baseDatos::listadoMovimientosEfectivo(QString db , QString inicio, QSt
     return consulta;
 }
 
-QSqlQuery baseDatos::listadoCaducados(QString desde, QString hasta)
+QSqlQuery baseDatos::listadoCaducados(QString base, QString desde, QString hasta)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("SELECT * FROM caducados WHERE fecha >= ? AND fecha <= ?");
     consulta.bindValue(0, desde);
     consulta.bindValue(1, hasta);
