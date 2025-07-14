@@ -1,5 +1,7 @@
 #include "listadoarqueos.h"
-#include "qtrpt.h"
+#include "qprinter.h"
+#include "qprocess.h"
+#include "qtextdocument.h"
 #include "ui_listadoarqueos.h"
 
 ListadoArqueos::ListadoArqueos(QWidget *parent)
@@ -32,47 +34,67 @@ void ListadoArqueos::on_pushButtonConsultar_clicked()
 
 void ListadoArqueos::on_pushButtonImprimir_clicked()
 {
-    // QtRPT *informe = new QtRPT(this);
-    // informe->recordCount.append(modeloTabla->rowCount());
-    // QString informeDir = base->devolverDirectorio("arqueos");
-    // informe->loadReport(informeDir);
-    // connect(informe,
-    //         &QtRPT::setValue,
-    //         [&](const int recNo,
-    //             const QString paramName,
-    //             QVariant &paramValue,
-    //             const int reportPage) {
-    //             (void) reportPage;
-    //             if (paramName == "desde") {
-    //                 paramValue = ui->dateEditDesde->text();
-    //             }
-    //             if (paramName == "hasta") {
-    //                 paramValue = ui->dateEditHasta->text();
-    //             }
-    //             if (paramName == "fecha") {
-    //                 paramValue = modeloTabla->record(recNo).value("fecha").toString();
-    //             }
-    //             if (paramName == "hora") {
-    //                 paramValue = modeloTabla->record(recNo).value("hora").toString();
-    //             }
-    //             if (paramName == "ventasE") {
-    //                 paramValue = modeloTabla->record(recNo).value("ventasEfectivo").toString();
-    //             }
-    //             if (paramName == "ventasT") {
-    //                 paramValue = modeloTabla->record(recNo).value("ventasTarjeta").toString();
-    //             }
-    //             if (paramName == "entradas") {
-    //                 paramValue = modeloTabla->record(recNo).value("entradas").toString();
-    //             }
-    //             if (paramName == "efectivo") {
-    //                 paramValue = modeloTabla->record(recNo).value("efectivoReal").toString();
-    //             }
-    //             if (paramName == "descuadre") {
-    //                 paramValue = modeloTabla->record(recNo).value("descuadre").toString();
-    //             }
-    //         });
-    // informe->printExec();
-    QTextDocument focumento;
-    QString html;
+    QTextDocument documento;
+    QString lineasHtml = "";
+    QString html = R"(
+<html>
+<head>
+  <meta charset='utf-8'>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 10pt; }
+    h2 { text-align: center; margin-bottom: 20px; }
+    .rango { text-align: center; margin-bottom: 15px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #333; padding: 6px; text-align: left; }
+    th { background-color: #f0f0f0; }
+    .total { text-align: right; margin-top: 20px; font-weight: bold; }
+  </style>
+</head>
+<body>
 
+<h2>Listado de Arqueos</h2>
+<div class='rango'>
+  Desde: <b>%DESDE%</b> &nbsp;&nbsp;&nbsp; Hasta: <b>%HASTA%</b>
+</div>
+
+<table>
+  <tr>
+    <th>Fecha</th>
+    <th>Hora</th>
+    <th>Ventas efecivo</th>
+    <th>Ventas tarjeta</th>
+    <th>Entradas</th>
+    <th>Efectivo</th>
+    <th>Descuadre</th>
+  </tr>
+  %LINEAS%
+</table>
+
+
+</body>
+</html>
+)";
+    for (int i = 0; i < modeloTabla->rowCount(); ++i) {
+        QString fecha = modeloTabla->data(modeloTabla->index(i,1)).toString();
+        QString hora = modeloTabla->data(modeloTabla->index(i,2)).toString();
+        QString vefect = modeloTabla->data(modeloTabla->index(i,3)).toString();
+        QString vtarj = modeloTabla->data(modeloTabla->index(i,4)).toString();
+        QString entradas = modeloTabla->data(modeloTabla->index(i,5)).toString();
+        QString efectivo = modeloTabla->data(modeloTabla->index(i,6)).toString();
+        QString descuadre = modeloTabla->data(modeloTabla->index(i,7)).toString();
+
+    lineasHtml += QString("<tr><td>%1</td><td>%2</td><td>%3 €</td><td>%4 €</td><td>%5 €</td><td>%6 €</td><td>%7 €</td></tr>").arg(fecha,hora,vefect,vtarj,entradas,efectivo,descuadre);
+    }
+    html.replace("%DESDE%", ui->dateEditDesde->text());
+    html.replace("%HASTA%", ui->dateEditHasta->text());
+    html.replace("%LINEAS%",lineasHtml);
+    documento.setHtml(html);
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName("./documentos/ListadoArqueos.pdf");
+    documento.print(&printer);
+
+    // Mostrarlo
+    QProcess::startDetached("xdg-open", QStringList() << "./documentos/ListadoArqueos.pdf");
 }

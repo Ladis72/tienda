@@ -2,7 +2,6 @@
 #define INFORMES1_H
 
 #include "configuracion.h"
-#include "base_datos.h"
 
 #include <QDebug>
 #include <QObject>
