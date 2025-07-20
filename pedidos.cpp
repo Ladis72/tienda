@@ -48,16 +48,54 @@ QString pedidos::calcularTotalLinea()
 
 void pedidos::llenarTablaPedido(QString idPedido)
 {
-    modeloPedido
-        ->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = '%1'").arg(idPedido),
-                   QSqlDatabase::database(conf->getConexionLocal()));
-    ui->tableView->setModel(modeloPedido);
-    ui->tableView->hideColumn(0);
-    ui->tableView->hideColumn(1);
-    ui->tableView->hideColumn(10);
-    ui->tableView->hideColumn(13);
-    ui->tableView->hideColumn(14);
-    ui->tableView->resizeColumnsToContents();
+
+    modeloPedido->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = '%1'").arg(idPedido),
+                           QSqlDatabase::database(conf->getConexionLocal()));
+            ui->tableView->setModel(modeloPedido);
+            ui->tableView->hideColumn(0);
+            ui->tableView->hideColumn(1);
+            ui->tableView->hideColumn(10);
+            ui->tableView->hideColumn(13);
+            ui->tableView->hideColumn(14);
+            ui->tableView->resizeColumnsToContents();
+
+    // Consulta para agrupar por tipo de IVA
+    QString queryStr = QString(
+                           "SELECT tipoIva, "
+                           "SUM(totalbase) AS totalBase, "
+                           "SUM(iva) AS totalIva, "
+                           "SUM(re) AS totalRe, "
+                           "(SUM(totalbase) + SUM(iva) + SUM(re)) AS totalGeneral "
+                           "FROM lineaspedido_tmp "
+                           "WHERE idPedido = '%1' "
+                           "GROUP BY tipoIva").arg(idPedido);
+
+    QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
+    if (!query.exec(queryStr)) {
+        QMessageBox::critical(this, "Error", "Error al consultar los datos agrupados por IVA");
+        return;
+    }
+
+    // Crear un modelo de tabla para mostrar los datos agrupados
+    QStandardItemModel *modelo = new QStandardItemModel(this);
+
+    // Definir encabezados
+    modelo->setHorizontalHeaderLabels(QStringList() << "Tipo IVA" << "Base Imponible"
+                                                    << "Total IVA" << "Total RE"
+                                                    << "Total General");
+
+    double totalBase = 0, totalIva = 0, totalRe = 0, totalGeneral = 0;
+
+    // Procesar resultados de la consulta
+    while (query.next()) {
+        QList<QStandardItem *> fila;
+
+        // Obtener valores
+        double tipoIva = query.value("tipoIva").toDouble();
+        double base = query.value("totalBase").toDouble();
+        double iva = query.value("totalIva").toDouble();
+        double re = query.value("totalRe").toDouble();
+        double total = query.value("totalGeneral").toDouble();
 
     contarArticulos();
     contarLineas();
@@ -176,40 +214,140 @@ void pedidos::on_leDescuento_textChanged(const QString &arg1)
 
 void pedidos::on_pushButtonAnadir_clicked()
 {
-    QStringList datos;
-    datos.clear();
-    //Comprobar de nuevo que hay un artículo con ese código
-    bool existe = base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
-                                         "articulos",
-                                         "cod",
-                                         ui->leCod->text());
-    if (existe == true) {
-        float baseTotal = ui->leTotalLinea->text().toFloat();
-        int tipoIva = ui->leIva->text().toInt();
-        float iva = baseTotal * tipoIva / 100;
-        float re;
+    // QStringList datos;
+    // datos.clear();
+    // //Comprobar de nuevo que hay un artículo con ese código
+    // bool existe = base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
+    //                                      "articulos",
+    //                                      "cod",
+    //                                      ui->leCod->text());
+    // if (existe == true) {
+    //     float baseTotal = ui->leTotalLinea->text().toFloat();
+    //     int tipoIva = ui->leIva->text().toInt();
+    //     float iva = baseTotal * tipoIva / 100;
+    //     float re;
 
-        if (base.leerConfiguracion() == "1") {
-            switch (tipoIva) {
-            case 21:
-                re = baseTotal * 5.2 / 100;
-                break;
-            case 10:
-                re = baseTotal * 1.4 / 100;
-                break;
-            case 4:
-                re = baseTotal * 0.5 / 100;
-                break;
-            case 5:
-                re = baseTotal * 0.625 / 100;
-                break;
-            case 0:
-                re = 0;
-                break;
-            default:
-                re = 0;
-                break;
-            };
+    //     if (base.leerConfiguracion() == "1") {
+    //         switch (tipoIva) {
+    //         case 21:
+    //             re = baseTotal * 5.2 / 100;
+    //             break;
+    //         case 10:
+    //             re = baseTotal * 1.4 / 100;
+    //             break;
+    //         case 4:
+    //             re = baseTotal * 0.5 / 100;
+    //             break;
+    //         case 5:
+    //             re = baseTotal * 0.625 / 100;
+    //             break;
+    //         case 0:
+    //             re = 0;
+    //             break;
+    //         default:
+    //             re = 0;
+    //             break;
+    //         };
+    //     } else {
+    //         re = 0;
+    //     }
+    //     float baseProducto = ui->leTotalLinea->text().toFloat() / ui->leUds->text().toFloat();
+
+    //     datos.append(idPedido);
+    //     datos.append(ui->leCod->text());
+    //     datos.append(ui->leDescripcion->text());
+    //     datos.append(ui->leUds->text());
+    //     if (ui->leBon->text().isEmpty()) {
+    //         datos.append("0");
+    //     } else {
+    //         datos.append(ui->leBon->text());
+    //     }
+    //     datos.append(ui->leLote->text());
+    //     datos.append(ui->dateEdit->date().toString("yyyy-MM-dd"));
+    //     datos.append(ui->lePvt->text());
+    //     datos.append(ui->leDescuento->text());
+    //     datos.append(QString::number(baseProducto));
+    //     datos.append(ui->leIva->text());
+    //     datos.append(ui->leTotalLinea->text());
+    //     datos.append(QString::number(iva));
+    //     datos.append(QString::number(re));
+    //     datos.append(ui->lePvp->text());
+    //     if (editando == true) {
+    //         datos.append(lineaSeleccionada);
+    //         base.modificarLineaPedido(conf->getConexionLocal(), datos);
+    //     } else {
+    //         base.grabarLineaPedido(conf->getConexionLocal(), datos);
+    //     }
+    //     llenarTablaPedido(idPedido);
+    // } else {
+    //     QMessageBox *msg = new QMessageBox(this);
+    //     msg->setText("ERROR");
+    //     msg->setInformativeText("No hay un producto con ese código");
+    //     msg->exec();
+    // }
+    // editando = false;
+
+    // borrarLineEdits();
+    // ui->leCod->setFocus();
+
+        QStringList datos;
+        datos.clear();
+
+        // Verificar que el producto existe
+        bool existe = base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
+                                             "articulos", "cod", ui->leCod->text());
+        if (existe == true) {
+            // Obtener tipo de IVA desde la entrada del usuario
+            QVariant tipoIva = ui->leIva->text();
+            double baseTotal = ui->leTotalLinea->text().toDouble();
+            double iva = 0.0;
+            double re = 0.0;
+
+            // Calcular IVA y RE desde la tabla impuestos
+            qDebug() << "Tipo IVA: " << tipoIva << tipoIva.typeName();
+            QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
+            query.prepare("SELECT tipoIva, porcentaje, recargo FROM impuestos WHERE porcentaje = :porcentaje");
+            query.bindValue(":porcentaje", tipoIva);
+            query.exec();
+            query.first();
+            qDebug() << query.lastQuery();
+            qDebug() << query.lastError();
+
+            qDebug() << "Base: " << baseTotal << " IVA: " << query.value(1).toDouble();
+            iva = baseTotal * query.value(1).toDouble() / 100;
+            qDebug() << "Base: " << baseTotal << " IVA: " << query.value(2).toDouble();
+            re = baseTotal * query.value(2).toDouble() / 100;
+
+
+            // Continuar con la creación de la línea del pedido
+            double baseProducto = baseTotal / ui->leUds->text().toDouble();
+            datos.append(idPedido);
+            datos.append(ui->leCod->text());
+            datos.append(ui->leDescripcion->text());
+            datos.append(ui->leUds->text());
+            datos.append(ui->leBon->text().isEmpty() ? "0" : ui->leBon->text());
+            datos.append(ui->leLote->text());
+            datos.append(ui->dateEdit->date().toString("yyyy-MM-dd"));
+            datos.append(ui->lePvt->text());
+            datos.append(ui->leDescuento->text());
+            datos.append(QString::number(baseProducto));
+            datos.append(tipoIva.toString());
+            datos.append(ui->leTotalLinea->text());
+            datos.append(QString::number(iva));
+            datos.append(QString::number(re));
+            datos.append(ui->lePvp->text());
+
+            qDebug() << datos;
+
+            if (editando) {
+                datos.append(lineaSeleccionada);
+                base.modificarLineaPedido(conf->getConexionLocal(), datos);
+            } else {
+                base.grabarLineaPedido(conf->getConexionLocal(), datos);
+            }
+
+            llenarTablaPedido(idPedido);
+
         } else {
             re = 0;
         }

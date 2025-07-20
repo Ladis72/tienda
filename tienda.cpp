@@ -15,10 +15,10 @@ Tienda::Tienda(QWidget *parent)
     ui->setupUi(this);
     QStringList datos = base.datosConexionLocal();
     if (datos.isEmpty()) {
-        createConnection("localhost", "3306", "tienda", "root", "meganizado", "DB");
+        createConnection("localhost", "3306", "tiendaNueva", "root", "meganizado", "DB");
         conf->setConexionLocal("DB");
     } else {
-        createConnection(datos.at(1), "3306", "tienda", datos.at(2), datos.at(3), datos.at(0));
+        createConnection(datos.at(1), "3306", "tiendaNueva", datos.at(2), datos.at(3), datos.at(0));
         conf->setConexionLocal(datos.at(0));
     }
     QString conexionMaster = base.nombreConexionMaster();
@@ -44,7 +44,7 @@ Tienda::Tienda(QWidget *parent)
     usuario->setPalette(paleta );
     ui->statusBar->addPermanentWidget(usuario);
     connect(usuario, SIGNAL(clicked()), this, SLOT(on_pushButtonSesion_clicked()));
-    on_pushButtonSesion_clicked();
+    //on_pushButtonSesion_clicked();
 }
 
 Tienda::~Tienda()
@@ -471,3 +471,10 @@ void Tienda::login()
     qDebug() << conf->getRol();
     permisos(conf->getRol());
 }
+
+void Tienda::on_pushButtonImpuestos_clicked()
+{
+    impuestos *editarImpuestos = new impuestos(this);
+    editarImpuestos->exec();
+}
+

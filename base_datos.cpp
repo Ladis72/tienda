@@ -975,10 +975,10 @@ bool baseDatos::nuevoTicketTmp(int orden, int cliente, int vendedor)
     }
 }
 
-bool baseDatos::grabarTicket(QString serie, QStringList datos)
+bool baseDatos::grabarTicket(QString base , QString serie, QStringList datos)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.prepare("INSERT INTO " + serie + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    QSqlQuery consulta(QSqlDatabase::database(base));
+    consulta.prepare("INSERT INTO " + serie + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
     //consulta.bindValue(0,serie);
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i, datos.at(i));
@@ -1233,8 +1233,8 @@ bool baseDatos::insertarES(QStringList datos, QString base)
 QStringList baseDatos::recuperarConfigTicket()
 {
     QStringList configTicket;
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
-    if (!consulta.exec("SELECT * FROM tienda.configTicket")) {
+    QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
+    if (!consulta.exec("SELECT * FROM configTicket")) {
         qDebug() << consulta.lastError();
         return configTicket;
     }
@@ -1248,7 +1248,7 @@ QStringList baseDatos::recuperarConfigTicket()
     return configTicket;
 }
 
-bool baseDatos::ticketPromo()
+bool baseDatos::ticketPromo(QString base)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     if (!consulta.exec("SELECT boolPromocion FROM tienda.configTicket"))
@@ -1401,10 +1401,14 @@ float baseDatos::sumarBasesPedido(QString base, QString idPedido, QString tipoIv
 bool baseDatos::borrarLineaPedido(QString base, QString idLinea)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
-    if (consulta.exec("DELETE FROM `tienda`.`lineaspedido_tmp` WHERE `lineaspedido_tmp`.`id` = '"
+    if (consulta.exec("DELETE FROM `lineaspedido_tmp` WHERE `lineaspedido_tmp`.`id` = '"
                       + idLinea + "'")) {
+        qDebug() << "CORRECTO" << consulta.lastError();
+
         return true;
     }
+    qDebug() << "ERROR" << consulta.lastError();
+
     return false;
 }
 
@@ -1422,22 +1426,25 @@ bool baseDatos::contabilizarPedido(QString base, QStringList datos)
     return false;
 }
 
-bool baseDatos::grabarFactura(QStringList datos)
+bool baseDatos::grabarFactura(QString base , QStringList datos)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
+    qDebug() << datos;
     consulta.prepare("INSERT INTO facturas VALUES(NULL,?,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i, datos.at(i));
     }
-    if (consulta.exec())
+    if (consulta.exec()){
+        qDebug() << "GRABANDO FACTURA";
         return true;
-    qDebug() << consulta.lastError().text();
+    }
+    qDebug() << " ERROR GRABANDO FACTURA" << consulta.lastError().text();
     return false;
 }
 
-bool baseDatos::grabarAlbaran(QStringList datos)
+bool baseDatos::grabarAlbaran(QString base , QStringList datos)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("INSERT INTO albaranes VALUES(NULL,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i, datos.at(i));
@@ -1541,7 +1548,7 @@ int baseDatos::nTarjetasDesdeUltimoArqueo(QString fechaI, QString horaI, QString
     return consulta.value(0).toInt();
 }
 
-QSqlQuery baseDatos::devolverTablaCompleta(QString nombreTabla)
+QSqlQuery baseDatos::devolverTablaCompleta(QString base , QString nombreTabla)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.exec("SELECT * FROM " + nombreTabla);
@@ -1760,9 +1767,9 @@ QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final, QStrin
     return consulta;
 }
 
-QSqlQuery baseDatos::listadoMovimientosEfectivo(QString inicio, QString final)
+QSqlQuery baseDatos::listadoMovimientosEfectivo(QString db , QString inicio, QString final)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(db));
     consulta.prepare(
         "SELECT fecha , hora , cantidad , motivosEntrada.descripcion , entradasSalidas.descripcion "
         "FROM entradasSalidas left join motivosEntrada on entradasSalidas.idTiposRentrada = "
@@ -1775,9 +1782,9 @@ QSqlQuery baseDatos::listadoMovimientosEfectivo(QString inicio, QString final)
     return consulta;
 }
 
-QSqlQuery baseDatos::listadoCaducados(QString desde, QString hasta)
+QSqlQuery baseDatos::listadoCaducados(QString base, QString desde, QString hasta)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("SELECT * FROM caducados WHERE fecha >= ? AND fecha <= ?");
     consulta.bindValue(0, desde);
     consulta.bindValue(1, hasta);
@@ -1846,7 +1853,7 @@ QString baseDatos::devolverDirectorio(QString tipo)
 
 QString baseDatos::nombreConexionMaster()
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
     consulta.exec("SELECT * FROM tiendas where master = '1'");
     if (consulta.numRowsAffected() < 1) {
         return "";
@@ -1857,7 +1864,7 @@ QString baseDatos::nombreConexionMaster()
 
 QString baseDatos::nombreConexionLocal()
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
     consulta.exec("SELECT * FROM tiendas where local = '1'");
     if (consulta.numRowsAffected() < 1) {
         return "DB";

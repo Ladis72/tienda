@@ -3,7 +3,7 @@
  <class>Articulos</class>
  <widget class="QDialog" name="Articulos">
   <property name="windowModality">
-   <enum>Qt::WindowModality::WindowModal</enum>
+   <enum>Qt::WindowModal</enum>
   </property>
   <property name="enabled">
    <bool>true</bool>
@@ -12,8 +12,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1039</width>
-    <height>578</height>
+    <width>1049</width>
+    <height>629</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -42,16 +42,16 @@ color: rgb(255, 25, 5);</string>
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="tabPosition">
-      <enum>QTabWidget::TabPosition::North</enum>
+      <enum>QTabWidget::North</enum>
      </property>
      <property name="tabShape">
-      <enum>QTabWidget::TabShape::Rounded</enum>
+      <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
       <number>0</number>
      </property>
      <property name="elideMode">
-      <enum>Qt::TextElideMode::ElideMiddle</enum>
+      <enum>Qt::ElideMiddle</enum>
      </property>
      <property name="movable">
       <bool>false</bool>
@@ -68,7 +68,7 @@ color: rgb(255, 25, 5);</string>
         <widget class="QWidget" name="General" native="true">
          <layout class="QGridLayout" name="gridLayout">
           <property name="sizeConstraint">
-           <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
+           <enum>QLayout::SetDefaultConstraint</enum>
           </property>
           <property name="leftMargin">
            <number>4</number>
@@ -91,7 +91,7 @@ color: rgb(255, 25, 5);</string>
              <bool>false</bool>
             </property>
             <property name="focusPolicy">
-             <enum>Qt::FocusPolicy::NoFocus</enum>
+             <enum>Qt::NoFocus</enum>
             </property>
             <property name="displayFormat">
              <string>yyyy-MM-dd</string>
@@ -195,7 +195,7 @@ color: rgb(255, 25, 5);</string>
           <item row="2" column="4">
            <widget class="QLineEdit" name="lineEditCosto">
             <property name="layoutDirection">
-             <enum>Qt::LayoutDirection::LeftToRight</enum>
+             <enum>Qt::LeftToRight</enum>
             </property>
             <property name="inputMask">
              <string/>
@@ -204,7 +204,7 @@ color: rgb(255, 25, 5);</string>
              <number>32767</number>
             </property>
             <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
             </property>
            </widget>
           </item>
@@ -228,7 +228,7 @@ color: rgb(255, 25, 5);</string>
              <bool>false</bool>
             </property>
             <property name="focusPolicy">
-             <enum>Qt::FocusPolicy::NoFocus</enum>
+             <enum>Qt::NoFocus</enum>
             </property>
            </widget>
           </item>
@@ -292,10 +292,10 @@ color: rgb(255, 25, 5);</string>
              <bool>false</bool>
             </property>
             <property name="focusPolicy">
-             <enum>Qt::FocusPolicy::NoFocus</enum>
+             <enum>Qt::NoFocus</enum>
             </property>
             <property name="correctionMode">
-             <enum>QAbstractSpinBox::CorrectionMode::CorrectToNearestValue</enum>
+             <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
             </property>
             <property name="displayFormat">
              <string>yyyy-MM-dd</string>
@@ -424,7 +424,7 @@ color: rgb(255, 25, 5);</string>
              </size>
             </property>
             <property name="focusPolicy">
-             <enum>Qt::FocusPolicy::NoFocus</enum>
+             <enum>Qt::NoFocus</enum>
             </property>
            </widget>
           </item>
@@ -454,7 +454,7 @@ color: rgb(255, 25, 5);</string>
           <item row="1" column="7" rowspan="5">
            <widget class="QTreeWidget" name="treeWidgetStockTiendas">
             <property name="contextMenuPolicy">
-             <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
+             <enum>Qt::DefaultContextMenu</enum>
             </property>
             <column>
              <property name="text">
@@ -514,7 +514,7 @@ color: rgb(255, 25, 5);</string>
       <attribute name="title">
        <string>Ventas</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_3">
+      <layout class="QGridLayout" name="gridLayout_2">
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
@@ -551,6 +551,13 @@ color: rgb(255, 25, 5);</string>
        <item row="1" column="0">
         <widget class="QTableView" name="tableViewVentas"/>
        </item>
+       <item row="1" column="1">
+        <layout class="QVBoxLayout" name="layOutVentas">
+         <item>
+          <widget class="QWidget" name="widgetVentas" native="true"/>
+         </item>
+        </layout>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tab_2">
@@ -561,7 +568,7 @@ color: rgb(255, 25, 5);</string>
        <item row="1" column="0">
         <widget class="QTableView" name="tableViewCompras">
          <property name="selectionBehavior">
-          <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+          <enum>QAbstractItemView::SelectRows</enum>
          </property>
         </widget>
        </item>

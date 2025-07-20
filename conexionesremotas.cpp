@@ -7,13 +7,13 @@ conexionesRemotas::conexionesRemotas(QObject *parent)
 QStringList conexionesRemotas::crear()
 {
     listaConexionesRemotas.clear();
-    QSqlQuery conexiones = base->tiendas(QSqlDatabase::database("DB"));
+    QSqlQuery conexiones = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
     conexiones.first();
     qDebug() << conexiones.numRowsAffected();
     for (int i = 0; i < conexiones.numRowsAffected(); ++i) {
         QString host = conexiones.value("ip").toString();
         QString puerto = "3306";
-        QString baseDatos = "tienda";
+        QString baseDatos = "tiendaNueva";
         QString usuario = conexiones.value("usuario").toString();
         QString constrasena = conexiones.value("password").toString();
         QString nombreConexion = conexiones.value("nombre").toString();
@@ -34,7 +34,7 @@ QStringList conexionesRemotas::crear()
 QStringList conexionesRemotas::lista()
 {
     listaOrdenadoresRemotos.clear();
-    QSqlQuery tiendas = base->tiendas(QSqlDatabase::database("DB"));
+    QSqlQuery tiendas = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
     tiendas.first();
     qDebug() << tiendas.numRowsAffected();
     qDebug() << tiendas.lastError();
@@ -49,13 +49,13 @@ QStringList conexionesRemotas::lista()
 QStringList conexionesRemotas::listaOnLine()
 {
     listaConexionesActivas.clear();
-    QSqlQuery conexiones = base->tiendas(QSqlDatabase::database("DB"));
+    QSqlQuery conexiones = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
     conexiones.first();
     qDebug() << conexiones.numRowsAffected();
     for (int i = 0; i < conexiones.numRowsAffected(); ++i) {
         QString host = conexiones.value("ip").toString();
         QString puerto = "3306";
-        QString baseDatos = "tienda";
+        QString baseDatos = "tiendaNueva";
         QString usuario = conexiones.value("usuario").toString();
         QString constrasena = conexiones.value("password").toString();
         QString nombreConexion = conexiones.value("nombre").toString();

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>910</width>
-    <height>342</height>
+    <height>367</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -111,13 +111,6 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="3">
-       <widget class="QLabel" name="label_8">
-        <property name="text">
-         <string>Ususario</string>
-        </property>
-       </widget>
-      </item>
       <item row="2" column="4">
        <widget class="QLineEdit" name="lineEditIP">
         <property name="inputMask">
@@ -152,13 +145,6 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="4">
-       <widget class="QLineEdit" name="lineEditPassword">
-        <property name="echoMode">
-         <enum>QLineEdit::EchoMode::Password</enum>
-        </property>
-       </widget>
-      </item>
       <item row="3" column="0">
        <widget class="QLabel" name="label_2">
         <property name="text">
@@ -179,7 +165,7 @@
       <item row="1" column="4">
        <spacer name="horizontalSpacer">
         <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
+         <enum>Qt::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -188,16 +174,6 @@
          </size>
         </property>
        </spacer>
-      </item>
-      <item row="4" column="3">
-       <widget class="QLabel" name="label_9">
-        <property name="text">
-         <string>Contrase&amp;ña</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="4">
-       <widget class="QLineEdit" name="lineEditUsusario"/>
       </item>
       <item row="7" column="0">
        <widget class="QLabel" name="label_6">
@@ -223,7 +199,7 @@
       <item row="1" column="2">
        <spacer name="horizontalSpacer_2">
         <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
+         <enum>Qt::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -256,6 +232,40 @@
         </property>
        </widget>
       </item>
+      <item row="5" column="4">
+       <widget class="QLineEdit" name="lineEditPassword">
+        <property name="echoMode">
+         <enum>QLineEdit::Password</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="3">
+       <widget class="QLabel" name="label_9">
+        <property name="text">
+         <string>Contrase&amp;ña</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="3">
+       <widget class="QLabel" name="label_8">
+        <property name="text">
+         <string>Ususario</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="4">
+       <widget class="QLineEdit" name="lineEditUsusario"/>
+      </item>
+      <item row="3" column="3">
+       <widget class="QLabel" name="label_11">
+        <property name="text">
+         <string>Base de datos</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="4">
+       <widget class="QLineEdit" name="lineEditBase"/>
+      </item>
      </layout>
     </widget>
    </item>
@@ -269,8 +279,6 @@
   <tabstop>lineEditWharsapp</tabstop>
   <tabstop>lineEditEmail</tabstop>
   <tabstop>lineEditIP</tabstop>
-  <tabstop>lineEditUsusario</tabstop>
-  <tabstop>lineEditPassword</tabstop>
   <tabstop>pushButtonNuevo</tabstop>
   <tabstop>pushButtonBorrar</tabstop>
   <tabstop>pushButtonModificar</tabstop>

@@ -217,41 +217,19 @@ QStringList Tpv::recopilarDatosTicket()
 QStringList Tpv::recopilarBasesIvas()
 {
     QStringList basesIvas;
-    basesIvas.clear();
-    double base1 = 0, base2 = 0, base3 = 0, base0 = 0, base5 = 0;
+    double TotalBase, TotalIva;
+    TotalBase=0;
+    TotalIva=0;
+
     for (int i = 0; i < modeloTicket->rowCount(); ++i) {
-        int tipoIva = modeloTicket->record(i).value(5).toInt();
-        qDebug() << tipoIva;
-        switch (tipoIva) {
-        case 4:
-            base1 += modeloTicket->record(i).value(8).toDouble();
-            break;
-        case 10:
-            base2 += modeloTicket->record(i).value(8).toDouble();
-            break;
-        case 21:
-            base3 += modeloTicket->record(i).value(8).toDouble();
-            break;
-        case 0:
-            base0 += modeloTicket->record(i).value(8).toDouble();
-            break;
-        case 5:
-            base5 += modeloTicket->record(i).value(8).toDouble();
-            break;
-        default:
-            break;
-        }
+        double base = modeloTicket->record(i).value(8).toDouble()/(1+(modeloTicket->record(i).value(5).toDouble()/100));
+        double iva = modeloTicket->record(i).value(8).toDouble()-base;
+        TotalBase +=base;
+        TotalIva +=iva;
+
     }
-    basesIvas.append(QString::number(base0));
-    basesIvas.append("0");
-    basesIvas.append(QString::number(base1 / 1.04));
-    basesIvas.append(QString::number(base1 - (base1 / 1.04)));
-    basesIvas.append(QString::number(base5 / 1.05));
-    basesIvas.append(QString::number(base5 - (base5 / 1.05)));
-    basesIvas.append(QString::number(base2 / 1.1));
-    basesIvas.append(QString::number(base2 - (base2 / 1.1)));
-    basesIvas.append(QString::number(base3 / 1.21));
-    basesIvas.append(QString::number(base3 - (base3 / 1.21)));
+    basesIvas.append(QString::number(TotalBase));
+    basesIvas.append(QString::number(TotalIva));
 
     return basesIvas;
 }
@@ -316,16 +294,10 @@ void Tpv::on_lineEdit_cod_returnPressed()
         } else {
             linea << ui->lineEdit_precio->text();
         }
-        //       if(ui->lineEdit_descuento->text() == "0"){
-        //           qDebug() << "Descuento en line 0";
-        //           linea << QString::number(descuentoCliente);
 
-        //           }else{
         linea << ui->lineEdit_descuento->text();
-        //       }
         double totalLinea = linea.at(4).toDouble() * linea.at(2).toDouble()
                             * (1 - linea.at(5).toDouble() / 100);
-        //totalLinea = redondear(totalLinea,2);
         totalLinea = classFormatear.redondear(totalLinea, 2);
         linea << QString::number(totalLinea);
 
@@ -424,7 +396,6 @@ void Tpv::on_btn_cobrar_clicked()
     qDebug() << codApertura;
     QStringList cadaCodApertura = codApertura.split(",");
     for (int i = 0; i < cadaCodApertura.size(); ++i) {
-        qDebug() << cadaCodApertura.at(i);
         codigoApertura << char(cadaCodApertura.at(i).toInt());
     }
     cajon.close();
@@ -521,7 +492,7 @@ void Tpv::on_btn_cobrar_clicked()
             ticket += 1;
         }
 
-        base.grabarTicket(serie, totalTicket);
+        base.grabarTicket(conf->getConexionLocal(), serie, totalTicket);
         qDebug() << totalTicket;
         qDebug() << serie;
 
@@ -664,6 +635,11 @@ void Tpv::on_btn_preTicket_clicked()
     QFile impresora("ticket.txt");
     impresora.open(QIODevice::WriteOnly);
     QTextStream texto(&impresora);
+    QString abrirCajon = confTicket.at(4);
+    QStringList comandoAbrirCajon = abrirCajon.split(",");
+    for (int i = 0; i < comandoAbrirCajon.size(); ++i) {
+        texto << char(comandoAbrirCajon.at(i).toInt());
+    }
     texto << confTicket.at(0) + "\n\n";
     texto << QDate::currentDate().toString("yyyy-MM-dd") + "  "
                  + QTime::currentTime().toString("hh:mm") + "   " + "Ticket: TICKET";
@@ -671,17 +647,6 @@ void Tpv::on_btn_preTicket_clicked()
     texto << "UDS|  Producto            |Prec.|Dto|Total\n";
     texto << "------------------------------------------\n";
 
-    //            texto << "HERBOLARIO EMEICJAC\n";
-    //            texto << "C/Perines 14 bajo\n";
-    //            texto << "Tlfn: 942-37-20-27\n";
-    //            texto << "N.I.F.: 20196639-V\n";
-    //            texto << "E-mail: emeicjac@emeicjac.com\n";
-    //            texto << "Web: emeicjac.com\n\n";
-    //            texto << QDateTime::currentDateTime().toString("dd-MMM-yyyy  HH:mm:ss");
-    //            texto << "    Ticket:" << QString::number(ticket);
-    //            texto <<"\n";
-    //            texto << "UDS | Producto            |Prec.|Dto|Total\n";
-    //            texto << "------------------------------------------\n";
     for (int i = 0; i < modeloTicket->rowCount(); i++) {
         lineaTicket.clear();
         lineaTicket.append("TICKET");
@@ -718,22 +683,18 @@ void Tpv::on_btn_preTicket_clicked()
     }
     texto << "\n\n";
     texto << "Total : " + QString::number(calcularPrecioTotal()) + "\n";
-    //        texto << QString::number(totalizacion->total)+"\n";
-    //        texto << totalizacion->efectivo;
+
     texto << "\n\n\n";
     texto << confTicket.at(1);
     texto << "\n\n\n\n";
-    //    texto << char(0x1D) << char(0x56) << char(0x30);
     QString codCorte = confTicket.at(5);
-    qDebug() << codCorte;
     QStringList cadaCodCorte = codCorte.split(",");
     for (int i = 0; i < cadaCodCorte.size(); ++i) {
         texto << char(cadaCodCorte.at(i).toInt());
     }
-    //texto << confTicket.at(4);
     texto << "\n\n";
     impresora.close();
-    QString imprimir = "less ./ticket.txt: >> " + confTicket.at(3);
+    QString imprimir = "cat ./ticket.txt >> " + confTicket.at(3);
     const char *ch = imprimir.toLocal8Bit().constData();
     system(ch);
 }

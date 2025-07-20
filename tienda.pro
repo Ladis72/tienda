@@ -4,7 +4,9 @@
 #Ladis
 #-------------------------------------------------
 
-QT       += sql
+
+
+QT       += sql charts webenginewidgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -17,8 +19,10 @@ SOURCES += main.cpp\
     actualizarclientes.cpp \
     conexionesremotas.cpp \
     generarvales.cpp \
+    graficoventaswidget.cpp \
     imprimirfacturaproveedor.cpp \
     imprimirpedido.cpp \
+    impuestos.cpp \
     informes1.cpp \
     login.cpp \
         tienda.cpp \
@@ -44,6 +48,7 @@ SOURCES += main.cpp\
     configuracion.cpp \
     cambiodatosproducto.cpp \
     historicotickets.cpp \
+    ventasusuariowidget.cpp \
     verfacturas.cpp \
     listadoventas.cpp \
     dialogfecha.cpp \
@@ -78,8 +83,10 @@ HEADERS  += tienda.h \
     actualizarclientes.h \
     conexionesremotas.h \
     generarvales.h \
+    graficoventaswidget.h \
     imprimirfacturaproveedor.h \
     imprimirpedido.h \
+    impuestos.h \
     informes1.h \
     login.h \
     tpv.h \
@@ -105,6 +112,7 @@ HEADERS  += tienda.h \
     configuracion.h \
     cambiodatosproducto.h \
     historicotickets.h \
+    ventasusuariowidget.h \
     verfacturas.h \
     listadoventas.h \
     dialogfecha.h \
@@ -138,6 +146,7 @@ FORMS    += tienda.ui \
     actualizarclientes.ui \
     copiaseguridad.ui \
     generarvales.ui \
+    impuestos.ui \
     login.ui \
     tpv.ui \
     buscarproducto.ui \
@@ -159,6 +168,7 @@ FORMS    += tienda.ui \
     aceptarpedido.ui \
     cambiodatosproducto.ui \
     historicotickets.ui \
+    ventasusuariowidget.ui \
     verfacturas.ui \
     listadoventas.ui \
     dialogfecha.ui \
@@ -190,4 +200,5 @@ RESOURCES += \
     recursos.qrc
 
 DISTFILES += \
-    Instalación.txt
+    Instalación.txt \
+    canbiosVersiónNueva

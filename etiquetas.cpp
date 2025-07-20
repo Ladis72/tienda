@@ -2,9 +2,12 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QPdfWriter>
-#include "qtrpt.h"
+#include <QUrl>
+#include <QPrinter>
 #include "ui_etiquetas.h"
-#include <qtrpt.h>
+#include <QFile>
+#include <QDesktopServices>
+#include <QProcess>
 
 Etiquetas::Etiquetas(QWidget *parent)
     : QDialog(parent)
@@ -22,107 +25,51 @@ Etiquetas::~Etiquetas()
 
 void Etiquetas::on_pushButtonImprimir_clicked()
 {
-    //imprimirHtml();
-    QStandardItemModel *modeloImpresion = new QStandardItemModel();
-    modeloImpresion->clear();
-    int contadorfila = 0;
-    int contadorcolumna = 0;
-    for (int i = 0; i < modelo->rowCount(); i++) {
-        QString textoFormateado = modelo->item(i, 1)->text();
-        if (textoFormateado.length() > 25) {
-            textoFormateado.insert(textoFormateado.indexOf(" ", 20), "\n");
-        }
-        QStandardItem *nombreImp = new QStandardItem(textoFormateado);
-        modeloImpresion->setItem(contadorfila, contadorcolumna, nombreImp);
-        contadorcolumna++;
+      QList<QList<QString>> datos;
+    datos.clear();
+      for (int i = 0; i < modelo->rowCount(); ++i) {
+          QList<QString> datosFila;
+          QString nombre = modelo->item(i,1)->text();
+          if (nombre.length() > 25)  {
+              nombre.insert(nombre.indexOf(" ", 12), "\n");
+          }
+          datosFila << nombre << modelo->item(i,2)->text();
 
-        QStandardItem *PVPImp = new QStandardItem(modelo->item(i, 2)->text());
-        modeloImpresion->setItem(contadorfila, contadorcolumna, PVPImp);
-        contadorcolumna++;
+          QString formato = modelo->item(i, 3)->text();
+          QString formatoEtiqueta;
+          if (formato == "Uds") {
+              formatoEtiqueta = "Precio/ud: ";
+              double pvp = classFormatear.redondear(modelo->item(i, 2)->text().toDouble()
+                                                        / modelo->item(i, 4)->text().toDouble(),
+                                                    3);
+              formatoEtiqueta += QString::number(pvp);
+          }
+          if (formato == "Peso") {
+              formatoEtiqueta = "Precio/Kg: ";
+              double pvp = classFormatear.redondear(modelo->item(i, 2)->text().toDouble() * 1000
+                                                        / modelo->item(i, 4)->text().toDouble(),
+                                                    3);
+              formatoEtiqueta += QString::number(pvp);
+          }
+          if (formato == "Volumen") {
+              formatoEtiqueta = "Precio/L: ";
+              double pvp = classFormatear.redondear(modelo->item(i, 2)->text().toDouble() * 1000
+                                                        / modelo->item(i, 4)->text().toDouble(),
+                                                    3);
+              formatoEtiqueta += QString::number(pvp);
+          }
+          if (formato == "No definido") {
+              formatoEtiqueta = "---/--- ";
+          }
+          datosFila << formatoEtiqueta;
+          datos << datosFila;
 
-        QString formato = modelo->item(i, 3)->text();
-        QString formatoEtiqueta;
-        if (formato == "Uds") {
-            formatoEtiqueta = "Precio / ud \n";
-            double pvp = classFormatear.redondear(modelo->item(i, 2)->text().toDouble()
-                                                      / modelo->item(i, 4)->text().toDouble(),
-                                                  3);
-            formatoEtiqueta += QString::number(pvp);
-        }
-        if (formato == "Peso") {
-            formatoEtiqueta = "Precio / Kg \n";
-            double pvp = classFormatear.redondear(modelo->item(i, 2)->text().toDouble() * 1000
-                                                      / modelo->item(i, 4)->text().toDouble(),
-                                                  3);
-            formatoEtiqueta += QString::number(pvp);
-        }
-        if (formato == "Volumen") {
-            formatoEtiqueta = "Precio / L \n";
-            double pvp = classFormatear.redondear(modelo->item(i, 2)->text().toDouble() * 1000
-                                                      / modelo->item(i, 4)->text().toDouble(),
-                                                  3);
-            formatoEtiqueta += QString::number(pvp);
-        }
-        if (formato == "No definido") {
-            formatoEtiqueta = "--- / --- \n";
-        }
+      }
+      generarPDF(datos);
+      QProcess::startDetached("xdg-open", QStringList() << base->devolverDirectorio("etiquetas")+"/Etiquetas.pdf");
 
-        QStandardItem *formatoImp = new QStandardItem(formatoEtiqueta);
-        modeloImpresion->setItem(contadorfila, contadorcolumna, formatoImp);
-        contadorcolumna++;
+      //abriPDF(QUrl::fromLocalFile(base->cargarDirectorios(conf->getConexionLocal()).at(2)).toString());
 
-        if (contadorcolumna == 9) {
-            contadorcolumna = 0;
-            contadorfila++;
-        }
-    }
-    while (contadorcolumna < 9) {
-        QStandardItem *vacio = new QStandardItem("");
-        modeloImpresion->setItem(contadorfila, contadorcolumna, vacio);
-
-        contadorcolumna++;
-    }
-
-    QtRPT *informe = new QtRPT();
-    informe->recordCount.append(modeloImpresion->rowCount());
-    QString informeDir = base->devolverDirectorio("etiquetas");
-    informe->loadReport(informeDir);
-    connect(informe,
-            &QtRPT::setValue,
-            [&](const int recNo,
-                const QString paramName,
-                QVariant &paramValue,
-                const int reportPage) {
-                (void) reportPage;
-                if (paramName == "producto1") {
-                    paramValue = modeloImpresion->item(recNo, 0)->text();
-                }
-                if (paramName == "pvp1") {
-                    paramValue = modeloImpresion->item(recNo, 1)->text();
-                }
-                if (paramName == "producto2") {
-                    paramValue = modeloImpresion->item(recNo, 3)->text();
-                }
-                if (paramName == "pvp2") {
-                    paramValue = modeloImpresion->item(recNo, 4)->text();
-                }
-                if (paramName == "producto3") {
-                    paramValue = modeloImpresion->item(recNo, 6)->text();
-                }
-                if (paramName == "pvp3") {
-                    paramValue = modeloImpresion->item(recNo, 7)->text();
-                }
-                if (paramName == "peso1") {
-                    paramValue = modeloImpresion->item(recNo, 2)->text();
-                }
-                if (paramName == "peso2") {
-                    paramValue = modeloImpresion->item(recNo, 5)->text();
-                }
-                if (paramName == "peso3") {
-                    paramValue = modeloImpresion->item(recNo, 8)->text();
-                }
-            });
-    informe->printExec();
 }
 
 void Etiquetas::on_lineEditCod_returnPressed()
@@ -218,131 +165,86 @@ void Etiquetas::on_pushButton_3_clicked()
     return;
 }
 
-void Etiquetas::imprimirHtml()
+void Etiquetas::generarPDF(const QList<QList<QString> > datos)
 {
-    QStandardItemModel *modeloImpresionHtml = new QStandardItemModel;
-    modeloImpresionHtml->clear();
-    for (int i = 0; i < modelo->rowCount(); i++) {
-        QStandardItem *nombreHtml = new QStandardItem(modelo->item(i, 1)->text());
-        modeloImpresionHtml->setItem(i, 0, nombreHtml);
-        QStandardItem *pvpHtml = new QStandardItem(modelo->item(i, 2)->text());
-        modeloImpresionHtml->setItem(i, 1, pvpHtml);
-        QString formato = modelo->item(i, 3)->text();
-        QString formatoEtiqueta;
-        if (formato == "Uds") {
-            formatoEtiqueta = "Precio / ud \n";
-            double pvp = classFormatear.redondear(modelo->item(i, 2)->text().toDouble()
-                                                      / modelo->item(i, 4)->text().toDouble(),
-                                                  3);
-            formatoEtiqueta += QString::number(pvp);
+    QPrinter printer(QPrinter::PrinterResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(base->devolverDirectorio("etiquetas")+"/Etiquetas.pdf");
+    qDebug() << base->cargarDirectorios(conf->getConexionLocal()).at(2);
+
+    //printer.setPaperSize(QPrinter::A4);
+    printer.setPageSize(QPageSize::A4);
+    printer.setPageMargins(QMarginsF(5, 5, 5, 5));
+
+    QPainter painter(&printer);
+
+    // 📏 Tamaño de cada etiqueta en mm
+    int anchoEtiqueta = 65;  // Ancho en mm
+    int altoEtiqueta = 30;   // Alto en mm
+    int margenX = 3;         // Espacio horizontal entre etiquetas
+    int margenY = 4;        // Espacio vertical entre filas
+
+    // 🔄 Convertir de mm a puntos (1 mm ≈ 2.83 puntos)
+    anchoEtiqueta *= 2.83;
+    altoEtiqueta *= 2.83;
+    margenX *= 2.83;
+    margenY *= 2.83;
+
+    int columnas = 3;  // 3 etiquetas por fila
+    int filasPorPagina = printer.pageLayout().paintRect().height() / (altoEtiqueta + margenY);
+
+    int x = margenX, y = margenY;
+    int etiquetasEnPagina = 0;
+
+
+
+    for (int i = 0; i < datos.size(); i++) {
+        QRect rect(x, y, anchoEtiqueta, altoEtiqueta);
+        painter.drawRect(rect);
+
+        // 📌 Dibujar el contenido de la etiqueta
+        int textY = y + 3;
+
+        // Nombre del producto
+        QFont fuenteProducto("Arial", 12, QFont::Bold);
+        painter.setFont(fuenteProducto);
+        painter.drawText(QRect(x +5, textY, anchoEtiqueta -3, 27),Qt::AlignCenter, datos[i][0]);
+        textY += 18;
+
+        QFont fuentePrecio("Arial", 34, QFont::Bold);
+        painter.setFont(fuentePrecio);
+        painter.drawText(QRect(x+5,textY,anchoEtiqueta -3, 50),Qt::AlignCenter, datos[i][1]);
+        textY += 45;
+
+        QFont fuenteValor("Arial", 9);
+        painter.setFont(fuenteValor);
+        painter.drawText(QRect(x +5, textY, anchoEtiqueta -10, 12),Qt::AlignRight, datos[i][2]);
+
+        // 📍 Moverse a la siguiente columna
+        x += anchoEtiqueta + margenX;
+
+        // 📌 Si llegamos a la 3ª etiqueta en una fila, saltamos a la siguiente
+        if ((i + 1) % columnas == 0) {
+            x = margenX;
+            y += altoEtiqueta + margenY;
         }
-        if (formato == "Peso") {
-            formatoEtiqueta = "Precio / Kg \n";
-            double pvp = classFormatear.redondear(modelo->item(i, 2)->text().toDouble() * 1000
-                                                      / modelo->item(i, 4)->text().toDouble(),
-                                                  3);
-            formatoEtiqueta += QString::number(pvp);
+
+        etiquetasEnPagina++;
+
+        // 📝 Si llenamos la página, creamos una nueva
+        if (etiquetasEnPagina >= (filasPorPagina * columnas)) {
+            printer.newPage();
+            x = margenX;
+            y = margenY;
+            etiquetasEnPagina = 0;
         }
-        if (formato == "Volumen") {
-            formatoEtiqueta = "Precio / L \n";
-            double pvp = classFormatear.redondear(modelo->item(i, 2)->text().toDouble() * 1000
-                                                      / modelo->item(i, 4)->text().toDouble(),
-                                                  3);
-            formatoEtiqueta += QString::number(pvp);
-        }
-        if (formato == "No definido") {
-            formatoEtiqueta = "--- / --- \n";
-        }
-        QStandardItem *formatoHtml = new QStandardItem(formatoEtiqueta);
-        modeloImpresionHtml->setItem(i, 2, formatoHtml);
     }
-    QFile fichero("./documentos/Etiquetas.html");
-    fichero.open(QIODevice::WriteOnly);
-    QTextStream pagina(&fichero);
-    QString html = "<!DOCTYPE html>"
-                   "<html>"
-                   "<head>"
-                   "<meta http-equiv='content-type' content='text/html; charset=UTF-8'>"
-                   "<title>Etiquetas lineales</title>"
-                   "<link type='text/css' rel='stylesheet' href='bootstrap.min.css' title='estilo'>"
-                   "</head>"
-                   "<table style='widht = 20cm;' cellspacing='0' cellpadding='0' border='0'>"
-                   "<colgroup><col width='120'><col width='90'><col width='120'><col "
-                   "width='90'><col width='120'><col width='90'></colgroup>"
-                   "<tbody>";
-    pagina << html;
-    //for (int i = 0;i < modeloImpresionHtml->rowCount() ;i++ ) {
-    for (int i = 0; i < 130; i = i + 3) {
-        pagina << "<tr style='vertical-align: top; max-height: 50px; background-color: white;'>"
-                  "<td colspan='2' class='Tabla1_A1'>"
-                  "<p class='P1'>"
-                      + modeloImpresionHtml->item(i, 0)->text()
-                      + "</p>"
-                        "</td>";
-        pagina << "<td colspan='2' class='Tabla1_A1'>"
-                  "<p class='P1'>"
-                      + modeloImpresionHtml->item(i + 1, 0)->text()
-                      + "</p>"
-                        "</td>"
-                        "<td colspan='2' class='Tabla1_A1'>"
-                        "<p class='P1'>"
-                      + modeloImpresionHtml->item(i + 2, 0)->text()
-                      + "</p>"
-                        "</td>"
-                        //                 "<td colspan='2' class='Tabla1_A1'>"
-                        //                             "<p class='P1'>"+modeloImpresionHtml->item(i+3,0)->text()+"</p>"
-                        //                           "</td>"
-                        "</tr>";
-        pagina
-            << "<tr>"
-               "<td style='text-align:center; vertical-align: top; width:2.5cm;'  "
-               "class='Tabla1_A1'>"
-               "<h1 class='P1'>"
-                   + modeloImpresionHtml->item(i, 1)->text()
-                   + "</h1>"
-                     "</td>"
-                     "<td style='text-align: right; width:2.5cm; ' class='Tabla1_A1'>"
-                     "<p class='P1'>"
-                   + modeloImpresionHtml->item(i, 2)->text()
-                   + "</p>"
-                     "</td>"
-                     "<td style='text-align:center; vertical-align: top; width:2.5cm;'  "
-                     "class='Tabla1_A1'>"
-                     "<h1 class='P1'>"
-                   + modeloImpresionHtml->item(i + 1, 1)->text()
-                   + "</h1>"
-                     "</td>"
-                     "<td style='text-align:right; width:2.5cm; ' class='Tabla1_A1'>"
-                     "<p class='P1'>"
-                   + modeloImpresionHtml->item(i + 1, 2)->text()
-                   + "</p>"
-                     "</td>"
-                     "<td style='text-align:center; vertical-align: top; width:2.5cm;'  "
-                     "class='Tabla1_A1'>"
-                     "<h1 class='P1'>"
-                   + modeloImpresionHtml->item(i + 2, 1)->text()
-                   + "</h1>"
-                     "</td>"
-                     "<td style='text-align:right; width:2.5cm; ' class='Tabla1_A1'>"
-                     "<p class='P1'>"
-                   + modeloImpresionHtml->item(i + 2, 2)->text()
-                   + "</p>"
-                     "</td>"
-                     //                 "<td style='text-align:left;width:2.5cm; ' class='Tabla1_A1'>"
-                     //                   "<h1 class='P2'>"+modeloImpresionHtml->item(i+3,1)->text()+"</h1>"
-                     //                 "</td>"
-                     //                 "<td style='text-align:left;width:2.5cm; ' class='Tabla1_A1'>"
-                     //                 "<p class='P1'>"+modeloImpresionHtml->item(i+3,2)->text()+"<br>"
-                     //                 "</td>"
-                     "</tr>";
-    }
-    pagina << "</tbody>"
-              "</table>"
-              "<br>"
-              "</div>"
-              "</body>"
-              "</html>";
-    fichero.close();
-    system("firefox " + QCoreApplication::applicationDirPath().toLocal8Bit()
-           + "/documentos/Etiquetas.html");
+
+    painter.end();
+    qDebug() << "Archivo etiquetas.pdf generado correctamente.";
+}
+
+void Etiquetas::abriPDF(const QString &ruta)
+{
+    QDesktopServices::openUrl(ruta);
 }

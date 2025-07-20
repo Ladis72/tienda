@@ -32,66 +32,77 @@ AceptarPedido::~AceptarPedido()
 
 void AceptarPedido::llenarTabla(QString idPedido, double desc)
 {
-    ui->leIva10->setText(
-        QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "10") * desc));
-    ui->leIva21->setText(
-        QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "21") * desc));
-    ui->leIva4->setText(
-        QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "4") * desc));
-    ui->leIva5->setText(
-        QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "5") * desc));
-    ui->leIva0->setText(
-        QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "0") * desc));
 
-    ui->leRe0->setText(
-        QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "0") * desc));
-    ui->leRe4->setText(
-        QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "4") * desc));
-    ui->leRe5->setText(
-        QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "5") * desc));
-    ui->leRe10->setText(
-        QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "10") * desc));
-    ui->leRe21->setText(
-        QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "21") * desc));
 
-    ui->leBase0->setText(
-        QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "0") * desc));
-    ui->leBase4->setText(
-        QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "4") * desc));
-    ui->leBase5->setText(
-        QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "5") * desc));
-    ui->leBase10->setText(
-        QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "10") * desc));
-    ui->leBase21->setText(
-        QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "21") * desc));
+    double totalBase = 0, totalIva = 0, totalRe = 0, totalGeneral = 0;
 
-    ui->leTotal0->setText(QString::number(ui->leBase0->text().toDouble()));
-    ui->leTotal4->setText(QString::number(ui->leBase4->text().toDouble()
-                                          + ui->leIva4->text().toDouble()
-                                          + ui->leRe4->text().toDouble()));
-    ui->leTotal5->setText(QString::number(ui->leBase5->text().toDouble()
-                                          + ui->leIva5->text().toDouble()
-                                          + ui->leRe5->text().toDouble()));
-    ui->leTotal10->setText(QString::number(ui->leBase10->text().toDouble()
-                                           + ui->leIva10->text().toDouble()
-                                           + ui->leRe10->text().toDouble()));
-    ui->leTotal21->setText(QString::number(ui->leBase21->text().toDouble()
-                                           + ui->leIva21->text().toDouble()
-                                           + ui->leRe21->text().toDouble()));
 
-    ui->leTotalBase->setText(
-        QString::number(ui->leBase0->text().toDouble() + ui->leBase4->text().toDouble()
-                        + ui->leBase5->text().toDouble() + ui->leBase10->text().toDouble()
-                        + ui->leBase21->text().toDouble()));
-    ui->leTotalIva->setText(
-        QString::number(ui->leIva4->text().toDouble() + ui->leIva5->text().toDouble()
-                        + ui->leIva10->text().toDouble() + ui->leIva21->text().toDouble()));
-    ui->leTotalRe->setText(
-        QString::number(ui->leRe4->text().toDouble() + ui->leRe5->text().toDouble()
-                        + ui->leRe10->text().toDouble() + ui->leRe21->text().toDouble()));
-    ui->leTotal->setText(QString::number(ui->leTotalBase->text().toDouble()
-                                         + ui->leTotalIva->text().toDouble()
-                                         + ui->leTotalRe->text().toDouble()));
+        // Consulta para agrupar por tipo de IVA
+        QString queryStr = QString(
+                               "SELECT tipoIva, "
+                               "SUM(totalbase) AS totalBase, "
+                               "SUM(iva) AS totalIva, "
+                               "SUM(re) AS totalRe, "
+                               "(SUM(totalbase) + SUM(iva) + SUM(re)) AS totalGeneral "
+                               "FROM lineaspedido_tmp "
+                               "WHERE idPedido = '%1' "
+                               "GROUP BY tipoIva").arg(idPedido);
+
+        QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
+        if (!query.exec(queryStr)) {
+            QMessageBox::critical(this, "Error", "Error al consultar los datos agrupados por IVA");
+            return;
+        }
+
+        // Crear un modelo de tabla para mostrar los datos agrupados
+        QStandardItemModel *modelo = new QStandardItemModel(this);
+
+        // Definir encabezados
+        modelo->setHorizontalHeaderLabels(QStringList() << "Tipo IVA" << "Base Imponible"
+                                                        << "Total IVA" << "Total RE"
+                                                        << "Total General");
+
+
+
+        // Procesar resultados de la consulta
+        while (query.next()) {
+            QList<QStandardItem *> fila;
+
+            // Obtener valores
+            double tipoIva = query.value("tipoIva").toDouble();
+            double base = query.value("totalBase").toDouble();
+            double iva = query.value("totalIva").toDouble();
+            double re = query.value("totalRe").toDouble();
+            double total = query.value("totalGeneral").toDouble();
+
+            // Crear celdas de la fila
+            fila << new QStandardItem(QString::number(tipoIva)) // Tipo IVA
+                 << new QStandardItem(QString::number(base*desc, 'f', 2)) // Base Imponible
+                 << new QStandardItem(QString::number(iva*desc, 'f', 2)) // IVA
+                 << new QStandardItem(QString::number(re*desc, 'f', 2)) // Recargo de Equivalencia
+                 << new QStandardItem(QString::number(total*desc, 'f', 2)); // Total General
+
+            // Agregar fila al modelo
+            modelo->appendRow(fila);
+
+            // Sumar totales generales
+            totalBase += base;
+            totalIva += iva;
+            totalRe += re;
+            totalGeneral += total;
+        }
+
+        // Establecer el modelo en la vista de tabla
+        ui->tableView->setModel(modelo);
+        ui->tableView->resizeColumnsToContents();
+
+        //Mostrar los totales generales en los campos correspondientes
+        ui->leTotalBase->setText(QString::number(totalBase*desc, 'f', 2));
+        ui->leTotalIva->setText(QString::number(totalIva*desc, 'f', 2));
+        ui->leTotalRe->setText(QString::number(totalRe*desc, 'f', 2));
+        ui->leTotal->setText(QString::number(totalGeneral*desc, 'f', 2));
+        //ui->leLineas->setText(QString::number(modeloPedido->rowCount()));
+
 }
 
 bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
@@ -311,12 +322,12 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     if (ui->comboBox->currentText() == "Factura") {
         datosFactura.append(ui->dateEditVencimiento->text());
         datosFactura.append("0");
-        if (!base.grabarFactura(datosFactura)) {
+        if (!base.grabarFactura(conf->getConexionLocal(),datosFactura)) {
             return false;
         }
     } else {
         datosFactura.append("0");
-        if (base.grabarAlbaran(datosFactura)) {
+        if (base.grabarAlbaran(conf->getConexionLocal(),datosFactura)) {
             return false;
         }
     }

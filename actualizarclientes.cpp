@@ -44,10 +44,10 @@ void ActualizarClientes::on_pushButtonActualizar_clicked()
                         + QSqlDatabase::database(conexionLocal).hostName() + " -u "
                         + QSqlDatabase::database(conexionLocal).userName() + " -p"
                         + QSqlDatabase::database(conexionLocal).password()
-                        + " tienda clientes | mysql -h "
+                        + " tiendaNueva clientes | mysql -h "
                         + QSqlDatabase::database(conexionActual).hostName() + " -u "
                         + QSqlDatabase::database(conexionActual).userName() + " -p"
-                        + QSqlDatabase::database(conexionActual).password() + " tienda";
+                        + QSqlDatabase::database(conexionActual).password() + " tiendaNueva";
             qDebug() << sentencia;
             const char *ch = sentencia.toLocal8Bit().constData();
             qDebug() << system(ch);

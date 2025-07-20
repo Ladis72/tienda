@@ -53,11 +53,27 @@ void Directorios::cargalListaBase()
     llenarListaBase(listaDatos);
 }
 
+QString Directorios::rutaRelativa(QString directorio)
+{
+    if (!directorio.isEmpty()) {
+        QString rutaEjecutable = QCoreApplication::applicationDirPath();
+        QString rutaRelativa = QDir(rutaEjecutable).relativeFilePath(directorio);
+
+        if (!rutaRelativa.startsWith(".") && !rutaRelativa.startsWith("/"))
+            rutaRelativa.prepend("./");
+        return rutaRelativa;
+}
+    return "";
+}
+
 void Directorios::on_toolButtonFactura_clicked()
 {
-    QString directorio = QFileDialog::getOpenFileName(this);
-    qDebug() << directorio;
-    ui->lineEditFactura->setText(directorio);
+    QString directorio = QFileDialog::getExistingDirectory(this,
+                                                           "Seleccionas directorio para la factura",
+                                                           ui->lineEditFactura->text(),
+                                                           QFileDialog::ShowDirsOnly
+                                                           | QFileDialog::DontResolveSymlinks);
+    ui->lineEditFactura->setText(rutaRelativa(directorio));
 }
 
 void Directorios::on_toolButtonVentas_clicked()
@@ -68,8 +84,12 @@ void Directorios::on_toolButtonVentas_clicked()
 
 void Directorios::on_toolButtonEtiquetas_clicked()
 {
-    QString directorio = QFileDialog::getOpenFileName(this);
-    ui->lineEditEtiquetas->setText(directorio);
+    QString directorio = QFileDialog::getExistingDirectory(this,
+                                                           "Selecciona el directorio de etiquetas",
+                                                           ui->lineEditEtiquetas->text(),
+                                                           QFileDialog::ShowDirsOnly
+                                                           | QFileDialog::DontResolveSymlinks);
+    ui->lineEditEtiquetas->setText(rutaRelativa(directorio));
 }
 
 void Directorios::on_toolButtonCaducados_clicked()
@@ -80,8 +100,12 @@ void Directorios::on_toolButtonCaducados_clicked()
 
 void Directorios::on_toolButtonArqueos_clicked()
 {
-    QString directorio = QFileDialog::getOpenFileName(this);
-    ui->lineEditArqueos->setText(directorio);
+    QString directorio = QFileDialog::getExistingDirectory(this,
+                                                           "Selecciona el directorio de Arqueos",
+                                                           ui->lineEditArqueos->text(),
+                                                           QFileDialog::ShowDirsOnly
+                                                           | QFileDialog::DontResolveSymlinks);
+    ui->lineEditArqueos->setText(rutaRelativa(directorio));
 }
 
 void Directorios::on_toolButtonMovimientos_clicked()
@@ -90,14 +114,14 @@ void Directorios::on_toolButtonMovimientos_clicked()
     ui->lineEditMovimientos->setText(directorio);
 }
 
-void Directorios::on_toolButtonCseg_triggered(QAction *arg1) {}
-
 void Directorios::on_toolButtonCseg_clicked()
 {
     QString directorio = QFileDialog::getExistingDirectory(this,
                                                            "Seleccionar directorio para la copia",
-                                                           QDir::homePath(),
+                                                           ui->lineEditCseg->text(),
                                                            QFileDialog::ShowDirsOnly
                                                                | QFileDialog::DontResolveSymlinks);
-    ui->lineEditCseg->setText(directorio);
+
+    ui->lineEditCseg->setText(rutaRelativa(directorio));
+
 }

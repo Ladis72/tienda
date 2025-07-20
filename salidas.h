@@ -37,6 +37,8 @@ private slots:
 
     void on_pushButtonActualizar_clicked();
 
+    void actualizarTotales();
+
 private:
     Ui::Salidas *ui;
     baseDatos *base;
@@ -46,6 +48,8 @@ private:
     void actualizarTabla();
     Articulos *articulo;
     void llenarComboTiendas();
+    int lineas;
+    double productos;
 };
 
 #endif // SALIDAS_H

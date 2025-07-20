@@ -37,6 +37,12 @@ private slots:
 
     void on_comboBoxProcedencia_activated(const QString &arg1);
 
+    void actualizarTotales();
+    void procesarLineaEntrada(const QSqlRecord &registro);
+    void actualizarArticulo(const QString &cod, const QString &descripcion, const QString &precio);
+    void guardarArticulo (int idTienda);
+    void limpiarTabla (int idTienda);
+
 private:
     Ui::EntradaMercancia *ui;
     baseDatos *base;
@@ -44,6 +50,8 @@ private:
     QSqlQuery consulta;
     QString codSeleccionado;
     Articulos *articulo;
+    int lineas;
+    double productos;
 
     void actualizarTabla();
     void llenarComboTiendas();

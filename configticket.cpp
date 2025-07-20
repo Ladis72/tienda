@@ -10,7 +10,7 @@ ConfigTicket::ConfigTicket(QWidget *parent)
     ui->plainTextEditCabecera->setPlainText(configuracionTicket.at(0));
     ui->plainTextEditPie->setPlainText(configuracionTicket.at(1));
     ui->plainTextEditPromo->setPlainText(configuracionTicket.at(2));
-    if (base->ticketPromo()) {
+    if (base->ticketPromo(conf->getConexionLocal())) {
         ui->checkBoxPromo->setChecked(true);
         ui->plainTextEditPromo->setEnabled(true);
     } else {

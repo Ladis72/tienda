@@ -1,7 +1,6 @@
 #include "imprimirticket.h"
 #include <QDate>
 #include <QFile>
-#include "qtrpt.h"
 
 ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
 {
@@ -9,22 +8,16 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
     ticket = consulta.value(0).toString();
     fecha = consulta.value(3).toString();
     hora = consulta.value(4).toString();
-    total = consulta.value(16).toString();
-    fPago = base.nombreFormaPago(consulta.value(17).toString(), conf->getConexionLocal());
-    entrega = consulta.value(19).toString();
-    cambio = consulta.value(20).toString();
+    total = consulta.value(8).toString();
+    fPago = base.nombreFormaPago(consulta.value(9).toString(), conf->getConexionLocal());
+    entrega = consulta.value(11).toString();
+    cambio = consulta.value(12).toString();
     QStringList confTicket = base.recuperarConfigTicket();
     if (formato == "ticket") {
         QFile impresora("ticket.txt");
         impresora.open(QIODevice::WriteOnly);
         QTextStream texto(&impresora);
-        //    texto << "\n";
-        //    texto << "HERBOLARIO EMEICJAC\n";
-        //    texto << "C/Perines 14 bajo\n";
-        //    texto << "Tlfn: 942-37-20-27\n";
-        //    texto << "N.I.F.: 20196639-V\n";
-        //    texto << "E-mail: emeicjac@emeicjac.com\n";
-        //    texto << "Web: emeicjac.com\n\n";
+
         texto << confTicket.at(0) + "\n\n";
         texto << QDate::fromString(fecha, "yyyy-MM-dd").toString("dd-MMM-yyyy") + "  " + hora
                      + "    " + "Ticket: " + ticket;
@@ -65,7 +58,7 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato)
         //texto << confTicket.at(4);
         texto << "\n\n";
         impresora.close();
-        QString imprimir = "cat ./ticket.txt: >> " + confTicket.at(3);
+        QString imprimir = "cat ./ticket.txt >> " + confTicket.at(3);
         const char *ch = imprimir.toLocal8Bit().constData();
         system(ch);
         return;

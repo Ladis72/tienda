@@ -25,7 +25,11 @@
     <widget class="QComboBox" name="comboBoxProcedencia"/>
    </item>
    <item row="1" column="0" colspan="3">
-    <widget class="QTableView" name="tableView"/>
+    <widget class="QTableView" name="tableView">
+     <property name="sortingEnabled">
+      <bool>true</bool>
+     </property>
+    </widget>
    </item>
    <item row="2" column="0" colspan="3">
     <layout class="QGridLayout" name="gridLayout">
@@ -153,7 +157,7 @@
      <item>
       <widget class="QPushButton" name="pushButtonSalir">
        <property name="focusPolicy">
-        <enum>Qt::FocusPolicy::ClickFocus</enum>
+        <enum>Qt::ClickFocus</enum>
        </property>
        <property name="text">
         <string>Salir</string>
@@ -164,6 +168,18 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item row="0" column="2">
+    <widget class="QLabel" name="lbProductos">
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

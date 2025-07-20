@@ -31,8 +31,6 @@ private slots:
 
     void on_toolButtonMovimientos_clicked();
 
-    void on_toolButtonCseg_triggered(QAction *arg1);
-
     void on_toolButtonCseg_clicked();
 
 private:
@@ -43,6 +41,7 @@ private:
     void llenarListaBase(QStringList lista);
     void cargarListaLineEdit();
     void cargalListaBase();
+    QString rutaRelativa(QString directorio);
 };
 
 #endif // DIRECTORIOS_H

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ventasUsuarioWidget</class>
+ <widget class="QWidget" name="ventasUsuarioWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1054</width>
+    <height>760</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_2">
+   <item row="0" column="0">
+    <widget class="QTabWidget" name="tabWidge">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tabFechas">
+      <attribute name="title">
+       <string>Fechas</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout_3">
+       <item row="3" column="1">
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Desde;</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDateEdit" name="dateDesde">
+           <property name="displayFormat">
+            <string>yyyy/MM/dd</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>Hasta</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDateEdit" name="dateHasta">
+           <property name="displayFormat">
+            <string>yyyy/MM/dd</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="0" column="0" colspan="3">
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Ordenar por;</string>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QRadioButton" name="radioDia">
+            <property name="text">
+             <string>Día</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radioMes">
+            <property name="text">
+             <string>Mes</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="radioAnio">
+            <property name="text">
+             <string>Año</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="4" column="5">
+        <layout class="QGridLayout" name="fechasLayout"/>
+       </item>
+       <item row="4" column="0" colspan="5">
+        <widget class="QTableView" name="tableResumen"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabHoras">
+      <attribute name="title">
+       <string>Horas</string>
+      </attribute>
+     </widget>
+     <widget class="QWidget" name="tabSemana">
+      <attribute name="title">
+       <string>Dias semana</string>
+      </attribute>
+     </widget>
+     <widget class="QWidget" name="tabTickets">
+      <attribute name="title">
+       <string>Tickets</string>
+      </attribute>
+     </widget>
+     <widget class="QWidget" name="tabProductos">
+      <attribute name="title">
+       <string>Productos</string>
+      </attribute>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -131,4 +131,5 @@ void ListadoVentas::on_pushButtonImprimir_clicked()
                             ui->dateEditDesde->text(),
                             ui->dateEditHasta->text(),
                             modeloTabla);
+    on_pushButtonVer_clicked();
 }

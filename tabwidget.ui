@@ -3,18 +3,21 @@
  <class>Ususarios</class>
  <widget class="QTabWidget" name="Ususarios">
   <property name="windowModality">
-   <enum>Qt::WindowModality::WindowModal</enum>
+   <enum>Qt::WindowModal</enum>
   </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1016</width>
-    <height>549</height>
+    <width>1515</width>
+    <height>810</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Usuarios</string>
+  </property>
+  <property name="currentIndex">
+   <number>0</number>
   </property>
   <widget class="QWidget" name="General">
    <attribute name="title">
@@ -109,7 +112,7 @@
       <item row="5" column="3">
        <widget class="QLineEdit" name="lineEditClave">
         <property name="echoMode">
-         <enum>QLineEdit::EchoMode::Password</enum>
+         <enum>QLineEdit::Password</enum>
         </property>
        </widget>
       </item>
@@ -201,7 +204,7 @@
          <bool>false</bool>
         </property>
         <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
+         <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
         </property>
        </widget>
       </item>
@@ -246,7 +249,7 @@
          <bool>true</bool>
         </property>
         <property name="alignment">
-         <set>Qt::AlignmentFlag::AlignJustify|Qt::AlignmentFlag::AlignVCenter</set>
+         <set>Qt::AlignJustify|Qt::AlignVCenter</set>
         </property>
         <property name="wordWrap">
          <bool>false</bool>
@@ -273,7 +276,7 @@
          <bool>true</bool>
         </property>
         <property name="contextMenuPolicy">
-         <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
+         <enum>Qt::DefaultContextMenu</enum>
         </property>
        </widget>
       </item>
@@ -294,7 +297,7 @@
       <item row="0" column="2">
        <spacer name="horizontalSpacer">
         <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
+         <enum>Qt::Horizontal</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -306,7 +309,7 @@
       </item>
      </layout>
     </item>
-    <item row="3" column="0">
+    <item row="2" column="0">
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
        <widget class="QPushButton" name="pushButtonNuevo">
@@ -363,11 +366,6 @@
      </layout>
     </item>
    </layout>
-  </widget>
-  <widget class="QWidget" name="tab">
-   <attribute name="title">
-    <string>Tab 2</string>
-   </attribute>
   </widget>
  </widget>
  <tabstops>

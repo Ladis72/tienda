@@ -20,7 +20,7 @@ void ListadoSalidas::on_pushButtonVer_clicked()
     fechaI = ui->dateEditDesde->text();
     fechaF = ui->dateEditHasta->text();
     modeloTabla = new QSqlQueryModel(this);
-    modeloTabla->setQuery(base->listadoMovimientosEfectivo(fechaI, fechaF));
+    modeloTabla->setQuery(base->listadoMovimientosEfectivo(conf->getConexionLocal() , fechaI , fechaF));
     modeloTabla->setHeaderData(0, Qt::Horizontal, "FECHA");
     modeloTabla->setHeaderData(1, Qt::Horizontal, "HORA");
     modeloTabla->setHeaderData(2, Qt::Horizontal, "CANTIDAD");

@@ -92,7 +92,11 @@
     </widget>
    </item>
    <item row="1" column="0" colspan="5">
-    <widget class="QTableView" name="tableView"/>
+    <widget class="QTableView" name="tableView">
+     <property name="sortingEnabled">
+      <bool>true</bool>
+     </property>
+    </widget>
    </item>
    <item row="2" column="1">
     <widget class="QLabel" name="label_2">
@@ -151,6 +155,18 @@
    </item>
    <item row="0" column="1">
     <widget class="QComboBox" name="comboBoxDestino"/>
+   </item>
+   <item row="0" column="2" colspan="3">
+    <widget class="QLabel" name="lbSalidas">
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+      </font>
+     </property>
+     <property name="text">
+      <string>TextLabel</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

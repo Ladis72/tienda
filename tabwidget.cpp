@@ -4,16 +4,21 @@
 #include <QMessageBox>
 #include "base_datos.h"
 #include "ui_tabwidget.h"
+#include "ventasusuariowidget.h"
 
 Ususarios::Ususarios(QWidget *parent)
     : QTabWidget(parent)
     , ui(new Ui::Ususarios)
 {
     ui->setupUi(this);
+    ventasWidget = new ventasUsuarioWidget(this);
+    this->addTab(ventasWidget,"Ventas");
     modeloTabla = new QSqlQueryModel;
     recargarTabla();
 
     ui->lineEditCod->installEventFilter(this);
+
+
 }
 
 Ususarios::~Ususarios()
@@ -25,12 +30,14 @@ void Ususarios::on_pushButtonAnterior_clicked()
 {
     mapper.toPrevious();
     refrescarBotones(mapper.currentIndex());
+
 }
 
 void Ususarios::on_pushButtonSiguiente_clicked()
 {
     mapper.toNext();
     refrescarBotones(mapper.currentIndex());
+
 }
 
 void Ususarios::refrescarBotones(int i)
@@ -42,6 +49,8 @@ void Ususarios::refrescarBotones(int i)
     QImage foto(fichero);
     ui->labelFoto->setPixmap(QPixmap::fromImage(foto));
     ui->labelFoto->setScaledContents(true);
+    ventasWidget->setUser(ui->lineEditCod->text());
+
 }
 
 QStringList Ususarios::recogerDatosFormulario()
@@ -73,10 +82,11 @@ QStringList Ususarios::recogerDatosFormulario()
 
 void Ususarios::recargarTabla()
 {
-    modeloTabla->setQuery("SELECT * FROM usuarios", QSqlDatabase::database("DB"));
+    modeloTabla->setQuery("SELECT * FROM usuarios", QSqlDatabase::database(conf->getConexionLocal()));
     mapper.setModel(modeloTabla);
 
     ajustarMapper();
+    ventasWidget->setUser(ui->lineEditCod->text());
 }
 
 void Ususarios::ajustarMapper()
@@ -160,7 +170,7 @@ void Ususarios::borrarFormulario()
 
 void Ususarios::on_pushButtonNuevo_clicked()
 {
-    consulta = base.usuarios(QSqlDatabase::database("DB"));
+    consulta = base.usuarios(QSqlDatabase::database(conf->getConexionLocal()));
     if (consulta.isActive()) {
         while (consulta.next()) {
             if (consulta.value(0).toString() == ui->lineEditCod->text()) {
@@ -170,7 +180,7 @@ void Ususarios::on_pushButtonNuevo_clicked()
         }
 
         QStringList lista = recogerDatosFormulario();
-        if (base.insertarUsuario(QSqlDatabase::database("DB"), lista)) {
+        if (base.insertarUsuario(QSqlDatabase::database(conf->getConexionLocal()), lista)) {
             QMessageBox::about(this, "ATENCION", "Nuevo usuario creado");
         } else {
             QMessageBox::warning(this, "ATENCION", "El error al crear usuario");
@@ -181,7 +191,7 @@ void Ususarios::on_pushButtonNuevo_clicked()
 
 void Ususarios::on_lineEditNombre_returnPressed()
 {
-    consulta = base.buscarEnTabla(QSqlDatabase::database("DB"),
+    consulta = base.buscarEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
                                   "usuarios",
                                   "nombre",
                                   ui->lineEditNombre->text());
