@@ -92,9 +92,9 @@ void ListadoArqueos::on_pushButtonImprimir_clicked()
 
     QPrinter printer(QPrinter::HighResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName("./documentos/ListadoArqueos.pdf");
+    printer.setOutputFileName(base->devolverDirectorio("arqueos")+"/ListadoArqueos.pdf");
     documento.print(&printer);
 
     // Mostrarlo
-    QProcess::startDetached("xdg-open", QStringList() << "./documentos/ListadoArqueos.pdf");
+    QProcess::startDetached("xdg-open", QStringList() << base->devolverDirectorio("arqueos")+"/ListadoArqueos.pdf");
 }

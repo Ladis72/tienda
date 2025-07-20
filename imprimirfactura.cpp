@@ -301,11 +301,11 @@ void ImprimirFactura::facturaPDF()
     documento.setHtml(html);
     QPrinter printer(QPrinter::HighResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName(base.devolverDirectorio("factura")+".pdf");
+    printer.setOutputFileName(base.devolverDirectorio("factura")+"/Factura.pdf");
     printer.setPageSize(QPageSize::A4);
     printer.setPageMargins(QMargins(15,15,15,15),QPageLayout::Millimeter);
     documento.print(&printer);
-    QProcess::startDetached("xdg-open", QStringList() << base.devolverDirectorio("factura")+".pdf");
+    QProcess::startDetached("xdg-open", QStringList() << base.devolverDirectorio("factura")+"/Factura.pdf");
 }
 
 

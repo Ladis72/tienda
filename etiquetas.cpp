@@ -7,6 +7,7 @@
 #include "ui_etiquetas.h"
 #include <QFile>
 #include <QDesktopServices>
+#include <QProcess>
 
 Etiquetas::Etiquetas(QWidget *parent)
     : QDialog(parent)
@@ -65,7 +66,9 @@ void Etiquetas::on_pushButtonImprimir_clicked()
 
       }
       generarPDF(datos);
-      abriPDF(QUrl::fromLocalFile(base->cargarDirectorios(conf->getConexionLocal()).at(2)).toString());
+      QProcess::startDetached("xdg-open", QStringList() << base->devolverDirectorio("etiquetas")+"/Etiquetas.pdf");
+
+      //abriPDF(QUrl::fromLocalFile(base->cargarDirectorios(conf->getConexionLocal()).at(2)).toString());
 
 }
 
@@ -166,7 +169,7 @@ void Etiquetas::generarPDF(const QList<QList<QString> > datos)
 {
     QPrinter printer(QPrinter::PrinterResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName("etiquetas.pdf");
+    printer.setOutputFileName(base->devolverDirectorio("etiquetas")+"/Etiquetas.pdf");
     qDebug() << base->cargarDirectorios(conf->getConexionLocal()).at(2);
 
     //printer.setPaperSize(QPrinter::A4);
