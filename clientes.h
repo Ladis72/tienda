@@ -4,7 +4,6 @@
 #include <QList>
 #include <QStandardItemModel>
 #include "base_datos.h"
-#include "buscarproducto.h"
 #include "configuracion.h"
 #include "qdatetime.h"
 
@@ -46,8 +45,6 @@ private slots:
     void on_dateEditHasta_userDateChanged(const QDate &date);
 
     void on_dateEditDesde_userDateChanged(const QDate &date);
-
-    void on_pushButtonVerProductos_clicked();
 
     void on_tableView_clicked(const QModelIndex &index);
 

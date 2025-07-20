@@ -1,6 +1,6 @@
 #include "clientes.h"
 #include "ui_clientes.h"
-
+#include "buscarproducto.h"
 #include <QMessageBox>
 
 Clientes::Clientes(QWidget *parent)
@@ -14,8 +14,8 @@ Clientes::Clientes(QWidget *parent)
     ticket = new QSqlQueryModel;
     vistaTickets = new QStandardItemModel;
     nTicket = "";
-    nombreConexionMaster = base.nombreConexionMaster();
-    nombreConexionLocal = base.nombreConexionLocal();
+    nombreConexionMaster = conf->getConexionMaster();
+    nombreConexionLocal = conf->getConexionLocal();
     qDebug() << nombreConexionMaster;
     if (!QSqlDatabase::database(nombreConexionMaster).isOpen()) {
         qDebug() << "MASTER cerrada" << nombreConexionMaster;
@@ -57,8 +57,8 @@ Clientes::Clientes(QWidget *parent, QString codigo)
     , ui(new Ui::Clientes)
 {
     ui->setupUi(this);
-    nombreConexionMaster = base.nombreConexionMaster();
-    nombreConexionLocal = base.nombreConexionLocal();
+    nombreConexionMaster = conf->getConexionMaster();
+    nombreConexionLocal = conf->getConexionLocal();
     qDebug() << nombreConexionMaster;
     if (!QSqlDatabase::database(nombreConexionMaster).isOpen()) {
         qDebug() << "MASTER abierta" << nombreConexionMaster;
@@ -106,7 +106,6 @@ Clientes::~Clientes()
 void Clientes::recargarTabla()
 {
     modeloTabla->setQuery("SELECT * FROM clientes", QSqlDatabase::database(nombreConexionLocal));
-    //modeloTabla->setQuery("SELECT * FROM clientes",QSqlDatabase::database("DB"));
     mapper.setModel(modeloTabla);
 }
 
@@ -379,8 +378,6 @@ void Clientes::on_dateEditDesde_userDateChanged(const QDate &date)
     cargarCompras();
 }
 
-void Clientes::on_pushButtonVerProductos_clicked() {}
-
 void Clientes::on_tableView_clicked(const QModelIndex &index)
 {
     vistaTickets->clear();
@@ -420,7 +417,7 @@ void Clientes::on_tableView_clicked(const QModelIndex &index)
             listaItems << itemTicket;
             QString nombreUsusario = listaTickets->record(i).value(1).toString();
             QStandardItem *itemUsuario = new QStandardItem(
-                base.nombreUsusario(nombreUsusario, conf->getConexionLocal()));
+                base.nombreUsusario(nombreUsusario, listaConexionesRemotas.at(c)));
             listaItems << itemUsuario;
 
             QStandardItem *itemFecha = new QStandardItem(
@@ -430,18 +427,18 @@ void Clientes::on_tableView_clicked(const QModelIndex &index)
             listaItems << itemHora;
 
             QStandardItem *itemDescuento = new QStandardItem(
-                listaTickets->record(i).value(11).toString());
+                listaTickets->record(i).value(7).toString());
             listaItems << itemDescuento;
 
             QStandardItem *itemTotal = new QStandardItem(
-                listaTickets->record(i).value(12).toString());
+                listaTickets->record(i).value(8).toString());
             listaItems << itemTotal;
             QStandardItem *itemFormaPago = new QStandardItem(
-                base.nombreFormaPago(listaTickets->record(i).value(13).toString(),
-                                     conf->getConexionLocal()));
+                base.nombreFormaPago(listaTickets->record(i).value(9).toString(),
+                                     listaConexionesRemotas.at(c)));
             listaItems << itemFormaPago;
             QString pagado;
-            if (listaTickets->record(i).value(14).toString() == "1") {
+            if (listaTickets->record(i).value(10).toString() == "1") {
                 pagado = "Si";
             } else {
                 pagado = "No";
@@ -449,10 +446,10 @@ void Clientes::on_tableView_clicked(const QModelIndex &index)
             QStandardItem *itemPagado = new QStandardItem(pagado);
             listaItems << itemPagado;
             QStandardItem *itemEntrega = new QStandardItem(
-                listaTickets->record(i).value(15).toString());
+                listaTickets->record(i).value(11).toString());
             listaItems << itemEntrega;
             QStandardItem *itemCambio = new QStandardItem(
-                listaTickets->record(i).value(16).toString());
+                listaTickets->record(i).value(12).toString());
             listaItems << itemCambio;
             QStandardItem *itemTienda = new QStandardItem(listaConexionesRemotas.at(c));
             listaItems << itemTienda;
