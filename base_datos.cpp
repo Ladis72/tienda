@@ -1416,7 +1416,7 @@ bool baseDatos::contabilizarPedido(QString base, QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare(
-        "INSERT INTO pedidos VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?)");
+        "INSERT INTO pedidos VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i, datos.at(i));
     }

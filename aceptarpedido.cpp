@@ -1,7 +1,6 @@
 #include "aceptarpedido.h"
 #include <QInputDialog>
 #include <QMessageBox>
-#include <QStandardItemModel>
 #include "ui_aceptarpedido.h"
 
 AceptarPedido::AceptarPedido(
@@ -23,7 +22,7 @@ AceptarPedido::AceptarPedido(
     modeloPedido = new QSqlQueryModel(this);
     modeloPedido
         ->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = %1").arg(idPedido),
-                   QSqlDatabase::database(conf->getConexionLocal()));
+                   QSqlDatabase::database("DB"));
 }
 
 AceptarPedido::~AceptarPedido()
@@ -33,6 +32,7 @@ AceptarPedido::~AceptarPedido()
 
 void AceptarPedido::llenarTabla(QString idPedido, double desc)
 {
+
 
     double totalBase = 0, totalIva = 0, totalRe = 0, totalGeneral = 0;
 
@@ -103,12 +103,9 @@ void AceptarPedido::llenarTabla(QString idPedido, double desc)
         ui->leTotal->setText(QString::number(totalGeneral*desc, 'f', 2));
         //ui->leLineas->setText(QString::number(modeloPedido->rowCount()));
 
-
-
 }
 
-bool AceptarPedido::
-    procesarPedido(QSqlQueryModel *modelo)
+bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
 {
     QStringList datos;
     QString idLinea, ean, descripcion, lote, fechaCaducidad, descuentoLinea, tipoIva, baseProducto,
@@ -283,25 +280,21 @@ bool AceptarPedido::
     //    unidades += base.sumarColumna("lineaspedido_tmp","bonificacion","idPedido",idPedido);
     datosPedido.append(QString::number(unidades));
     datosPedido.append(QString::number(descuentoReal));
-    // datosPedido.append(ui->leBase21->text());
-    // datosPedido.append(ui->leIva21->text());
-    // datosPedido.append(ui->leRe21->text());
-    // datosPedido.append(ui->leBase10->text());
-    // datosPedido.append(ui->leIva10->text());
-    // datosPedido.append(ui->leRe10->text());
-    // datosPedido.append(ui->leBase4->text());
-    // datosPedido.append(ui->leIva4->text());
-    // datosPedido.append(ui->leRe4->text());
-    // datosPedido.append(ui->leBase0->text());
-    // datosPedido.append(ui->leIva0->text());
-    // datosPedido.append(ui->leRe0->text());
-    // datosPedido.append(ui->leBase5->text());
-    // datosPedido.append(ui->leIva5->text());
-    // datosPedido.append(ui->leRe5->text());
-    // datosPedido.append(ui->leTotalBase->text());
-    // datosPedido.append(ui->leTotalIva->text());
-    // datosPedido.append(ui->leTotalRe->text());
-    // datosPedido.append(ui->leTotal->text());
+    datosPedido.append(ui->leBase21->text());
+    datosPedido.append(ui->leIva21->text());
+    datosPedido.append(ui->leRe21->text());
+    datosPedido.append(ui->leBase10->text());
+    datosPedido.append(ui->leIva10->text());
+    datosPedido.append(ui->leRe10->text());
+    datosPedido.append(ui->leBase4->text());
+    datosPedido.append(ui->leIva4->text());
+    datosPedido.append(ui->leRe4->text());
+    datosPedido.append(ui->leBase0->text());
+    datosPedido.append(ui->leIva0->text());
+    datosPedido.append(ui->leRe0->text());
+    datosPedido.append(ui->leBase5->text());
+    datosPedido.append(ui->leIva5->text());
+    datosPedido.append(ui->leRe5->text());
     datosPedido.append(ui->leTotalBase->text());
     datosPedido.append(ui->leTotalIva->text());
     datosPedido.append(ui->leTotalRe->text());
