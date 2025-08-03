@@ -6,6 +6,8 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QtMath>
+#include <QVariant>
+#include <QStandardItemModel>
 
 extern Configuracion *conf;
 
@@ -46,9 +48,80 @@ QString pedidos::calcularTotalLinea()
     return QString::number(total);
 }
 
+// void pedidos::llenarTablaPedido(QString idPedido)
+// {
+//     modeloPedido
+//         ->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = '%1'").arg(idPedido),
+//                    QSqlDatabase::database(conf->getConexionLocal()));
+//     ui->tableView->setModel(modeloPedido);
+//     ui->tableView->hideColumn(0);
+//     ui->tableView->hideColumn(1);
+//     ui->tableView->hideColumn(10);
+//     ui->tableView->hideColumn(13);
+//     ui->tableView->hideColumn(14);
+//     ui->tableView->resizeColumnsToContents();
+
+//     contarArticulos();
+//     contarLineas();
+//     ui->leIva10->setText(
+//         QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "10")));
+//     ui->leIva21->setText(
+//         QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "21")));
+//     ui->leIva4->setText(
+//         QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "4")));
+//     ui->leIva5->setText(
+//         QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "5")));
+//     ui->leIva0->setText(
+//         QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "0")));
+//     ui->leRe0->setText(QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "0")));
+//     ui->leRe5->setText(QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "5")));
+//     ui->leRe4->setText(QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "4")));
+//     ui->leRe10->setText(
+//         QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "10")));
+//     ui->leRe21->setText(
+//         QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "21")));
+//     ui->leBase0->setText(
+//         QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "0")));
+//     ui->leBase4->setText(
+//         QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "4")));
+//     ui->leBase5->setText(
+//         QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "5")));
+//     ui->leBase10->setText(
+//         QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "10")));
+//     ui->leBase21->setText(
+//         QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "21")));
+//     ui->leTotal0->setText(QString::number(ui->leBase0->text().toDouble()
+//                                           + ui->leIva0->text().toDouble()
+//                                           + ui->leRe0->text().toDouble()));
+//     ui->leTotal4->setText(QString::number(ui->leBase4->text().toDouble()
+//                                           + ui->leIva4->text().toDouble()
+//                                           + ui->leRe4->text().toDouble()));
+//     ui->leTotal5->setText(QString::number(ui->leBase5->text().toDouble()
+//                                           + ui->leIva5->text().toDouble()
+//                                           + ui->leRe5->text().toDouble()));
+//     ui->leTotal10->setText(QString::number(ui->leBase10->text().toDouble()
+//                                            + ui->leIva10->text().toDouble()
+//                                            + ui->leRe10->text().toDouble()));
+//     ui->leTotal21->setText(QString::number(ui->leBase21->text().toDouble()
+//                                            + ui->leIva21->text().toDouble()
+//                                            + ui->leRe21->text().toDouble()));
+//     ui->leTotalBase->setText(
+//         QString::number(ui->leBase0->text().toDouble() + ui->leBase4->text().toDouble()
+//                         + ui->leBase5->text().toDouble() + ui->leBase10->text().toDouble()
+//                         + ui->leBase21->text().toDouble()));
+//     ui->leTotalIva->setText(QString::number(
+//         ui->leIva0->text().toDouble() + ui->leIva4->text().toDouble() + ui->leIva5->text().toDouble()
+//         + ui->leIva10->text().toDouble() + ui->leIva21->text().toDouble()));
+//     ui->leTotalRe->setText(QString::number(
+//         ui->leRe0->text().toDouble() + ui->leRe4->text().toDouble() + ui->leRe5->text().toDouble()
+//         + ui->leRe10->text().toDouble() + ui->leRe21->text().toDouble()));
+//     ui->leTotal->setText(QString::number(ui->leTotalBase->text().toDouble()
+//                                          + ui->leTotalIva->text().toDouble()
+//                                          + ui->leTotalRe->text().toDouble()));
+// }
+
 void pedidos::llenarTablaPedido(QString idPedido)
 {
-
     modeloPedido->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = '%1'").arg(idPedido),
                            QSqlDatabase::database(conf->getConexionLocal()));
             ui->tableView->setModel(modeloPedido);
@@ -97,64 +170,41 @@ void pedidos::llenarTablaPedido(QString idPedido)
         double re = query.value("totalRe").toDouble();
         double total = query.value("totalGeneral").toDouble();
 
+        // Crear celdas de la fila
+        fila << new QStandardItem(QString::number(tipoIva)) // Tipo IVA
+             << new QStandardItem(QString::number(base, 'f', 2)) // Base Imponible
+             << new QStandardItem(QString::number(iva, 'f', 2)) // IVA
+             << new QStandardItem(QString::number(re, 'f', 2)) // Recargo de Equivalencia
+             << new QStandardItem(QString::number(total, 'f', 2)); // Total General
+
+        // Agregar fila al modelo
+        modelo->appendRow(fila);
+
+        // Sumar totales generales
+        totalBase += base;
+        totalIva += iva;
+        totalRe += re;
+        totalGeneral += total;
+
+    }
+    //Lenar los totales
+    ui->lineEditBase->setText(QString::number(totalBase,'f',2));
+    ui->lineEditIVA->setText(QString::number(totalIva,'f',2));
+    ui->lineEditRecargo->setText(QString::number(totalRe,'f',2));
+    ui->lineEditTotal->setText(QString::number(totalGeneral,'f',2));
     contarArticulos();
     contarLineas();
-    ui->leIva10->setText(
-        QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "10")));
-    ui->leIva21->setText(
-        QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "21")));
-    ui->leIva4->setText(
-        QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "4")));
-    ui->leIva5->setText(
-        QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "5")));
-    ui->leIva0->setText(
-        QString::number(base.sumarIvasPedido(conf->getConexionLocal(), idPedido, "0")));
-    ui->leRe0->setText(QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "0")));
-    ui->leRe5->setText(QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "5")));
-    ui->leRe4->setText(QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "4")));
-    ui->leRe10->setText(
-        QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "10")));
-    ui->leRe21->setText(
-        QString::number(base.sumarRePedido(conf->getConexionLocal(), idPedido, "21")));
-    ui->leBase0->setText(
-        QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "0")));
-    ui->leBase4->setText(
-        QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "4")));
-    ui->leBase5->setText(
-        QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "5")));
-    ui->leBase10->setText(
-        QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "10")));
-    ui->leBase21->setText(
-        QString::number(base.sumarBasesPedido(conf->getConexionLocal(), idPedido, "21")));
-    ui->leTotal0->setText(QString::number(ui->leBase0->text().toDouble()
-                                          + ui->leIva0->text().toDouble()
-                                          + ui->leRe0->text().toDouble()));
-    ui->leTotal4->setText(QString::number(ui->leBase4->text().toDouble()
-                                          + ui->leIva4->text().toDouble()
-                                          + ui->leRe4->text().toDouble()));
-    ui->leTotal5->setText(QString::number(ui->leBase5->text().toDouble()
-                                          + ui->leIva5->text().toDouble()
-                                          + ui->leRe5->text().toDouble()));
-    ui->leTotal10->setText(QString::number(ui->leBase10->text().toDouble()
-                                           + ui->leIva10->text().toDouble()
-                                           + ui->leRe10->text().toDouble()));
-    ui->leTotal21->setText(QString::number(ui->leBase21->text().toDouble()
-                                           + ui->leIva21->text().toDouble()
-                                           + ui->leRe21->text().toDouble()));
-    ui->leTotalBase->setText(
-        QString::number(ui->leBase0->text().toDouble() + ui->leBase4->text().toDouble()
-                        + ui->leBase5->text().toDouble() + ui->leBase10->text().toDouble()
-                        + ui->leBase21->text().toDouble()));
-    ui->leTotalIva->setText(QString::number(
-        ui->leIva0->text().toDouble() + ui->leIva4->text().toDouble() + ui->leIva5->text().toDouble()
-        + ui->leIva10->text().toDouble() + ui->leIva21->text().toDouble()));
-    ui->leTotalRe->setText(QString::number(
-        ui->leRe0->text().toDouble() + ui->leRe4->text().toDouble() + ui->leRe5->text().toDouble()
-        + ui->leRe10->text().toDouble() + ui->leRe21->text().toDouble()));
-    ui->leTotal->setText(QString::number(ui->leTotalBase->text().toDouble()
-                                         + ui->leTotalIva->text().toDouble()
-                                         + ui->leTotalRe->text().toDouble()));
+    // Establecer el modelo en la vista de tabla
+    ui->tableViewTotales->setModel(modelo);
+    ui->tableViewTotales->resizeColumnsToContents();
+
+    // Mostrar los totales generales en los campos correspondientes
+    // ui->leTotalBase->setText(QString::number(totalBase, 'f', 2));
+    // ui->leTotalIva->setText(QString::number(totalIva, 'f', 2));
+    // ui->leTotalRe->setText(QString::number(totalRe, 'f', 2));
+    // ui->leTotal->setText(QString::number(totalGeneral, 'f', 2));
 }
+
 
 void pedidos::borrarLineEdits()
 {
@@ -174,7 +224,7 @@ void pedidos::borrarLineEdits()
 void pedidos::contarLineas()
 {
     int lineas = modeloPedido->rowCount();
-    ui->labelNLineas->setText(QString::number(lineas));
+    ui->lineEditLineas->setText(QString::number(lineas));
 }
 
 void pedidos::contarArticulos()
@@ -189,7 +239,7 @@ void pedidos::contarArticulos()
                                            "bonificacion",
                                            "idPedido",
                                            idPedido);
-    ui->labelNArticulos->setText(QString::number(articulos + bonificacion));
+    ui->lineEditUnidades->setText(QString::number(articulos + bonificacion));
 }
 
 void pedidos::on_leUds_textChanged(const QString &arg1)
@@ -347,48 +397,15 @@ void pedidos::on_pushButtonAnadir_clicked()
             }
 
             llenarTablaPedido(idPedido);
-
         } else {
-            re = 0;
+            QMessageBox::information(this, "ERROR", "No hay un producto con ese código.");
         }
-        float baseProducto = ui->leTotalLinea->text().toFloat() / ui->leUds->text().toFloat();
 
-        datos.append(idPedido);
-        datos.append(ui->leCod->text());
-        datos.append(ui->leDescripcion->text());
-        datos.append(ui->leUds->text());
-        if (ui->leBon->text().isEmpty()) {
-            datos.append("0");
-        } else {
-            datos.append(ui->leBon->text());
-        }
-        datos.append(ui->leLote->text());
-        datos.append(ui->dateEdit->date().toString("yyyy-MM-dd"));
-        datos.append(ui->lePvt->text());
-        datos.append(ui->leDescuento->text());
-        datos.append(QString::number(baseProducto));
-        datos.append(ui->leIva->text());
-        datos.append(ui->leTotalLinea->text());
-        datos.append(QString::number(iva));
-        datos.append(QString::number(re));
-        datos.append(ui->lePvp->text());
-        if (editando == true) {
-            datos.append(lineaSeleccionada);
-            base.modificarLineaPedido(conf->getConexionLocal(), datos);
-        } else {
-            base.grabarLineaPedido(conf->getConexionLocal(), datos);
-        }
-        llenarTablaPedido(idPedido);
-    } else {
-        QMessageBox *msg = new QMessageBox(this);
-        msg->setText("ERROR");
-        msg->setInformativeText("No hay un producto con ese código");
-        msg->exec();
-    }
-    editando = false;
+        editando = false;
+        borrarLineEdits();
+        ui->leCod->setFocus();
 
-    borrarLineEdits();
-    ui->leCod->setFocus();
+
 }
 
 void pedidos::on_leCod_returnPressed()
@@ -493,13 +510,27 @@ void pedidos::on_pushButtonModificar_clicked()
 
 void pedidos::on_leIva_editingFinished()
 {
-    if (ui->leIva->text() != "4" && ui->leIva->text() != "10" && ui->leIva->text() != "21"
-        && ui->leIva->text() != "5" && ui->leIva->text() != "0") {
-        QMessageBox::information(this,
-                                 "Error en el IVA",
-                                 "Ha escrito un IVA diferente de los permitidos");
+
+    // Obtener los tipos de IVA permitidos desde la tabla impuestos
+    QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
+    query.prepare("SELECT porcentaje FROM impuestos");
+    query.exec();
+
+    bool valido = false;
+    while (query.next()) {
+        qDebug() << query.value(0).toString() << "  " << ui->leIva->text();
+        if (ui->leIva->text() == query.value(0).toString()) {
+            valido = true;
+            break;
+        }
+    }
+
+    if (!valido) {
+        QMessageBox::information(this, "Error en el IVA", "El IVA ingresado no es válido.");
         ui->leIva->clear();
         ui->leIva->setFocus();
+    } else {
+        ui->leTotalLinea->setText(calcularTotalLinea());  // Actualiza el total con el nuevo IVA
     }
 }
 
@@ -531,9 +562,9 @@ void pedidos::on_pushButtonImprimir_clicked()
     cabecera.clear();
     cabecera << nDoc;
     cabecera << proveedorNombre;
-    cabecera << ui->leTotalBase->text();
-    cabecera << ui->leTotalIva->text();
-    cabecera << ui->leTotalRe->text();
-    cabecera << ui->leTotal->text();
+    cabecera << ui->lineEditBase->text();
+    cabecera << ui->lineEditIVA->text();
+    cabecera << ui->lineEditRecargo->text();
+    cabecera << ui->lineEditTotal->text();
     imprimirPedido pedido(tienda, cabecera, modeloPedido);
 }

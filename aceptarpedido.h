@@ -45,6 +45,7 @@ private:
     void llenarTabla(QString idPedido, double desc);
     QSqlQueryModel *modeloPedido;
     bool procesarPedido(QSqlQueryModel *modelo);
+    double totalBase = 0, totalIva = 0, totalRe = 0, totalGeneral = 0;
 };
 
 #endif // ACEPTARPEDIDO_H
