@@ -1897,6 +1897,72 @@ bool baseDatos::copiaSeguridad(QString base, QString nombre)
     return false;
 }
 
+bool baseDatos::insertarLog(const QString db, const QString &categoria, const QString &usuario, const QString &mensaje)
+{
+    if (!QSqlDatabase::database(db).isOpen()) {
+        qWarning() << "No se puede registrar log: Base de datos no conectada.";
+        return false;
+    }
+
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.prepare("INSERT INTO logs (categoria, usuario, mensaje) VALUES (:categoria, :usuario, :mensaje)");
+    query.bindValue(":categoria", categoria);
+    query.bindValue(":usuario", usuario);
+    query.bindValue(":mensaje", mensaje);
+
+    if (!query.exec()) {
+        qWarning() << "Error al insertar log:" << query.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+QSqlQueryModel *baseDatos::consultarLog(const QString db, const QString &categoria, const QString &usuario, const QDateTime &desde, const QDateTime &hasta)
+{
+    QString sql = "SELECT id, timestamp, categoria, usuario, mensaje FROM logs WHERE 1=1";
+
+    if (!categoria.isEmpty())
+        sql += " AND categoria = :categoria";
+
+    if (!usuario.isEmpty())
+        sql += " AND usuario = :usuario";
+
+    if (desde.isValid())
+        sql += " AND timestamp >= :desde";
+
+    if (hasta.isValid())
+        sql += " AND timestamp <= :hasta";
+
+    sql += " ORDER BY timestamp DESC";
+
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.prepare(sql);
+
+    if (!categoria.isEmpty())
+        query.bindValue(":categoria", categoria);
+    if (!usuario.isEmpty())
+        query.bindValue(":usuario", usuario);
+    if (desde.isValid())
+        query.bindValue(":desde", desde.toString("yyyy-MM-dd HH:mm:ss"));
+    if (hasta.isValid())
+        query.bindValue(":hasta", hasta.toString("yyyy-MM-dd HH:mm:ss"));
+
+    if (!query.exec()) {
+        qWarning() << "Error al consultar logs:" << query.lastError().text();
+        return nullptr;
+    }
+
+    QSqlQueryModel *model = new QSqlQueryModel();
+    model->setQuery(query);
+    model->setHeaderData(0, Qt::Horizontal, "ID");
+    model->setHeaderData(1, Qt::Horizontal, "Fecha");
+    model->setHeaderData(2, Qt::Horizontal, "Categoría");
+    model->setHeaderData(3, Qt::Horizontal, "Usuario");
+    model->setHeaderData(4, Qt::Horizontal, "Mensaje");
+
+    return model;
+}
+
 QStringList baseDatos::datosTiendaLocal(QString db)
 {
     QStringList datos;

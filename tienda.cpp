@@ -28,6 +28,7 @@ Tienda::Tienda(QWidget *parent)
         ui->pushButtonActualizarClientes->setEnabled(false);
     }
 
+
     QPixmap logo;
     logo.load("./documentos/logo.jpg");
     ui->logo->setPixmap(logo);
@@ -44,7 +45,9 @@ Tienda::Tienda(QWidget *parent)
     usuario->setPalette(paleta );
     ui->statusBar->addPermanentWidget(usuario);
     connect(usuario, SIGNAL(clicked()), this, SLOT(on_pushButtonSesion_clicked()));
-    //on_pushButtonSesion_clicked();
+    on_pushButtonSesion_clicked();
+    base.insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Inicio programa ");
+
 }
 
 Tienda::~Tienda()
@@ -57,6 +60,8 @@ Tienda::~Tienda()
     if (respuesta == QMessageBox::Yes) {
         on_pushButtonCopia_clicked();
     }
+    base.insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Fin del programa ");
+
     delete conf;
     delete ui;
 }

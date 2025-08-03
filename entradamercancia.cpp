@@ -34,96 +34,12 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
     for (int i = 0; i < mTablaEntradas->rowCount(); ++i) {
         procesarLineaEntrada(mTablaEntradas->record(i));
     }
+    base->insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Entrada genero ");
 
     guardarArticulo(idTienda);
     limpiarTabla(idTienda);
     actualizarTabla();
 
-
-    // for (int i = 0; i < mTablaEntradas->rowCount(); ++i) {
-    //     QString cod = mTablaEntradas->record(i).value(1).toString();
-    //     QString fechaCaducidad = mTablaEntradas->record(i).value(5).toString();
-    //     QString uds = mTablaEntradas->record(i).value(4).toString();
-    //     QString idTienda = mTablaEntradas->record(i).value(7).toString();
-
-    //     // Buscar si hay lotes con unidades pendientes
-    //     QString idLote = base->idLote(conf->getConexionLocal(),
-    //                                   mTablaEntradas->record(i).value(1).toString(),
-    //                                   "",
-    //                                   "2000-01-01");
-    //     qDebug() << "IDLOTE " + idLote;
-    //     if (idLote != "0") {
-    //         int pendientes = base->unidadesLote(conf->getConexionLocal(), idLote);
-    //         qDebug() << "Hay lotes pendientes";
-    //         qDebug() << "Lotes PENDIENTES " + pendientes;
-    //         if (abs(pendientes) > uds.toInt()) {
-    //             qDebug() << "Hay mas pendientes que entradas";
-    //             base->aumentarLote(conf->getConexionLocal(), idLote, uds.toInt());
-    //         } else if (abs(pendientes) == uds.toInt()) {
-    //             qDebug() << "Hay los mismos pendientes que entradas";
-    //             base->ejecutarSentencia("DELETE FROM lotes WHERE id = '" + idLote + "'",
-    //                                     conf->getConexionLocal());
-    //         } else {
-    //             qDebug() << "Hay mas entradas que pendientes";
-    //             base->ejecutarSentencia("DELETE FROM lotes WHERE id = '" + idLote + "'",
-    //                                     conf->getConexionLocal());
-    //             qDebug() << "ENTRADAS: " + uds;
-    //             qDebug() << "PENDIENTES: " + pendientes;
-    //             int unidades = uds.toInt() + pendientes;
-    //             qDebug() << "DIFERENCIA: " + unidades;
-
-    //             idLote = base->idLote(conf->getConexionLocal(), cod, "", fechaCaducidad);
-    //             if (idLote == "0") {
-    //                 base->crearLote(conf->getConexionLocal(),
-    //                                 cod,
-    //                                 "",
-    //                                 fechaCaducidad,
-    //                                 QString::number(unidades));
-    //             } else {
-    //                 base->aumentarLote(conf->getConexionLocal(), idLote, unidades);
-    //             }
-    //         }
-    //     } else {
-    //         idLote = base->idLote(conf->getConexionLocal(), cod, "", fechaCaducidad);
-    //         if (idLote == "0") {
-    //             base->crearLote(conf->getConexionLocal(), cod, "", fechaCaducidad, uds);
-    //         } else {
-    //             base->aumentarLote(conf->getConexionLocal(), idLote, uds.toInt());
-    //         }
-    //     }
-
-    //     QString codigo = mTablaEntradas->record(i).value(1).toString();
-    //     QString precio = mTablaEntradas->record(i).value(6).toString();
-    //     QString descripcion = mTablaEntradas->record(i).value(3).toString();
-    //     QSqlQuery cambios = base->consulta_producto("DB", codigo);
-    //     cambios.first();
-    //     QString precioAnterior = cambios.value("pvp").toString();
-    //     QString descripcionAnterior = cambios.value("descripcion").toString();
-    //     if (!(precio == precioAnterior && descripcion == descripcionAnterior)) {
-    //         QSqlQuery tmp = base->ejecutarSentencia("UPDATE articulos SET descripcion = '"
-    //                                                     + descripcion + "' , pvp = " + precio
-    //                                                     + " WHERE cod = '" + codigo + "'",
-    //                                                 conf->getConexionLocal());
-    //         qDebug() << tmp.lastError();
-    //     }
-    // }
-    // QSqlQuery tmp = base->ejecutarSentencia(
-    //     "INSERT INTO entradaGenero (cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp "
-    //     ", idTienda) "
-    //     "SELECT entradaGenero_tmp.cod, entradaGenero_tmp.fechaEntrada, "
-    //     "entradaGenero_tmp.descripcion, entradaGenero_tmp.cantidad, "
-    //     "entradaGenero_tmp.fechaCaducidad, entradaGenero_tmp.pvp , entradaGenero_tmp.idTienda"
-    //     " FROM entradaGenero_tmp WHERE entradaGenero_tmp.idTienda = "
-    //         + QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),
-    //                                                     ui->comboBoxProcedencia->currentText())),
-    //     conf->getConexionLocal());
-    // base->ejecutarSentencia("DELETE FROM entradaGenero_tmp WHERE idTienda = "
-    //                             + QString::number(
-    //                                 base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),
-    //                                                           ui->comboBoxProcedencia
-    //                                                               ->currentText())),
-    //                         conf->getConexionLocal());
-    // actualizarTabla();
 }
 
 void EntradaMercancia::actualizarTabla()

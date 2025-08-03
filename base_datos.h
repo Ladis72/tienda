@@ -187,6 +187,13 @@ public:
     QString nombreConexionLocal();
     bool copiaSeguridad(QString base, QString nombre);
 
+    //Funciones Log
+    bool insertarLog(const QString db, const QString &categoria, const QString &usuario, const QString &mensaje);
+    QSqlQueryModel* consultarLog(const QString db,
+                                 const QString &categoria,
+                                 const QString &usuario,
+                                 const QDateTime &desde,
+                                 const QDateTime &hasta);
 private:
     QSqlDatabase db;
     QSqlQuery consulta;

@@ -330,15 +330,19 @@ bool AceptarPedido::
         datosFactura.append(ui->dateEditVencimiento->text());
         datosFactura.append("0");
         if (!base.grabarFactura(conf->getConexionLocal(),datosFactura)) {
+            base.insertarLog(conf->getConexionLocal(),"Error",conf->getUsuario(),"Error al grabar la factura: "+datosFactura.at(0));
             return false;
         }
     } else {
         datosFactura.append("0");
         if (base.grabarAlbaran(conf->getConexionLocal(),datosFactura)) {
+            base.insertarLog(conf->getConexionLocal(),"Error",conf->getUsuario(),"Error al grabar el albarán: "+datosFactura.at(0));
+
             return false;
         }
     }
     qDebug() << "Factura grabada";
+    base.insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Registrada la factura"+datosFactura.at(0));
 
     return true;
 }

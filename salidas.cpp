@@ -203,6 +203,8 @@ void Salidas::on_pushButtonEnviar_clicked()
                                     base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),
                                                               ui->comboBoxDestino->currentText())),
                             conf->getConexionLocal());
+    base->insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Salida genero ");
+
     actualizarTabla();
 }
 
