@@ -110,7 +110,7 @@ void Prestamos::on_pushButtonProcesar_clicked()
     datos.append(ui->lineEditNotas->text());
     qDebug() << datos;
     if (datos.at(4) < 0) {
-        base->descontarArticulo(datos.at(0), abs(datos.at(4).toInt()));
+        base->descontarArticulo(conf->getConexionLocal(),datos.at(0), abs(datos.at(4).toInt()));
     } else {
         QString idLote = base->idLote(conf->getConexionLocal(),
                                       datos.at(0),

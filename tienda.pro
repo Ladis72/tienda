@@ -6,7 +6,7 @@
 
 
 
-QT       += sql charts webenginewidgets
+QT       += sql charts webenginewidgets concurrent
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -64,6 +64,7 @@ SOURCES += main.cpp\
     imprimirfactura.cpp \
     configticket.cpp \
     configbase.cpp \
+    verifactuclass.cpp \
     visorimagenes.cpp \
     visorfacturas.cpp \
     prestamos.cpp \
@@ -128,6 +129,7 @@ HEADERS  += tienda.h \
     imprimirfactura.h \
     configticket.h \
     configbase.h \
+    verifactuclass.h \
     visorimagenes.h \
     visorfacturas.h \
     prestamos.h \

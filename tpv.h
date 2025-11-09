@@ -100,6 +100,12 @@ private:
     QStringList recopilarBasesIvas();
     QString formatearCadena(QString cadena, int tamano);
     void datosProducto(QString IdProducto);
+    QString generarDatosFactura(const QStringList datos,
+                                const QString ultimoHash);
+
+    QString generarHashFactura(const QString &datosFactura);
+
+    bool grabarLineasTicket(const QString serie);
     //void mostrarFoto();
 
 signals:

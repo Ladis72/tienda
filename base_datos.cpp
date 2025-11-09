@@ -358,9 +358,9 @@ bool baseDatos::insertarArticulo(QSqlDatabase db, QStringList datos)
     }
 }
 
-bool baseDatos::descontarArticulo(QString cod, int uds)
+bool baseDatos::descontarArticulo(QString db, QString cod, int uds)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(db));
 
     consulta.exec("SELECT id , cantidad FROM lotes WHERE ean = '" + cod + "' ORDER BY fecha ASC");
     consulta.first();
@@ -385,7 +385,7 @@ bool baseDatos::descontarArticulo(QString cod, int uds)
                 return true;
             } else {
                 consulta.exec("DELETE FROM lotes WHERE id = '" + registro + "'");
-                descontarArticulo(cod, resta);
+                descontarArticulo(db, cod, resta);
                 qDebug() << consulta.lastError().text();
                 return true;
             }
@@ -397,17 +397,48 @@ bool baseDatos::descontarArticulo(QString cod, int uds)
     return true;
 }
 
-bool baseDatos::actualizarFechaVentaArticulo(QString cod, QString fecha)
+bool baseDatos::actualizarFechaVentaArticulo(QString nombreConexion, QString cod, QString fecha)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    // QSqlQuery consulta(QSqlDatabase::database(db));
+    // consulta.prepare("UPDATE articulos SET ultima_venta = ? WHERE cod LIKE ?");
+    // consulta.bindValue(0, fecha);
+    // consulta.bindValue(1, cod);
+    // if (consulta.exec()) {
+    //     return true;
+    // }
+    // qDebug() << consulta.lastError().text();
+    // return false;
+    // 1. Obtener la conexión a la base de datos
+    QSqlDatabase db = QSqlDatabase::database(nombreConexion);
+
+    // 2. Iniciar la transacción
+    if (!db.transaction()) {
+        qDebug() << "Error al iniciar la transacción:" << db.lastError().text();
+        return false;
+    }
+
+    QSqlQuery consulta(db);
     consulta.prepare("UPDATE articulos SET ultima_venta = ? WHERE cod LIKE ?");
     consulta.bindValue(0, fecha);
     consulta.bindValue(1, cod);
+
     if (consulta.exec()) {
-        return true;
+        // 3. Si la consulta fue exitosa, confirmar los cambios
+        if (db.commit()) {
+            return true;
+        } else {
+            // Error al confirmar (ej. problemas de red, disco lleno, etc.)
+            qDebug() << "Error al confirmar la transacción:" << db.lastError().text();
+            // Intenta hacer un rollback si el commit falla
+            db.rollback();
+            return false;
+        }
+    } else {
+        // 4. Si la consulta falló, mostrar el error y revertir
+        qDebug() << "Error al ejecutar la consulta UPDATE:" << consulta.lastError().text();
+        db.rollback();
+        return false;
     }
-    qDebug() << consulta.lastError().text();
-    return false;
 }
 
 bool baseDatos::actualizarArticulosDesdeCompras(QStringList datos)
@@ -1961,6 +1992,43 @@ QSqlQueryModel *baseDatos::consultarLog(const QString db, const QString &categor
     model->setHeaderData(4, Qt::Horizontal, "Mensaje");
 
     return model;
+}
+
+QString baseDatos::obtenerUltimoHash(const QString db)
+{
+    QSqlQuery query(QSqlDatabase::database(db));
+    if (query.exec("SELECT hash_actual FROM verifactu_logs ORDER BY id DESC LIMIT 1")) {
+        if (query.next())
+            return query.value(0).toString();
+    }
+    // Si no hay registros, devolver 64 ceros
+    return QString(64, '0');
+}
+
+QString baseDatos::registrarTickeckVerifactu(const QString db,
+                                             const int ticket,
+                                             const QString hashActual,
+                                             const QString hashAnterior,
+                                             const QString datosFactura,
+                                             const int ususario)
+{
+
+
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.prepare("INSERT INTO verifactu_logs (id_factura, hash_actual, hash_anterior, cadena_firmada, usuario) "
+                  "VALUES (:ticket, :hash_actual, :hash_anterior, :cadena_firmada, :usuario)");
+    query.bindValue(":ticket", ticket);
+    query.bindValue(":hash_actual", hashActual);
+    query.bindValue(":hash_anterior", hashAnterior);
+    query.bindValue(":cadena_firmada", datosFactura);
+    query.bindValue(":usuario", ususario); // campo usuario
+
+    if (!query.exec()) {
+        qWarning() << "Error al insertar en verifactu_logs:" << query.lastError().text();
+        return "";
+    }
+
+    return hashActual;
 }
 
 QStringList baseDatos::datosTiendaLocal(QString db)

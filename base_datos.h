@@ -41,8 +41,8 @@ public:
     bool modificarFotoUsusario(QString foto, int id);
     bool modificarArticulo(QSqlDatabase db, QStringList datos, QString dato);
     bool insertarArticulo(QSqlDatabase db, QStringList datos);
-    bool descontarArticulo(QString cod, int uds);
-    bool actualizarFechaVentaArticulo(QString cod, QString fecha);
+    bool descontarArticulo(QString db, QString cod, int uds);
+    bool actualizarFechaVentaArticulo(QString db, QString cod, QString fecha);
     bool actualizarArticulosDesdeCompras(QStringList datos);
     bool modificarFotoArticulo(QString foto, QString dato);
 
@@ -194,6 +194,13 @@ public:
                                  const QString &usuario,
                                  const QDateTime &desde,
                                  const QDateTime &hasta);
+
+
+    //Funciones VERIFACTU
+    QString obtenerUltimoHash(const QString db);
+    QString registrarTickeckVerifactu(const QString db, const int ticket, const QString hashActual, const QString hashAnterior, const QString datosFactura, const int ususario);
+
+
 private:
     QSqlDatabase db;
     QSqlQuery consulta;

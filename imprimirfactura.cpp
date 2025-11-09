@@ -9,21 +9,21 @@
 ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent)
     : QObject(parent)
 {
-     consultaTicket = base.datosTicket(conf->getConexionLocal(), nTicket);
-     ticket = consultaTicket.value(0).toString();
-     fecha = consultaTicket.value(3).toString();
-     hora = consultaTicket.value(4).toString();
-     total = consultaTicket.value(8).toString();
-     idCliente = consultaTicket.value(2).toString();
-     idVendedor = consultaTicket.value(1).toString();
+    consultaTicket = base.datosTicket(conf->getConexionLocal(), nTicket);
+    ticket = consultaTicket.value(0).toString();
+    fecha = consultaTicket.value(3).toString();
+    hora = consultaTicket.value(4).toString();
+    total = consultaTicket.value(8).toString();
+    idCliente = consultaTicket.value(2).toString();
+    idVendedor = consultaTicket.value(1).toString();
 
-     //double totalBases = consultaTicket.value(5).toDouble();
-     //double totalIVAS = consultaTicket.value(6).toDouble();
-     totalFactura = consultaTicket.value(8).toString();
-     cliente = base.etiquetaCliente(idCliente);
-     fPago = base.nombreFormaPago(consultaTicket.value(9).toString(), conf->getConexionLocal());
+    //double totalBases = consultaTicket.value(5).toDouble();
+    //double totalIVAS = consultaTicket.value(6).toDouble();
+    totalFactura = consultaTicket.value(8).toString();
+    cliente = base.etiquetaCliente(idCliente);
+    fPago = base.nombreFormaPago(consultaTicket.value(9).toString(), conf->getConexionLocal());
 
-     consulta = base.consultarLineasTicket(conf->getConexionLocal(), ticket);
+    consulta = base.consultarLineasTicket(conf->getConexionLocal(), ticket);
     //  int i = 0;
     //  modeloTabla = new QStandardItemModel();
     // while (consulta.next()) {
@@ -177,7 +177,7 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent)
     //  //system("firefox " + QCoreApplication::applicationDirPath().toLocal8Bit()
     //  //       + "/documentos/FacturaCliente.html");
 
-     facturaPDF();
+    facturaPDF();
 
 
 }
@@ -191,42 +191,101 @@ void ImprimirFactura::facturaPDF()
 <head>
   <meta charset='utf-8'>
   <style>
-    body { font-family: Arial, sans-serif; font-size: 10pt; }
-    .factura { font-size: 14pt; font-weight: bold; text-align: center; margin-bottom: 20px; }
-    table.cabecera { width: 100%; border: none; }
-    td { vertical-align: top; }
-    .cliente { font-size: 9pt; width: 33%; }
-    .logo { text-align: center; width: 33%; padding-top: 5px;}
-    .tienda { font-size: 9pt; text-align: right; width: 33%; }
-    .lineas { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    .lineas th, .lineas td { border: 1px solid black; padding: 4px; text-align: left; }
-    .totales { text-align: right; margin-top: 20px; }
+    body {
+        font-family: Arial, sans-serif;
+        font-size: 10pt;
+        margin: 0;
+        padding: 0;
+        border: 9;
+    }
+    .cabecera-superior {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin: 0;
+        padding: 0;
+    }
+    .numero-factura {
+        font-size: 12pt;
+        font-weight: bold;
+        text-align: center
+    }
+    .fecha-factura {
+        font-size: 12pt;
+        font-weight: bold;
+        text-align: right;
+    }
+    table.cabecera {
+        width: 100%;
+        border: none;
+        margin-bottom: 8px;
+    }
+    td {
+        vertical-align: top;
+    }
+    .lineas {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+        font-size: 10pt;
+    }
+    .lineas th {
+        background-color: #f0f0f0;
+        font-weight: bold;
+        padding: 5px;
+    }
+    .lineas th, .lineas td {
+        border: 1px solid black;
+        padding: 4px;
+    }
+    .lineas td {
+        text-align: right;
+    }
+    .lineas td:nth-child(2) {
+        text-align: left;
+    }
+    .totales {
+        text-align: right;
+        margin-top: 12px;
+        font-size: 10pt;
+        font-weight: bold;
+    }
+    .seccion {
+        margin-bottom: 2px;
+    }
+    .borde-superior {
+        border-top: 2px solid #000;
+        padding-top: 6px;
+    }
   </style>
 </head>
 <body>
+<!-- Número de factura y fecha en la parte SUPERIOR -->
+<div class='cabecera-superior'>
+    <div class='numero-factura'>FACTURA Nº %NUM_FACTURA% <br>FECHA: %FECHA%</div>
+</div>
 
-<div class='factura'>FACTURA Nº %NUM_FACTURA%   FECHA: %FECHA%</div>
-
-<table class='cabecera'>
+<table class='cabecera' style='width: 100%; border-collapse: collapse;'>
+  <!-- Logo centrado y ancho -->
   <tr>
-    <td class='cliente'>
-      <b>Cliente:</b> %CLIENTE%<br/>
-    </td>
-    <td class='logo'>
-      <table style='width: 100%;'>
-        <tr>
-          <td style='text-align: right;'>
-            <img src=':/imagenes/Emeicjac logo.jpg' width='100'/>
-          </td>
-        </tr>
-      </table>
-    </td>
-
-    <td class='tienda'>
-      <b>Tienda:</b> %TIENDA%<br/>
+    <td colspan='2' style='text-align: center; padding: 3px 0;'>
+      <img src=':/imagenes/Emeicjac logo.jpg' width='500' style='max-width: 100%; height: auto;' alt='Logo Emeicjac'/>
     </td>
   </tr>
 
+  <!-- Información en dos columnas -->
+  <tr>
+    <td style='width: 50%; vertical-align: top; padding: 7px 10px; border-top: 2px solid #000;'>
+
+      <b>%CLIENTE%<br/>
+    </td>
+
+    <td style='width: 50%; vertical-align: top; padding: 15px 10px; border-top: 2px solid #000; text-align: right;'>
+
+      <b>%TIENDA%<br/>
+
+    </td>
+  </tr>
 </table>
 
 <table class='lineas'>

@@ -4,7 +4,8 @@
 #include <QDir>
 #include <QItemDelegate>
 #include <QString>
-#include <QtConcurrent/QtConcurrent>
+//#include <QtConcurrent/QtConcurrent>
+#include <QCryptographicHash>
 #include "dialogfecha.h"
 #include "imprimirfactura.h"
 #include "imprimirticket.h"
@@ -29,7 +30,7 @@ Tpv::Tpv(QWidget *parent)
     recuperarTicketsPendientes();
     ui->tableViewTicketsPendientes->hideColumn(0);
     ui->lineEdit_cod_cliente->setText("1");
-    emit on_lineEdit_cod_cliente_editingFinished();
+    on_lineEdit_cod_cliente_editingFinished();
 }
 
 Tpv::~Tpv()
@@ -66,7 +67,7 @@ bool Tpv::llenar_usuarios(QSqlDatabase db)
 
 double Tpv::calcularPrecioTotal()
 {
-    double total = 0;
+    double total = 0.0;
     if (modeloTicket->rowCount() == 0) {
         ui->lcdNumber_total->display(total);
     }
@@ -136,27 +137,28 @@ bool Tpv::actualizarLineaTicket(QList<QString> lista)
 void Tpv::recuperarTicketsPendientes()
 {
     modeloTicketPendiente->clear();
-    QSqlQuery listaTicketsPendientes;
-    listaTicketsPendientes = base.tcketsPendientes(QSqlDatabase::database(conf->getConexionLocal()));
-    listaTicketsPendientes.first();
-    for (int i = 0; i < listaTicketsPendientes.numRowsAffected(); ++i) {
-        QStandardItem *itemOrden = new QStandardItem(listaTicketsPendientes.value(0).toString());
-        modeloTicketPendiente->setItem(i, 0, itemOrden);
-        QStandardItem *itemCliente = new QStandardItem(
-            base.nombreCliente(listaTicketsPendientes.value(1).toString()));
-        modeloTicketPendiente->setItem(i, 1, itemCliente);
-        QStandardItem *itemVendedor = new QStandardItem(
-            base.nombreUsusario(listaTicketsPendientes.value(2).toString(),
-                                conf->getConexionLocal()));
-        modeloTicketPendiente->setItem(i, 2, itemVendedor);
-        QStandardItem *itemCodCliente = new QStandardItem(
-            listaTicketsPendientes.value(1).toString());
-        modeloTicketPendiente->setItem(i, 3, itemCodCliente);
-        QStandardItem *itemCodVendedor = new QStandardItem(
-            listaTicketsPendientes.value(2).toString());
-        modeloTicketPendiente->setItem(i, 4, itemCodVendedor);
-        listaTicketsPendientes.next();
+    //2025-10-11
+    QSqlQuery listaTicketsPendientes = base.tcketsPendientes(QSqlDatabase::database(conf->getConexionLocal()));
+    int row = 0;
+    while (listaTicketsPendientes.next()) {
+            QStandardItem *itemOrden = new QStandardItem(listaTicketsPendientes.value(0).toString());
+            modeloTicketPendiente->setItem(row, 0, itemOrden);
+            QStandardItem *itemCliente = new QStandardItem(
+                base.nombreCliente(listaTicketsPendientes.value(1).toString()));
+            modeloTicketPendiente->setItem(row, 1, itemCliente);
+            QStandardItem *itemVendedor = new QStandardItem(
+                base.nombreUsusario(listaTicketsPendientes.value(2).toString(),
+                                    conf->getConexionLocal()));
+            modeloTicketPendiente->setItem(row, 2, itemVendedor);
+            QStandardItem *itemCodCliente = new QStandardItem(
+                listaTicketsPendientes.value(1).toString());
+            modeloTicketPendiente->setItem(row, 3, itemCodCliente);
+            QStandardItem *itemCodVendedor = new QStandardItem(
+                listaTicketsPendientes.value(2).toString());
+            modeloTicketPendiente->setItem(row, 4, itemCodVendedor);
+            row++;
     }
+
     ui->tableViewTicketsPendientes->setModel(modeloTicketPendiente);
     ui->tableViewTicketsPendientes->hideColumn(0);
     ui->tableViewTicketsPendientes->hideColumn(3);
@@ -172,7 +174,7 @@ void Tpv::cambiarTicket(int i)
 {
     ticketActual = i;
     modeloTicket->setTable("lineasticket_tmp");
-    modeloTicket->setFilter("orden LIKE " + QString::number(ticketActual));
+    modeloTicket->setFilter("orden = " + QString::number(ticketActual));
     modeloTicket->select();
 
     ui->tableView->setModel(modeloTicket);
@@ -217,9 +219,9 @@ QStringList Tpv::recopilarDatosTicket()
 QStringList Tpv::recopilarBasesIvas()
 {
     QStringList basesIvas;
-    double TotalBase, TotalIva;
-    TotalBase=0;
-    TotalIva=0;
+    double TotalBase = 0.0;
+    double TotalIva = 0.0;
+
 
     for (int i = 0; i < modeloTicket->rowCount(); ++i) {
         double base = modeloTicket->record(i).value(8).toDouble()/(1+(modeloTicket->record(i).value(5).toDouble()/100));
@@ -263,6 +265,84 @@ void Tpv::datosProducto(QString IdProducto)
     ui->labelFoto->setPixmap(imagen.scaled(200, 200));
 
     ui->textInfo->setText(consulta.value("notas").toString());
+}
+
+QString Tpv::generarDatosFactura(const QStringList datos, const QString ultimoHash)
+{
+    QString cadena = datos.join("|")+"|"+ ultimoHash;
+
+    return cadena;
+}
+
+QString Tpv::generarHashFactura(const QString &datosFactura)
+{
+    QByteArray hash = QCryptographicHash::hash(datosFactura.toUtf8(), QCryptographicHash::Sha256);
+    return QString(hash.toHex());
+}
+
+bool Tpv::grabarLineasTicket(const QString serie)
+{
+    QStringList lineaTicket;
+    for (int i = 0; i < modeloTicket->rowCount(); i++) {
+        lineaTicket.clear();
+        lineaTicket.append(serie);
+        for (int x = 2; x < modeloTicket->columnCount(); ++x) {
+            lineaTicket.append(modeloTicket->record(i).value(x).toString());
+        }
+        lineaTicket.append(QDate::currentDate().toString("yyyy-MM-dd"));
+        lineaTicket.append(QTime::currentTime().toString("hh:mm"));
+        QString dato;
+        dato = lineaTicket.at(3);
+        dato = formatearCadena(dato, 3);
+        qDebug() << dato;
+        dato = lineaTicket.at(2);
+        dato = formatearCadena(dato, 20);
+        qDebug() << dato;
+        dato = lineaTicket.at(5);
+        dato = formatearCadena(dato, 6);
+        dato.clear();
+        dato = lineaTicket.at(6);
+        dato = formatearCadena(dato, 3);
+        dato.clear();
+        dato = lineaTicket.at(7);
+        dato = formatearCadena(" " + dato, 6);
+        dato.clear();
+        qDebug() << lineaTicket;
+        if(!base.grabarLineaTicket(lineaTicket)){
+            throw std::runtime_error("Error grabando llinea de ticktes:");
+            return false;
+        }
+        if (lineaTicket.at(3).toInt() < 0) {
+            DialogFecha *fechaCaducidad = new DialogFecha(lineaTicket.at(2));
+            fechaCaducidad->exec();
+            QString fecha = fechaCaducidad->fecha.toString("yyyy-MM-dd");
+            QString lote = fechaCaducidad->lote;
+            QString idLote = base.idLote(conf->getConexionLocal(),
+                                         lineaTicket.at(1),
+                                         lote,
+                                         fecha);
+            qDebug() << lote;
+            if (idLote != "0") {
+                base.aumentarLote(conf->getConexionLocal(),
+                                  idLote,
+                                  abs(lineaTicket.at(3).toInt()));
+                qDebug() << "Error al devolver el producto lote";
+            } else {
+                base.crearLote(conf->getConexionLocal(),
+                               lineaTicket.at(1),
+                               lote,
+                               fecha,
+                               QString::number(abs(lineaTicket.at(3).toInt())));
+                qDebug() << "Crear lote";
+            }
+        } else {
+            base.descontarArticulo(conf->getConexionLocal(), lineaTicket.at(1), lineaTicket.at(3).toInt());
+        }
+        base.actualizarFechaVentaArticulo(conf->getConexionLocal(),
+                                          lineaTicket.at(1),
+                                          QDate::currentDate().toString("yyyy-MM-dd"));
+    }
+    return true;
 }
 
 void Tpv::mostrarFoto()
@@ -387,6 +467,128 @@ void Tpv::on_lineEdit_desc_returnPressed()
 
 void Tpv::on_btn_cobrar_clicked()
 {
+    // QStringList confTicket = base.recuperarConfigTicket();
+    // QFile cajon(confTicket.at(3));
+    // qDebug() << confTicket.at(3);
+    // cajon.open(QIODevice::WriteOnly);
+    // QTextStream codigoApertura(&cajon);
+    // QString codApertura = confTicket.at(4);
+    // qDebug() << codApertura;
+    // QStringList cadaCodApertura = codApertura.split(",");
+    // for (int i = 0; i < cadaCodApertura.size(); ++i) {
+    //     codigoApertura << char(cadaCodApertura.at(i).toInt());
+    // }
+    // cajon.close();
+    // qDebug() << "Finalizado apertura cajon";
+    // totalizacion = new totalizar(QString::number(calcularPrecioTotal()), vale, this);
+
+    // QStringList lineaTicket, totalTicket;
+    // totalTicket.clear();
+
+    // if (totalizacion->exec() == totalizacion->Accepted) {
+    //     for (int i = 0; i < modeloTicket->rowCount(); i++) {
+    //         lineaTicket.clear();
+    //         if (totalizacion->facturacion == "1"
+    //             && base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
+    //                                       "ticketss",
+    //                                       "ticket",
+    //                                       QString::number(ticket))
+    //                    == false) {
+    //             qDebug() << "Serie" << totalizacion->facturacion;
+    //             qDebug() << "Facturación por el B";
+    //             lineaTicket.append("B" + QString::number(ticket));
+    //         } else {
+    //             lineaTicket.append(QString::number(ticket));
+    //             totalizacion->facturacion = "0";
+    //             qDebug() << "Facturación por el A";
+    //         }
+    //         for (int x = 2; x < modeloTicket->columnCount(); ++x) {
+    //             lineaTicket.append(modeloTicket->record(i).value(x).toString());
+    //         }
+    //         lineaTicket.append(QDate::currentDate().toString("yyyy-MM-dd"));
+    //         lineaTicket.append(QTime::currentTime().toString("hh:mm"));
+    //         QString dato;
+    //         dato = lineaTicket.at(3);
+    //         dato = formatearCadena(dato, 3);
+    //         qDebug() << dato;
+    //         dato = lineaTicket.at(2);
+    //         dato = formatearCadena(dato, 20);
+    //         qDebug() << dato;
+    //         dato = lineaTicket.at(5);
+    //         dato = formatearCadena(dato, 6);
+    //         dato.clear();
+    //         dato = lineaTicket.at(6);
+    //         dato = formatearCadena(dato, 3);
+    //         dato.clear();
+    //         dato = lineaTicket.at(7);
+    //         dato = formatearCadena(" " + dato, 6);
+    //         dato.clear();
+    //         qDebug() << lineaTicket;
+    //         base.grabarLineaTicket(lineaTicket);
+    //         if (lineaTicket.at(3).toInt() < 0) {
+    //             DialogFecha *fechaCaducidad = new DialogFecha(lineaTicket.at(2));
+    //             fechaCaducidad->exec();
+    //             QString fecha = fechaCaducidad->fecha.toString("yyyy-MM-dd");
+    //             QString lote = fechaCaducidad->lote;
+    //             QString idLote = base.idLote(conf->getConexionLocal(),
+    //                                          lineaTicket.at(1),
+    //                                          lote,
+    //                                          fecha);
+    //             qDebug() << lote;
+    //             if (idLote != "0") {
+    //                 base.aumentarLote(conf->getConexionLocal(),
+    //                                   idLote,
+    //                                   abs(lineaTicket.at(3).toInt()));
+    //                 qDebug() << "Error al devolver el producto lote";
+    //             } else {
+    //                 base.crearLote(conf->getConexionLocal(),
+    //                                lineaTicket.at(1),
+    //                                lote,
+    //                                fecha,
+    //                                QString::number(abs(lineaTicket.at(3).toInt())));
+    //                 qDebug() << "Crear lote";
+    //             }
+    //         } else {
+    //             base.descontarArticulo(lineaTicket.at(1), lineaTicket.at(3).toInt());
+    //         }
+    //         base.actualizarFechaVentaArticulo(lineaTicket.at(1),
+    //                                           QDate::currentDate().toString("yyyy-MM-dd"));
+    //     }
+    //     if (totalizacion->valeUsado) {
+    //         usarVale(ticket, idVale, vale);
+    //     }
+    //     totalTicket.append(recopilarDatosTicket());
+    //     totalTicket.append(QString::number(totalizacion->descuento));
+    //     totalTicket.append(QString::number(totalizacion->total));
+    //     totalTicket.append(base.idFormaPago(totalizacion->efectivo, conf->getConexionLocal()));
+    //     totalTicket.append(totalizacion->facturacion);
+    //     totalTicket.append(QString::number(totalizacion->entrega));
+    //     totalTicket.append(QString::number(totalizacion->cambio));
+
+    //     QString serie;
+    //     serie = "ticketss";
+    //     if (totalizacion->facturacion == "0") {
+    //         serie = "tickets";
+    //         ticket += 1;
+    //     }
+
+    //     base.grabarTicket(conf->getConexionLocal(), serie, totalTicket);
+    //     qDebug() << totalTicket;
+    //     qDebug() << serie;
+
+    //     emit on_pushButtonBorrarTodo_clicked();
+    //     //        impresora.close();
+    //     if (totalizacion->ticket == true && totalizacion->factura == false) {
+    //         //            system("less ./ticket.txt >> /dev/lp0");
+    //         ImprimirTicket(QString::number(ticket - 1), "ticket");
+    //     } else if (totalizacion->factura == true) {
+    //         ImprimirFactura(QString::number(ticket - 1));
+    //     }
+    // }
+
+
+    //2025-10-12
+
     QStringList confTicket = base.recuperarConfigTicket();
     QFile cajon(confTicket.at(3));
     qDebug() << confTicket.at(3);
@@ -400,79 +602,46 @@ void Tpv::on_btn_cobrar_clicked()
     }
     cajon.close();
     qDebug() << "Finalizado apertura cajon";
+
+    if (modeloTicket->rowCount() == 0){
+        QMessageBox::information(this,"Ticket vacio","No hay productos en el ticket");
+        return;
+    }
+
+
+
     totalizacion = new totalizar(QString::number(calcularPrecioTotal()), vale, this);
 
     QStringList lineaTicket, totalTicket;
     totalTicket.clear();
 
-    if (totalizacion->exec() == totalizacion->Accepted) {
-        for (int i = 0; i < modeloTicket->rowCount(); i++) {
-            lineaTicket.clear();
-            if (totalizacion->facturacion == "1"
-                && base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
-                                          "ticketss",
-                                          "ticket",
-                                          QString::number(ticket))
-                       == false) {
-                qDebug() << "Serie" << totalizacion->facturacion;
-                qDebug() << "Facturación por el B";
-                lineaTicket.append("B" + QString::number(ticket));
-            } else {
-                lineaTicket.append(QString::number(ticket));
-                totalizacion->facturacion = "0";
-                qDebug() << "Facturación por el A";
-            }
-            for (int x = 2; x < modeloTicket->columnCount(); ++x) {
-                lineaTicket.append(modeloTicket->record(i).value(x).toString());
-            }
-            lineaTicket.append(QDate::currentDate().toString("yyyy-MM-dd"));
-            lineaTicket.append(QTime::currentTime().toString("hh:mm"));
-            QString dato;
-            dato = lineaTicket.at(3);
-            dato = formatearCadena(dato, 3);
-            qDebug() << dato;
-            dato = lineaTicket.at(2);
-            dato = formatearCadena(dato, 20);
-            qDebug() << dato;
-            dato = lineaTicket.at(5);
-            dato = formatearCadena(dato, 6);
-            dato.clear();
-            dato = lineaTicket.at(6);
-            dato = formatearCadena(dato, 3);
-            dato.clear();
-            dato = lineaTicket.at(7);
-            dato = formatearCadena(" " + dato, 6);
-            dato.clear();
-            qDebug() << lineaTicket;
-            base.grabarLineaTicket(lineaTicket);
-            if (lineaTicket.at(3).toInt() < 0) {
-                DialogFecha *fechaCaducidad = new DialogFecha(lineaTicket.at(2));
-                fechaCaducidad->exec();
-                QString fecha = fechaCaducidad->fecha.toString("yyyy-MM-dd");
-                QString lote = fechaCaducidad->lote;
-                QString idLote = base.idLote(conf->getConexionLocal(),
-                                             lineaTicket.at(1),
-                                             lote,
-                                             fecha);
-                qDebug() << lote;
-                if (idLote != "0") {
-                    base.aumentarLote(conf->getConexionLocal(),
-                                      idLote,
-                                      abs(lineaTicket.at(3).toInt()));
-                    qDebug() << "Error al devolver el producto lote";
-                } else {
-                    base.crearLote(conf->getConexionLocal(),
-                                   lineaTicket.at(1),
-                                   lote,
-                                   fecha,
-                                   QString::number(abs(lineaTicket.at(3).toInt())));
-                    qDebug() << "Crear lote";
-                }
-            } else {
-                base.descontarArticulo(lineaTicket.at(1), lineaTicket.at(3).toInt());
-            }
-            base.actualizarFechaVentaArticulo(lineaTicket.at(1),
-                                              QDate::currentDate().toString("yyyy-MM-dd"));
+    if (totalizacion->exec() != totalizacion->Accepted) {
+        delete totalizacion;
+        return;
+    }
+
+    QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
+    if (!db.transaction()) {
+        QMessageBox::critical(this, "Error","No se pudo iniciar la transacción de venta. "+db.lastError().text());
+        return;
+    }
+
+    QString serie = QString::number(ticket);
+
+    if (totalizacion->facturacion == "1"
+        && base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
+                                  "ticketss",
+                                  "ticket",
+                                  QString::number(ticket))
+               == false) {
+        serie = "B"+QString::number(ticket);
+    }
+    bool success = false;
+    QString ticketImpresion = QString::number(ticket);
+
+    try {
+        if(!grabarLineasTicket(serie)){
+            throw std::runtime_error("Error al grabar las lineas del ticket");
         }
         if (totalizacion->valeUsado) {
             usarVale(ticket, idVale, vale);
@@ -485,26 +654,112 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(QString::number(totalizacion->entrega));
         totalTicket.append(QString::number(totalizacion->cambio));
 
-        QString serie;
+        //QString serie;
         serie = "ticketss";
         if (totalizacion->facturacion == "0") {
             serie = "tickets";
             ticket += 1;
+            ticketImpresion = QString::number(ticket -1);
         }
 
-        base.grabarTicket(conf->getConexionLocal(), serie, totalTicket);
-        qDebug() << totalTicket;
-        qDebug() << serie;
+        if(!base.grabarTicket(conf->getConexionLocal(), serie, totalTicket)){
+            throw std::runtime_error("Error al grabar el ticket");
 
-        emit on_pushButtonBorrarTodo_clicked();
-        //        impresora.close();
-        if (totalizacion->ticket == true && totalizacion->factura == false) {
-            //            system("less ./ticket.txt >> /dev/lp0");
-            ImprimirTicket(QString::number(ticket - 1), "ticket");
-        } else if (totalizacion->factura == true) {
-            ImprimirFactura(QString::number(ticket - 1));
         }
+        if (serie == "tickets") {
+            QString ultimoHash = base.obtenerUltimoHash(conf->getConexionLocal());
+            QString datosFactura = generarDatosFactura(totalTicket,ultimoHash);
+            QString hashFactura = generarHashFactura(datosFactura);
+            if(base.registrarTickeckVerifactu(conf->getConexionLocal(),
+                                               totalTicket.at(0).toInt(),
+                                               hashFactura,
+                                               ultimoHash,
+                                               datosFactura,
+                                               totalTicket.at(1).toInt()) == "")
+            {
+                throw std::runtime_error("Error al grabar VeriFactuLog");
+            }
+        }
+
+        if (!db.commit()) {
+            throw std::runtime_error("Error al confirmar la transacción: "+db.lastError().text().toStdString());
+        }
+
+
+    } catch (const std::exception &e) {
+        db.rollback();
+        QMessageBox::critical(this, "ERROR", QString::fromStdString(e.what()));
+        delete totalizacion;
+        return;
     }
+    // for (int i = 0; i < modeloTicket->rowCount(); i++) {
+    //     lineaTicket.clear();
+    //     lineaTicket.append(serie);
+    //     for (int x = 2; x < modeloTicket->columnCount(); ++x) {
+    //         lineaTicket.append(modeloTicket->record(i).value(x).toString());
+    //     }
+    //     lineaTicket.append(QDate::currentDate().toString("yyyy-MM-dd"));
+    //     lineaTicket.append(QTime::currentTime().toString("hh:mm"));
+    //     QString dato;
+    //     dato = lineaTicket.at(3);
+    //     dato = formatearCadena(dato, 3);
+    //     qDebug() << dato;
+    //     dato = lineaTicket.at(2);
+    //     dato = formatearCadena(dato, 20);
+    //     qDebug() << dato;
+    //     dato = lineaTicket.at(5);
+    //     dato = formatearCadena(dato, 6);
+    //     dato.clear();
+    //     dato = lineaTicket.at(6);
+    //     dato = formatearCadena(dato, 3);
+    //     dato.clear();
+    //     dato = lineaTicket.at(7);
+    //     dato = formatearCadena(" " + dato, 6);
+    //     dato.clear();
+    //     qDebug() << lineaTicket;
+    //     base.grabarLineaTicket(lineaTicket);
+    //     if (lineaTicket.at(3).toInt() < 0) {
+    //         DialogFecha *fechaCaducidad = new DialogFecha(lineaTicket.at(2));
+    //         fechaCaducidad->exec();
+    //         QString fecha = fechaCaducidad->fecha.toString("yyyy-MM-dd");
+    //         QString lote = fechaCaducidad->lote;
+    //         QString idLote = base.idLote(conf->getConexionLocal(),
+    //                                      lineaTicket.at(1),
+    //                                      lote,
+    //                                      fecha);
+    //         qDebug() << lote;
+    //         if (idLote != "0") {
+    //             base.aumentarLote(conf->getConexionLocal(),
+    //                               idLote,
+    //                               abs(lineaTicket.at(3).toInt()));
+    //             qDebug() << "Error al devolver el producto lote";
+    //         } else {
+    //             base.crearLote(conf->getConexionLocal(),
+    //                            lineaTicket.at(1),
+    //                            lote,
+    //                            fecha,
+    //                            QString::number(abs(lineaTicket.at(3).toInt())));
+    //             qDebug() << "Crear lote";
+    //         }
+    //     } else {
+    //         base.descontarArticulo(lineaTicket.at(1), lineaTicket.at(3).toInt());
+    //     }
+    //     base.actualizarFechaVentaArticulo(lineaTicket.at(1),
+    //                                       QDate::currentDate().toString("yyyy-MM-dd"));
+    // }
+
+
+
+    emit on_pushButtonBorrarTodo_clicked();
+    //        impresora.close();
+    if (totalizacion->ticket == true && totalizacion->factura == false) {
+        //            system("less ./ticket.txt >> /dev/lp0");
+        ImprimirTicket(ticketImpresion , "ticket");
+    } else if (totalizacion->factura == true) {
+        ImprimirFactura(ticketImpresion,this);
+    }
+
+
 }
 
 void Tpv::on_tableViewTicketsPendientes_clicked(const QModelIndex &index)
@@ -715,24 +970,55 @@ void Tpv::usarVale(int ticket, int idVale, double cantVale)
     lineaTicket.append(QTime::currentTime().toString("hh:mm"));
     base.grabarLineaTicket(lineaTicket);
 
-    listaConexionesRemotas = conf->getNombreConexiones();
-    qDebug() << listaConexionesRemotas;
-    conexionLocal = conf->getConexionLocal();
-    qDebug() << conexionLocal;
-    if (base.usarVale(conexionLocal, idVale)) {
-        qDebug() << "Vale usado";
-    } else {
-        qDebug() << "Error al usar el vale";
-    }
-    for (int i = 0; i < listaConexionesRemotas.length(); i++) {
-        if (!base.usarVale(listaConexionesRemotas.at(i), idVale)) {
-            qDebug() << "Error al marcar vale en tienda " << listaConexionesRemotas.at(i);
-            base.valesPendientesMarcar(conexionLocal, listaConexionesRemotas.at(i), idVale);
-        } else {
-            qDebug() << "Vale marcado en tienda " << listaConexionesRemotas.at(i);
+
+    // 2025-10-12
+
+        QString conexionLocal = conf->getConexionLocal();
+        listaConexionesRemotas = conf->getNombreConexiones();
+        qDebug() << "🧩 Sincronizando vale usado con tiendas remotas en hilo separado...";
+        qDebug() << "Tienda local:" << conexionLocal;
+        qDebug() << "Tiendas remotas:" << listaConexionesRemotas;
+
+        //Marcar local
+        if (base.usarVale(conexionLocal, idVale)) {
+            qDebug() << "Vale marcado correctamente en tienda local";
+        }else {
+            qWarning() << "Error al marcar en tienda local";
+        }
+
+        //Intentar en tiendas remotas
+        for (const QString &tienda : listaConexionesRemotas) {
+            QSqlDatabase db = QSqlDatabase::database(tienda);
+            if (!db.isOpen()) {
+                qWarning() << "Conexion cerrada con tienda " << tienda;
+                base.valesPendientesMarcar(conexionLocal,tienda,idVale);
+                continue;
+            }
+            if (!base.usarVale(tienda, idVale)) {
+                qWarning() << "Error al marcar el vale en la tienda remota " << tienda;
+                base.valesPendientesMarcar(conexionLocal,tienda,idVale);
+            }
         }
     }
-}
+
+    // listaConexionesRemotas = conf->getNombreConexiones();
+    // qDebug() << listaConexionesRemotas;
+    // conexionLocal = conf->getConexionLocal();
+    // qDebug() << conexionLocal;
+    // if (base.usarVale(conexionLocal, idVale)) {
+    //     qDebug() << "Vale usado";
+    // } else {
+    //     qDebug() << "Error al usar el vale";
+    // }
+    // for (int i = 0; i < listaConexionesRemotas.length(); i++) {
+    //     if (!base.usarVale(listaConexionesRemotas.at(i), idVale)) {
+    //         qDebug() << "Error al marcar vale en tienda " << listaConexionesRemotas.at(i);
+    //         base.valesPendientesMarcar(conexionLocal, listaConexionesRemotas.at(i), idVale);
+    //     } else {
+    //         qDebug() << "Vale marcado en tienda " << listaConexionesRemotas.at(i);
+    //     }
+    // }
+//}
 //ClickableLabel::ClickableLabel(QWidget *parent, Qt::WindowFlags f) : QLabel(parent)
 //{
 

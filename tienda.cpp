@@ -45,8 +45,9 @@ Tienda::Tienda(QWidget *parent)
     usuario->setPalette(paleta );
     ui->statusBar->addPermanentWidget(usuario);
     connect(usuario, SIGNAL(clicked()), this, SLOT(on_pushButtonSesion_clicked()));
-    on_pushButtonSesion_clicked();
+    //on_pushButtonSesion_clicked();
     base.insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Inicio programa ");
+    conf->setNombreconexiones(conexiones->lista());
 
 }
 
@@ -58,6 +59,8 @@ Tienda::~Tienda()
                                tr("Quieres hacer una copia de seguridad antes de cerrar?"),
                                QMessageBox::Yes | QMessageBox::No);
     if (respuesta == QMessageBox::Yes) {
+        base.insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Copia de seguridad creada");
+
         on_pushButtonCopia_clicked();
     }
     base.insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Fin del programa ");
@@ -370,7 +373,7 @@ void Tienda::refrescarConexiones()
     QStringList conn;
     conn.clear();
     conn = conexiones->crear();
-    conf->setNombreconexiones(conexiones->lista());
+    // conf->setNombreconexiones(conexiones->lista());
     for (int i = 0; i < conn.length(); i = i + 2) {
         if (conn.at(i + 1) == "0") {
             button[i / 2]->setStyleSheet("QLabel {background-color : red}");
