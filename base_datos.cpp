@@ -399,16 +399,7 @@ bool baseDatos::descontarArticulo(QString db, QString cod, int uds)
 
 bool baseDatos::actualizarFechaVentaArticulo(QString nombreConexion, QString cod, QString fecha)
 {
-    // QSqlQuery consulta(QSqlDatabase::database(db));
-    // consulta.prepare("UPDATE articulos SET ultima_venta = ? WHERE cod LIKE ?");
-    // consulta.bindValue(0, fecha);
-    // consulta.bindValue(1, cod);
-    // if (consulta.exec()) {
-    //     return true;
-    // }
-    // qDebug() << consulta.lastError().text();
-    // return false;
-    // 1. Obtener la conexión a la base de datos
+
     QSqlDatabase db = QSqlDatabase::database(nombreConexion);
 
     // 2. Iniciar la transacción

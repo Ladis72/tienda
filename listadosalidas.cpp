@@ -1,6 +1,11 @@
 #include "listadosalidas.h"
-#include "qtrpt.h"
 #include "ui_listadosalidas.h"
+#include <QPrinter>
+#include <QPrintDialog>
+#include <QPainter>
+#include <QDebug>
+#include <QProcess>
+#include <QTextDocument>
 
 ListadoSalidas::ListadoSalidas(QWidget *parent)
     : QDialog(parent)
@@ -41,41 +46,34 @@ double ListadoSalidas::sumar(QSqlQueryModel *modelo)
 
 void ListadoSalidas::on_pushButton_2_clicked()
 {
-    QtRPT *informe = new QtRPT(this);
-    informe->recordCount.append(modeloTabla->rowCount());
-    QString informeDir = base->devolverDirectorio("movimientos");
-    informe->loadReport(informeDir);
-    connect(informe,
-            &QtRPT::setValue,
-            [&](const int recNo,
-                const QString paramName,
-                QVariant &paramValue,
-                const int reportPage) {
-                (void) reportPage;
-                if (paramName == "desde") {
-                    paramValue = ui->dateEditDesde->text();
-                }
-                if (paramName == "hasta") {
-                    paramValue = ui->dateEditHasta->text();
-                }
-                if (paramName == "fecha") {
-                    paramValue = modeloTabla->record(recNo).value("fecha").toString();
-                }
-                if (paramName == "hora") {
-                    paramValue = modeloTabla->record(recNo).value("hora").toString();
-                }
-                if (paramName == "cantidad") {
-                    paramValue = modeloTabla->record(recNo).value("cantidad").toString();
-                }
-                if (paramName == "tipo") {
-                    paramValue = modeloTabla->record(recNo).value("descripcion").toString();
-                }
-                if (paramName == "descripcion") {
-                    paramValue = modeloTabla->record(recNo).value(4).toString();
-                }
-                if (paramName == "total") {
-                    paramValue = ui->labelTotal->text();
-                }
-            });
-    informe->printExec();
+    QString html;
+    html += "<html><body>";
+    html += "<h1>Informe de Movimientos</h1>";
+    html += "<p>Desde: " + ui->dateEditDesde->text() + " Hasta: " + ui->dateEditHasta->text() + "</p>";
+    html += "<table border='1'>";
+    html += "<tr><th>Fecha</th><th>Hora</th><th>Cantidad</th><th>Tipo</th><th>Descripción</th></tr>";
+
+    for (int row = 0; row < modeloTabla->rowCount(); ++row) {
+        html += "<tr>";
+        html += "<td>" + modeloTabla->record(row).value("fecha").toString() + "</td>";
+        html += "<td>" + modeloTabla->record(row).value("hora").toString() + "</td>";
+        html += "<td>" + modeloTabla->record(row).value("cantidad").toString() + "</td>";
+        html += "<td>" + modeloTabla->record(row).value("descripcion").toString() + "</td>";
+        html += "<td>" + modeloTabla->record(row).value(4).toString() + "</td>";
+        html += "</tr>";
+    }
+
+    html += "</table>";
+    html += "<p><b>Total: " + ui->labelTotal->text() + "</b></p>";
+    html += "</body></html>";
+
+    QTextDocument document;
+    document.setHtml(html);
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(base->devolverDirectorio("movimientos")+"/Movimientos.pdf");
+    document.print(&printer);
+    QProcess::startDetached("xdg-open", QStringList() << base->devolverDirectorio("movimientos")+"/Movimientos.pdf");
+
 }

@@ -109,7 +109,7 @@ void Prestamos::on_pushButtonProcesar_clicked()
     datos.append(QString::number(ui->spinBox->value()));
     datos.append(ui->lineEditNotas->text());
     qDebug() << datos;
-    if (datos.at(4) < 0) {
+    if (datos.at(4).toInt() < 0) {
         base->descontarArticulo(conf->getConexionLocal(),datos.at(0), abs(datos.at(4).toInt()));
     } else {
         QString idLote = base->idLote(conf->getConexionLocal(),

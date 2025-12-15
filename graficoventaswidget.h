@@ -4,7 +4,7 @@
 #include <QWidget>
 #include <QtCharts>
 
-QT_CHARTS_USE_NAMESPACE
+//QT_CHARTS_USE_NAMESPACE
 
     class GraficoVentasWidget : public QWidget
 {

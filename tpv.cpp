@@ -442,6 +442,8 @@ void Tpv::keyPressEvent(QKeyEvent *e)
     //Tpv::keyPressEvent(e);
 }
 
+
+
 void Tpv::on_btn_anadir_clicked()
 {
     emit on_lineEdit_cod_returnPressed();
@@ -589,6 +591,8 @@ void Tpv::on_btn_cobrar_clicked()
 
     //2025-10-12
 
+    tabla = "tickets";
+
     QStringList confTicket = base.recuperarConfigTicket();
     QFile cajon(confTicket.at(3));
     qDebug() << confTicket.at(3);
@@ -635,8 +639,8 @@ void Tpv::on_btn_cobrar_clicked()
                                   QString::number(ticket))
                == false) {
         serie = "B"+QString::number(ticket);
+        tabla = "ticketss";
     }
-    bool success = false;
     QString ticketImpresion = QString::number(ticket);
 
     try {
@@ -654,19 +658,17 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(QString::number(totalizacion->entrega));
         totalTicket.append(QString::number(totalizacion->cambio));
 
-        //QString serie;
-        serie = "ticketss";
         if (totalizacion->facturacion == "0") {
-            serie = "tickets";
+            tabla = "tickets";
+            ticketImpresion = QString::number(ticket);
             ticket += 1;
-            ticketImpresion = QString::number(ticket -1);
+
         }
 
-        if(!base.grabarTicket(conf->getConexionLocal(), serie, totalTicket)){
+        if(!base.grabarTicket(conf->getConexionLocal(), tabla, totalTicket)){
             throw std::runtime_error("Error al grabar el ticket");
-
         }
-        if (serie == "tickets") {
+        if (tabla == "tickets") {
             QString ultimoHash = base.obtenerUltimoHash(conf->getConexionLocal());
             QString datosFactura = generarDatosFactura(totalTicket,ultimoHash);
             QString hashFactura = generarHashFactura(datosFactura);

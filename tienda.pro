@@ -196,7 +196,8 @@ FORMS    += tienda.ui \
     tiendas.ui \
     comprasventasremoto.ui \
     comprasventasremoto.ui
-include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
+
+#include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
 RESOURCES += \
     recursos.qrc

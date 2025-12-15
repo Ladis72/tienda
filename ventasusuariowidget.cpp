@@ -4,6 +4,7 @@
 #include "ui_ventasusuariowidget.h"
 #include <QSqlQueryModel>
 #include <QDebug>
+#include <QtCharts>
 #include <QtCharts/QChartView>
 #include <QtCharts/QChart>
 #include <QtCharts/QStackedBarSeries>
@@ -12,7 +13,7 @@
 #include <QtCharts/QValueAxis>
 #include <QToolTip>
 
-using namespace QtCharts;
+//using namespace QtCharts;
 
 ventasUsuarioWidget::ventasUsuarioWidget(QWidget *parent)
     : QWidget(parent)

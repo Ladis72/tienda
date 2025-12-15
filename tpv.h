@@ -72,7 +72,7 @@ private:
     int idVale;
     double descuentoCliente, vale;
     QStringList listaConexionesRemotas;
-    QString conexionLocal;
+    QString conexionLocal, tabla;
     Formateo classFormatear;
     Ui::Tpv *ui;
     QSqlDatabase db;

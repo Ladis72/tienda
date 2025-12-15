@@ -84,6 +84,7 @@ void GraficoVentasWidget::configurar(const QString &titulo,
 
     // Eje X por categorías
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
+    axisX->setLabelsAngle(-90);
     axisX->append(categorias);
     chart->addAxis(axisX, Qt::AlignBottom);
     barSeries->attachAxis(axisX);
