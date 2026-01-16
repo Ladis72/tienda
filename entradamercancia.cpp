@@ -27,7 +27,7 @@ EntradaMercancia::~EntradaMercancia()
 
 void EntradaMercancia::on_pushButtonAceptar_clicked()
 {
-    const int idTienda = base->idTiendaDesdeNombre(
+     int idTienda = base->idTiendaDesdeNombre(
         QSqlDatabase::database(conf->getConexionLocal()),
         ui->comboBoxProcedencia->currentText());
 
@@ -58,7 +58,7 @@ void EntradaMercancia::actualizarTabla()
 
 void EntradaMercancia::llenarComboTiendas()
 {
-    QSqlQuery listaCombo = base->tiendas(QSqlDatabase::database("DB"));
+    QSqlQuery listaCombo = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
     listaCombo.first();
     do {
         ui->comboBoxProcedencia->addItem(listaCombo.value("nombre").toString());
@@ -67,7 +67,7 @@ void EntradaMercancia::llenarComboTiendas()
 
 void EntradaMercancia::on_lineEditCod_returnPressed()
 {
-    consulta = base->consulta_producto("DB", ui->lineEditCod->text());
+    consulta = base->consulta_producto(conf->getConexionLocal(), ui->lineEditCod->text());
     consulta.first();
     if (!consulta.isValid()) {
         QString cod = base->codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
@@ -164,10 +164,10 @@ void EntradaMercancia::on_dateEditCaducidad_editingFinished()
     }
 }
 
-void EntradaMercancia::on_comboBoxProcedencia_activated(const QString &arg1)
-{
-    actualizarTabla();
-}
+// void EntradaMercancia::on_comboBoxProcedencia_activated(const QString &arg1)
+// {
+//     actualizarTabla();
+// }
 
 void EntradaMercancia::actualizarTotales()
 {
@@ -253,3 +253,10 @@ void EntradaMercancia::limpiarTabla(int idTienda)
     base->ejecutarSentencia(QString("DELETE FROM entradaGenero_tmp WHERE idTienda = %1").arg(idTienda),
     conf->getConexionLocal());
 }
+
+void EntradaMercancia::on_comboBoxProcedencia_currentIndexChanged(int index)
+{
+    actualizarTabla();
+    qDebug() << "Current index changed";
+}
+

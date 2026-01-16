@@ -35,13 +35,15 @@ private slots:
 
     void on_dateEditCaducidad_editingFinished();
 
-    void on_comboBoxProcedencia_activated(const QString &arg1);
+    //void on_comboBoxProcedencia_activated(const QString &arg1);
 
     void actualizarTotales();
     void procesarLineaEntrada(const QSqlRecord &registro);
     void actualizarArticulo(const QString &cod, const QString &descripcion, const QString &precio);
     void guardarArticulo (int idTienda);
     void limpiarTabla (int idTienda);
+
+    void on_comboBoxProcedencia_currentIndexChanged(int index);
 
 private:
     Ui::EntradaMercancia *ui;

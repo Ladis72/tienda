@@ -9,8 +9,8 @@ Salidas::Salidas(QWidget *parent)
     ui->setupUi(this);
     lineas = 0;
     productos = 0;
+    mTablaSalidas = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
     llenarComboTiendas();
-    mTablaSalidas = new QSqlTableModel(this, QSqlDatabase::database("DB"));
     mTablaSalidas->setTable("salidaGenero_tmp");
     ui->tableView->hideColumn(0);
     connect(mTablaSalidas, &QAbstractItemModel::dataChanged, this, &Salidas::actualizarTotales);
@@ -26,7 +26,7 @@ Salidas::~Salidas()
 
 void Salidas::on_lineEditCod_returnPressed()
 {
-    consulta = base->consulta_producto("DB", ui->lineEditCod->text());
+    consulta = base->consulta_producto(conf->getConexionLocal(), ui->lineEditCod->text());
     consulta.first();
     if (!consulta.isValid()) {
         QString cod = base->codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
@@ -62,7 +62,7 @@ void Salidas::actualizarTabla()
 {
     mTablaSalidas->setFilter(
         "idTienda = "
-        + QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),
+        + QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database(conf->getConexionLocal()),
                                                     ui->comboBoxDestino->currentText())));
     mTablaSalidas->setSort(3, Qt::AscendingOrder);
     mTablaSalidas->select();
@@ -226,12 +226,6 @@ void Salidas::on_tableView_clicked(const QModelIndex &index)
     qDebug() << codSeleccionado;
 }
 
-void Salidas::on_comboBoxDestino_activated(const QString &arg1)
-{
-    actualizarTabla();
-    qDebug() << "Current index chaned";
-}
-
 void Salidas::on_pushButtonActualizar_clicked()
 {
     actualizarTabla();
@@ -249,3 +243,12 @@ void Salidas::actualizarTotales()
     ui->lbSalidas->setText("Lineas= "+QString::number(lineas)+"  Productos="+QString::number(productos));
 
 }
+
+
+
+void Salidas::on_comboBoxDestino_currentIndexChanged(int index)
+{
+    actualizarTabla();
+    qDebug() << "Current index changed";
+}
+

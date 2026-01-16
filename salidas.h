@@ -33,11 +33,12 @@ private slots:
 
     void on_tableView_clicked(const QModelIndex &index);
 
-    void on_comboBoxDestino_activated(const QString &arg1);
-
     void on_pushButtonActualizar_clicked();
 
     void actualizarTotales();
+
+
+    void on_comboBoxDestino_currentIndexChanged(int index);
 
 private:
     Ui::Salidas *ui;
