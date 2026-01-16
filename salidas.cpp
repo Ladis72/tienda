@@ -26,36 +26,79 @@ Salidas::~Salidas()
 
 void Salidas::on_lineEditCod_returnPressed()
 {
-    consulta = base->consulta_producto(conf->getConexionLocal(), ui->lineEditCod->text());
-    consulta.first();
-    if (!consulta.isValid()) {
-        QString cod = base->codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
-        consulta = base->consulta_producto("DB", cod);
-        consulta.first();
-    }
-    if (consulta.numRowsAffected() == 1) {
-        ui->lineEditCod->setText(consulta.value(0).toString());
-        ui->lineEditDesc->setText(consulta.value(1).toString());
-        ui->lineEditPrecio->setText(consulta.value(2).toString());
-        ui->lineEditCantidad->setFocus();
-    } else {
-        QMessageBox *msg = new QMessageBox(this);
-        msg->setText("No se encuentra el producto");
-        msg->setInformativeText("Desea crearlo?");
-        msg->setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-        msg->setDefaultButton(QMessageBox::Ok);
-        int resp = msg->exec();
-        if (resp == QMessageBox::Ok) {
-            Articulos *articulo = new Articulos;
-            articulo->exec();
-            articulo->borrarFormulario();
+    // consulta = base->consulta_producto(conf->getConexionLocal(), ui->lineEditCod->text());
+    // consulta.first();
+    // if (!consulta.isValid()) {
+    //     QString cod = base->codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
+    //     consulta = base->consulta_producto(conf->getConexionLocal(), cod);
+    //     consulta.first();
+    // }
+    // if (consulta.numRowsAffected() == 1) {
+    //     ui->lineEditCod->setText(consulta.value(0).toString());
+    //     ui->lineEditDesc->setText(consulta.value(1).toString());
+    //     ui->lineEditPrecio->setText(consulta.value(2).toString());
+    //     ui->lineEditCantidad->setFocus();
+    // } else {
+    //     QMessageBox msg(this);
+    //     msg.setText("No se encuentra el producto");
+    //     msg.setInformativeText("Desea crearlo?");
+    //     msg.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+    //     msg.setDefaultButton(QMessageBox::Ok);
+    //     int resp = msg.exec();
+    //     if (resp == QMessageBox::Ok) {
+    //         Articulos *articulo = new Articulos;
+    //         articulo->exec();
+    //         articulo->borrarFormulario();
 
-            qDebug() << "Crear producto";
+    //         qDebug() << "Crear producto";
+    //     } else {
+    //         ui->lineEditCod->setFocus();
+    //         ui->lineEditCod->selectAll();
+    //     }
+    // }
+
+        QString codigo = ui->lineEditCod->text().trimmed();
+        if (codigo.isEmpty())
+            return;
+
+        QSqlQuery consulta = base->consulta_producto(conf->getConexionLocal(), codigo);
+
+        // 1. Buscar por código directo
+        if (!consulta.first()) {
+            // 2. Buscar por código auxiliar
+            QString codAux = base->codigoDesdeAux(conf->getConexionLocal(), codigo);
+            if (!codAux.isEmpty()) {
+                consulta = base->consulta_producto(conf->getConexionLocal(), codAux);
+                consulta.first();
+            }
+        }
+
+        // 3. Si hay producto válido
+        if (consulta.isValid()) {
+            ui->lineEditCod->setText(consulta.value("cod").toString());
+            ui->lineEditDesc->setText(consulta.value("descripcion").toString());
+            ui->lineEditPrecio->setText(consulta.value("pvp").toString());
+            ui->lineEditCantidad->setFocus();
+            return;
+        }
+
+        // 4. No existe → preguntar creación
+        QMessageBox msg(this);
+        msg.setText("No se encuentra el producto");
+        msg.setInformativeText("¿Desea crearlo?");
+        msg.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+        msg.setDefaultButton(QMessageBox::Ok);
+
+        if (msg.exec() == QMessageBox::Ok) {
+            Articulos articulo(this);
+            articulo.exec();
+            articulo.borrarFormulario();
         } else {
             ui->lineEditCod->setFocus();
             ui->lineEditCod->selectAll();
         }
-    }
+
+
 }
 
 void Salidas::actualizarTabla()
