@@ -1614,20 +1614,23 @@ double baseDatos::ESdesdeFecha(QString fecha, QString hora, QString base)
 QString baseDatos::idLote(QString base, QString cod, QString lote, QString fecha)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
-    consulta.exec("SELECT id FROM lotes WHERE ean = '" + cod + "' AND lote = '" + lote
-                  + "' AND fecha = '" + fecha + "'");
-    consulta.first();
-    if (consulta.isValid())
+    consulta.prepare("SELECT id FROM lotes WHERE ean = :id_producto AND fecha = :fecha");
+    consulta.bindValue(":id_producto", cod);
+    consulta.bindValue(":fecha", fecha);
+    if (consulta.exec() && consulta.first()) {
         return consulta.value(0).toString();
-    return "0";
+    }
+    return QString();
 }
 
 int baseDatos::unidadesLote(QString base, QString idLote)
 {
+    if(idLote.isEmpty()) return 0;
+
     QSqlQuery consulta(QSqlDatabase::database(base));
-    consulta.exec("SELECT cantidad FROM lotes WHERE id ='" + idLote + "'");
-    consulta.first();
-    if (consulta.isValid()) {
+    consulta.prepare("SELECT cantidad FROM lotes WHERE id = :id_lote");
+    consulta.bindValue(":id_lote", idLote);
+    if (consulta.exec() && consulta.first()) {
         return consulta.value(0).toInt();
     }
     return 0;
