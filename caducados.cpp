@@ -100,15 +100,19 @@ void Caducados::on_lineEditDescripcion_returnPressed()
     emit on_lineEditCodigo_returnPressed();
 }
 
-void Caducados::on_comboBox_currentIndexChanged(const QString &arg1)
+void Caducados::on_comboBox_currentTextChanged(const QString &arg1)
 {
     QString idLote = base.idLote(conf->getConexionLocal(), ui->lineEditCodigo->text(), "", arg1);
     int udsLote = base.unidadesLote(conf->getConexionLocal(), idLote);
-    if (arg1 == "Desconocido") {
-        ui->spinBox->setMaximum(1000);
-        ui->spinBox->setMinimum(0);
+    if (arg1 == "Selecciona uno") {
+        // ui->spinBox->setMaximum(1000);
+        // ui->spinBox->setMinimum(0);
+        ui->spinBox->setDisabled(true);
     } else {
+        ui->spinBox->setDisabled(false);
         ui->spinBox->setMaximum(udsLote);
         ui->spinBox->setMinimum(0);
     }
 }
+
+

@@ -27,6 +27,7 @@ private slots:
 
     void on_tableView_activated(const QModelIndex &index);
 
+
 private:
     Ui::BuscarProducto *ui;
     QSqlQuery query;
