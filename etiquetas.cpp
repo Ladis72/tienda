@@ -174,7 +174,7 @@ void Etiquetas::generarPDF(const QList<QList<QString> > datos)
 
     //printer.setPaperSize(QPrinter::A4);
     printer.setPageSize(QPageSize::A4);
-    printer.setPageMargins(QMarginsF(5, 5, 5, 5));
+    printer.setPageMargins(QMarginsF(4,4,4,4));
 
     QPainter painter(&printer);
 
@@ -191,7 +191,8 @@ void Etiquetas::generarPDF(const QList<QList<QString> > datos)
     margenY *= 2.83;
 
     int columnas = 3;  // 3 etiquetas por fila
-    int filasPorPagina = printer.pageLayout().paintRect().height() / (altoEtiqueta + margenY);
+    // int filasPorPagina = printer.pageLayout().paintRect().height() / (altoEtiqueta + margenY);
+    int filasPorPagina = printer.height() / (altoEtiqueta + margenY);
 
     int x = margenX, y = margenY;
     int etiquetasEnPagina = 0;
