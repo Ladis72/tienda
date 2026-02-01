@@ -1620,7 +1620,7 @@ QString baseDatos::idLote(QString base, QString cod, QString lote, QString fecha
     if (consulta.exec() && consulta.first()) {
         return consulta.value(0).toString();
     }
-    return QString();
+    return "0";
 }
 
 int baseDatos::unidadesLote(QString base, QString idLote)

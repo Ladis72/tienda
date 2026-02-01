@@ -6,7 +6,7 @@
 
 
 
-QT       += sql charts webenginewidgets concurrent
+QT       += sql charts webenginewidgets concurrent core5compat
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -25,7 +25,8 @@ SOURCES += main.cpp\
     impuestos.cpp \
     informes1.cpp \
     login.cpp \
-        tienda.cpp \
+    printermanager.cpp \
+    tienda.cpp \
     tpv.cpp \
     base_datos.cpp \
     buscarproducto.cpp \
@@ -90,6 +91,7 @@ HEADERS  += tienda.h \
     impuestos.h \
     informes1.h \
     login.h \
+    printermanager.h \
     tpv.h \
     base_datos.h \
     conexion.h \

@@ -6,23 +6,33 @@
 #include "base_datos.h"
 #include "configuracion.h"
 #include <qstandarditemmodel.h>
+#include "printermanager.h"
 
 extern Configuracion *conf;
 
-class ImprimirTicket
+class ImprimirTicket : public QObject
 {
 public:
-    ImprimirTicket(QString nTicket, QString formato);
+    explicit ImprimirTicket(QString nTicket, QString formato, QObject *parent = nullptr);
+    ~ImprimirTicket();
+
     void ImprimirTicketRegalo();
 
 private:
-    QString formatearCadena(QString cadena, int tamano);
 
     baseDatos base;
     QSqlQuery consulta;
 
     QString fecha, hora, ticket, total, fPago;
     QString uds, producto, precio, dto, totalLinea, entrega, cambio;
+    QString formatearCadena(QString cadena, int tamano);
+
+    PrinterManager *printer;
+
+    bool imprimirCabecera();
+    bool imprimirLineasProductos();
+    bool imprimirPie();
+    bool imprimirLogo();
 };
 
 #endif // IMPRIMIRTICKET_H
