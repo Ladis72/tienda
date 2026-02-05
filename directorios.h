@@ -33,6 +33,8 @@ private slots:
 
     void on_toolButtonCseg_clicked();
 
+    void on_toolButtonLogo_clicked();
+
 private:
     Ui::Directorios *ui;
     baseDatos *base;

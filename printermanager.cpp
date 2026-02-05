@@ -194,7 +194,7 @@ bool PrinterManager::imprimirImagen(const QImage &imagen, bool centrado)
     }
 
     bool ok = enviarComando(datos);
-    alimentarLineas(1);
+    //alimentarLineas(1);
 
     // 4. Restaurar margen izquierdo para siguiente contenido
     restaurarMargenIzquierdo();

@@ -33,6 +33,7 @@ void Directorios::llenarListaBase(QStringList lista)
     ui->lineEditArqueos->setText(lista.at(4));
     ui->lineEditMovimientos->setText(lista.at(5));
     ui->lineEditCseg->setText(lista.at(6));
+    ui->lineEditLogo->setText(lista.at(7));
 }
 
 void Directorios::cargarListaLineEdit()
@@ -45,6 +46,7 @@ void Directorios::cargarListaLineEdit()
     listaDatos.append(ui->lineEditArqueos->text());
     listaDatos.append(ui->lineEditMovimientos->text());
     listaDatos.append(ui->lineEditCseg->text());
+    listaDatos.append(ui->lineEditLogo->text());
 }
 
 void Directorios::cargalListaBase()
@@ -62,7 +64,7 @@ QString Directorios::rutaRelativa(QString directorio)
         if (!rutaRelativa.startsWith(".") && !rutaRelativa.startsWith("/"))
             rutaRelativa.prepend("./");
         return rutaRelativa;
-}
+    }
     return "";
 }
 
@@ -79,7 +81,7 @@ void Directorios::on_toolButtonFactura_clicked()
 void Directorios::on_toolButtonVentas_clicked()
 {
     QString directorio = QFileDialog::getOpenFileName(this);
-    ui->lineEditVentas->setText(directorio);
+    ui->lineEditVentas->setText(rutaRelativa(directorio));
 }
 
 void Directorios::on_toolButtonEtiquetas_clicked()
@@ -95,7 +97,7 @@ void Directorios::on_toolButtonEtiquetas_clicked()
 void Directorios::on_toolButtonCaducados_clicked()
 {
     QString directorio = QFileDialog::getOpenFileName(this);
-    ui->lineEditCaducados->setText(directorio);
+    ui->lineEditCaducados->setText(rutaRelativa(directorio));
 }
 
 void Directorios::on_toolButtonArqueos_clicked()
@@ -111,7 +113,7 @@ void Directorios::on_toolButtonArqueos_clicked()
 void Directorios::on_toolButtonMovimientos_clicked()
 {
     QString directorio = QFileDialog::getOpenFileName(this);
-    ui->lineEditMovimientos->setText(directorio);
+    ui->lineEditMovimientos->setText(rutaRelativa(directorio));
 }
 
 void Directorios::on_toolButtonCseg_clicked()
@@ -125,3 +127,10 @@ void Directorios::on_toolButtonCseg_clicked()
     ui->lineEditCseg->setText(rutaRelativa(directorio));
 
 }
+
+void Directorios::on_toolButtonLogo_clicked()
+{
+    QString directorio = QFileDialog::getOpenFileName(this);
+    ui->lineEditLogo->setText(rutaRelativa(directorio));
+}
+

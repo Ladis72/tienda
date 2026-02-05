@@ -20,6 +20,46 @@
   <layout class="QGridLayout" name="gridLayout_2">
    <item row="0" column="0" colspan="2">
     <layout class="QGridLayout" name="gridLayout">
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>Movimientos efectivo:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLineEdit" name="lineEditEtiquetas"/>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="lineEditFactura"/>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Caducados:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QLineEdit" name="lineEditCaducados"/>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_5">
+       <property name="text">
+        <string>Listado arqueos:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QLineEdit" name="lineEditMovimientos"/>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Ventas:</string>
+       </property>
+      </widget>
+     </item>
      <item row="2" column="2">
       <widget class="QToolButton" name="toolButtonEtiquetas">
        <property name="text">
@@ -27,10 +67,10 @@
        </property>
       </widget>
      </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_5">
+     <item row="4" column="2">
+      <widget class="QToolButton" name="toolButtonArqueos">
        <property name="text">
-        <string>Listado arqueos:</string>
+        <string>...</string>
        </property>
       </widget>
      </item>
@@ -41,8 +81,12 @@
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
-      <widget class="QLineEdit" name="lineEditEtiquetas"/>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Etiquetas:</string>
+       </property>
+      </widget>
      </item>
      <item row="5" column="2">
       <widget class="QToolButton" name="toolButtonMovimientos">
@@ -51,70 +95,10 @@
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
-      <widget class="QLineEdit" name="lineEditMovimientos"/>
-     </item>
-     <item row="0" column="1">
-      <widget class="QLineEdit" name="lineEditFactura"/>
-     </item>
      <item row="0" column="0">
       <widget class="QLabel" name="label_4">
        <property name="text">
         <string>Factura:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Caducados:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>Etiquetas:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QLineEdit" name="lineEditCaducados"/>
-     </item>
-     <item row="4" column="1">
-      <widget class="QLineEdit" name="lineEditArqueos"/>
-     </item>
-     <item row="4" column="2">
-      <widget class="QToolButton" name="toolButtonArqueos">
-       <property name="text">
-        <string>...</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QLineEdit" name="lineEditVentas"/>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Ventas:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="2">
-      <widget class="QToolButton" name="toolButtonFactura">
-       <property name="text">
-        <string>...</string>
-       </property>
-       <property name="popupMode">
-        <enum>QToolButton::ToolButtonPopupMode::DelayedPopup</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="label_6">
-       <property name="text">
-        <string>Movimientos efectivo:</string>
        </property>
       </widget>
      </item>
@@ -132,11 +116,44 @@
        </property>
       </widget>
      </item>
+     <item row="6" column="2">
+      <widget class="QToolButton" name="toolButtonCseg">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
      <item row="6" column="1">
       <widget class="QLineEdit" name="lineEditCseg"/>
      </item>
-     <item row="6" column="2">
-      <widget class="QToolButton" name="toolButtonCseg">
+     <item row="1" column="1">
+      <widget class="QLineEdit" name="lineEditVentas"/>
+     </item>
+     <item row="0" column="2">
+      <widget class="QToolButton" name="toolButtonFactura">
+       <property name="text">
+        <string>...</string>
+       </property>
+       <property name="popupMode">
+        <enum>QToolButton::ToolButtonPopupMode::DelayedPopup</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QLineEdit" name="lineEditArqueos"/>
+     </item>
+     <item row="7" column="0">
+      <widget class="QLabel" name="label_8">
+       <property name="text">
+        <string>Logo</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <widget class="QLineEdit" name="lineEditLogo"/>
+     </item>
+     <item row="7" column="2">
+      <widget class="QToolButton" name="toolButtonLogo">
        <property name="text">
         <string>...</string>
        </property>

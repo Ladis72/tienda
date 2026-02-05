@@ -17,7 +17,7 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, QObject *parent
     fPago = base.nombreFormaPago(consulta.value(9).toString(), conf->getConexionLocal());
     entrega = consulta.value(11).toString();
     cambio = consulta.value(12).toString();
-    QStringList confTicket = base.recuperarConfigTicket();
+    confTicket = base.recuperarConfigTicket();
     if (formato == "ticket") {
         // if (!printer->abrirImpresora()) {
         //     qDebug() << "No se pudo abrir la impresora "
@@ -110,9 +110,11 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, QObject *parent
                 comandoCorte.append(static_cast<char>(cadaCodCorte.at(i).toInt()));
             }
             printer->enviarComando(comandoCorte);
+            qDebug() << "Corte de configuración";
         } else {
             // Corte estándar
             printer->cortarPapel(true);
+            qDebug() << "Corte standar";
         }
 
         // 10. Cerrar impresora
@@ -180,7 +182,7 @@ bool ImprimirTicket::imprimirLineasProductos()
         totalLinea = consulta.value(8).toString();
 
         // Formatear línea para impresión
-        QString linea = formatearCadena(uds, 3) + "  " +
+        QString linea = formatearCadena(uds, 3) + " " +
                         formatearCadena(producto, 24) + "  " +
                         formatearCadena(precio, 5) + "  " +
                         formatearCadena(dto, 3) + "  " +
@@ -225,12 +227,18 @@ bool ImprimirTicket::imprimirPie()
 
 bool ImprimirTicket::imprimirLogo()
 {
+    QStringList directorios = base.cargarDirectorios(conf->getConexionLocal());
+    if (QFile::exists(directorios.at(7))) {
+        if (printer->imprimirImagen(directorios.at(7),true)) {
+            return true;
+        }
+
+    }
     // Buscar logo de empresa
     QStringList posiblesLogos = {
         "logo.png", "logo.jpg", "logo.bmp",
         "img/logo.png", "img/logo.jpg",
-        "/usr/share/miempresa/logo.png"
-    //,conf->getRutaLogo() // Si tu clase Configuracion tiene un método para obtener la ruta del logo
+        "/usr/share/miempresa/logo.png",
     };
 
     for (const QString &logoPath : posiblesLogos) {

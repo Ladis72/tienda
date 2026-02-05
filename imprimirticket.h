@@ -26,6 +26,7 @@ private:
     QString fecha, hora, ticket, total, fPago;
     QString uds, producto, precio, dto, totalLinea, entrega, cambio;
     QString formatearCadena(QString cadena, int tamano);
+    QStringList confTicket;
 
     PrinterManager *printer;
 
