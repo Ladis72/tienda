@@ -75,26 +75,30 @@ void ListadoArqueos::on_pushButtonImprimir_clicked()
 </html>
 )";
     for (int i = 0; i < modeloTabla->rowCount(); ++i) {
-        QString fecha = modeloTabla->data(modeloTabla->index(i,1)).toString();
-        QString hora = modeloTabla->data(modeloTabla->index(i,2)).toString();
-        QString vefect = modeloTabla->data(modeloTabla->index(i,3)).toString();
-        QString vtarj = modeloTabla->data(modeloTabla->index(i,4)).toString();
-        QString entradas = modeloTabla->data(modeloTabla->index(i,5)).toString();
-        QString efectivo = modeloTabla->data(modeloTabla->index(i,6)).toString();
-        QString descuadre = modeloTabla->data(modeloTabla->index(i,7)).toString();
+        QString fecha = modeloTabla->data(modeloTabla->index(i, 1)).toString();
+        QString hora = modeloTabla->data(modeloTabla->index(i, 2)).toString();
+        QString vefect = modeloTabla->data(modeloTabla->index(i, 3)).toString();
+        QString vtarj = modeloTabla->data(modeloTabla->index(i, 4)).toString();
+        QString entradas = modeloTabla->data(modeloTabla->index(i, 5)).toString();
+        QString efectivo = modeloTabla->data(modeloTabla->index(i, 6)).toString();
+        QString descuadre = modeloTabla->data(modeloTabla->index(i, 7)).toString();
 
-    lineasHtml += QString("<tr><td>%1</td><td>%2</td><td>%3 €</td><td>%4 €</td><td>%5 €</td><td>%6 €</td><td>%7 €</td></tr>").arg(fecha,hora,vefect,vtarj,entradas,efectivo,descuadre);
+        lineasHtml += QString("<tr><td>%1</td><td>%2</td><td>%3 €</td><td>%4 €</td><td>%5 "
+                              "€</td><td>%6 €</td><td>%7 €</td></tr>")
+                          .arg(fecha, hora, vefect, vtarj, entradas, efectivo, descuadre);
     }
     html.replace("%DESDE%", ui->dateEditDesde->text());
     html.replace("%HASTA%", ui->dateEditHasta->text());
-    html.replace("%LINEAS%",lineasHtml);
+    html.replace("%LINEAS%", lineasHtml);
     documento.setHtml(html);
 
     QPrinter printer(QPrinter::HighResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName(base->devolverDirectorio("arqueos")+"/ListadoArqueos.pdf");
+    printer.setOutputFileName(base->devolverDirectorio("arqueos") + "/ListadoArqueos.pdf");
     documento.print(&printer);
 
     // Mostrarlo
-    QProcess::startDetached("xdg-open", QStringList() << base->devolverDirectorio("arqueos")+"/ListadoArqueos.pdf");
+    QProcess::startDetached("xdg-open",
+                            QStringList()
+                                << base->devolverDirectorio("arqueos") + "/ListadoArqueos.pdf");
 }

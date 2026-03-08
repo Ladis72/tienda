@@ -12,13 +12,11 @@ Ususarios::Ususarios(QWidget *parent)
 {
     ui->setupUi(this);
     ventasWidget = new ventasUsuarioWidget(this);
-    this->addTab(ventasWidget,"Ventas");
+    this->addTab(ventasWidget, "Ventas");
     modeloTabla = new QSqlQueryModel;
     recargarTabla();
 
     ui->lineEditCod->installEventFilter(this);
-
-
 }
 
 Ususarios::~Ususarios()
@@ -30,14 +28,12 @@ void Ususarios::on_pushButtonAnterior_clicked()
 {
     mapper.toPrevious();
     refrescarBotones(mapper.currentIndex());
-
 }
 
 void Ususarios::on_pushButtonSiguiente_clicked()
 {
     mapper.toNext();
     refrescarBotones(mapper.currentIndex());
-
 }
 
 void Ususarios::refrescarBotones(int i)
@@ -50,7 +46,6 @@ void Ususarios::refrescarBotones(int i)
     ui->labelFoto->setPixmap(QPixmap::fromImage(foto));
     ui->labelFoto->setScaledContents(true);
     ventasWidget->setUser(ui->lineEditCod->text());
-
 }
 
 QStringList Ususarios::recogerDatosFormulario()
@@ -82,7 +77,8 @@ QStringList Ususarios::recogerDatosFormulario()
 
 void Ususarios::recargarTabla()
 {
-    modeloTabla->setQuery("SELECT * FROM usuarios", QSqlDatabase::database(conf->getConexionLocal()));
+    modeloTabla->setQuery("SELECT * FROM usuarios",
+                          QSqlDatabase::database(conf->getConexionLocal()));
     mapper.setModel(modeloTabla);
 
     ajustarMapper();

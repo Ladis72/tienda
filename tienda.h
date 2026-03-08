@@ -26,6 +26,7 @@
 #include "generarvales.h"
 #include "gestionpedidos.h"
 #include "historicotickets.h"
+#include "impuestos.h"
 #include "listadoarqueos.h"
 #include "listadocaducados.h"
 #include "listadosalidas.h"
@@ -40,7 +41,6 @@
 #include "tiposentradassalidas.h"
 #include "tpv.h"
 #include "verfacturas.h"
-#include "impuestos.h"
 
 extern Configuracion *conf;
 namespace Ui {

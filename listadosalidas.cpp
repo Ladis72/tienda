@@ -1,11 +1,11 @@
 #include "listadosalidas.h"
-#include "ui_listadosalidas.h"
-#include <QPrinter>
-#include <QPrintDialog>
-#include <QPainter>
 #include <QDebug>
+#include <QPainter>
+#include <QPrintDialog>
+#include <QPrinter>
 #include <QProcess>
 #include <QTextDocument>
+#include "ui_listadosalidas.h"
 
 ListadoSalidas::ListadoSalidas(QWidget *parent)
     : QDialog(parent)
@@ -25,7 +25,8 @@ void ListadoSalidas::on_pushButtonVer_clicked()
     fechaI = ui->dateEditDesde->text();
     fechaF = ui->dateEditHasta->text();
     modeloTabla = new QSqlQueryModel(this);
-    modeloTabla->setQuery(base->listadoMovimientosEfectivo(conf->getConexionLocal() , fechaI , fechaF));
+    modeloTabla->setQuery(
+        base->listadoMovimientosEfectivo(conf->getConexionLocal(), fechaI, fechaF));
     modeloTabla->setHeaderData(0, Qt::Horizontal, "FECHA");
     modeloTabla->setHeaderData(1, Qt::Horizontal, "HORA");
     modeloTabla->setHeaderData(2, Qt::Horizontal, "CANTIDAD");
@@ -49,9 +50,11 @@ void ListadoSalidas::on_pushButton_2_clicked()
     QString html;
     html += "<html><body>";
     html += "<h1>Informe de Movimientos</h1>";
-    html += "<p>Desde: " + ui->dateEditDesde->text() + " Hasta: " + ui->dateEditHasta->text() + "</p>";
+    html += "<p>Desde: " + ui->dateEditDesde->text() + " Hasta: " + ui->dateEditHasta->text()
+            + "</p>";
     html += "<table border='1'>";
-    html += "<tr><th>Fecha</th><th>Hora</th><th>Cantidad</th><th>Tipo</th><th>Descripción</th></tr>";
+    html
+        += "<tr><th>Fecha</th><th>Hora</th><th>Cantidad</th><th>Tipo</th><th>Descripción</th></tr>";
 
     for (int row = 0; row < modeloTabla->rowCount(); ++row) {
         html += "<tr>";
@@ -72,8 +75,9 @@ void ListadoSalidas::on_pushButton_2_clicked()
 
     QPrinter printer(QPrinter::HighResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName(base->devolverDirectorio("movimientos")+"/Movimientos.pdf");
+    printer.setOutputFileName(base->devolverDirectorio("movimientos") + "/Movimientos.pdf");
     document.print(&printer);
-    QProcess::startDetached("xdg-open", QStringList() << base->devolverDirectorio("movimientos")+"/Movimientos.pdf");
-
+    QProcess::startDetached("xdg-open",
+                            QStringList()
+                                << base->devolverDirectorio("movimientos") + "/Movimientos.pdf");
 }

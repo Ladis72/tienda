@@ -3,7 +3,6 @@
 GraficoVentasWidget::GraficoVentasWidget(QWidget *parent)
     : QWidget(parent)
 {
-
     chart = new QChart();
     chartView = new QChartView(chart);
     chartView->setRenderHint(QPainter::Antialiasing);
@@ -17,7 +16,8 @@ void GraficoVentasWidget::configurar(const QString &titulo,
                                      const QStringList &categorias,
                                      const QList<QList<double>> &series,
                                      const QStringList &nombresSeries,
-                                     const QList<QColor> &colores, const QString tipo)
+                                     const QList<QColor> &colores,
+                                     const QString tipo)
 {
     chart->removeAllSeries();
     chart->removeAxis(chart->axisX());
@@ -28,43 +28,41 @@ void GraficoVentasWidget::configurar(const QString &titulo,
     int puntos = categorias.size();
     int numSeries = series.size();
 
+    if (tipo != "barras") {
+        QCategoryAxis *axisX = new QCategoryAxis;
+        QValueAxis *axisY = new QValueAxis;
 
+        chart->addAxis(axisX, Qt::AlignBottom);
+        chart->addAxis(axisY, Qt::AlignLeft);
 
-    if(tipo != "barras"){
-    QCategoryAxis *axisX = new QCategoryAxis;
-    QValueAxis *axisY = new QValueAxis;
+        for (int i = 0; i < numSeries; ++i) {
+            if (series[i].size() != puntos)
+                continue;
 
-    chart->addAxis(axisX, Qt::AlignBottom);
-    chart->addAxis(axisY, Qt::AlignLeft);
+            QLineSeries *line = new QLineSeries();
+            line->setName(nombresSeries.value(i, QString("Serie %1").arg(i)));
 
-    for (int i = 0; i < numSeries; ++i) {
-        if (series[i].size() != puntos)
-            continue;
+            for (int j = 0; j < puntos; ++j) {
+                line->append(j, series[i][j]);
+            }
 
-        QLineSeries *line = new QLineSeries();
-        line->setName(nombresSeries.value(i, QString("Serie %1").arg(i)));
+            if (i < colores.size())
+                line->setColor(colores[i]);
 
-        for (int j = 0; j < puntos; ++j) {
-            line->append(j, series[i][j]);
+            chart->addSeries(line);
+            line->attachAxis(axisX);
+            line->attachAxis(axisY);
         }
 
-        if (i < colores.size())
-            line->setColor(colores[i]);
+        for (int j = 0; j < puntos; ++j) {
+            axisX->append(categorias[j], j);
+        }
 
-        chart->addSeries(line);
-        line->attachAxis(axisX);
-        line->attachAxis(axisY);
-    }
-
-    for (int j = 0; j < puntos; ++j) {
-        axisX->append(categorias[j], j);
-    }
-
-    axisX->setLabelsAngle(-60);
-    axisX->setTickCount(qMin(puntos, 10));
-    chart->legend()->setVisible(true);
-    chart->legend()->setAlignment(Qt::AlignBottom);
-    return;
+        axisX->setLabelsAngle(-60);
+        axisX->setTickCount(qMin(puntos, 10));
+        chart->legend()->setVisible(true);
+        chart->legend()->setAlignment(Qt::AlignBottom);
+        return;
     }
     QBarSeries *barSeries = new QBarSeries();
 
@@ -72,7 +70,7 @@ void GraficoVentasWidget::configurar(const QString &titulo,
     for (int i = 0; i < series.size(); ++i) {
         QBarSet *barSet = new QBarSet(nombresSeries.value(i, QString("Serie %1").arg(i)));
         for (double valor : series[i]) {
-            *barSet << valor;  // Añade los valores secuencialmente
+            *barSet << valor; // Añade los valores secuencialmente
         }
         if (i < colores.size())
             barSet->setColor(colores[i]);

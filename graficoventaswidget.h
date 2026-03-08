@@ -6,7 +6,7 @@
 
 //QT_CHARTS_USE_NAMESPACE
 
-    class GraficoVentasWidget : public QWidget
+class GraficoVentasWidget : public QWidget
 {
     Q_OBJECT
 
@@ -25,4 +25,3 @@ private:
 };
 
 #endif // GRAFICOVENTASWIDGET_H
-

@@ -8,7 +8,6 @@
 #include <QStandardItemModel>
 extern Configuracion *conf;
 
-
 class informes1
 {
 public:

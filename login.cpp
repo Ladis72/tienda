@@ -31,7 +31,6 @@ void Login::on_pushButton_clicked()
         conf->setRol(rol);
         accept();
     }
-
 }
 
 void Login::on_pushButton_2_clicked()

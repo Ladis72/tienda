@@ -24,7 +24,7 @@ limitations under the License.
 #ifndef RPTBANDOBJECT_H
 #define RPTBANDOBJECT_H
 
-#include <RptFieldObject.h>
+#include "RptFieldObject.h"
 
 using namespace QtRptName;
 

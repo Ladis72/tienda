@@ -2,11 +2,11 @@
 #ifndef PRINTERMANAGER_H
 #define PRINTERMANAGER_H
 
-#include <QObject>
+#include <QByteArray>
 #include <QFile>
 #include <QImage>
+#include <QObject>
 #include <QPainter>
-#include <QByteArray>
 
 class PrinterManager : public QObject
 {

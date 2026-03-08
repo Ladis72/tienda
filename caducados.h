@@ -29,8 +29,6 @@ private slots:
 
     void on_comboBox_currentTextChanged(const QString &arg1);
 
-
-
 private:
     Ui::Caducados *ui;
     baseDatos base;

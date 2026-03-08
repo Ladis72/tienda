@@ -3,7 +3,8 @@
 #include <QFile>
 
 ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, QObject *parent)
-    : QObject(parent), printer(new PrinterManager(this))
+    : QObject(parent)
+    , printer(new PrinterManager(this))
 {
     consulta = base.datosTicket(conf->getConexionLocal(), nTicket);
     if (!consulta.first()) {
@@ -71,7 +72,7 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, QObject *parent
         // const char *ch = imprimir.toLocal8Bit().constData();
         // system(ch);
         // return;
-//    }
+        //    }
         // IMPRESIÓN DIRECTA A /dev/usb/lp0
         qDebug() << "Imprimiendo ticket" << ticket << "directamente a impresora...";
 
@@ -124,13 +125,7 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, QObject *parent
     }
 }
 
-
-
-
-ImprimirTicket::~ImprimirTicket()
-{
-
-}
+ImprimirTicket::~ImprimirTicket() {}
 
 void ImprimirTicket::ImprimirTicketRegalo() {}
 
@@ -182,11 +177,9 @@ bool ImprimirTicket::imprimirLineasProductos()
         totalLinea = consulta.value(8).toString();
 
         // Formatear línea para impresión
-        QString linea = formatearCadena(uds, 3) + " " +
-                        formatearCadena(producto, 24) + "  " +
-                        formatearCadena(precio, 5) + "  " +
-                        formatearCadena(dto, 3) + "  " +
-                        formatearCadena(totalLinea, 6);
+        QString linea = formatearCadena(uds, 3) + " " + formatearCadena(producto, 24) + "  "
+                        + formatearCadena(precio, 5) + "  " + formatearCadena(dto, 3) + "  "
+                        + formatearCadena(totalLinea, 6);
 
         printer->imprimirLinea(linea);
     }
@@ -229,15 +222,17 @@ bool ImprimirTicket::imprimirLogo()
 {
     QStringList directorios = base.cargarDirectorios(conf->getConexionLocal());
     if (QFile::exists(directorios.at(7))) {
-        if (printer->imprimirImagen(directorios.at(7),true)) {
+        if (printer->imprimirImagen(directorios.at(7), true)) {
             return true;
         }
-
     }
     // Buscar logo de empresa
     QStringList posiblesLogos = {
-        "logo.png", "logo.jpg", "logo.bmp",
-        "img/logo.png", "img/logo.jpg",
+        "logo.png",
+        "logo.jpg",
+        "logo.bmp",
+        "img/logo.png",
+        "img/logo.jpg",
         "/usr/share/miempresa/logo.png",
     };
 

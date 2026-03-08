@@ -1,9 +1,9 @@
 #ifndef PRINTERMANAGER_H
 #define PRINTERMANAGER_H
 
-#include <QObject>
 #include <QFile>
 #include <QImage>
+#include <QObject>
 
 class PrinterManager : public QObject
 {
@@ -48,6 +48,7 @@ public:
     bool abrirCajon();
 
     void restaurarMargenIzquierdo();
+
 private:
     QByteArray convertirTexto(const QString &texto);
     QByteArray procesarImagenParaImpresora(const QImage &imagen); // ¡SIN centrado aquí!
@@ -57,8 +58,8 @@ private:
     bool m_conectado;
 
     // Constantes
-    static constexpr int MAX_WIDTH_58MM = 384;  // Píxeles para papel de 58mm
-    static constexpr int MAX_WIDTH_80MM = 576;  // Píxeles para papel de 80mm
+    static constexpr int MAX_WIDTH_58MM = 384; // Píxeles para papel de 58mm
+    static constexpr int MAX_WIDTH_80MM = 576; // Píxeles para papel de 80mm
 };
 
 #endif // PRINTERMANAGER_H

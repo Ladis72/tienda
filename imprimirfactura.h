@@ -15,7 +15,7 @@ public:
 
 private:
     QStandardItemModel *modeloTabla;
-    QSqlQuery consulta , consultaTicket;
+    QSqlQuery consulta, consultaTicket;
     baseDatos base;
     QStringList datosTienda;
     QString fecha, hora, ticket, total, fPago, idCliente, idVendedor, vendedor, cliente;

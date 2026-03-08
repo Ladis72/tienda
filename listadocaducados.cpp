@@ -1,7 +1,7 @@
 #include "listadocaducados.h"
+#include <QProcess>
 #include "qprinter.h"
 #include "qtextdocument.h"
-#include <QProcess>
 #include "ui_listadocaducados.h"
 
 ListadoCaducados::ListadoCaducados(QWidget *parent)
@@ -10,11 +10,8 @@ ListadoCaducados::ListadoCaducados(QWidget *parent)
 {
     ui->setupUi(this);
 
-
-
-
     QDate fechaActual = QDate::currentDate();
-    QDate targetDate(fechaActual.year(),1,1);
+    QDate targetDate(fechaActual.year(), 1, 1);
 
     hasta = fechaActual.toString("yyyy-MM-dd");
     desde = targetDate.toString("yyyy-MM-dd");
@@ -89,19 +86,21 @@ void ListadoCaducados::on_pushButtonImprimir_clicked()
 </html>
 )";
 
-    html.replace("%FECHAS%", desde+" hasta "+hasta);
+    html.replace("%FECHAS%", desde + " hasta " + hasta);
     for (int i = 0; i < mCaducados->rowCount(); ++i) {
-        QString cod = mCaducados->data(mCaducados->index(i,1)).toString();
-        QString cantidad = mCaducados->data(mCaducados->index(i,2)).toString();
-        QString descripcion = mCaducados->data(mCaducados->index(i,3)).toString();
-        QString fecha = mCaducados->data(mCaducados->index(i,4)).toString();
-        QString precio = mCaducados->data(mCaducados->index(i,5)).toString();
-        QString fechaCad = mCaducados->data(mCaducados->index(i,6)).toString();
+        QString cod = mCaducados->data(mCaducados->index(i, 1)).toString();
+        QString cantidad = mCaducados->data(mCaducados->index(i, 2)).toString();
+        QString descripcion = mCaducados->data(mCaducados->index(i, 3)).toString();
+        QString fecha = mCaducados->data(mCaducados->index(i, 4)).toString();
+        QString precio = mCaducados->data(mCaducados->index(i, 5)).toString();
+        QString fechaCad = mCaducados->data(mCaducados->index(i, 6)).toString();
 
-        lineasHtml += QString("<tr><td>%1</td><td>%2</td><td>%3</td><td>%4</td><td>%5 €</td><td>%6</td></tr>").arg(
-            cod,cantidad,descripcion,fecha,precio,fechaCad);
+        lineasHtml
+            += QString(
+                   "<tr><td>%1</td><td>%2</td><td>%3</td><td>%4</td><td>%5 €</td><td>%6</td></tr>")
+                   .arg(cod, cantidad, descripcion, fecha, precio, fechaCad);
     }
-    html.replace("%LINEAS%",lineasHtml);
+    html.replace("%LINEAS%", lineasHtml);
 
     documento.setHtml(html);
 
@@ -112,12 +111,11 @@ void ListadoCaducados::on_pushButtonImprimir_clicked()
 
     // Mostrarlo
     QProcess::startDetached("xdg-open", QStringList() << "./documentos/ListadoCaducados.pdf");
-
 }
 
 void ListadoCaducados::llenarTabla(QString desde, QString hasta)
 {
-    mCaducados->setQuery(base->listadoCaducados(conf->getConexionLocal(),desde, hasta));
+    mCaducados->setQuery(base->listadoCaducados(conf->getConexionLocal(), desde, hasta));
     ui->tableView->setModel(mCaducados);
     ui->tableView->resizeColumnsToContents();
     ui->tableView->hideColumn(0);

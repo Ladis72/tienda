@@ -28,7 +28,6 @@ Tienda::Tienda(QWidget *parent)
         ui->pushButtonActualizarClientes->setEnabled(false);
     }
 
-
     QPixmap logo;
     logo.load("./documentos/logo.jpg");
     ui->logo->setPixmap(logo);
@@ -42,13 +41,12 @@ Tienda::Tienda(QWidget *parent)
     usuario = new QPushButton(conf->getUsuario());
     QPalette paleta = usuario->palette();
     paleta.setColor(QPalette::Button, QColor(Qt::green));
-    usuario->setPalette(paleta );
+    usuario->setPalette(paleta);
     ui->statusBar->addPermanentWidget(usuario);
     connect(usuario, SIGNAL(clicked()), this, SLOT(on_pushButtonSesion_clicked()));
     on_pushButtonSesion_clicked();
-    base.insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Inicio programa ");
+    base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(), "Inicio programa ");
     conf->setNombreconexiones(conexiones->lista());
-
 }
 
 Tienda::~Tienda()
@@ -59,11 +57,14 @@ Tienda::~Tienda()
                                tr("Quieres hacer una copia de seguridad antes de cerrar?"),
                                QMessageBox::Yes | QMessageBox::No);
     if (respuesta == QMessageBox::Yes) {
-        base.insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Copia de seguridad creada");
+        base.insertarLog(conf->getConexionLocal(),
+                         "Info",
+                         conf->getUsuario(),
+                         "Copia de seguridad creada");
 
         on_pushButtonCopia_clicked();
     }
-    base.insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Fin del programa ");
+    base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(), "Fin del programa ");
 
     delete conf;
     delete ui;
@@ -89,11 +90,11 @@ void Tienda::on_ventasButton_clicked()
 void Tienda::permisos(int i)
 {
     switch (i) {
-    case 0:{
+    case 0: {
         QList<QPushButton *> buttons = this->findChildren<QPushButton *>();
 
         // Recorre la lista de botones y desactiva cada uno
-        foreach(QPushButton *button, buttons) {
+        foreach (QPushButton *button, buttons) {
             button->setEnabled(true);
         }
         break;
@@ -131,14 +132,12 @@ void Tienda::permisos(int i)
         ui->tabConfig->setDisabled(true);
 
         break;
-    case -1:{
-
+    case -1: {
         QList<QPushButton *> buttons = this->findChildren<QPushButton *>();
 
         // Recorre la lista de botones y desactiva cada uno
-        foreach(QPushButton *button, buttons) {
+        foreach (QPushButton *button, buttons) {
             button->setDisabled(true);
-
         }
         ui->pushButtonSesion->setEnabled(true);
         usuario->setEnabled(true);
@@ -149,14 +148,14 @@ void Tienda::permisos(int i)
         QList<QPushButton *> buttons = this->findChildren<QPushButton *>();
 
         // Recorre la lista de botones y desactiva cada uno
-        foreach(QPushButton *button, buttons) {
+        foreach (QPushButton *button, buttons) {
             button->setDisabled(true);
-    }
+        }
         ui->pushButtonSesion->setEnabled(true);
         usuario->setEnabled(true);
 
         break;
-}
+    }
 }
 void Tienda::activar_btn_tpv() {}
 
@@ -454,11 +453,11 @@ void Tienda::on_pushButtonCopia_clicked()
     base.copiaSeguridad(conf->getConexionLocal(), nombreBackup);
 }
 
-void Tienda::on_pushButtonSesion_clicked() {
+void Tienda::on_pushButtonSesion_clicked()
+{
     conf->setUsuario(NULL);
     conf->setRol(-1);
     login();
-
 }
 
 void Tienda::login()
@@ -485,4 +484,3 @@ void Tienda::on_pushButtonImpuestos_clicked()
     impuestos *editarImpuestos = new impuestos(this);
     editarImpuestos->exec();
 }
-

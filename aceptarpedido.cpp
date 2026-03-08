@@ -33,82 +33,74 @@ AceptarPedido::~AceptarPedido()
 
 void AceptarPedido::llenarTabla(QString idPedido, double desc)
 {
-
     double totalBase = 0, totalIva = 0, totalRe = 0, totalGeneral = 0;
 
-
-        // Consulta para agrupar por tipo de IVA
-        QString queryStr = QString(
-                               "SELECT tipoIva, "
+    // Consulta para agrupar por tipo de IVA
+    QString queryStr = QString("SELECT tipoIva, "
                                "SUM(totalbase) AS totalBase, "
                                "SUM(iva) AS totalIva, "
                                "SUM(re) AS totalRe, "
                                "(SUM(totalbase) + SUM(iva) + SUM(re)) AS totalGeneral "
                                "FROM lineaspedido_tmp "
                                "WHERE idPedido = '%1' "
-                               "GROUP BY tipoIva").arg(idPedido);
+                               "GROUP BY tipoIva")
+                           .arg(idPedido);
 
-        QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
-        if (!query.exec(queryStr)) {
-            QMessageBox::critical(this, "Error", "Error al consultar los datos agrupados por IVA");
-            return;
-        }
+    QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
+    if (!query.exec(queryStr)) {
+        QMessageBox::critical(this, "Error", "Error al consultar los datos agrupados por IVA");
+        return;
+    }
 
-        // Crear un modelo de tabla para mostrar los datos agrupados
-        QStandardItemModel *modelo = new QStandardItemModel(this);
+    // Crear un modelo de tabla para mostrar los datos agrupados
+    QStandardItemModel *modelo = new QStandardItemModel(this);
 
-        // Definir encabezados
-        modelo->setHorizontalHeaderLabels(QStringList() << "Tipo IVA" << "Base Imponible"
-                                                        << "Total IVA" << "Total RE"
-                                                        << "Total General");
+    // Definir encabezados
+    modelo->setHorizontalHeaderLabels(QStringList() << "Tipo IVA" << "Base Imponible"
+                                                    << "Total IVA" << "Total RE"
+                                                    << "Total General");
 
+    // Procesar resultados de la consulta
+    while (query.next()) {
+        QList<QStandardItem *> fila;
 
+        // Obtener valores
+        double tipoIva = query.value("tipoIva").toDouble();
+        double base = query.value("totalBase").toDouble();
+        double iva = query.value("totalIva").toDouble();
+        double re = query.value("totalRe").toDouble();
+        double total = query.value("totalGeneral").toDouble();
 
-        // Procesar resultados de la consulta
-        while (query.next()) {
-            QList<QStandardItem *> fila;
+        // Crear celdas de la fila
+        fila << new QStandardItem(QString::number(tipoIva))               // Tipo IVA
+             << new QStandardItem(QString::number(base * desc, 'f', 2))   // Base Imponible
+             << new QStandardItem(QString::number(iva * desc, 'f', 2))    // IVA
+             << new QStandardItem(QString::number(re * desc, 'f', 2))     // Recargo de Equivalencia
+             << new QStandardItem(QString::number(total * desc, 'f', 2)); // Total General
 
-            // Obtener valores
-            double tipoIva = query.value("tipoIva").toDouble();
-            double base = query.value("totalBase").toDouble();
-            double iva = query.value("totalIva").toDouble();
-            double re = query.value("totalRe").toDouble();
-            double total = query.value("totalGeneral").toDouble();
+        // Agregar fila al modelo
+        modelo->appendRow(fila);
 
-            // Crear celdas de la fila
-            fila << new QStandardItem(QString::number(tipoIva)) // Tipo IVA
-                 << new QStandardItem(QString::number(base*desc, 'f', 2)) // Base Imponible
-                 << new QStandardItem(QString::number(iva*desc, 'f', 2)) // IVA
-                 << new QStandardItem(QString::number(re*desc, 'f', 2)) // Recargo de Equivalencia
-                 << new QStandardItem(QString::number(total*desc, 'f', 2)); // Total General
+        // Sumar totales generales
+        totalBase += base;
+        totalIva += iva;
+        totalRe += re;
+        totalGeneral += total;
+    }
 
-            // Agregar fila al modelo
-            modelo->appendRow(fila);
+    // Establecer el modelo en la vista de tabla
+    ui->tableView->setModel(modelo);
+    ui->tableView->resizeColumnsToContents();
 
-            // Sumar totales generales
-            totalBase += base;
-            totalIva += iva;
-            totalRe += re;
-            totalGeneral += total;
-        }
-
-        // Establecer el modelo en la vista de tabla
-        ui->tableView->setModel(modelo);
-        ui->tableView->resizeColumnsToContents();
-
-        //Mostrar los totales generales en los campos correspondientes
-        ui->leTotalBase->setText(QString::number(totalBase*desc, 'f', 2));
-        ui->leTotalIva->setText(QString::number(totalIva*desc, 'f', 2));
-        ui->leTotalRe->setText(QString::number(totalRe*desc, 'f', 2));
-        ui->leTotal->setText(QString::number(totalGeneral*desc, 'f', 2));
-        //ui->leLineas->setText(QString::number(modeloPedido->rowCount()));
-
-
-
+    //Mostrar los totales generales en los campos correspondientes
+    ui->leTotalBase->setText(QString::number(totalBase * desc, 'f', 2));
+    ui->leTotalIva->setText(QString::number(totalIva * desc, 'f', 2));
+    ui->leTotalRe->setText(QString::number(totalRe * desc, 'f', 2));
+    ui->leTotal->setText(QString::number(totalGeneral * desc, 'f', 2));
+    //ui->leLineas->setText(QString::number(modeloPedido->rowCount()));
 }
 
-bool AceptarPedido::
-    procesarPedido(QSqlQueryModel *modelo)
+bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
 {
     QStringList datos;
     QString idLinea, ean, descripcion, lote, fechaCaducidad, descuentoLinea, tipoIva, baseProducto,
@@ -329,20 +321,29 @@ bool AceptarPedido::
     if (ui->comboBox->currentText() == "Factura") {
         datosFactura.append(ui->dateEditVencimiento->text());
         datosFactura.append("0");
-        if (!base.grabarFactura(conf->getConexionLocal(),datosFactura)) {
-            base.insertarLog(conf->getConexionLocal(),"Error",conf->getUsuario(),"Error al grabar la factura: "+datosFactura.at(0));
+        if (!base.grabarFactura(conf->getConexionLocal(), datosFactura)) {
+            base.insertarLog(conf->getConexionLocal(),
+                             "Error",
+                             conf->getUsuario(),
+                             "Error al grabar la factura: " + datosFactura.at(0));
             return false;
         }
     } else {
         datosFactura.append("0");
-        if (base.grabarAlbaran(conf->getConexionLocal(),datosFactura)) {
-            base.insertarLog(conf->getConexionLocal(),"Error",conf->getUsuario(),"Error al grabar el albarán: "+datosFactura.at(0));
+        if (base.grabarAlbaran(conf->getConexionLocal(), datosFactura)) {
+            base.insertarLog(conf->getConexionLocal(),
+                             "Error",
+                             conf->getUsuario(),
+                             "Error al grabar el albarán: " + datosFactura.at(0));
 
             return false;
         }
     }
     qDebug() << "Factura grabada";
-    base.insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Registrada la factura"+datosFactura.at(0));
+    base.insertarLog(conf->getConexionLocal(),
+                     "Info",
+                     conf->getUsuario(),
+                     "Registrada la factura" + datosFactura.at(0));
 
     return true;
 }

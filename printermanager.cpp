@@ -1,7 +1,7 @@
 #include "printermanager.h"
+#include <QBuffer>
 #include <QDebug>
 #include <QPainter>
-#include <QBuffer>
 
 // Qt6 requiere QtCore5Compat para QTextCodec
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -11,9 +11,10 @@
 #endif
 
 PrinterManager::PrinterManager(QObject *parent)
-    : QObject(parent), m_dispositivo("/dev/usb/lp0"), m_conectado(false)
-{
-}
+    : QObject(parent)
+    , m_dispositivo("/dev/usb/lp0")
+    , m_conectado(false)
+{}
 
 PrinterManager::~PrinterManager()
 {
@@ -29,7 +30,7 @@ bool PrinterManager::abrirImpresora()
     m_impresora.setFileName(m_dispositivo);
     if (!m_impresora.open(QIODevice::WriteOnly)) {
         qDebug() << "No se pudo abrir la impresora:" << m_impresora.errorString()
-        << "Ruta:" << m_dispositivo;
+                 << "Ruta:" << m_dispositivo;
         m_conectado = false;
         return false;
     }
@@ -62,8 +63,8 @@ bool PrinterManager::enviarComando(const QByteArray &comando)
     m_impresora.flush();
 
     if (bytesEscritos != comando.size()) {
-        qDebug() << "Error al enviar comando: bytes esperados" << comando.size()
-        << "bytes escritos" << bytesEscritos;
+        qDebug() << "Error al enviar comando: bytes esperados" << comando.size() << "bytes escritos"
+                 << bytesEscritos;
         return false;
     }
     return true;
@@ -151,7 +152,8 @@ bool PrinterManager::imprimirImagen(const QString &rutaImagen, bool centrado)
 // 🔑 CORRECCIÓN CRÍTICA: Centrado gestionado aquí, NO en procesarImagenParaImpresora
 bool PrinterManager::imprimirImagen(const QImage &imagen, bool centrado)
 {
-    if (imagen.isNull()) return false;
+    if (imagen.isNull())
+        return false;
 
     // 1. Preparar imagen en escala de grises y calcular dimensiones reales
     QImage img = imagen;
@@ -165,7 +167,7 @@ bool PrinterManager::imprimirImagen(const QImage &imagen, bool centrado)
 
     // Escalar MANTENIENDO PROPORCIÓN si excede el ancho máximo
     if (anchoReal > MAX_WIDTH) {
-        altoReal = qRound(altoReal * (qreal)MAX_WIDTH / anchoReal);
+        altoReal = qRound(altoReal * (qreal) MAX_WIDTH / anchoReal);
         anchoReal = MAX_WIDTH;
         img = img.scaled(anchoReal, altoReal, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }
@@ -176,9 +178,9 @@ bool PrinterManager::imprimirImagen(const QImage &imagen, bool centrado)
 
         // ESC $ nL nH - Posicionamiento absoluto en puntos (little-endian)
         QByteArray posCmd;
-        posCmd.append(static_cast<char>(0x1B));  // ESC
+        posCmd.append(static_cast<char>(0x1B)); // ESC
         posCmd.append('$');
-        posCmd.append(static_cast<char>(offset & 0xFF));       // nL (LSB)
+        posCmd.append(static_cast<char>(offset & 0xFF));        // nL (LSB)
         posCmd.append(static_cast<char>((offset >> 8) & 0xFF)); // nH (MSB)
 
         if (!enviarComando(posCmd)) {
@@ -218,13 +220,11 @@ bool PrinterManager::imprimirLogoEmpresa(const QString &rutaLogo)
     QString logoPath = rutaLogo;
 
     if (logoPath.isEmpty()) {
-        QStringList rutas = {
-            ":/images/logo.png",
-            ":/logo.png",
-            "logo.png",
-            "img/logo.png",
-            "/usr/share/app/logo.png"
-        };
+        QStringList rutas = {":/images/logo.png",
+                             ":/logo.png",
+                             "logo.png",
+                             "img/logo.png",
+                             "/usr/share/app/logo.png"};
 
         for (const QString &path : rutas) {
             if (QFile::exists(path)) {
@@ -285,7 +285,7 @@ QByteArray PrinterManager::procesarImagenParaImpresora(const QImage &imagen)
     // 2. Redimensionar manteniendo proporción (máx 384px para 58mm)
     const int MAX_WIDTH = MAX_WIDTH_80MM;
     if (img.width() > MAX_WIDTH) {
-        int newHeight = qRound(img.height() * (qreal)MAX_WIDTH / img.width());
+        int newHeight = qRound(img.height() * (qreal) MAX_WIDTH / img.width());
         img = img.scaled(MAX_WIDTH, newHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }
 
@@ -307,7 +307,7 @@ QByteArray PrinterManager::procesarImagenParaImpresora(const QImage &imagen)
     }
 
     width = padded.width();
-//    int bytesPerLine = width / 8;
+    //    int bytesPerLine = width / 8;
 
     // 4. Binarizar manualmente con control total de bits (MSB primero)
     QByteArray bits(bytesPerLine * height, 0x00);
@@ -319,7 +319,7 @@ QByteArray PrinterManager::procesarImagenParaImpresora(const QImage &imagen)
         for (int x = 0; x < width; ++x) {
             if (scanLine[x] < 200) { // Negro
                 int byteIdx = y * bytesPerLine + (x / 8);
-                int bitPos = 7 - (x % 8); // MSB primero
+                int bitPos = 7 - (x % 8);       // MSB primero
                 bits[byteIdx] |= (1 << bitPos); // ✅ Activar bit para imprimir
             }
         }
@@ -330,15 +330,15 @@ QByteArray PrinterManager::procesarImagenParaImpresora(const QImage &imagen)
     // m=1: modo doble densidad (mejor calidad)
     QByteArray cmd;
     cmd.append(0x1D).append(0x76).append(0x30);
-    cmd.append(static_cast<char>(0x00)); // GS v 0 m=1
-    cmd.append(static_cast<char>(bytesPerLine & 0xFF));      // xL
+    cmd.append(static_cast<char>(0x00));                       // GS v 0 m=1
+    cmd.append(static_cast<char>(bytesPerLine & 0xFF));        // xL
     cmd.append(static_cast<char>((bytesPerLine >> 8) & 0xFF)); // xH
-    cmd.append(static_cast<char>(height & 0xFF));            // yL
-    cmd.append(static_cast<char>((height >> 8) & 0xFF));     // yH
+    cmd.append(static_cast<char>(height & 0xFF));              // yL
+    cmd.append(static_cast<char>((height >> 8) & 0xFF));       // yH
     cmd.append(bits);
 
-    qDebug() << "Imagen procesada:" << width << "x" << height << "px,"
-             << bytesPerLine << "bytes/linea," << cmd.size() << "bytes totales";
+    qDebug() << "Imagen procesada:" << width << "x" << height << "px," << bytesPerLine
+             << "bytes/linea," << cmd.size() << "bytes totales";
 
     // DEBUG: Guardar imagen binaria para verificación (solo desarrollo)
     // QImage debug(width, height, QImage::Format_Mono);

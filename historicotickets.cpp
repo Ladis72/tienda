@@ -37,7 +37,7 @@ void HistoricoTickets::mostrarTickets()
                                + fechaF + "/" + horaF + "'",
                            QSqlDatabase::database(conf->getConexionLocal()));
     QStandardItemModel *vistaTickets = new QStandardItemModel(listaTickets->rowCount(),
-                                                              listaTickets->columnCount()-3);
+                                                              listaTickets->columnCount() - 3);
     for (int i = 0; i < listaTickets->rowCount(); ++i) {
         QStandardItem *itemTicket = new QStandardItem(listaTickets->record(i).value(0).toString());
         vistaTickets->setItem(i, 0, itemTicket);
@@ -75,7 +75,8 @@ void HistoricoTickets::mostrarTickets()
         vistaTickets->setItem(i, 9, itemCambio);
     }
     QStringList etiquetas;
-    etiquetas << "Ticket" << "Vendedor" << "Cliente" << "Fecha" << "Hora"  << "Dto" << "F. Pago" << "Total" << "Entrega" << "Cambio";
+    etiquetas << "Ticket" << "Vendedor" << "Cliente" << "Fecha" << "Hora" << "Dto" << "F. Pago"
+              << "Total" << "Entrega" << "Cambio";
     qDebug() << etiquetas;
     vistaTickets->setHorizontalHeaderLabels(etiquetas);
     ui->tableViewTickets->setModel(vistaTickets);

@@ -1,8 +1,8 @@
 // printermanager.cpp - VERSIÓN CORREGIDA SIN QTEXTCODEC
-#include "printermanager.h"
-#include <QDebug>
 #include <QBuffer>
+#include <QDebug>
 #include <QStringConverter>
+#include "printermanager.h"
 
 // Si estás en Qt6, necesitas incluir QTextCodec desde core5compat
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -12,9 +12,10 @@
 #endif
 
 PrinterManager::PrinterManager(QObject *parent)
-    : QObject(parent), m_dispositivo("/dev/usb/lp0"), m_conectado(false)
-{
-}
+    : QObject(parent)
+    , m_dispositivo("/dev/usb/lp0")
+    , m_conectado(false)
+{}
 
 PrinterManager::~PrinterManager()
 {
@@ -203,11 +204,12 @@ bool PrinterManager::imprimirLogoEmpresa(const QString &rutaLogo)
 
     if (logoPath.isEmpty()) {
         // Buscar logo por defecto
-        QStringList posiblesLogos = {
-            "logo.png", "logo.jpg", "logo.bmp",
-            "img/logo.png", "img/logo.jpg",
-            "/usr/share/miempresa/logo.png"
-        };
+        QStringList posiblesLogos = {"logo.png",
+                                     "logo.jpg",
+                                     "logo.bmp",
+                                     "img/logo.png",
+                                     "img/logo.jpg",
+                                     "/usr/share/miempresa/logo.png"};
 
         for (const QString &path : posiblesLogos) {
             if (QFile::exists(path)) {
@@ -247,8 +249,8 @@ bool PrinterManager::abrirCajon()
 {
     // ESC p m t1 t2 - Pulse
     QByteArray comando;
-    comando.append(0x1B); // ESC
-    comando.append(0x70); // p
+    comando.append(0x1B);       // ESC
+    comando.append(0x70);       // p
     comando.append(char(0x00)); // m=0
     comando.append(char(0x19)); // t1=25
     comando.append(char(0x19)); // t2=25
@@ -285,7 +287,7 @@ QByteArray PrinterManager::procesarImagenParaImpresora(const QImage &imagen, boo
                 // En QImage::Format_Mono, cada pixel es un bit
                 // 0 = negro, 1 = blanco
                 int byteIndex = x / 8;
-                int bitIndex = 7 - (x % 8); // MSB first
+                int bitIndex = 7 - (x % 8);             // MSB first
                 binLine[byteIndex] &= ~(1 << bitIndex); // Poner a 0 (negro)
             }
         }

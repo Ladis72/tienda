@@ -138,25 +138,26 @@ void Tpv::recuperarTicketsPendientes()
 {
     modeloTicketPendiente->clear();
     //2025-10-11
-    QSqlQuery listaTicketsPendientes = base.tcketsPendientes(QSqlDatabase::database(conf->getConexionLocal()));
+    QSqlQuery listaTicketsPendientes = base.tcketsPendientes(
+        QSqlDatabase::database(conf->getConexionLocal()));
     int row = 0;
     while (listaTicketsPendientes.next()) {
-            QStandardItem *itemOrden = new QStandardItem(listaTicketsPendientes.value(0).toString());
-            modeloTicketPendiente->setItem(row, 0, itemOrden);
-            QStandardItem *itemCliente = new QStandardItem(
-                base.nombreCliente(listaTicketsPendientes.value(1).toString()));
-            modeloTicketPendiente->setItem(row, 1, itemCliente);
-            QStandardItem *itemVendedor = new QStandardItem(
-                base.nombreUsusario(listaTicketsPendientes.value(2).toString(),
-                                    conf->getConexionLocal()));
-            modeloTicketPendiente->setItem(row, 2, itemVendedor);
-            QStandardItem *itemCodCliente = new QStandardItem(
-                listaTicketsPendientes.value(1).toString());
-            modeloTicketPendiente->setItem(row, 3, itemCodCliente);
-            QStandardItem *itemCodVendedor = new QStandardItem(
-                listaTicketsPendientes.value(2).toString());
-            modeloTicketPendiente->setItem(row, 4, itemCodVendedor);
-            row++;
+        QStandardItem *itemOrden = new QStandardItem(listaTicketsPendientes.value(0).toString());
+        modeloTicketPendiente->setItem(row, 0, itemOrden);
+        QStandardItem *itemCliente = new QStandardItem(
+            base.nombreCliente(listaTicketsPendientes.value(1).toString()));
+        modeloTicketPendiente->setItem(row, 1, itemCliente);
+        QStandardItem *itemVendedor = new QStandardItem(
+            base.nombreUsusario(listaTicketsPendientes.value(2).toString(),
+                                conf->getConexionLocal()));
+        modeloTicketPendiente->setItem(row, 2, itemVendedor);
+        QStandardItem *itemCodCliente = new QStandardItem(
+            listaTicketsPendientes.value(1).toString());
+        modeloTicketPendiente->setItem(row, 3, itemCodCliente);
+        QStandardItem *itemCodVendedor = new QStandardItem(
+            listaTicketsPendientes.value(2).toString());
+        modeloTicketPendiente->setItem(row, 4, itemCodVendedor);
+        row++;
     }
 
     ui->tableViewTicketsPendientes->setModel(modeloTicketPendiente);
@@ -222,13 +223,12 @@ QStringList Tpv::recopilarBasesIvas()
     double TotalBase = 0.0;
     double TotalIva = 0.0;
 
-
     for (int i = 0; i < modeloTicket->rowCount(); ++i) {
-        double base = modeloTicket->record(i).value(8).toDouble()/(1+(modeloTicket->record(i).value(5).toDouble()/100));
-        double iva = modeloTicket->record(i).value(8).toDouble()-base;
-        TotalBase +=base;
-        TotalIva +=iva;
-
+        double base = modeloTicket->record(i).value(8).toDouble()
+                      / (1 + (modeloTicket->record(i).value(5).toDouble() / 100));
+        double iva = modeloTicket->record(i).value(8).toDouble() - base;
+        TotalBase += base;
+        TotalIva += iva;
     }
     basesIvas.append(QString::number(TotalBase));
     basesIvas.append(QString::number(TotalIva));
@@ -269,7 +269,7 @@ void Tpv::datosProducto(QString IdProducto)
 
 QString Tpv::generarDatosFactura(const QStringList datos, const QString ultimoHash)
 {
-    QString cadena = datos.join("|")+"|"+ ultimoHash;
+    QString cadena = datos.join("|") + "|" + ultimoHash;
 
     return cadena;
 }
@@ -308,7 +308,7 @@ bool Tpv::grabarLineasTicket(const QString serie)
         dato = formatearCadena(" " + dato, 6);
         dato.clear();
         qDebug() << lineaTicket;
-        if(!base.grabarLineaTicket(lineaTicket)){
+        if (!base.grabarLineaTicket(lineaTicket)) {
             throw std::runtime_error("Error grabando llinea de ticktes:");
             return false;
         }
@@ -317,15 +317,10 @@ bool Tpv::grabarLineasTicket(const QString serie)
             fechaCaducidad->exec();
             QString fecha = fechaCaducidad->fecha.toString("yyyy-MM-dd");
             QString lote = fechaCaducidad->lote;
-            QString idLote = base.idLote(conf->getConexionLocal(),
-                                         lineaTicket.at(1),
-                                         lote,
-                                         fecha);
+            QString idLote = base.idLote(conf->getConexionLocal(), lineaTicket.at(1), lote, fecha);
             qDebug() << lote;
             if (idLote != "0") {
-                base.aumentarLote(conf->getConexionLocal(),
-                                  idLote,
-                                  abs(lineaTicket.at(3).toInt()));
+                base.aumentarLote(conf->getConexionLocal(), idLote, abs(lineaTicket.at(3).toInt()));
                 qDebug() << "Error al devolver el producto lote";
             } else {
                 base.crearLote(conf->getConexionLocal(),
@@ -336,7 +331,9 @@ bool Tpv::grabarLineasTicket(const QString serie)
                 qDebug() << "Crear lote";
             }
         } else {
-            base.descontarArticulo(conf->getConexionLocal(), lineaTicket.at(1), lineaTicket.at(3).toInt());
+            base.descontarArticulo(conf->getConexionLocal(),
+                                   lineaTicket.at(1),
+                                   lineaTicket.at(3).toInt());
         }
         base.actualizarFechaVentaArticulo(conf->getConexionLocal(),
                                           lineaTicket.at(1),
@@ -442,8 +439,6 @@ void Tpv::keyPressEvent(QKeyEvent *e)
     //Tpv::keyPressEvent(e);
 }
 
-
-
 void Tpv::on_btn_anadir_clicked()
 {
     emit on_lineEdit_cod_returnPressed();
@@ -485,12 +480,10 @@ void Tpv::on_btn_cobrar_clicked()
     cajon.close();
     qDebug() << "Finalizado apertura cajon";
 
-    if (modeloTicket->rowCount() == 0){
-        QMessageBox::information(this,"Ticket vacio","No hay productos en el ticket");
+    if (modeloTicket->rowCount() == 0) {
+        QMessageBox::information(this, "Ticket vacio", "No hay productos en el ticket");
         return;
     }
-
-
 
     totalizacion = new totalizar(QString::number(calcularPrecioTotal()), vale, this);
 
@@ -504,7 +497,10 @@ void Tpv::on_btn_cobrar_clicked()
 
     QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
     if (!db.transaction()) {
-        QMessageBox::critical(this, "Error","No se pudo iniciar la transacción de venta. "+db.lastError().text());
+        QMessageBox::critical(this,
+                              "Error",
+                              "No se pudo iniciar la transacción de venta. "
+                                  + db.lastError().text());
         return;
     }
 
@@ -516,13 +512,13 @@ void Tpv::on_btn_cobrar_clicked()
                                   "ticket",
                                   QString::number(ticket))
                == false) {
-        serie = "B"+QString::number(ticket);
+        serie = "B" + QString::number(ticket);
         tabla = "ticketss";
     }
     QString ticketImpresion = QString::number(ticket);
 
     try {
-        if(!grabarLineasTicket(serie)){
+        if (!grabarLineasTicket(serie)) {
             throw std::runtime_error("Error al grabar las lineas del ticket");
         }
         if (totalizacion->valeUsado) {
@@ -540,31 +536,30 @@ void Tpv::on_btn_cobrar_clicked()
             tabla = "tickets";
             ticketImpresion = QString::number(ticket);
             ticket += 1;
-
         }
 
-        if(!base.grabarTicket(conf->getConexionLocal(), tabla, totalTicket)){
+        if (!base.grabarTicket(conf->getConexionLocal(), tabla, totalTicket)) {
             throw std::runtime_error("Error al grabar el ticket");
         }
         if (tabla == "tickets") {
             QString ultimoHash = base.obtenerUltimoHash(conf->getConexionLocal());
-            QString datosFactura = generarDatosFactura(totalTicket,ultimoHash);
+            QString datosFactura = generarDatosFactura(totalTicket, ultimoHash);
             QString hashFactura = generarHashFactura(datosFactura);
-            if(base.registrarTickeckVerifactu(conf->getConexionLocal(),
+            if (base.registrarTickeckVerifactu(conf->getConexionLocal(),
                                                totalTicket.at(0).toInt(),
                                                hashFactura,
                                                ultimoHash,
                                                datosFactura,
-                                               totalTicket.at(1).toInt()) == "")
-            {
+                                               totalTicket.at(1).toInt())
+                == "") {
                 throw std::runtime_error("Error al grabar VeriFactuLog");
             }
         }
 
         if (!db.commit()) {
-            throw std::runtime_error("Error al confirmar la transacción: "+db.lastError().text().toStdString());
+            throw std::runtime_error("Error al confirmar la transacción: "
+                                     + db.lastError().text().toStdString());
         }
-
 
     } catch (const std::exception &e) {
         db.rollback();
@@ -628,18 +623,14 @@ void Tpv::on_btn_cobrar_clicked()
     //                                       QDate::currentDate().toString("yyyy-MM-dd"));
     // }
 
-
-
     emit on_pushButtonBorrarTodo_clicked();
     //        impresora.close();
     if (totalizacion->ticket == true && totalizacion->factura == false) {
         //            system("less ./ticket.txt >> /dev/lp0");
-        ImprimirTicket(ticketImpresion , "ticket");
+        ImprimirTicket(ticketImpresion, "ticket");
     } else if (totalizacion->factura == true) {
-        ImprimirFactura(ticketImpresion,this);
+        ImprimirFactura(ticketImpresion, this);
     }
-
-
 }
 
 void Tpv::on_tableViewTicketsPendientes_clicked(const QModelIndex &index)
@@ -850,54 +841,53 @@ void Tpv::usarVale(int ticket, int idVale, double cantVale)
     lineaTicket.append(QTime::currentTime().toString("hh:mm"));
     base.grabarLineaTicket(lineaTicket);
 
-
     // 2025-10-12
 
-        QString conexionLocal = conf->getConexionLocal();
-        listaConexionesRemotas = conf->getNombreConexiones();
-        qDebug() << "🧩 Sincronizando vale usado con tiendas remotas en hilo separado...";
-        qDebug() << "Tienda local:" << conexionLocal;
-        qDebug() << "Tiendas remotas:" << listaConexionesRemotas;
+    QString conexionLocal = conf->getConexionLocal();
+    listaConexionesRemotas = conf->getNombreConexiones();
+    qDebug() << "🧩 Sincronizando vale usado con tiendas remotas en hilo separado...";
+    qDebug() << "Tienda local:" << conexionLocal;
+    qDebug() << "Tiendas remotas:" << listaConexionesRemotas;
 
-        //Marcar local
-        if (base.usarVale(conexionLocal, idVale)) {
-            qDebug() << "Vale marcado correctamente en tienda local";
-        }else {
-            qWarning() << "Error al marcar en tienda local";
-        }
-
-        //Intentar en tiendas remotas
-        for (const QString &tienda : listaConexionesRemotas) {
-            QSqlDatabase db = QSqlDatabase::database(tienda);
-            if (!db.isOpen()) {
-                qWarning() << "Conexion cerrada con tienda " << tienda;
-                base.valesPendientesMarcar(conexionLocal,tienda,idVale);
-                continue;
-            }
-            if (!base.usarVale(tienda, idVale)) {
-                qWarning() << "Error al marcar el vale en la tienda remota " << tienda;
-                base.valesPendientesMarcar(conexionLocal,tienda,idVale);
-            }
-        }
+    //Marcar local
+    if (base.usarVale(conexionLocal, idVale)) {
+        qDebug() << "Vale marcado correctamente en tienda local";
+    } else {
+        qWarning() << "Error al marcar en tienda local";
     }
 
-    // listaConexionesRemotas = conf->getNombreConexiones();
-    // qDebug() << listaConexionesRemotas;
-    // conexionLocal = conf->getConexionLocal();
-    // qDebug() << conexionLocal;
-    // if (base.usarVale(conexionLocal, idVale)) {
-    //     qDebug() << "Vale usado";
-    // } else {
-    //     qDebug() << "Error al usar el vale";
-    // }
-    // for (int i = 0; i < listaConexionesRemotas.length(); i++) {
-    //     if (!base.usarVale(listaConexionesRemotas.at(i), idVale)) {
-    //         qDebug() << "Error al marcar vale en tienda " << listaConexionesRemotas.at(i);
-    //         base.valesPendientesMarcar(conexionLocal, listaConexionesRemotas.at(i), idVale);
-    //     } else {
-    //         qDebug() << "Vale marcado en tienda " << listaConexionesRemotas.at(i);
-    //     }
-    // }
+    //Intentar en tiendas remotas
+    for (const QString &tienda : listaConexionesRemotas) {
+        QSqlDatabase db = QSqlDatabase::database(tienda);
+        if (!db.isOpen()) {
+            qWarning() << "Conexion cerrada con tienda " << tienda;
+            base.valesPendientesMarcar(conexionLocal, tienda, idVale);
+            continue;
+        }
+        if (!base.usarVale(tienda, idVale)) {
+            qWarning() << "Error al marcar el vale en la tienda remota " << tienda;
+            base.valesPendientesMarcar(conexionLocal, tienda, idVale);
+        }
+    }
+}
+
+// listaConexionesRemotas = conf->getNombreConexiones();
+// qDebug() << listaConexionesRemotas;
+// conexionLocal = conf->getConexionLocal();
+// qDebug() << conexionLocal;
+// if (base.usarVale(conexionLocal, idVale)) {
+//     qDebug() << "Vale usado";
+// } else {
+//     qDebug() << "Error al usar el vale";
+// }
+// for (int i = 0; i < listaConexionesRemotas.length(); i++) {
+//     if (!base.usarVale(listaConexionesRemotas.at(i), idVale)) {
+//         qDebug() << "Error al marcar vale en tienda " << listaConexionesRemotas.at(i);
+//         base.valesPendientesMarcar(conexionLocal, listaConexionesRemotas.at(i), idVale);
+//     } else {
+//         qDebug() << "Vale marcado en tienda " << listaConexionesRemotas.at(i);
+//     }
+// }
 //}
 //ClickableLabel::ClickableLabel(QWidget *parent, Qt::WindowFlags f) : QLabel(parent)
 //{

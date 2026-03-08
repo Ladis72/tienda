@@ -20,7 +20,7 @@
       <string>Fecha último arqueo</string>
      </property>
      <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
      </property>
     </widget>
    </item>
@@ -43,10 +43,10 @@
    <item row="1" column="0" rowspan="2">
     <widget class="QFrame" name="frame">
      <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+      <enum>QFrame::Shape::StyledPanel</enum>
      </property>
      <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
+      <enum>QFrame::Shadow::Raised</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout">
       <item row="1" column="3">
@@ -60,7 +60,7 @@
          <locale language="Spanish" country="UnitedStates"/>
         </property>
         <property name="correctionMode">
-         <enum>QAbstractSpinBox::CorrectToPreviousValue</enum>
+         <enum>QAbstractSpinBox::CorrectionMode::CorrectToPreviousValue</enum>
         </property>
         <property name="showGroupSeparator" stdset="0">
          <bool>false</bool>
@@ -580,10 +580,10 @@
    <item row="1" column="1">
     <widget class="QFrame" name="frame_2">
      <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+      <enum>QFrame::Shape::StyledPanel</enum>
      </property>
      <property name="frameShadow">
-      <enum>QFrame::Raised</enum>
+      <enum>QFrame::Shadow::Raised</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="1" column="0">
@@ -777,7 +777,7 @@
          <item row="6" column="0">
           <spacer name="verticalSpacer">
            <property name="orientation">
-            <enum>Qt::Vertical</enum>
+            <enum>Qt::Orientation::Vertical</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
@@ -845,13 +845,13 @@
             <string notr="true">color: rgb(0, 0, 255);</string>
            </property>
            <property name="frameShape">
-            <enum>QFrame::NoFrame</enum>
+            <enum>QFrame::Shape::NoFrame</enum>
            </property>
            <property name="text">
             <string>0</string>
            </property>
            <property name="textFormat">
-            <enum>Qt::AutoText</enum>
+            <enum>Qt::TextFormat::AutoText</enum>
            </property>
           </widget>
          </item>

@@ -1,7 +1,7 @@
 #include "clientes.h"
-#include "ui_clientes.h"
-#include "buscarproducto.h"
 #include <QMessageBox>
+#include "buscarproducto.h"
+#include "ui_clientes.h"
 
 Clientes::Clientes(QWidget *parent)
     : QDialog(parent)
@@ -182,11 +182,10 @@ void Clientes::cargarCompras()
         return;
     }
     if (ui->radioButtonAnos->isChecked()) {
-        modeloCompras
-            .setQuery("SELECT year(fecha) , sum(total) FROM tickets where cliente = "
-                          + ui->lineEditCod->text()
-                          + " group by year(fecha)  order by year(fecha) desc ; ",
-                      QSqlDatabase::database(nombreConexionLocal));
+        modeloCompras.setQuery("SELECT year(fecha) , sum(total) FROM tickets where cliente = "
+                                   + ui->lineEditCod->text()
+                                   + " group by year(fecha)  order by year(fecha) desc ; ",
+                               QSqlDatabase::database(nombreConexionLocal));
         modeloCompras.setHeaderData(0, Qt::Horizontal, "Año");
         modeloCompras.setHeaderData(1, Qt::Horizontal, "Cantidad");
         ui->tableView->setModel(&modeloCompras);

@@ -114,5 +114,3 @@ void Caducados::on_comboBox_currentTextChanged(const QString &arg1)
         ui->spinBox->setMinimum(0);
     }
 }
-
-

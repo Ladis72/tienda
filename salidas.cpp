@@ -57,48 +57,46 @@ void Salidas::on_lineEditCod_returnPressed()
     //     }
     // }
 
-        QString codigo = ui->lineEditCod->text().trimmed();
-        if (codigo.isEmpty())
-            return;
+    QString codigo = ui->lineEditCod->text().trimmed();
+    if (codigo.isEmpty())
+        return;
 
-        QSqlQuery consulta = base->consulta_producto(conf->getConexionLocal(), codigo);
+    QSqlQuery consulta = base->consulta_producto(conf->getConexionLocal(), codigo);
 
-        // 1. Buscar por código directo
-        if (!consulta.first()) {
-            // 2. Buscar por código auxiliar
-            QString codAux = base->codigoDesdeAux(conf->getConexionLocal(), codigo);
-            if (!codAux.isEmpty()) {
-                consulta = base->consulta_producto(conf->getConexionLocal(), codAux);
-                consulta.first();
-            }
+    // 1. Buscar por código directo
+    if (!consulta.first()) {
+        // 2. Buscar por código auxiliar
+        QString codAux = base->codigoDesdeAux(conf->getConexionLocal(), codigo);
+        if (!codAux.isEmpty()) {
+            consulta = base->consulta_producto(conf->getConexionLocal(), codAux);
+            consulta.first();
         }
+    }
 
-        // 3. Si hay producto válido
-        if (consulta.isValid()) {
-            ui->lineEditCod->setText(consulta.value("cod").toString());
-            ui->lineEditDesc->setText(consulta.value("descripcion").toString());
-            ui->lineEditPrecio->setText(consulta.value("pvp").toString());
-            ui->lineEditCantidad->setFocus();
-            return;
-        }
+    // 3. Si hay producto válido
+    if (consulta.isValid()) {
+        ui->lineEditCod->setText(consulta.value("cod").toString());
+        ui->lineEditDesc->setText(consulta.value("descripcion").toString());
+        ui->lineEditPrecio->setText(consulta.value("pvp").toString());
+        ui->lineEditCantidad->setFocus();
+        return;
+    }
 
-        // 4. No existe → preguntar creación
-        QMessageBox msg(this);
-        msg.setText("No se encuentra el producto");
-        msg.setInformativeText("¿Desea crearlo?");
-        msg.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-        msg.setDefaultButton(QMessageBox::Ok);
+    // 4. No existe → preguntar creación
+    QMessageBox msg(this);
+    msg.setText("No se encuentra el producto");
+    msg.setInformativeText("¿Desea crearlo?");
+    msg.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+    msg.setDefaultButton(QMessageBox::Ok);
 
-        if (msg.exec() == QMessageBox::Ok) {
-            Articulos articulo(this);
-            articulo.exec();
-            articulo.borrarFormulario();
-        } else {
-            ui->lineEditCod->setFocus();
-            ui->lineEditCod->selectAll();
-        }
-
-
+    if (msg.exec() == QMessageBox::Ok) {
+        Articulos articulo(this);
+        articulo.exec();
+        articulo.borrarFormulario();
+    } else {
+        ui->lineEditCod->setFocus();
+        ui->lineEditCod->selectAll();
+    }
 }
 
 void Salidas::actualizarTabla()
@@ -113,7 +111,7 @@ void Salidas::actualizarTabla()
     ui->tableView->hideColumn(0);
     ui->tableView->resizeColumnsToContents();
     actualizarTotales();
-    }
+}
 
 void Salidas::llenarComboTiendas()
 {
@@ -246,7 +244,7 @@ void Salidas::on_pushButtonEnviar_clicked()
                                     base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),
                                                               ui->comboBoxDestino->currentText())),
                             conf->getConexionLocal());
-    base->insertarLog(conf->getConexionLocal(),"Info",conf->getUsuario(),"Salida genero ");
+    base->insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(), "Salida genero ");
 
     actualizarTabla();
 }
@@ -279,19 +277,16 @@ void Salidas::actualizarTotales()
     lineas = mTablaSalidas->rowCount();
     productos = 0;
     for (int i = 0; i < mTablaSalidas->rowCount(); ++i) {
-        QModelIndex idx = mTablaSalidas->index(i,4);
+        QModelIndex idx = mTablaSalidas->index(i, 4);
         double valor = mTablaSalidas->data(idx).toDouble();
         productos += valor;
     }
-    ui->lbSalidas->setText("Lineas= "+QString::number(lineas)+"  Productos="+QString::number(productos));
-
+    ui->lbSalidas->setText("Lineas= " + QString::number(lineas)
+                           + "  Productos=" + QString::number(productos));
 }
-
-
 
 void Salidas::on_comboBoxDestino_currentIndexChanged(int index)
 {
     actualizarTabla();
     qDebug() << "Current index changed";
 }
-

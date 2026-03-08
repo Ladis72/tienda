@@ -40,8 +40,8 @@ private slots:
     void actualizarTotales();
     void procesarLineaEntrada(const QSqlRecord &registro);
     void actualizarArticulo(const QString &cod, const QString &descripcion, const QString &precio);
-    void guardarArticulo (int idTienda);
-    void limpiarTabla (int idTienda);
+    void guardarArticulo(int idTienda);
+    void limpiarTabla(int idTienda);
 
     void on_comboBoxProcedencia_currentIndexChanged(int index);
 

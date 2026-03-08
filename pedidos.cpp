@@ -5,9 +5,9 @@
 #include <QDebug>
 #include <QInputDialog>
 #include <QMessageBox>
-#include <QtMath>
-#include <QVariant>
 #include <QStandardItemModel>
+#include <QVariant>
+#include <QtMath>
 
 extern Configuracion *conf;
 
@@ -122,26 +122,27 @@ QString pedidos::calcularTotalLinea()
 
 void pedidos::llenarTablaPedido(QString idPedido)
 {
-    modeloPedido->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = '%1'").arg(idPedido),
-                           QSqlDatabase::database(conf->getConexionLocal()));
-            ui->tableView->setModel(modeloPedido);
-            ui->tableView->hideColumn(0);
-            ui->tableView->hideColumn(1);
-            ui->tableView->hideColumn(10);
-            ui->tableView->hideColumn(13);
-            ui->tableView->hideColumn(14);
-            ui->tableView->resizeColumnsToContents();
+    modeloPedido
+        ->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = '%1'").arg(idPedido),
+                   QSqlDatabase::database(conf->getConexionLocal()));
+    ui->tableView->setModel(modeloPedido);
+    ui->tableView->hideColumn(0);
+    ui->tableView->hideColumn(1);
+    ui->tableView->hideColumn(10);
+    ui->tableView->hideColumn(13);
+    ui->tableView->hideColumn(14);
+    ui->tableView->resizeColumnsToContents();
 
     // Consulta para agrupar por tipo de IVA
-    QString queryStr = QString(
-                           "SELECT tipoIva, "
-                           "SUM(totalbase) AS totalBase, "
-                           "SUM(iva) AS totalIva, "
-                           "SUM(re) AS totalRe, "
-                           "(SUM(totalbase) + SUM(iva) + SUM(re)) AS totalGeneral "
-                           "FROM lineaspedido_tmp "
-                           "WHERE idPedido = '%1' "
-                           "GROUP BY tipoIva").arg(idPedido);
+    QString queryStr = QString("SELECT tipoIva, "
+                               "SUM(totalbase) AS totalBase, "
+                               "SUM(iva) AS totalIva, "
+                               "SUM(re) AS totalRe, "
+                               "(SUM(totalbase) + SUM(iva) + SUM(re)) AS totalGeneral "
+                               "FROM lineaspedido_tmp "
+                               "WHERE idPedido = '%1' "
+                               "GROUP BY tipoIva")
+                           .arg(idPedido);
 
     QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
     if (!query.exec(queryStr)) {
@@ -171,10 +172,10 @@ void pedidos::llenarTablaPedido(QString idPedido)
         double total = query.value("totalGeneral").toDouble();
 
         // Crear celdas de la fila
-        fila << new QStandardItem(QString::number(tipoIva)) // Tipo IVA
-             << new QStandardItem(QString::number(base, 'f', 2)) // Base Imponible
-             << new QStandardItem(QString::number(iva, 'f', 2)) // IVA
-             << new QStandardItem(QString::number(re, 'f', 2)) // Recargo de Equivalencia
+        fila << new QStandardItem(QString::number(tipoIva))        // Tipo IVA
+             << new QStandardItem(QString::number(base, 'f', 2))   // Base Imponible
+             << new QStandardItem(QString::number(iva, 'f', 2))    // IVA
+             << new QStandardItem(QString::number(re, 'f', 2))     // Recargo de Equivalencia
              << new QStandardItem(QString::number(total, 'f', 2)); // Total General
 
         // Agregar fila al modelo
@@ -185,13 +186,12 @@ void pedidos::llenarTablaPedido(QString idPedido)
         totalIva += iva;
         totalRe += re;
         totalGeneral += total;
-
     }
     //Lenar los totales
-    ui->lineEditBase->setText(QString::number(totalBase,'f',2));
-    ui->lineEditIVA->setText(QString::number(totalIva,'f',2));
-    ui->lineEditRecargo->setText(QString::number(totalRe,'f',2));
-    ui->lineEditTotal->setText(QString::number(totalGeneral,'f',2));
+    ui->lineEditBase->setText(QString::number(totalBase, 'f', 2));
+    ui->lineEditIVA->setText(QString::number(totalIva, 'f', 2));
+    ui->lineEditRecargo->setText(QString::number(totalRe, 'f', 2));
+    ui->lineEditTotal->setText(QString::number(totalGeneral, 'f', 2));
     contarArticulos();
     contarLineas();
     // Establecer el modelo en la vista de tabla
@@ -204,7 +204,6 @@ void pedidos::llenarTablaPedido(QString idPedido)
     // ui->leTotalRe->setText(QString::number(totalRe, 'f', 2));
     // ui->leTotal->setText(QString::number(totalGeneral, 'f', 2));
 }
-
 
 void pedidos::borrarLineEdits()
 {
@@ -340,72 +339,72 @@ void pedidos::on_pushButtonAnadir_clicked()
     // borrarLineEdits();
     // ui->leCod->setFocus();
 
-        QStringList datos;
-        datos.clear();
+    QStringList datos;
+    datos.clear();
 
-        // Verificar que el producto existe
-        bool existe = base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
-                                             "articulos", "cod", ui->leCod->text());
-        if (existe == true) {
-            // Obtener tipo de IVA desde la entrada del usuario
-            QVariant tipoIva = ui->leIva->text();
-            double baseTotal = ui->leTotalLinea->text().toDouble();
-            double iva = 0.0;
-            double re = 0.0;
+    // Verificar que el producto existe
+    bool existe = base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
+                                         "articulos",
+                                         "cod",
+                                         ui->leCod->text());
+    if (existe == true) {
+        // Obtener tipo de IVA desde la entrada del usuario
+        QVariant tipoIva = ui->leIva->text();
+        double baseTotal = ui->leTotalLinea->text().toDouble();
+        double iva = 0.0;
+        double re = 0.0;
 
-            // Calcular IVA y RE desde la tabla impuestos
-            qDebug() << "Tipo IVA: " << tipoIva << tipoIva.typeName();
-            QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
-            query.prepare("SELECT tipoIva, porcentaje, recargo FROM impuestos WHERE porcentaje = :porcentaje");
-            query.bindValue(":porcentaje", tipoIva);
-            query.exec();
-            query.first();
-            qDebug() << query.lastQuery();
-            qDebug() << query.lastError();
+        // Calcular IVA y RE desde la tabla impuestos
+        qDebug() << "Tipo IVA: " << tipoIva << tipoIva.typeName();
+        QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
+        query.prepare(
+            "SELECT tipoIva, porcentaje, recargo FROM impuestos WHERE porcentaje = :porcentaje");
+        query.bindValue(":porcentaje", tipoIva);
+        query.exec();
+        query.first();
+        qDebug() << query.lastQuery();
+        qDebug() << query.lastError();
 
-            qDebug() << "Base: " << baseTotal << " IVA: " << query.value(1).toDouble();
-            iva = baseTotal * query.value(1).toDouble() / 100;
-            qDebug() << "Base: " << baseTotal << " IVA: " << query.value(2).toDouble();
-            re = baseTotal * query.value(2).toDouble() / 100;
+        qDebug() << "Base: " << baseTotal << " IVA: " << query.value(1).toDouble();
+        iva = baseTotal * query.value(1).toDouble() / 100;
+        qDebug() << "Base: " << baseTotal << " IVA: " << query.value(2).toDouble();
+        re = baseTotal * query.value(2).toDouble() / 100;
 
+        // Continuar con la creación de la línea del pedido
+        double baseProducto = baseTotal / ui->leUds->text().toDouble();
+        datos.append(idPedido);
+        datos.append(ui->leCod->text());
+        datos.append(ui->leDescripcion->text());
+        datos.append(ui->leUds->text());
+        datos.append(ui->leBon->text().isEmpty() ? "0" : ui->leBon->text());
+        datos.append(ui->leLote->text());
+        datos.append(ui->dateEdit->date().toString("yyyy-MM-dd"));
+        datos.append(ui->lePvt->text());
+        datos.append(ui->leDescuento->text());
+        datos.append(QString::number(baseProducto));
+        datos.append(tipoIva.toString());
+        datos.append(ui->leTotalLinea->text());
+        datos.append(QString::number(iva));
+        datos.append(QString::number(re));
+        datos.append(ui->lePvp->text());
 
-            // Continuar con la creación de la línea del pedido
-            double baseProducto = baseTotal / ui->leUds->text().toDouble();
-            datos.append(idPedido);
-            datos.append(ui->leCod->text());
-            datos.append(ui->leDescripcion->text());
-            datos.append(ui->leUds->text());
-            datos.append(ui->leBon->text().isEmpty() ? "0" : ui->leBon->text());
-            datos.append(ui->leLote->text());
-            datos.append(ui->dateEdit->date().toString("yyyy-MM-dd"));
-            datos.append(ui->lePvt->text());
-            datos.append(ui->leDescuento->text());
-            datos.append(QString::number(baseProducto));
-            datos.append(tipoIva.toString());
-            datos.append(ui->leTotalLinea->text());
-            datos.append(QString::number(iva));
-            datos.append(QString::number(re));
-            datos.append(ui->lePvp->text());
+        qDebug() << datos;
 
-            qDebug() << datos;
-
-            if (editando) {
-                datos.append(lineaSeleccionada);
-                base.modificarLineaPedido(conf->getConexionLocal(), datos);
-            } else {
-                base.grabarLineaPedido(conf->getConexionLocal(), datos);
-            }
-
-            llenarTablaPedido(idPedido);
+        if (editando) {
+            datos.append(lineaSeleccionada);
+            base.modificarLineaPedido(conf->getConexionLocal(), datos);
         } else {
-            QMessageBox::information(this, "ERROR", "No hay un producto con ese código.");
+            base.grabarLineaPedido(conf->getConexionLocal(), datos);
         }
 
-        editando = false;
-        borrarLineEdits();
-        ui->leCod->setFocus();
+        llenarTablaPedido(idPedido);
+    } else {
+        QMessageBox::information(this, "ERROR", "No hay un producto con ese código.");
+    }
 
-
+    editando = false;
+    borrarLineEdits();
+    ui->leCod->setFocus();
 }
 
 void pedidos::on_leCod_returnPressed()
@@ -510,7 +509,6 @@ void pedidos::on_pushButtonModificar_clicked()
 
 void pedidos::on_leIva_editingFinished()
 {
-
     // Obtener los tipos de IVA permitidos desde la tabla impuestos
     QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
     query.prepare("SELECT porcentaje FROM impuestos");
@@ -530,7 +528,7 @@ void pedidos::on_leIva_editingFinished()
         ui->leIva->clear();
         ui->leIva->setFocus();
     } else {
-        ui->leTotalLinea->setText(calcularTotalLinea());  // Actualiza el total con el nuevo IVA
+        ui->leTotalLinea->setText(calcularTotalLinea()); // Actualiza el total con el nuevo IVA
     }
 }
 

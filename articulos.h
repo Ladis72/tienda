@@ -18,11 +18,12 @@
 #include <QDialog>
 #include <QKeyEvent>
 #include <QLabel>
-#include <QTreeWidget>
 #include <QList>
+#include <QTreeWidget>
 
 extern Configuracion *conf;
-struct DatosGrafico {
+struct DatosGrafico
+{
     QString titulo;
     QStringList categorias;
     QList<QList<double>> series;
@@ -103,7 +104,6 @@ private slots:
 
     void on_treeWidgetStockTiendas_itemDoubleClicked(QTreeWidgetItem *item, int column);
 
-
 private:
     Ui::Articulos *ui;
 
@@ -138,8 +138,6 @@ private:
     void llenarStockRemoto(QString ean);
     DatosGrafico extraerVentasPorFechas(QSqlQueryModel *modelo);
     static QStringList crearConexionesRemotas(QSqlQuery consultaRemota);
-
-
 };
 
 #endif // ARTICULOS_H

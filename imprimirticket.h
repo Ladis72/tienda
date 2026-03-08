@@ -5,8 +5,8 @@
 #include <QString>
 #include "base_datos.h"
 #include "configuracion.h"
-#include <qstandarditemmodel.h>
 #include "printermanager.h"
+#include <qstandarditemmodel.h>
 
 extern Configuracion *conf;
 
@@ -19,7 +19,6 @@ public:
     void ImprimirTicketRegalo();
 
 private:
-
     baseDatos base;
     QSqlQuery consulta;
 

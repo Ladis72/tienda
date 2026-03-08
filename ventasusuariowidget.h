@@ -1,14 +1,13 @@
 #ifndef VENTASUSUARIOWIDGET_H
 #define VENTASUSUARIOWIDGET_H
 
-#include <QWidget>
 #include <QRadioButton>
+#include <QWidget>
 #include <QtCharts/QBarSet>
 
 #include "configuracion.h"
 
 extern Configuracion *conf;
-
 
 namespace Ui {
 class ventasUsuarioWidget;
@@ -26,7 +25,10 @@ public:
 private:
     Ui::ventasUsuarioWidget *ui;
     void actualizarResumen();
-    void actualizarTablaVentas(const QString &agrupacion, const QDate &desde, const QDate &hasta, QString &usuario);
+    void actualizarTablaVentas(const QString &agrupacion,
+                               const QDate &desde,
+                               const QDate &hasta,
+                               QString &usuario);
     void generarGraficoDesdeTabla();
     void keyPressEvent(QKeyEvent *event);
     QString usuario;

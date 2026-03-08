@@ -37,7 +37,6 @@ private slots:
 
     void actualizarTotales();
 
-
     void on_comboBoxDestino_currentIndexChanged(int index);
 
 private:

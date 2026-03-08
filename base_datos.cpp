@@ -399,7 +399,6 @@ bool baseDatos::descontarArticulo(QString db, QString cod, int uds)
 
 bool baseDatos::actualizarFechaVentaArticulo(QString nombreConexion, QString cod, QString fecha)
 {
-
     QSqlDatabase db = QSqlDatabase::database(nombreConexion);
 
     // 2. Iniciar la transacción
@@ -997,7 +996,7 @@ bool baseDatos::nuevoTicketTmp(int orden, int cliente, int vendedor)
     }
 }
 
-bool baseDatos::grabarTicket(QString base , QString serie, QStringList datos)
+bool baseDatos::grabarTicket(QString base, QString serie, QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("INSERT INTO " + serie + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
@@ -1423,8 +1422,8 @@ float baseDatos::sumarBasesPedido(QString base, QString idPedido, QString tipoIv
 bool baseDatos::borrarLineaPedido(QString base, QString idLinea)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
-    if (consulta.exec("DELETE FROM `lineaspedido_tmp` WHERE `lineaspedido_tmp`.`id` = '"
-                      + idLinea + "'")) {
+    if (consulta.exec("DELETE FROM `lineaspedido_tmp` WHERE `lineaspedido_tmp`.`id` = '" + idLinea
+                      + "'")) {
         qDebug() << "CORRECTO" << consulta.lastError();
 
         return true;
@@ -1437,8 +1436,7 @@ bool baseDatos::borrarLineaPedido(QString base, QString idLinea)
 bool baseDatos::contabilizarPedido(QString base, QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
-    consulta.prepare(
-        "INSERT INTO pedidos VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?)");
+    consulta.prepare("INSERT INTO pedidos VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i, datos.at(i));
     }
@@ -1448,7 +1446,7 @@ bool baseDatos::contabilizarPedido(QString base, QStringList datos)
     return false;
 }
 
-bool baseDatos::grabarFactura(QString base , QStringList datos)
+bool baseDatos::grabarFactura(QString base, QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
     qDebug() << datos;
@@ -1456,7 +1454,7 @@ bool baseDatos::grabarFactura(QString base , QStringList datos)
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i, datos.at(i));
     }
-    if (consulta.exec()){
+    if (consulta.exec()) {
         qDebug() << "GRABANDO FACTURA";
         return true;
     }
@@ -1464,7 +1462,7 @@ bool baseDatos::grabarFactura(QString base , QStringList datos)
     return false;
 }
 
-bool baseDatos::grabarAlbaran(QString base , QStringList datos)
+bool baseDatos::grabarAlbaran(QString base, QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("INSERT INTO albaranes VALUES(NULL,?,?,?,?,?,?,?,?)");
@@ -1570,7 +1568,7 @@ int baseDatos::nTarjetasDesdeUltimoArqueo(QString fechaI, QString horaI, QString
     return consulta.value(0).toInt();
 }
 
-QSqlQuery baseDatos::devolverTablaCompleta(QString base , QString nombreTabla)
+QSqlQuery baseDatos::devolverTablaCompleta(QString base, QString nombreTabla)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.exec("SELECT * FROM " + nombreTabla);
@@ -1625,7 +1623,8 @@ QString baseDatos::idLote(QString base, QString cod, QString lote, QString fecha
 
 int baseDatos::unidadesLote(QString base, QString idLote)
 {
-    if(idLote.isEmpty()) return 0;
+    if (idLote.isEmpty())
+        return 0;
 
     QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("SELECT cantidad FROM lotes WHERE id = :id_lote");
@@ -1792,7 +1791,7 @@ QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final, QStrin
     return consulta;
 }
 
-QSqlQuery baseDatos::listadoMovimientosEfectivo(QString db , QString inicio, QString final)
+QSqlQuery baseDatos::listadoMovimientosEfectivo(QString db, QString inicio, QString final)
 {
     QSqlQuery consulta(QSqlDatabase::database(db));
     consulta.prepare(
@@ -1922,7 +1921,10 @@ bool baseDatos::copiaSeguridad(QString base, QString nombre)
     return false;
 }
 
-bool baseDatos::insertarLog(const QString db, const QString &categoria, const QString &usuario, const QString &mensaje)
+bool baseDatos::insertarLog(const QString db,
+                            const QString &categoria,
+                            const QString &usuario,
+                            const QString &mensaje)
 {
     if (!QSqlDatabase::database(db).isOpen()) {
         qWarning() << "No se puede registrar log: Base de datos no conectada.";
@@ -1930,7 +1932,8 @@ bool baseDatos::insertarLog(const QString db, const QString &categoria, const QS
     }
 
     QSqlQuery query(QSqlDatabase::database(db));
-    query.prepare("INSERT INTO logs (categoria, usuario, mensaje) VALUES (:categoria, :usuario, :mensaje)");
+    query.prepare(
+        "INSERT INTO logs (categoria, usuario, mensaje) VALUES (:categoria, :usuario, :mensaje)");
     query.bindValue(":categoria", categoria);
     query.bindValue(":usuario", usuario);
     query.bindValue(":mensaje", mensaje);
@@ -1942,7 +1945,11 @@ bool baseDatos::insertarLog(const QString db, const QString &categoria, const QS
     return true;
 }
 
-QSqlQueryModel *baseDatos::consultarLog(const QString db, const QString &categoria, const QString &usuario, const QDateTime &desde, const QDateTime &hasta)
+QSqlQueryModel *baseDatos::consultarLog(const QString db,
+                                        const QString &categoria,
+                                        const QString &usuario,
+                                        const QDateTime &desde,
+                                        const QDateTime &hasta)
 {
     QString sql = "SELECT id, timestamp, categoria, usuario, mensaje FROM logs WHERE 1=1";
 
@@ -2006,10 +2013,9 @@ QString baseDatos::registrarTickeckVerifactu(const QString db,
                                              const QString datosFactura,
                                              const int ususario)
 {
-
-
     QSqlQuery query(QSqlDatabase::database(db));
-    query.prepare("INSERT INTO verifactu_logs (id_factura, hash_actual, hash_anterior, cadena_firmada, usuario) "
+    query.prepare("INSERT INTO verifactu_logs (id_factura, hash_actual, hash_anterior, "
+                  "cadena_firmada, usuario) "
                   "VALUES (:ticket, :hash_actual, :hash_anterior, :cadena_firmada, :usuario)");
     query.bindValue(":ticket", ticket);
     query.bindValue(":hash_actual", hashActual);

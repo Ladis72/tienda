@@ -1,10 +1,9 @@
 #include "imprimirfactura.h"
-#include <QFile>
-#include <QTextDocument>
-#include <QPrinter>
 #include <QCoreApplication>
+#include <QFile>
+#include <QPrinter>
 #include <QProcess>
-
+#include <QTextDocument>
 
 ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent)
     : QObject(parent)
@@ -153,7 +152,6 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent)
     //      pagina << "</tr>";
     //  }
 
-
     // pagina <<        "<tr>"
     //                  "<td><b>TOTAL"
     //                  "</td>"
@@ -178,13 +176,10 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent)
     //  //       + "/documentos/FacturaCliente.html");
 
     facturaPDF();
-
-
 }
 
 void ImprimirFactura::facturaPDF()
 {
-
     QTextDocument documento;
     QString html = R"(
 <html>
@@ -310,15 +305,15 @@ void ImprimirFactura::facturaPDF()
 </html>
 )";
 
-    QString datosTiendaLocal ="";
+    QString datosTiendaLocal = "";
     datosTienda = base.datosTiendaLocal(conf->getConexionLocal());
 
     for (int i = 1; i < 7; ++i) {
-        datosTiendaLocal += datosTienda.at(i)+"<br>";
+        datosTiendaLocal += datosTienda.at(i) + "<br>";
     }
-    html.replace("%TIENDA%", datosTiendaLocal );
+    html.replace("%TIENDA%", datosTiendaLocal);
     html.replace("%CLIENTE%", cliente);
-    html.replace("%NUM_FACTURA%",ticket);
+    html.replace("%NUM_FACTURA%", ticket);
     html.replace("%FECHA%", fecha);
     double totalBase = 0;
     double totalIva = 0;
@@ -329,17 +324,15 @@ void ImprimirFactura::facturaPDF()
         QString cantidad = consulta.value(4).toString();
         QString descripcion = consulta.value(3).toString();
         QString precio = QString::number(consulta.value(6).toDouble(), 'f', 2);
-        QString descuento = QString::number(consulta.value(7).toDouble(), 'f' , 2);
-        QString tipoiva = QString::number(consulta.value(5).toDouble(), 'f' , 0)+"%";
-        QString total = QString::number(consulta.value(8).toDouble(), 'f' ,2);
+        QString descuento = QString::number(consulta.value(7).toDouble(), 'f', 2);
+        QString tipoiva = QString::number(consulta.value(5).toDouble(), 'f', 0) + "%";
+        QString total = QString::number(consulta.value(8).toDouble(), 'f', 2);
 
-        double baseTMP = consulta.value(8).toDouble()/(1+ (consulta.value(5).toDouble()/100));
-        double ivaTMP = consulta.value(8).toDouble()-baseTMP;
+        double baseTMP = consulta.value(8).toDouble() / (1 + (consulta.value(5).toDouble() / 100));
+        double ivaTMP = consulta.value(8).toDouble() - baseTMP;
 
         totalBase += baseTMP;
         totalIva += ivaTMP;
-
-
 
         lineasHTML += QString(R"(
         <tr>
@@ -350,21 +343,21 @@ void ImprimirFactura::facturaPDF()
             <td>%5</td>
             <td>%6 €</td>
         </tr>
-    )").arg(cantidad, descripcion, precio, descuento, tipoiva, total);
+    )")
+                          .arg(cantidad, descripcion, precio, descuento, tipoiva, total);
     }
     html.replace("%LINEAS%", lineasHTML);
 
-    html.replace("%BASE%", QString::number(totalBase, 'f',2))+" €";
-    html.replace("%IVA%", QString::number(totalIva, 'f',2))+ " €";
-    html.replace("%TOTAL%", QString::number(totalBase + totalIva, 'f',2))+" €";
+    html.replace("%BASE%", QString::number(totalBase, 'f', 2)) + " €";
+    html.replace("%IVA%", QString::number(totalIva, 'f', 2)) + " €";
+    html.replace("%TOTAL%", QString::number(totalBase + totalIva, 'f', 2)) + " €";
     documento.setHtml(html);
     QPrinter printer(QPrinter::HighResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName(base.devolverDirectorio("factura")+"/Factura.pdf");
+    printer.setOutputFileName(base.devolverDirectorio("factura") + "/Factura.pdf");
     printer.setPageSize(QPageSize::A4);
-    printer.setPageMargins(QMargins(15,15,15,15),QPageLayout::Millimeter);
+    printer.setPageMargins(QMargins(15, 15, 15, 15), QPageLayout::Millimeter);
     documento.print(&printer);
-    QProcess::startDetached("xdg-open", QStringList() << base.devolverDirectorio("factura")+"/Factura.pdf");
+    QProcess::startDetached("xdg-open",
+                            QStringList() << base.devolverDirectorio("factura") + "/Factura.pdf");
 }
-
-

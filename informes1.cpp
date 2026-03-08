@@ -1,9 +1,9 @@
 #include "informes1.h"
+#include <QCoreApplication>
+#include <QFile>
 #include "qprinter.h"
 #include "qprocess.h"
 #include "qtextdocument.h"
-#include <QCoreApplication>
-#include <QFile>
 
 informes1::informes1(QString tienda, QString fechaI, QString fechaF, QStandardItemModel *tabla)
 {
@@ -72,7 +72,7 @@ informes1::informes1(QString tienda, QString fechaI, QString fechaF, QStandardIt
     // fichero.close();
     // system("firefox " + QCoreApplication::applicationDirPath().toLocal8Bit()
     //        + "/documentos/ventas.html");
-    imprimir(tienda,fechaI,fechaF,tabla);
+    imprimir(tienda, fechaI, fechaF, tabla);
 }
 
 bool informes1::imprimir(QString tienda, QString fechaI, QString fechaF, QStandardItemModel *tabla)
@@ -119,25 +119,26 @@ bool informes1::imprimir(QString tienda, QString fechaI, QString fechaF, QStanda
         </body>
         </html>
         )";
-    html.replace("%FECHAS%", tienda+" desde "+fechaI+" hasta"+fechaF);
+    html.replace("%FECHAS%", tienda + " desde " + fechaI + " hasta" + fechaF);
     if (tabla->columnCount() == 2) {
         for (int i = 0; i < tabla->rowCount(); ++i) {
-            QString fecha = tabla->item(i,0)->text();
-            QString venta = QString::number(tabla->item(i,1)->text().toDouble(), 'f',2);
+            QString fecha = tabla->item(i, 0)->text();
+            QString venta = QString::number(tabla->item(i, 1)->text().toDouble(), 'f', 2);
             total += venta.toDouble();
             lineasHtml += QString(R"(
     <tr>
         <td>%1</td>
         <td>%2 €</td>
     </tr>
-)").arg(fecha,venta);
+)")
+                              .arg(fecha, venta);
         }
-        totalesHtml = QString(R"(<td>%1</td>)").arg(QString::number(total));}
-    else {
+        totalesHtml = QString(R"(<td>%1</td>)").arg(QString::number(total));
+    } else {
         for (int i = 0; i < tabla->rowCount(); ++i) {
-            QString fecha = tabla->item(i,0)->text();
-            QString venta = QString::number(tabla->item(i,1)->text().toDouble(), 'f',2);
-            QString ventaB = QString::number(tabla->item(i,2)->text().toDouble(), 'f',2);
+            QString fecha = tabla->item(i, 0)->text();
+            QString venta = QString::number(tabla->item(i, 1)->text().toDouble(), 'f', 2);
+            QString ventaB = QString::number(tabla->item(i, 2)->text().toDouble(), 'f', 2);
             total += venta.toDouble();
             totalB += ventaB.toDouble();
             lineasHtml += QString(R"(
@@ -146,21 +147,24 @@ bool informes1::imprimir(QString tienda, QString fechaI, QString fechaF, QStanda
         <td>%2 €</td>
         <td>%3 €</td>
     </tr>
-)").arg(fecha,venta,ventaB);
+)")
+                              .arg(fecha, venta, ventaB);
         }
-    totalesHtml = QString(R"(<td>%1</td><td>%2</td><td>%3</td>)").arg(QString::number(total),QString::number(totalB),QString::number(totalB+total));
+        totalesHtml = QString(R"(<td>%1</td><td>%2</td><td>%3</td>)")
+                          .arg(QString::number(total),
+                               QString::number(totalB),
+                               QString::number(totalB + total));
     }
-    html.replace("%LINEAS%",lineasHtml);
+    html.replace("%LINEAS%", lineasHtml);
 
-    html.replace("%TOTALES%",totalesHtml);
+    html.replace("%TOTALES%", totalesHtml);
     pagina.setHtml(html);
     QPrinter printer(QPrinter::HighResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setOutputFileName("./documentos/ventas.pdf");
     printer.setPageSize(QPageSize::A4);
-    printer.setPageMargins(QMargins(15,15,15,15),QPageLayout::Millimeter);
+    printer.setPageMargins(QMargins(15, 15, 15, 15), QPageLayout::Millimeter);
     pagina.print(&printer);
     QProcess::startDetached("xdg-open", QStringList() << "./documentos/ventas.pdf");
     return true;
-
 }

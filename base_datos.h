@@ -188,18 +188,24 @@ public:
     bool copiaSeguridad(QString base, QString nombre);
 
     //Funciones Log
-    bool insertarLog(const QString db, const QString &categoria, const QString &usuario, const QString &mensaje);
-    QSqlQueryModel* consultarLog(const QString db,
+    bool insertarLog(const QString db,
+                     const QString &categoria,
+                     const QString &usuario,
+                     const QString &mensaje);
+    QSqlQueryModel *consultarLog(const QString db,
                                  const QString &categoria,
                                  const QString &usuario,
                                  const QDateTime &desde,
                                  const QDateTime &hasta);
 
-
     //Funciones VERIFACTU
     QString obtenerUltimoHash(const QString db);
-    QString registrarTickeckVerifactu(const QString db, const int ticket, const QString hashActual, const QString hashAnterior, const QString datosFactura, const int ususario);
-
+    QString registrarTickeckVerifactu(const QString db,
+                                      const int ticket,
+                                      const QString hashActual,
+                                      const QString hashAnterior,
+                                      const QString datosFactura,
+                                      const int ususario);
 
 private:
     QSqlDatabase db;

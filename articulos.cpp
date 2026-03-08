@@ -1,18 +1,16 @@
 #include "articulos.h"
 #include "caducados.h"
 #include "conexion.h"
+#include "graficoventaswidget.h"
 #include "imprimirfacturaproveedor.h"
 #include "ui_articulos.h"
-#include "graficoventaswidget.h"
 
+#include <QDate>
 #include <QDir>
 #include <QFileDialog>
+#include <QList>
 #include <QMessageBox>
 #include <QtConcurrent/QtConcurrent>
-#include <QList>
-#include <QDate>
-
-
 
 Articulos::Articulos(QWidget *parent)
     : QDialog(parent)
@@ -58,8 +56,6 @@ Articulos::Articulos(QWidget *parent)
     ui->lineEditCod->setFocus();
     graficoVentas = new GraficoVentasWidget(this);
     ui->layOutVentas->addWidget(graficoVentas);
-
-
 }
 
 Articulos::~Articulos()
@@ -197,9 +193,7 @@ void Articulos::cargarCompras()
         ui->tableViewCompras->setModel(&modeloCompras);
         ui->tableViewCompras->resizeColumnsToContents();
     }
-
 }
-
 
 void Articulos::cargarCodAux()
 {
@@ -214,7 +208,7 @@ void Articulos::cargarCodAux()
 
 void Articulos::llenarComboFormatos()
 {
-    consulta = base.devolverTablaCompleta(conf->getConexionLocal(),"formatos");
+    consulta = base.devolverTablaCompleta(conf->getConexionLocal(), "formatos");
     consulta.first();
     do {
         ui->comboBoxFormato->addItem(consulta.value("formato").toString());
@@ -249,49 +243,53 @@ DatosGrafico Articulos::extraerVentasPorFechas(QSqlQueryModel *modelo)
     if (!modelo || modelo->rowCount() == 0 || modelo->columnCount() < 3)
         return datos; // modelo vacío o mal estructurado
 
-
-
     QString nombreProducto = modelo->data(modelo->index(0, 0)).toString();
     datos.titulo = QString("Evolución de ventas: %1").arg(nombreProducto);
     QString formatoFecha;
     QString granularidad;
-    QString muestra = modelo->data(modelo->index(0,1)).toString();
+    QString muestra = modelo->data(modelo->index(0, 1)).toString();
     if (muestra.contains("-")) {
-        if (muestra.size() == 7) { formatoFecha = "yyyy-MM"; granularidad = "mes"; }
-        else if (muestra.size() == 10) { formatoFecha = "yyyy-MM-dd"; granularidad = "dia"; }
+        if (muestra.size() == 7) {
+            formatoFecha = "yyyy-MM";
+            granularidad = "mes";
+        } else if (muestra.size() == 10) {
+            formatoFecha = "yyyy-MM-dd";
+            granularidad = "dia";
+        }
     } else {
-        formatoFecha = "yyyy"; granularidad = "ano";
+        formatoFecha = "yyyy";
+        granularidad = "ano";
     }
 
-
-
-    QDate fechaMin = QDate::fromString(modelo->data(modelo->index(modelo->rowCount()-1,1)).toString(), formatoFecha);
-    QDate fechaMax = QDate::fromString(modelo->data(modelo->index(0,1)).toString(), formatoFecha);
+    QDate fechaMin
+        = QDate::fromString(modelo->data(modelo->index(modelo->rowCount() - 1, 1)).toString(),
+                            formatoFecha);
+    QDate fechaMax = QDate::fromString(modelo->data(modelo->index(0, 1)).toString(), formatoFecha);
     QList<double> serieUnica;
-
-
 
     QMap<QString, double> mapaDatos;
     for (int fila = 0; fila < modelo->rowCount(); ++fila) {
-        QString fecha = modelo->data(modelo->index(fila,1)).toString();
-        double cantidad = modelo->data(modelo->index(fila,2)).toDouble();
-        mapaDatos[fecha] +=cantidad;
+        QString fecha = modelo->data(modelo->index(fila, 1)).toString();
+        double cantidad = modelo->data(modelo->index(fila, 2)).toDouble();
+        mapaDatos[fecha] += cantidad;
     }
 
     QDate actual = fechaMin;
 
     while (actual <= fechaMax) {
         QString clave = actual.toString(formatoFecha);
-        double cantidad = mapaDatos.value(clave,0);
+        double cantidad = mapaDatos.value(clave, 0);
 
         datos.categorias << clave;
         serieUnica << cantidad;
 
-        if (granularidad == "dia") actual = actual.addDays(1);
-        else if (granularidad == "mes") actual = actual.addMonths(1);
-        else if (granularidad == "ano") actual = actual.addYears(1);
+        if (granularidad == "dia")
+            actual = actual.addDays(1);
+        else if (granularidad == "mes")
+            actual = actual.addMonths(1);
+        else if (granularidad == "ano")
+            actual = actual.addYears(1);
     }
-
 
     datos.series << serieUnica;
     datos.nombresSeries << "Ventas uds.";
@@ -324,8 +322,7 @@ QStringList Articulos::crearConexionesRemotas(QSqlQuery consultaRemota)
 
 void Articulos::cargarDatosGrafico(DatosGrafico nuevosDatos)
 {
-
-    if(!graficoVentas){
+    if (!graficoVentas) {
         qDebug() << "Grafico es nullptr";
         return;
     }
@@ -334,13 +331,8 @@ void Articulos::cargarDatosGrafico(DatosGrafico nuevosDatos)
     QList<QList<double>> ser = nuevosDatos.series;
     QStringList nomSer = nuevosDatos.nombresSeries;
     QList<QColor> color = {Qt::darkGreen};
-    graficoVentas->configurar(tit,cat,ser,nomSer,color);
-
+    graficoVentas->configurar(tit, cat, ser, nomSer, color);
 }
-
-
-
-
 
 void Articulos::cargarVentas()
 {
@@ -367,8 +359,6 @@ void Articulos::cargarVentas()
         ui->tableViewVentas->resizeColumnsToContents();
         DatosGrafico nuevosDatos = extraerVentasPorFechas(&modeloVentas);
         cargarDatosGrafico(nuevosDatos);
-
-
     }
     if (ui->radioButtonVentasDia->isChecked()) {
         modeloVentas
