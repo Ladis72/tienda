@@ -6,7 +6,8 @@
 
 
 
-QT       += sql charts webenginewidgets concurrent core5compat
+QT       += sql charts webenginewidgets concurrent
+greaterThan(QT_MAJOR_VERSION, 5): QT += core5compat
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -78,7 +79,8 @@ SOURCES += main.cpp\
     formatos.cpp \
     directorios.cpp \
     tiendas.cpp \
-    comprasventasremoto.cpp
+    comprasventasremoto.cpp \
+    facturaralbaranes.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -144,7 +146,8 @@ HEADERS  += tienda.h \
     formatos.h \
     directorios.h \
     tiendas.h \
-    comprasventasremoto.h
+    comprasventasremoto.h \
+    facturaralbaranes.h
 
 FORMS    += tienda.ui \
     actualizarclientes.ui \

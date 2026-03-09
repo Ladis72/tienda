@@ -43,7 +43,7 @@ public:
     bool insertarArticulo(QSqlDatabase db, QStringList datos);
     bool descontarArticulo(QString db, QString cod, int uds);
     bool actualizarFechaVentaArticulo(QString db, QString cod, QString fecha);
-    bool actualizarArticulosDesdeCompras(QStringList datos);
+    bool actualizarArticulosDesdeCompras(QString base,QStringList datos);
     bool modificarFotoArticulo(QString foto, QString dato);
 
     //FUNCIONES CLIENTES

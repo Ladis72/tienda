@@ -320,7 +320,7 @@ QByteArray PrinterManager::procesarImagenParaImpresora(const QImage &imagen)
             if (scanLine[x] < 200) { // Negro
                 int byteIdx = y * bytesPerLine + (x / 8);
                 int bitPos = 7 - (x % 8);       // MSB primero
-                bits[byteIdx] |= (1 << bitPos); // ✅ Activar bit para imprimir
+                bits[byteIdx] = bits[byteIdx] | (1 << bitPos); // ✅ Activar bit para imprimir
             }
         }
         // ✅ Bytes adicionales por padding permanecen en 0x00 (blanco)

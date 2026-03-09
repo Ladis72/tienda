@@ -19,11 +19,10 @@ AceptarPedido::AceptarPedido(
     fecha = fechaPedido;
     ui->lineEditNDoc->setText(nDoc);
     ui->dateEditDocumento->setDate(QDate::fromString(fecha, "yyyy-MM-dd"));
-    llenarTabla(idPedido, descuento);
     modeloPedido = new QSqlQueryModel(this);
-    modeloPedido
-        ->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = %1").arg(idPedido),
+    modeloPedido->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = %1").arg(idPedido),
                    QSqlDatabase::database(conf->getConexionLocal()));
+    llenarTabla(idPedido, descuento);
 }
 
 AceptarPedido::~AceptarPedido()
@@ -102,6 +101,9 @@ void AceptarPedido::llenarTabla(QString idPedido, double desc)
 
 bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
 {
+    QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
+    db.transaction();
+
     QStringList datos;
     QString idLinea, ean, descripcion, lote, fechaCaducidad, descuentoLinea, tipoIva, baseProducto,
         baseLinea, ivaLinea, reLinea;
@@ -113,6 +115,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         msg.setInformativeText(
             "Antes de poder aceptar el pedido debe indicar si es un albarán o una factura");
         msg.exec();
+        db.rollback();
         return false;
     }
     if (ui->lineEditNDoc->text().isEmpty()) {
@@ -121,6 +124,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         msg.setInformativeText("Antes de poder aceptar el pedido debe indicar el número del "
                                "documento al que pertenece");
         msg.exec();
+        db.rollback();
         return false;
     }
 
@@ -144,47 +148,40 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         reLinea = modelo->record(i).value("re").toString();
         //qDebug() << ean << " " << descripcion << " " << uds << " " << lote << " " << fechaCaducidad << " " << precioCosto << " " <<pvp;
 
-        // Buscar si hay lotes con unidades pendientes
-        QString idLote = base.idLote(conf->getConexionLocal(), ean, "", "2000-01-01");
-        qDebug() << "IDLOTE " + idLote;
-        if (idLote != "0") {
-            qDebug() << "IDLOTE " + idLote;
-            int pendientes = base.unidadesLote(conf->getConexionLocal(), idLote);
-            qDebug() << "PENDIENTES: " + QString::number(pendientes);
-            if (abs(pendientes) > uds) {
-                base.aumentarLote(conf->getConexionLocal(), idLote, uds);
-            } else if (abs(pendientes) == uds) {
-                base.ejecutarSentencia("DELETE FROM lotes WHERE id = '" + idLote + "'",
+        // Gestión de lotes y stock
+        int udsPorProcesar = uds;
+        // 1. Intentar compensar stock negativo/genérico (lote vacío, fecha antigua)
+        QString idLoteGeneric = base.idLote(conf->getConexionLocal(), ean, "", "2000-01-01");
+        if (idLoteGeneric != "0") {
+            int pendientes = base.unidadesLote(conf->getConexionLocal(), idLoteGeneric);
+            qDebug() << "Compensando stock genérico: " << pendientes << " uds";
+            if (abs(pendientes) > udsPorProcesar) {
+                base.aumentarLote(conf->getConexionLocal(), idLoteGeneric, udsPorProcesar);
+                udsPorProcesar = 0;
+            } else if (abs(pendientes) == udsPorProcesar) {
+                base.ejecutarSentencia("DELETE FROM lotes WHERE id = '" + idLoteGeneric + "'",
                                        conf->getConexionLocal());
+                udsPorProcesar = 0;
             } else {
-                base.ejecutarSentencia("DELETE FROM lotes WHERE id = '" + idLote + "'",
+                base.ejecutarSentencia("DELETE FROM lotes WHERE id = '" + idLoteGeneric + "'",
                                        conf->getConexionLocal());
-                uds = uds + pendientes;
-                //Modificar o crear lotes
-                idLote = base.idLote(conf->getConexionLocal(), ean, lote, fechaCaducidad);
-                if (idLote == "0") {
-                    base.crearLote(conf->getConexionLocal(),
-                                   ean,
-                                   lote,
-                                   fechaCaducidad,
-                                   QString::number(uds));
-                    qDebug() << "Creando lote";
-                } else {
-                    base.aumentarLote(conf->getConexionLocal(), idLote, uds);
-                }
+                udsPorProcesar += pendientes; // pendientes es negativo, ej: 10 + (-4) = 6
             }
-        } else {
-            //Modificar o crear lotes
-            idLote = base.idLote(conf->getConexionLocal(), ean, lote, fechaCaducidad);
-            if (idLote == "0") {
+        }
+
+        // 2. Procesar el resto de unidades en el lote real del pedido
+        if (udsPorProcesar > 0) {
+            QString idLoteReal = base.idLote(conf->getConexionLocal(), ean, lote, fechaCaducidad);
+            if (idLoteReal == "0") {
                 base.crearLote(conf->getConexionLocal(),
                                ean,
                                lote,
                                fechaCaducidad,
-                               QString::number(uds));
-                qDebug() << "Creando lote";
+                               QString::number(udsPorProcesar));
+                qDebug() << "Creando lote real: " << lote << " - Uds: " << udsPorProcesar;
             } else {
-                base.aumentarLote(conf->getConexionLocal(), idLote, uds);
+                base.aumentarLote(conf->getConexionLocal(), idLoteReal, udsPorProcesar);
+                qDebug() << "Aumentando lote real: " << idLoteReal << " - Uds: " << udsPorProcesar;
             }
         }
 
@@ -213,6 +210,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
                     base.insertarEtiqueta(conf->getConexionLocal(), ean);
                 }
             }
+            break;
 
         case 1:
             if (precioAnterior != QString::number(pvp)) {
@@ -228,7 +226,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         datos.append(tipoIva);
         datos.append(QString::number(precioCosto));
         datos.append(fecha);
-        if (base.actualizarArticulosDesdeCompras(datos)) {
+        if (base.actualizarArticulosDesdeCompras(conf->getConexionLocal(), datos)) {
             qDebug() << "actualizando " << datos.at(1);
         } else {
             QMessageBox msg;
@@ -236,6 +234,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
             msg.setInformativeText(
                 "No se ha podido actualizar la información de la tabla artículos");
             msg.show();
+            db.rollback();
             return false;
         }
 
@@ -259,6 +258,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         datosLineaPedido.append(reLinea);
         datosLineaPedido.append(QString::number(pvp));
         if (!base.pasarLineaPedidoAHistorico(conf->getConexionLocal(), datosLineaPedido)) {
+            db.rollback();
             return false;
         } else {
             qDebug() << base.borrarPedido(conf->getConexionLocal(), idPedido);
@@ -271,29 +271,9 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     datosPedido.append(nDoc);
     datosPedido.append(fecha);
     datosPedido.append(QString::number(modeloPedido->rowCount()));
-    //    double unidades = base.sumarColumna("lineaspedido_tmp","cantidad","idPedido",idPedido);
-    //    unidades += base.sumarColumna("lineaspedido_tmp","bonificacion","idPedido",idPedido);
     datosPedido.append(QString::number(unidades));
     datosPedido.append(QString::number(descuentoReal));
-    // datosPedido.append(ui->leBase21->text());
-    // datosPedido.append(ui->leIva21->text());
-    // datosPedido.append(ui->leRe21->text());
-    // datosPedido.append(ui->leBase10->text());
-    // datosPedido.append(ui->leIva10->text());
-    // datosPedido.append(ui->leRe10->text());
-    // datosPedido.append(ui->leBase4->text());
-    // datosPedido.append(ui->leIva4->text());
-    // datosPedido.append(ui->leRe4->text());
-    // datosPedido.append(ui->leBase0->text());
-    // datosPedido.append(ui->leIva0->text());
-    // datosPedido.append(ui->leRe0->text());
-    // datosPedido.append(ui->leBase5->text());
-    // datosPedido.append(ui->leIva5->text());
-    // datosPedido.append(ui->leRe5->text());
-    // datosPedido.append(ui->leTotalBase->text());
-    // datosPedido.append(ui->leTotalIva->text());
-    // datosPedido.append(ui->leTotalRe->text());
-    // datosPedido.append(ui->leTotal->text());
+
     datosPedido.append(ui->leTotalBase->text());
     datosPedido.append(ui->leTotalIva->text());
     datosPedido.append(ui->leTotalRe->text());
@@ -305,6 +285,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     }
 
     if (!base.contabilizarPedido(conf->getConexionLocal(), datosPedido)) {
+        db.rollback();
         return false;
     }
     qDebug() << "Pedido grabado";
@@ -326,16 +307,19 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
                              "Error",
                              conf->getUsuario(),
                              "Error al grabar la factura: " + datosFactura.at(0));
+            db.rollback();
             return false;
         }
     } else {
         datosFactura.append("0");
-        if (base.grabarAlbaran(conf->getConexionLocal(), datosFactura)) {
+        datosFactura.append(ui->lineEditNDoc->text());
+        if (!base.grabarAlbaran(conf->getConexionLocal(), datosFactura)) {
             base.insertarLog(conf->getConexionLocal(),
                              "Error",
                              conf->getUsuario(),
                              "Error al grabar el albarán: " + datosFactura.at(0));
 
+            db.rollback();
             return false;
         }
     }
@@ -343,8 +327,9 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     base.insertarLog(conf->getConexionLocal(),
                      "Info",
                      conf->getUsuario(),
-                     "Registrada la factura" + datosFactura.at(0));
+                     "Registrada la factura o albarán" + datosFactura.at(0));
 
+    db.commit();
     return true;
 }
 

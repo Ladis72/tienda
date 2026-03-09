@@ -165,7 +165,7 @@ QSqlQuery baseDatos::buscarProducto(QSqlDatabase db, QString tabla, QString nomb
     if (db.isOpen()) {
         QSqlQuery consulta(db);
         //consulta.exec("SELECT * FROM "+tabla+" WHERE descripcion LIKE '%"+nombre+"%' ORDER BY descripcion");
-        consulta.exec("SELECT * , SUM(lotes.cantidad) FROM articulos LEFT JOIN lotes ON "
+        consulta.exec("SELECT articulos.*, SUM(lotes.cantidad) as stock_total, MIN(lotes.fecha) as fecha_caducidad FROM articulos LEFT JOIN lotes ON "
                       "articulos.cod=lotes.ean WHERE articulos.descripcion LIKE '%"
                       + nombre + "%' GROUP BY articulos.cod");
         return consulta;
@@ -431,9 +431,9 @@ bool baseDatos::actualizarFechaVentaArticulo(QString nombreConexion, QString cod
     }
 }
 
-bool baseDatos::actualizarArticulosDesdeCompras(QStringList datos)
+bool baseDatos::actualizarArticulosDesdeCompras(QString base, QStringList datos)
 {
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("UPDATE articulos SET descripcion = ? , pvp = ? , iva = ? , precio_compra = ? "
                      ", ultimo_pedido = ?  WHERE cod = ?");
     consulta.bindValue(0, datos.at(1));
@@ -802,7 +802,8 @@ bool baseDatos::crearTienda(QStringList datos)
 QSqlQuery baseDatos::tiendas(QSqlDatabase db)
 {
     QSqlQuery consulta(db);
-    if (!consulta.exec("SELECT * FROM tiendas WHERE local != '1'")) {
+    QString nombreLocal = conf->getConexionLocal();
+    if (!consulta.exec("SELECT * FROM tiendas WHERE nombre != '" + nombreLocal + "'")) {
         qDebug() << consulta.lastError();
     }
     return consulta;
@@ -835,11 +836,10 @@ QString baseDatos::idProveedor(QString nombre, QString base)
     QSqlQuery consulta(QSqlDatabase::database(base));
     consulta.prepare("SELECT idProveedor FROM proveedores WHERE nombre LIKE ?");
     consulta.bindValue(0, nombre);
-    if (consulta.exec() == true) {
-        consulta.first();
+    if (consulta.exec() && consulta.first()) {
         return consulta.value(0).toString();
     }
-    return 0;
+    return QString();
 }
 
 bool baseDatos::modificarProveedor(QSqlDatabase db, QStringList datos, QString dato)
@@ -1465,7 +1465,7 @@ bool baseDatos::grabarFactura(QString base, QStringList datos)
 bool baseDatos::grabarAlbaran(QString base, QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
-    consulta.prepare("INSERT INTO albaranes VALUES(NULL,?,?,?,?,?,?,?,?)");
+    consulta.prepare("INSERT INTO albaranes VALUES(NULL,?,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); ++i) {
         consulta.bindValue(i, datos.at(i));
     }
@@ -1612,8 +1612,9 @@ double baseDatos::ESdesdeFecha(QString fecha, QString hora, QString base)
 QString baseDatos::idLote(QString base, QString cod, QString lote, QString fecha)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
-    consulta.prepare("SELECT id FROM lotes WHERE ean = :id_producto AND fecha = :fecha");
+    consulta.prepare("SELECT id FROM lotes WHERE ean = :id_producto AND lote = :lote AND fecha = :fecha");
     consulta.bindValue(":id_producto", cod);
+    consulta.bindValue(":lote", lote);
     consulta.bindValue(":fecha", fecha);
     if (consulta.exec() && consulta.first()) {
         return consulta.value(0).toString();
