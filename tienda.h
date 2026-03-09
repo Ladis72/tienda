@@ -89,6 +89,7 @@ private slots:
     void on_pushButtonPrestamos_clicked();
     void on_pushButtonConfiguracion_clicked();
     void on_pushButtonAlbaranes_clicked();
+    void on_pushButtonFacturar_clicked();
     void on_pushButtonPrestamistas_clicked();
     void on_pushButtonListadoMovimientos_clicked();
     void on_pushButtonListadoArqueos_clicked();

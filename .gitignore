@@ -1,0 +1,44 @@
+# C++ objects and libs
+*.slo
+*.lo
+*.o
+*.obj
+*.a
+*.la
+*.al
+*.so
+*.so.*
+*.dylib
+*.dll
+*.ext
+*.exe
+*.ilk
+
+# Qt Creator settings
+*.pro.user
+*.pro.user.*
+*.qtc
+CMakeLists.txt.user
+CMakeLists.txt.user.*
+
+# Qt build directories
+build/
+build-*/
+*-build-*
+*-build
+
+# Qt specific
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+Makefile
+Makefile.Debug
+Makefile.Release
+*.qmake.stash
+
+# IDE/OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

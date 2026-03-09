@@ -7,10 +7,9 @@ conexionesRemotas::conexionesRemotas(QObject *parent)
 QStringList conexionesRemotas::crear()
 {
     listaConexionesRemotas.clear();
+    if (!base) return listaConexionesRemotas;
     QSqlQuery conexiones = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
-    conexiones.first();
-    qDebug() << conexiones.numRowsAffected();
-    for (int i = 0; i < conexiones.numRowsAffected(); ++i) {
+    while (conexiones.next()) {
         QString host = conexiones.value("ip").toString();
         QString puerto = "3306";
         QString baseDatos = "tiendaNueva";
@@ -23,24 +22,19 @@ QStringList conexionesRemotas::crear()
         } else {
             listaConexionesRemotas << nombreConexion << "0";
         }
-
-        conexiones.next();
     }
 
-    qDebug() << "Lista online" << listaConexionesRemotas.size();
+    qDebug() << "Lista online" << listaConexionesRemotas.size() / 2;
     return listaConexionesRemotas;
 }
 
 QStringList conexionesRemotas::lista()
 {
     listaOrdenadoresRemotos.clear();
+    if (!base) return listaOrdenadoresRemotos;
     QSqlQuery tiendas = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
-    tiendas.first();
-    qDebug() << tiendas.numRowsAffected();
-    qDebug() << tiendas.lastError();
-    for (int i = 0; i < tiendas.numRowsAffected(); ++i) {
+    while (tiendas.next()) {
         listaOrdenadoresRemotos.append(tiendas.value("nombre").toString());
-        tiendas.next();
     }
     qDebug() << "Lista ordenadores remotos :" << listaOrdenadoresRemotos;
     return listaOrdenadoresRemotos;
@@ -49,10 +43,9 @@ QStringList conexionesRemotas::lista()
 QStringList conexionesRemotas::listaOnLine()
 {
     listaConexionesActivas.clear();
+    if (!base) return listaConexionesActivas;
     QSqlQuery conexiones = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
-    conexiones.first();
-    qDebug() << conexiones.numRowsAffected();
-    for (int i = 0; i < conexiones.numRowsAffected(); ++i) {
+    while (conexiones.next()) {
         QString host = conexiones.value("ip").toString();
         QString puerto = "3306";
         QString baseDatos = "tiendaNueva";
@@ -63,8 +56,6 @@ QStringList conexionesRemotas::listaOnLine()
             qDebug() << "conexion creada: " << nombreConexion;
             listaConexionesActivas << nombreConexion;
         }
-
-        conexiones.next();
     }
     return listaConexionesActivas;
 }

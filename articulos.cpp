@@ -17,6 +17,7 @@ Articulos::Articulos(QWidget *parent)
     , ui(new Ui::Articulos)
 {
     listaConexionesRemotas = conf->getNombreConexionesActivas();
+    qDebug() << "Lista conexiones remotas: ";
     qDebug() << listaConexionesRemotas;
     ui->setupUi(this);
     ClickableLabel *fotoHR = new ClickableLabel(ui->labelFoto);
@@ -80,10 +81,27 @@ void Articulos::refrescarBotones(int i)
     cargarVentas();
     cargarCompras();
     cargarCodAux();
+
+    // Siempre mostrar el desglose de lotes locales en el árbol de stock
+    ui->treeWidgetStockTiendas->clear();
+    QString localConn = conf->getConexionLocal();
+    QTreeWidgetItem *localItem = new QTreeWidgetItem(ui->treeWidgetStockTiendas);
+    localItem->setText(0, "Local");
+    localItem->setText(1, ui->lineEditStock->text());
+    localItem->setBackground(0, QBrush(Qt::lightGray));
+    localItem->setExpanded(true);
+
+    QSqlQuery localLots = base.lotesProducto(ui->lineEditCod->text(), localConn);
+    while (localLots.next()) {
+        QTreeWidgetItem *loteItem = new QTreeWidgetItem(localItem);
+        loteItem->setText(0, localLots.value("fecha").toString());
+        loteItem->setText(1, localLots.value("cantidad").toString());
+        QString L = localLots.value("lote").toString();
+        if (!L.isEmpty()) loteItem->setText(0, loteItem->text(0) + " (Lote: " + L + ")");
+    }
+
     if (ui->checkBoxRemoto->isChecked()) {
         llenarStockRemoto(ui->lineEditCod->text());
-    } else {
-        ui->treeWidgetStockTiendas->clear();
     }
     qDebug() << listaConexionesRemotas;
 }

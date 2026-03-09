@@ -1,0 +1,3 @@
+MODIFICAR BASE DE DATOS PARA AGRUPAR ALBARANES:
+----------------------------------------------
+ALTER TABLE `albaranes` ADD COLUMN `idFactura` VARCHAR(50) DEFAULT NULL;
