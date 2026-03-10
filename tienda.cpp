@@ -34,7 +34,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
 
   conexiones = new conexionesRemotas(this);
   conexiones->base = &base;
-  conexiones->crear();
+  //conexiones->crear();
   ui->statusBar->addPermanentWidget(ui->pushButtonConectar);
 
   sincroVales = new QPushButton("Sincro vales", this);
@@ -47,7 +47,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   ui->statusBar->addPermanentWidget(usuario);
   connect(usuario, SIGNAL(clicked()), this,
           SLOT(on_pushButtonSesion_clicked()));
-  // on_pushButtonSesion_clicked();
+  on_pushButtonSesion_clicked();
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
   conf->setNombreconexiones(conexiones->lista());
@@ -343,7 +343,6 @@ void Tienda::refrescarConexiones() {
   QStringList conn;
   conn.clear();
   conn = conexiones->crear();
-  // conf->setNombreconexiones(conexiones->lista());
   for (int i = 0; i < conn.length(); i = i + 2) {
     if (conn.at(i + 1) == "0") {
       button[i / 2]->setStyleSheet("QLabel {background-color : red}");
