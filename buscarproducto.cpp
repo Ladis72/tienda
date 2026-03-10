@@ -161,3 +161,19 @@ void BuscarProducto::mostrarDetalles(const QModelIndex &index)
     
     ui->label_info->setText(info);
 }
+
+
+
+
+void BuscarProducto::on_pushButtonCancelar_clicked()
+{
+    resultado = NULL;
+    this->reject();
+}
+
+
+void BuscarProducto::on_pushButtonAceptar_clicked()
+{
+    on_tableView_activated(ui->tableView->currentIndex());
+}
+
