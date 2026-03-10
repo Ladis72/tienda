@@ -24,7 +24,7 @@ VerFacturas::~VerFacturas()
 
 void VerFacturas::llenarProveedores()
 {
-    ui->comboBoxProceedores->addItems(base->listadoProveedores());
+    ui->comboBoxProceedores->addItems(base->listadoProveedores(conf->getConexionLocal()));
 }
 
 void VerFacturas::llenarTabla()

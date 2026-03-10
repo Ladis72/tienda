@@ -87,7 +87,7 @@ public:
     bool modificarProveedor(QSqlDatabase db, QStringList datos, QString dato);
     bool borrarProveedor(QSqlDatabase db, QString dato);
     QString descuentoProveedor(QString proveedor);
-    QStringList listadoProveedores();
+    QStringList listadoProveedores(QString db);
     QString codigoParaNuevoProveedor();
     QString codigoDesdeAux(QString base, QString aux);
     //Funciones TICKETS
