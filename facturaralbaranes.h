@@ -32,7 +32,7 @@ private slots:
 private:
     void setupUi();
     void loadProveedores();
-    void loadAlbaranes(int idProveedor);
+    void loadAlbaranes(QString Proveedor);
 
     QComboBox *comboProveedores;
     QTableView *tablaAlbaranes;
@@ -51,6 +51,8 @@ private:
     QPushButton *btnCancelar;
 
     baseDatos base;
+
+    QString proveedor;
 };
 
 #endif // FACTURARALBARANES_H

@@ -908,10 +908,10 @@ QString baseDatos::descuentoProveedor(QString proveedor)
     return 0;
 }
 
-QStringList baseDatos::listadoProveedores()
+QStringList baseDatos::listadoProveedores(QString db)
 {
     QStringList proveedores;
-    QSqlQuery consulta(QSqlDatabase::database("DB"));
+    QSqlQuery consulta(QSqlDatabase::database(db));
     consulta.exec("SELECT nombre FROM proveedores ORDER BY nombre ASC");
     while (consulta.next()) {
         proveedores << consulta.value("nombre").toString();
