@@ -569,14 +569,14 @@ void Articulos::on_lineEditDesc_returnPressed()
     consulta.first();
     qDebug() << consulta.lastError().text();
     BuscarProducto *buscar = new BuscarProducto(this, consulta);
-    buscar->exec();
-    qDebug() << buscar->resultado;
+    if(buscar->exec() == QDialog::Accepted){
     for (int i = 0; i < modeloTabla->rowCount(); i++) {
         if (modeloTabla->record(i).value("cod").toString() == buscar->resultado) {
             mapper.setCurrentIndex(i);
             refrescarBotones(i);
             break;
         }
+    }
     }
     delete buscar;
 }

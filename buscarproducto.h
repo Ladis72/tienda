@@ -47,6 +47,11 @@ private slots:
     void on_checkBox_conStock_stateChanged(int arg1);
     void selectionChanged(const QModelIndex &current, const QModelIndex &previous);
 
+
+    void on_pushButtonCancelar_clicked();
+
+    void on_pushButtonAceptar_clicked();
+
 private:
     Ui::BuscarProducto *ui;
     QSqlQuery query;
