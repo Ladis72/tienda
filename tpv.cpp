@@ -10,6 +10,7 @@
 #include "imprimirfactura.h"
 #include "imprimirticket.h"
 #include "ui_tpv.h"
+#include "buscarcliente.h"
 
 Tpv::Tpv(QWidget *parent)
     : QWidget(parent)
@@ -719,7 +720,7 @@ void Tpv::on_lineEdit_nobre_cliente_returnPressed()
                                   ui->lineEdit_nobre_cliente->text());
     consulta.first();
     qDebug() << consulta.lastError().text();
-    BuscarProducto *buscar = new BuscarProducto(this, consulta);
+    BuscarCliente *buscar = new BuscarCliente(this, consulta);
     buscar->exec();
     qDebug() << buscar->resultado;
     ui->lineEdit_cod_cliente->setText(buscar->resultado);

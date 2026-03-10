@@ -167,7 +167,7 @@ void BuscarProducto::mostrarDetalles(const QModelIndex &index)
 
 void BuscarProducto::on_pushButtonCancelar_clicked()
 {
-    resultado = NULL;
+    resultado = "";
     this->reject();
 }
 
