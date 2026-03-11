@@ -2,17 +2,17 @@
 #define CLIENTES_H
 #include "base_datos.h"
 #include "configuracion.h"
-#include <QDateTime>
+#include <QDataWidgetMapper>
 #include <QDate>
+#include <QDateTime>
 #include <QDialog>
 #include <QList>
+#include <QSortFilterProxyModel>
+#include <QSqlQuery>
+#include <QSqlQueryModel>
+#include <QStandardItem>
 #include <QStandardItemModel>
 #include <QString>
-#include <QSqlQueryModel>
-#include <QDataWidgetMapper>
-#include <QSqlQuery>
-#include <QStandardItem>
-#include <QSortFilterProxyModel>
 #include <QtCharts>
 
 extern Configuracion *conf;
