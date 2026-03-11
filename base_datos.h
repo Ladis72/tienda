@@ -1,4 +1,4 @@
-﻿#ifndef BASE_DATOS_H
+#ifndef BASE_DATOS_H
 #define BASE_DATOS_H
 
 #include <QDataWidgetMapper>
@@ -61,8 +61,8 @@ public:
                                QString fechaI,
                                QString fechaF,
                                QString idCliente);
-    QSqlQuery productosPorClienteCantidad(QString nombreConexion, QString idCliente);
-    QSqlQuery productosPorClienteFecha(QString nombreConexion, QString idCliente);
+    QSqlQuery productosPorClienteCantidad(QString nombreConexion, QString idCliente, QDate fechaI, QDate fechaF);
+    QSqlQuery productosPorClienteFecha(QString nombreConexion, QString idCliente, QDate fechaI, QDate fechaF);
 
     //FUNCIONES USUARIOS
 

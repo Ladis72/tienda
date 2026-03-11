@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1061</width>
+    <width>1290</width>
     <height>651</height>
    </rect>
   </property>
@@ -350,72 +350,152 @@
       <attribute name="title">
        <string>Ventas</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_2">
-       <item row="3" column="1">
-        <widget class="QTableView" name="tableView2">
-         <property name="editTriggers">
-          <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="3">
-        <widget class="QGroupBox" name="groupBox">
+      <layout class="QVBoxLayout" name="verticalLayout_Ventas">
+       <item>
+        <widget class="QGroupBox" name="groupBoxKPIs">
          <property name="title">
-          <string>Periodo</string>
+          <string>Panel de Resumen</string>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <layout class="QHBoxLayout" name="horizontalLayoutKPI">
           <item>
-           <widget class="QRadioButton" name="radioButtonMeses">
-            <property name="text">
-             <string>&amp;Meses</string>
+           <widget class="QLabel" name="labelKpiGasto">
+            <property name="font">
+             <font>
+              <bold>true</bold>
+             </font>
             </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="radioButtonAnos">
             <property name="text">
-             <string>A&amp;ños</string>
+             <string>Gasto Total:</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QRadioButton" name="radioButtonFechas">
+           <widget class="QLabel" name="labelKpiTotalGasto">
             <property name="text">
-             <string>E&amp;ntre fechas</string>
+             <string>0.00 €</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelKpiTickets">
+            <property name="font">
+             <font>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>  Tickets:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelKpiTotalTickets">
+            <property name="text">
+             <string>0</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelKpiUltima">
+            <property name="font">
+             <font>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>  Última Visita:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelKpiFechaUltima">
+            <property name="text">
+             <string>-</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelAgrupacion">
+            <property name="text">
+             <string>Agrupar por:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboBoxAgrupacion">
+            <item>
+             <property name="text">
+              <string>Meses</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Años</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Semanas</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Días</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelDesde">
+            <property name="text">
+             <string>Desde:</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QDateEdit" name="dateEditDesde">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="displayFormat">
-             <string>dd/MM/yyyy</string>
-            </property>
             <property name="calendarPopup">
              <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelHasta">
+            <property name="text">
+             <string>Hasta:</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QDateEdit" name="dateEditHasta">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="displayFormat">
-             <string>dd/MM/yyyy</string>
-            </property>
             <property name="calendarPopup">
              <bool>true</bool>
             </property>
            </widget>
           </item>
           <item>
-           <spacer name="horizontalSpacer">
+           <widget class="QLabel" name="labelTipoGrafico">
+            <property name="text">
+             <string>Tipo de Gráfico:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboBoxTipoGrafico">
+            <item>
+             <property name="text">
+              <string>Agrupado</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Apilado</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacerKPI">
             <property name="orientation">
              <enum>Qt::Orientation::Horizontal</enum>
             </property>
@@ -428,27 +508,45 @@
            </spacer>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButtonVerProductos2">
+           <widget class="QCheckBox" name="checkBoxTiendasConectadasVentas">
             <property name="text">
-             <string>Ver productos</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushButtonVerProductos">
-            <property name="text">
-             <string>Ver tickets</string>
+             <string>Incluir datos de Múltiples Tiendas</string>
             </property>
            </widget>
           </item>
          </layout>
         </widget>
        </item>
-       <item row="4" column="1">
-        <widget class="QTableView" name="tableViewDetalleTicket"/>
+       <item>
+        <widget class="QWidget" name="widgetGraficoVentas" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>200</height>
+          </size>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayoutGrafico"/>
+        </widget>
        </item>
-       <item row="3" column="0" rowspan="2">
-        <widget class="QTableView" name="tableView"/>
+       <item>
+        <widget class="QSplitter" name="splitterVentas">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <widget class="QTableView" name="tableView2">
+          <property name="editTriggers">
+           <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+          </property>
+          <property name="selectionBehavior">
+           <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+          </property>
+         </widget>
+         <widget class="QTableView" name="tableViewDetalleTicket">
+          <property name="editTriggers">
+           <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+          </property>
+         </widget>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -471,7 +569,69 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0" colspan="2">
+       <item row="0" column="2">
+        <widget class="QLabel" name="labelDesde_2">
+         <property name="text">
+          <string>Desde:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="3">
+        <widget class="QDateEdit" name="dateEditDesde_2">
+         <property name="calendarPopup">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="4">
+        <widget class="QLabel" name="labelHasta_2">
+         <property name="text">
+          <string>Hasta:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="5">
+        <widget class="QDateEdit" name="dateEditHasta_2">
+         <property name="calendarPopup">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="6">
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="0" column="7">
+        <widget class="QCheckBox" name="checkBoxTiendasConectadasProductos">
+         <property name="text">
+          <string>Incluir datos de Múltiples Tiendas</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="labelBuscar">
+         <property name="text">
+          <string>Buscar:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1" colspan="7">
+        <widget class="QLineEdit" name="lineEditBuscarProducto">
+         <property name="placeholderText">
+          <string>Filtrar por código o descripción...</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="8">
         <widget class="QTableView" name="tableViewProductos">
          <property name="editTriggers">
           <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
@@ -534,38 +694,6 @@
     <hint type="destinationlabel">
      <x>878</x>
      <y>575</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>radioButtonFechas</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>dateEditDesde</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>265</x>
-     <y>103</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>377</x>
-     <y>108</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>radioButtonFechas</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>dateEditHasta</receiver>
-   <slot>setEnabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>265</x>
-     <y>103</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>489</x>
-     <y>108</y>
     </hint>
    </hints>
   </connection>
