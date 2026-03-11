@@ -1,6 +1,6 @@
 #include "clientes.h"
 #include <QMessageBox>
-#include "buscarproducto.h"
+#include "buscarcliente.h"
 #include "ui_clientes.h"
 
 Clientes::Clientes(QWidget *parent)
@@ -328,7 +328,7 @@ void Clientes::on_lineEditNombre_returnPressed()
                                   ui->lineEditNombre->text());
     consulta.first();
     qDebug() << consulta.lastError().text();
-    BuscarProducto *buscar = new BuscarProducto(this, consulta);
+    BuscarCliente *buscar = new BuscarCliente(this, consulta);
     buscar->exec();
     qDebug() << buscar->resultado;
     for (int i = 0; i < modeloTabla->rowCount(); i++) {

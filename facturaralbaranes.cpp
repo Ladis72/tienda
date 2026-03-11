@@ -53,7 +53,7 @@ void FacturarAlbaranes::setupUi()
     QFormLayout *formLayout = new QFormLayout();
     leFactura = new QLineEdit();
     dateFactura = new QDateEdit(QDate::currentDate());
-    dateFactura->setDisplayFormat("yyyy-MM-22");
+    dateFactura->setDisplayFormat("yyyy-MM-dd");
     dateFactura->setCalendarPopup(true);
     dateVencimiento = new QDateEdit(QDate::currentDate());
     dateVencimiento->setCalendarPopup(true);
