@@ -4,6 +4,7 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMessageBox>
+#include <QString>
 #include <QStandardItemModel>
 #include <QWidget>
 #include "ClickableLabel.h"
@@ -84,6 +85,7 @@ private:
     QStandardItemModel *modeloTicketPendiente;
     Clientes *clien;
     VisorImagenes *visor;
+    QString currentFotoPath;
 
     void keyPressEvent(QKeyEvent *e);
     bool llenar_usuarios(QSqlDatabase db);

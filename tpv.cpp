@@ -10,6 +10,7 @@
 #include "imprimirfactura.h"
 #include "imprimirticket.h"
 #include "ui_tpv.h"
+#include <QCursor>
 #include "buscarcliente.h"
 
 Tpv::Tpv(QWidget *parent)
@@ -17,9 +18,8 @@ Tpv::Tpv(QWidget *parent)
     , ui(new Ui::Tpv)
 {
     ui->setupUi(this);
-    ClickableLabel *fotoHR = new ClickableLabel(ui->labelFoto);
-    fotoHR->setMaximumSize(200, 200);
-    connect(fotoHR, SIGNAL(clicked()), this, SLOT(mostrarFoto()));
+    ui->labelFoto->setCursor(Qt::PointingHandCursor);
+    connect(ui->labelFoto, SIGNAL(clicked()), this, SLOT(mostrarFoto()));
     ticketActual = ticketActualizado();
     ticket = base.obtenerNumeroUltimoTicket(QSqlDatabase::database(conf->getConexionLocal())) + 1;
     llenar_usuarios(QSqlDatabase::database(conf->getConexionLocal()));
@@ -260,7 +260,8 @@ void Tpv::datosProducto(QString IdProducto)
     ui->labelFecha->setText(tmp.value(0).toString());
     consulta = base.consulta_producto(conf->getConexionLocal(), IdProducto);
     consulta.first();
-    QString fichero = QDir::currentPath() + "/" + consulta.value("foto").toString();
+    currentFotoPath = consulta.value("foto").toString();
+    QString fichero = QDir::currentPath() + "/" + currentFotoPath;
     QImage foto(fichero);
     QPixmap imagen = QPixmap::fromImage(foto);
     ui->labelFoto->setPixmap(imagen.scaled(200, 200));
@@ -345,10 +346,11 @@ bool Tpv::grabarLineasTicket(const QString serie)
 
 void Tpv::mostrarFoto()
 {
-    //VisorImagenes *visor = new VisorImagenes(consulta.value(14).toString());
-    qDebug() << ui->labelFoto->text() << "Click en foto";
-    VisorImagenes *visor = new VisorImagenes(ui->labelFoto->text());
-    visor->showMaximized();
+    if (!currentFotoPath.isEmpty()) {
+        visor = new VisorImagenes(currentFotoPath, this);
+        visor->setAttribute(Qt::WA_DeleteOnClose);
+        visor->showMaximized();
+    }
 }
 
 void Tpv::on_lineEdit_cod_returnPressed()
