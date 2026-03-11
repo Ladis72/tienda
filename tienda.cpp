@@ -46,7 +46,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   ui->statusBar->addPermanentWidget(usuario);
   connect(usuario, SIGNAL(clicked()), this,
           SLOT(on_pushButtonSesion_clicked()));
-  //on_pushButtonSesion_clicked();
+  // on_pushButtonSesion_clicked();
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
   conf->setNombreconexiones(conexiones->lista());

@@ -615,13 +615,16 @@ QSqlQuery baseDatos::tickesPorCLiente(QString nombreConexion,
     return consulta;
 }
 
-QSqlQuery baseDatos::productosPorClienteCantidad(QString nombreConexion, QString idCliente)
+QSqlQuery baseDatos::productosPorClienteCantidad(QString nombreConexion, QString idCliente, QDate fechaI, QDate fechaF)
 {
     QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-    if (!consulta.exec("SELECT cod , descripcion , SUM(cantidad) FROM lineasticket JOIN tickets ON "
+    QString queryStr = "SELECT cod , descripcion , SUM(cantidad) FROM lineasticket JOIN tickets ON "
                        "lineasticket.nticket = tickets.ticket "
-                       "AND tickets.cliente = '"
-                       + idCliente + "' GROUP BY cod ORDER BY SUM(cantidad) DESC ")) {
+                       "AND tickets.cliente = '" + idCliente + "' "
+                       "AND tickets.fecha BETWEEN '" + fechaI.toString("yyyy-MM-dd") + "' AND '" + fechaF.toString("yyyy-MM-dd") + "' "
+                       "GROUP BY cod ORDER BY SUM(cantidad) DESC ";
+    
+    if (!consulta.exec(queryStr)) {
         qDebug() << consulta.lastError();
     }
     consulta.first();
@@ -629,13 +632,16 @@ QSqlQuery baseDatos::productosPorClienteCantidad(QString nombreConexion, QString
     return consulta;
 }
 
-QSqlQuery baseDatos::productosPorClienteFecha(QString nombreConexion, QString idCliente)
+QSqlQuery baseDatos::productosPorClienteFecha(QString nombreConexion, QString idCliente, QDate fechaI, QDate fechaF)
 {
     QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-    if (!consulta.exec("SELECT cod , descripcion , cantidad , lineasticket.fecha FROM lineasticket "
+    QString queryStr = "SELECT cod , descripcion , cantidad , lineasticket.fecha FROM lineasticket "
                        "JOIN tickets ON lineasticket.nticket = tickets.ticket"
-                       " AND tickets.cliente = '"
-                       + idCliente + "' ORDER BY tickets.fecha DESC  ")) {
+                       " AND tickets.cliente = '" + idCliente + "' "
+                       " AND tickets.fecha BETWEEN '" + fechaI.toString("yyyy-MM-dd") + "' AND '" + fechaF.toString("yyyy-MM-dd") + "' "
+                       " ORDER BY tickets.fecha DESC  ";
+                       
+    if (!consulta.exec(queryStr)) {
         qDebug() << consulta.lastError();
     }
     consulta.first();
