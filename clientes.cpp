@@ -23,7 +23,8 @@ void Clientes::inicializarComponentes() {
   modeloProductos = new QStandardItemModel(this);
   proxyProductos = new QSortFilterProxyModel(this);
   proxyProductos->setSourceModel(modeloProductos);
-  proxyProductos->setSortRole(Qt::UserRole); // We'll use UserRole for all sorting data
+  proxyProductos->setSortRole(
+      Qt::UserRole); // We'll use UserRole for all sorting data
   proxyProductos->setDynamicSortFilter(true);
   ui->tableViewProductos->setModel(proxyProductos);
   ui->tableViewProductos->setSortingEnabled(true);
@@ -54,30 +55,40 @@ void Clientes::inicializarComponentes() {
   ui->dateEditDesde->setDate(QDate::currentDate().addYears(-1));
   ui->dateEditHasta->setDate(QDate::currentDate());
 
-  connect(ui->dateEditDesde, &QDateEdit::dateChanged, this, &Clientes::on_dateEditDesde_dateChanged);
-  connect(ui->dateEditHasta, &QDateEdit::dateChanged, this, &Clientes::on_dateEditHasta_dateChanged);
-  connect(ui->comboBoxAgrupacion, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &Clientes::on_comboBoxAgrupacion_currentIndexChanged);
-  connect(ui->comboBoxTipoGrafico, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &Clientes::on_comboBoxTipoGrafico_currentIndexChanged);
-  
+  connect(ui->dateEditDesde, &QDateEdit::dateChanged, this,
+          &Clientes::on_dateEditDesde_dateChanged);
+  connect(ui->dateEditHasta, &QDateEdit::dateChanged, this,
+          &Clientes::on_dateEditHasta_dateChanged);
+  connect(ui->comboBoxAgrupacion,
+          QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+          &Clientes::on_comboBoxAgrupacion_currentIndexChanged);
+  connect(ui->comboBoxTipoGrafico,
+          QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+          &Clientes::on_comboBoxTipoGrafico_currentIndexChanged);
+
   ui->dateEditDesde_2->setDate(QDate(QDate::currentDate().year(), 1, 1));
   ui->dateEditHasta_2->setDate(QDate::currentDate());
   ui->radioButtonCantidad->setChecked(true);
-  connect(ui->dateEditDesde_2, &QDateEdit::dateChanged, this, &Clientes::on_dateEditDesde_2_dateChanged);
-  connect(ui->dateEditHasta_2, &QDateEdit::dateChanged, this, &Clientes::on_dateEditHasta_2_dateChanged);
-  connect(ui->checkBoxTiendasConectadasProductos, &QCheckBox::clicked, this, &Clientes::on_checkBoxTiendasConectadasProductos_clicked);
-  connect(ui->lineEditBuscarProducto, &QLineEdit::textChanged, this, &Clientes::on_lineEditBuscarProducto_textChanged);
+  connect(ui->dateEditDesde_2, &QDateEdit::dateChanged, this,
+          &Clientes::on_dateEditDesde_2_dateChanged);
+  connect(ui->dateEditHasta_2, &QDateEdit::dateChanged, this,
+          &Clientes::on_dateEditHasta_2_dateChanged);
+  connect(ui->checkBoxTiendasConectadasProductos, &QCheckBox::clicked, this,
+          &Clientes::on_checkBoxTiendasConectadasProductos_clicked);
+  connect(ui->lineEditBuscarProducto, &QLineEdit::textChanged, this,
+          &Clientes::on_lineEditBuscarProducto_textChanged);
   ui->tableViewProductos->setSortingEnabled(true);
 
   // Inicializar estados de los Combos UI
-  if(ui->comboBoxTipoGrafico->count() >= 2){
-      ui->comboBoxTipoGrafico->setItemData(0, "agrupado");
-      ui->comboBoxTipoGrafico->setItemData(1, "apilado");
+  if (ui->comboBoxTipoGrafico->count() >= 2) {
+    ui->comboBoxTipoGrafico->setItemData(0, "agrupado");
+    ui->comboBoxTipoGrafico->setItemData(1, "apilado");
   }
-  if(ui->comboBoxAgrupacion->count() >= 4){
-      ui->comboBoxAgrupacion->setItemData(0, "mes");
-      ui->comboBoxAgrupacion->setItemData(1, "ano");
-      ui->comboBoxAgrupacion->setItemData(2, "semana");
-      ui->comboBoxAgrupacion->setItemData(3, "dia");
+  if (ui->comboBoxAgrupacion->count() >= 4) {
+    ui->comboBoxAgrupacion->setItemData(0, "mes");
+    ui->comboBoxAgrupacion->setItemData(1, "ano");
+    ui->comboBoxAgrupacion->setItemData(2, "semana");
+    ui->comboBoxAgrupacion->setItemData(3, "dia");
   }
 
   recargarTabla();
@@ -156,8 +167,10 @@ void Clientes::refrescarBotones(int i) {
   ui->labelNombreCliente->setText(ui->lineEditNombre->text() + " " +
                                   ui->lineEditApellidos->text());
   cargarCompras();
-  if (ui->radioButtonCantidad->isChecked()) on_radioButtonCantidad_clicked();
-  else if (ui->radioButtonFecha->isChecked()) on_radioButtonFecha_clicked();
+  if (ui->radioButtonCantidad->isChecked())
+    on_radioButtonCantidad_clicked();
+  else if (ui->radioButtonFecha->isChecked())
+    on_radioButtonFecha_clicked();
 }
 
 void Clientes::cargarCompras() {
@@ -165,23 +178,25 @@ void Clientes::cargarCompras() {
   listaTickets->clear();
   modeloCompras.clear();
   ticket->clear();
-  
+
   // Limpiar Gráfico
   ventasChart->removeAllSeries();
   const auto axes = ventasChart->axes();
   for (QAbstractAxis *axis : axes) {
-      ventasChart->removeAxis(axis);
-      delete axis;
+    ventasChart->removeAxis(axis);
+    delete axis;
   }
   seriesVentas = nullptr;
-  
-  QString codigoCliente = ui->lineEditCod->text();  // Evitar ejecutar si no hay cliente válido
-  if (codigoCliente.isEmpty()) return;
+
+  QString codigoCliente =
+      ui->lineEditCod->text(); // Evitar ejecutar si no hay cliente válido
+  if (codigoCliente.isEmpty())
+    return;
 
   double gastoTotal = 0.0;
   int cantidadTickets = 0;
   QDate ultimaVisita(1900, 1, 1);
-  
+
   // Mapeo: [NombreTienda][Periodo] -> Total
   QMap<QString, QMap<QString, double>> ventasPorTiendaYPeriodo;
   QSet<QString> todosLosPeriodos;
@@ -197,7 +212,8 @@ void Clientes::cargarCompras() {
   QDate desde = ui->dateEditDesde->date();
   QDate hasta = ui->dateEditHasta->date();
   QString agrupacion = ui->comboBoxAgrupacion->currentData().toString();
-  if (agrupacion.isEmpty()) agrupacion = "mes"; // Fallback por seguridad
+  if (agrupacion.isEmpty())
+    agrupacion = "mes"; // Fallback por seguridad
 
   // Limpiar tablas y gráficos
   vistaTickets->clear();
@@ -207,28 +223,36 @@ void Clientes::cargarCompras() {
   // Llenar datos de tickets iterando las BDs (solo agregaciones)
   for (int c = 0; c < conexionesConsultar.length(); c++) {
     QString connName = conexionesConsultar.at(c);
-    QString queryStr = "SELECT * FROM tickets WHERE cliente = " + codigoCliente + 
-                       " AND fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" + hasta.toString("yyyy-MM-dd") + "'";
+    QString queryStr =
+        "SELECT * FROM tickets WHERE cliente = " + codigoCliente +
+        " AND fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" +
+        hasta.toString("yyyy-MM-dd") + "'";
     listaTickets->setQuery(queryStr, QSqlDatabase::database(connName));
-    
+
     for (int i = 0; i < listaTickets->rowCount(); i++) {
-        QDate fecha = listaTickets->record(i).value("fecha").toDate();
-        double totalTicket = listaTickets->record(i).value("total").toDouble();
-        
-        // Sumar a KPIs
-        gastoTotal += totalTicket;
-        cantidadTickets++;
-        if (fecha > ultimaVisita) ultimaVisita = fecha;
+      QDate fecha = listaTickets->record(i).value("fecha").toDate();
+      double totalTicket = listaTickets->record(i).value("total").toDouble();
 
-        // Sumar al gráfico según agrupación
-        QString key;
-        if (agrupacion == "ano") key = fecha.toString("yyyy");
-        else if (agrupacion == "mes") key = fecha.toString("yyyy-MM");
-        else if (agrupacion == "semana") key = QString::number(fecha.year()) + "-W" + QString::number(fecha.weekNumber());
-        else key = fecha.toString("yyyy-MM-dd"); // dia
+      // Sumar a KPIs
+      gastoTotal += totalTicket;
+      cantidadTickets++;
+      if (fecha > ultimaVisita)
+        ultimaVisita = fecha;
 
-        ventasPorTiendaYPeriodo[connName][key] += totalTicket;
-        todosLosPeriodos.insert(key);
+      // Sumar al gráfico según agrupación
+      QString key;
+      if (agrupacion == "ano")
+        key = fecha.toString("yyyy");
+      else if (agrupacion == "mes")
+        key = fecha.toString("yyyy-MM");
+      else if (agrupacion == "semana")
+        key = QString::number(fecha.year()) + "-W" +
+              QString::number(fecha.weekNumber());
+      else
+        key = fecha.toString("yyyy-MM-dd"); // dia
+
+      ventasPorTiendaYPeriodo[connName][key] += totalTicket;
+      todosLosPeriodos.insert(key);
     }
   }
 
@@ -241,44 +265,45 @@ void Clientes::cargarCompras() {
   ui->labelKpiTotalGasto->setText(QString::number(gastoTotal, 'f', 2) + " €");
   ui->labelKpiTotalTickets->setText(QString::number(cantidadTickets));
   if (cantidadTickets > 0) {
-      ui->labelKpiFechaUltima->setText(ultimaVisita.toString("dd/MM/yyyy"));
+    ui->labelKpiFechaUltima->setText(ultimaVisita.toString("dd/MM/yyyy"));
   } else {
-      ui->labelKpiFechaUltima->setText("-");
+    ui->labelKpiFechaUltima->setText("-");
   }
 
   // Refrescar Gráfico
   QString tipoGrafico = ui->comboBoxTipoGrafico->currentData().toString();
   QAbstractBarSeries *series;
-  if(tipoGrafico == "apilado") {
-      series = new QStackedBarSeries();
+  if (tipoGrafico == "apilado") {
+    series = new QStackedBarSeries();
   } else {
-      series = new QBarSeries();
+    series = new QBarSeries();
   }
   seriesVentas = series;
   connect(series, &QAbstractBarSeries::clicked, this, &Clientes::onBarClicked);
   connect(series, &QAbstractBarSeries::hovered, this, &Clientes::onBarHovered);
-  
+
   // Colores suaves para las tiendas
   QList<QColor> colores;
-  colores << QColor("#4A90E2") << QColor("#50E3C2") << QColor("#F5A623") 
+  colores << QColor("#4A90E2") << QColor("#50E3C2") << QColor("#F5A623")
           << QColor("#D0021B") << QColor("#BD10E0") << QColor("#7ED321");
 
   int colorIdx = 0;
-  for (const QString& tienda : conexionesConsultar) {
-      if(!ventasPorTiendaYPeriodo.contains(tienda)) continue;
+  for (const QString &tienda : conexionesConsultar) {
+    if (!ventasPorTiendaYPeriodo.contains(tienda))
+      continue;
 
-      QBarSet *setVentas = new QBarSet(tienda);
-      setVentas->setColor(colores.at(colorIdx % colores.size()));
-      colorIdx++;
+    QBarSet *setVentas = new QBarSet(tienda);
+    setVentas->setColor(colores.at(colorIdx % colores.size()));
+    colorIdx++;
 
-      for (const QString& d : categoriasPeriodos) {
-          *setVentas << ventasPorTiendaYPeriodo[tienda].value(d, 0.0);
-      }
-      series->append(setVentas);
+    for (const QString &d : categoriasPeriodos) {
+      *setVentas << ventasPorTiendaYPeriodo[tienda].value(d, 0.0);
+    }
+    series->append(setVentas);
   }
-  
+
   ventasChart->addSeries(series);
-  
+
   QBarCategoryAxis *axisX = new QBarCategoryAxis();
   axisX->append(categoriasPeriodos);
   ventasChart->addAxis(axisX, Qt::AlignBottom);
@@ -287,7 +312,7 @@ void Clientes::cargarCompras() {
   QValueAxis *axisY = new QValueAxis();
   ventasChart->addAxis(axisY, Qt::AlignLeft);
   series->attachAxis(axisY);
-  
+
   // Títulos de las columnas
   QStringList etiquetas;
   etiquetas << "Ticket" << "Vendedor" << "Fecha" << "Hora" << "Dto" << "Total"
@@ -298,109 +323,129 @@ void Clientes::cargarCompras() {
 }
 
 void Clientes::cargarTicketsPorRango(const QString &rangoMapeado) {
-    vistaTickets->removeRows(0, vistaTickets->rowCount());
-    QString codigoCliente = ui->lineEditCod->text();
-    if (codigoCliente.isEmpty()) return;
+  vistaTickets->removeRows(0, vistaTickets->rowCount());
+  QString codigoCliente = ui->lineEditCod->text();
+  if (codigoCliente.isEmpty())
+    return;
 
-    QStringList conexionesConsultar;
-    if (ui->checkBoxTiendasConectadasVentas->isChecked()) {
-        conexionesConsultar = listaConexionesRemotas;
-    } else {
-        conexionesConsultar << nombreConexionLocal;
+  QStringList conexionesConsultar;
+  if (ui->checkBoxTiendasConectadasVentas->isChecked()) {
+    conexionesConsultar = listaConexionesRemotas;
+  } else {
+    conexionesConsultar << nombreConexionLocal;
+  }
+
+  QString agrupacion = ui->comboBoxAgrupacion->currentData().toString();
+  if (agrupacion.isEmpty())
+    agrupacion = "mes";
+  QDate desde = ui->dateEditDesde->date();
+  QDate hasta = ui->dateEditHasta->date();
+
+  for (int c = 0; c < conexionesConsultar.length(); c++) {
+    QString connName = conexionesConsultar.at(c);
+    QString queryStr =
+        "SELECT * FROM tickets WHERE cliente = " + codigoCliente +
+        " AND fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" +
+        hasta.toString("yyyy-MM-dd") + "'";
+    listaTickets->setQuery(queryStr, QSqlDatabase::database(connName));
+
+    for (int i = 0; i < listaTickets->rowCount(); i++) {
+      QDate fecha = listaTickets->record(i).value("fecha").toDate();
+
+      QString key;
+      if (agrupacion == "ano")
+        key = fecha.toString("yyyy");
+      else if (agrupacion == "mes")
+        key = fecha.toString("yyyy-MM");
+      else if (agrupacion == "semana")
+        key = QString::number(fecha.year()) + "-W" +
+              QString::number(fecha.weekNumber());
+      else
+        key = fecha.toString("yyyy-MM-dd");
+
+      if (key != rangoMapeado)
+        continue;
+
+      listaItems.clear();
+      listaItems << new QStandardItem(
+          listaTickets->record(i).value("ticket").toString());
+      listaItems << new QStandardItem(base.nombreUsusario(
+          listaTickets->record(i).value("usuario").toString(), connName));
+      listaItems << new QStandardItem(fecha.toString("dd-MM-yyyy"));
+      listaItems << new QStandardItem(
+          listaTickets->record(i).value("hora").toString());
+      listaItems << new QStandardItem(
+          listaTickets->record(i).value("descuento").toString());
+      listaItems << new QStandardItem(QString::number(
+          listaTickets->record(i).value("total").toDouble(), 'f', 2));
+      listaItems << new QStandardItem(base.nombreFormaPago(
+          listaTickets->record(i).value("fpago").toString(), connName));
+      QString pagado =
+          (listaTickets->record(i).value("cobrado").toString() == "1") ? "Sí"
+                                                                       : "No";
+      listaItems << new QStandardItem(pagado);
+      listaItems << new QStandardItem(
+          listaTickets->record(i).value("entrega").toString());
+      listaItems << new QStandardItem(
+          listaTickets->record(i).value("cambio").toString());
+      listaItems << new QStandardItem(connName);
+      vistaTickets->appendRow(listaItems);
     }
-
-    QString agrupacion = ui->comboBoxAgrupacion->currentData().toString();
-    if (agrupacion.isEmpty()) agrupacion = "mes";
-    QDate desde = ui->dateEditDesde->date();
-    QDate hasta = ui->dateEditHasta->date();
-
-    for (int c = 0; c < conexionesConsultar.length(); c++) {
-        QString connName = conexionesConsultar.at(c);
-        QString queryStr = "SELECT * FROM tickets WHERE cliente = " + codigoCliente +
-                           " AND fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" + hasta.toString("yyyy-MM-dd") + "'";
-        listaTickets->setQuery(queryStr, QSqlDatabase::database(connName));
-        
-        for (int i = 0; i < listaTickets->rowCount(); i++) {
-            QDate fecha = listaTickets->record(i).value("fecha").toDate();
-            
-            QString key;
-            if (agrupacion == "ano") key = fecha.toString("yyyy");
-            else if (agrupacion == "mes") key = fecha.toString("yyyy-MM");
-            else if (agrupacion == "semana") key = QString::number(fecha.year()) + "-W" + QString::number(fecha.weekNumber());
-            else key = fecha.toString("yyyy-MM-dd");
-
-            if (key != rangoMapeado) continue;
-
-            listaItems.clear();
-            listaItems << new QStandardItem(listaTickets->record(i).value("ticket").toString());
-            listaItems << new QStandardItem(base.nombreUsusario(listaTickets->record(i).value("usuario").toString(), connName));
-            listaItems << new QStandardItem(fecha.toString("dd-MM-yyyy"));
-            listaItems << new QStandardItem(listaTickets->record(i).value("hora").toString());
-            listaItems << new QStandardItem(listaTickets->record(i).value("descuento").toString());
-            listaItems << new QStandardItem(QString::number(listaTickets->record(i).value("total").toDouble(), 'f', 2));
-            listaItems << new QStandardItem(base.nombreFormaPago(listaTickets->record(i).value("fpago").toString(), connName));
-            QString pagado = (listaTickets->record(i).value("cobrado").toString() == "1") ? "Sí" : "No";
-            listaItems << new QStandardItem(pagado);
-            listaItems << new QStandardItem(listaTickets->record(i).value("entrega").toString());
-            listaItems << new QStandardItem(listaTickets->record(i).value("cambio").toString());
-            listaItems << new QStandardItem(connName);
-            vistaTickets->appendRow(listaItems);
-        }
-    }
-    ui->tableView2->resizeColumnsToContents();
-    ui->tableView2->sortByColumn(2, Qt::DescendingOrder);
+  }
+  ui->tableView2->resizeColumnsToContents();
+  ui->tableView2->sortByColumn(2, Qt::DescendingOrder);
 }
 
 void Clientes::onBarClicked(int index, QBarSet *barset) {
-    Q_UNUSED(barset);
-    if (index >= 0 && index < mapeoCategRango.size()) {
-        cargarTicketsPorRango(mapeoCategRango.at(index));
-    }
+  Q_UNUSED(barset);
+  if (index >= 0 && index < mapeoCategRango.size()) {
+    cargarTicketsPorRango(mapeoCategRango.at(index));
+  }
 }
 
 void Clientes::onBarHovered(bool status, int index, QBarSet *barset) {
-    if (status && index >= 0 && index < mapeoCategRango.size()) {
-        double totalPeriodo = 0;
-        QList<QBarSet *> sets = seriesVentas->barSets();
-        for (QBarSet *set : sets) {
-            if (index < set->count())
-                totalPeriodo += set->at(index);
-        }
-
-        QString texto = QString("<b>Periodo: %1</b><br/>")
-                             .arg(mapeoCategRango.at(index));
-        
-        texto += QString("Tienda: %1 (%2 €)<br/>")
-                      .arg(barset->label())
-                      .arg(QString::number(barset->at(index), 'f', 2));
-
-        if (sets.count() > 1) {
-            texto += QString("<hr/><b>Total Todos: %1 €</b>")
-                          .arg(QString::number(totalPeriodo, 'f', 2));
-        }
-
-        QToolTip::showText(QCursor::pos(), texto, ventasChartView);
+  if (status && index >= 0 && index < mapeoCategRango.size()) {
+    double totalPeriodo = 0;
+    QList<QBarSet *> sets = seriesVentas->barSets();
+    for (QBarSet *set : sets) {
+      if (index < set->count())
+        totalPeriodo += set->at(index);
     }
+
+    QString texto =
+        QString("<b>Periodo: %1</b><br/>").arg(mapeoCategRango.at(index));
+
+    texto += QString("Tienda: %1 (%2 €)<br/>")
+                 .arg(barset->label())
+                 .arg(QString::number(barset->at(index), 'f', 2));
+
+    if (sets.count() > 1) {
+      texto += QString("<hr/><b>Total Todos: %1 €</b>")
+                   .arg(QString::number(totalPeriodo, 'f', 2));
+    }
+
+    QToolTip::showText(QCursor::pos(), texto, ventasChartView);
+  }
 }
 
 void Clientes::on_dateEditDesde_dateChanged(const QDate &date) {
-    Q_UNUSED(date);
-    cargarCompras();
+  Q_UNUSED(date);
+  cargarCompras();
 }
 
 void Clientes::on_dateEditHasta_dateChanged(const QDate &date) {
-    Q_UNUSED(date);
-    cargarCompras();
+  Q_UNUSED(date);
+  cargarCompras();
 }
 
 void Clientes::on_comboBoxAgrupacion_currentIndexChanged(int index) {
-    Q_UNUSED(index);
-    cargarCompras();
+  Q_UNUSED(index);
+  cargarCompras();
 }
 
 void Clientes::on_comboBoxTipoGrafico_currentIndexChanged(int index) {
-    Q_UNUSED(index);
-    cargarCompras();
+  Q_UNUSED(index);
+  cargarCompras();
 }
 
 void Clientes::on_pushButtonAnterior_clicked() {
@@ -546,12 +591,10 @@ void Clientes::on_lineEditCod_editingFinished() {
   }
 }
 
-void Clientes::on_checkBoxTiendasConectadasVentas_clicked() {
-    cargarCompras();
-}
+void Clientes::on_checkBoxTiendasConectadasVentas_clicked() { cargarCompras(); }
 
 void Clientes::on_tableView2_clicked(const QModelIndex &index) {
-    on_tableView2_doubleClicked(index);
+  on_tableView2_doubleClicked(index);
 }
 
 void Clientes::on_tableView2_doubleClicked(const QModelIndex &index) {
@@ -561,7 +604,8 @@ void Clientes::on_tableView2_doubleClicked(const QModelIndex &index) {
   QModelIndex indiceTienda = vistaTickets->index(index.row(), 10);
   QString dbName = vistaTickets->data(indiceTienda, Qt::EditRole).toString();
 
-  ticket->setQuery("SELECT * FROM lineasticket WHERE nticket = '" + nTicket + "'",
+  ticket->setQuery("SELECT * FROM lineasticket WHERE nticket = '" + nTicket +
+                       "'",
                    QSqlDatabase::database(dbName));
 
   ui->tableViewDetalleTicket->setModel(ticket);
@@ -579,52 +623,58 @@ void Clientes::on_radioButtonCantidad_clicked() {
   modeloProductos->setHorizontalHeaderLabels(labels);
 
   QString codigoCliente = ui->lineEditCod->text();
-  if (codigoCliente.isEmpty()) return;
+  if (codigoCliente.isEmpty())
+    return;
 
   QStringList conexiones;
-  if (ui->checkBoxTiendasConectadasProductos->isChecked()) conexiones = listaConexionesRemotas;
-  else conexiones << nombreConexionLocal;
+  if (ui->checkBoxTiendasConectadasProductos->isChecked())
+    conexiones = listaConexionesRemotas;
+  else
+    conexiones << nombreConexionLocal;
 
   QMap<QString, QPair<QString, double>> totales; // cod -> (desc, cant)
 
   QString filtro = ui->lineEditBuscarProducto->text().toLower();
 
   for (const QString &conn : conexiones) {
-    if (!QSqlDatabase::database(conn).isOpen()) continue;
-    QSqlQuery q = base.productosPorClienteCantidad(conn, codigoCliente, 
-                                                    ui->dateEditDesde_2->date(), 
-                                                    ui->dateEditHasta_2->date());
+    if (!QSqlDatabase::database(conn).isOpen())
+      continue;
+    QSqlQuery q = base.productosPorClienteCantidad(conn, codigoCliente,
+                                                   ui->dateEditDesde_2->date(),
+                                                   ui->dateEditHasta_2->date());
     while (q.next()) {
-        QString cod = q.value(0).toString();
-        QString desc = q.value(1).toString();
-        double cant = q.value(2).toDouble();
+      QString cod = q.value(0).toString();
+      QString desc = q.value(1).toString();
+      double cant = q.value(2).toDouble();
 
-        if (!filtro.isEmpty() && !cod.toLower().contains(filtro) && !desc.toLower().contains(filtro)) {
-            continue;
-        }
+      if (!filtro.isEmpty() && !cod.toLower().contains(filtro) &&
+          !desc.toLower().contains(filtro)) {
+        continue;
+      }
 
-        totales[cod].first = desc;
-        totales[cod].second += cant;
+      totales[cod].first = desc;
+      totales[cod].second += cant;
     }
   }
 
   for (auto it = totales.begin(); it != totales.end(); ++it) {
-      QList<QStandardItem *> items;
-      
-      QStandardItem *itemCod = new QStandardItem(it.key());
-      itemCod->setData(it.key(), Qt::UserRole);
-      items << itemCod;
+    QList<QStandardItem *> items;
 
-      QStandardItem *itemDesc = new QStandardItem(it.value().first);
-      itemDesc->setData(it.value().first, Qt::UserRole);
-      items << itemDesc;
+    QStandardItem *itemCod = new QStandardItem(it.key());
+    itemCod->setData(it.key(), Qt::UserRole);
+    items << itemCod;
 
-      QStandardItem *itemCant = new QStandardItem();
-      itemCant->setData(QVariant::fromValue(it.value().second), Qt::UserRole);
-      itemCant->setData(QString::number(it.value().second, 'f', 2), Qt::DisplayRole);
-      items << itemCant;
+    QStandardItem *itemDesc = new QStandardItem(it.value().first);
+    itemDesc->setData(it.value().first, Qt::UserRole);
+    items << itemDesc;
 
-      modeloProductos->appendRow(items);
+    QStandardItem *itemCant = new QStandardItem();
+    itemCant->setData(QVariant::fromValue(it.value().second), Qt::UserRole);
+    itemCant->setData(QString::number(it.value().second, 'f', 2),
+                      Qt::DisplayRole);
+    items << itemCant;
+
+    modeloProductos->appendRow(items);
   }
   ui->tableViewProductos->setSortingEnabled(true);
   proxyProductos->invalidate();
@@ -640,49 +690,55 @@ void Clientes::on_radioButtonFecha_clicked() {
   modeloProductos->setHorizontalHeaderLabels(labels);
 
   QString codigoCliente = ui->lineEditCod->text();
-  if (codigoCliente.isEmpty()) return;
+  if (codigoCliente.isEmpty())
+    return;
 
   QStringList conexiones;
-  if (ui->checkBoxTiendasConectadasProductos->isChecked()) conexiones = listaConexionesRemotas;
-  else conexiones << nombreConexionLocal;
+  if (ui->checkBoxTiendasConectadasProductos->isChecked())
+    conexiones = listaConexionesRemotas;
+  else
+    conexiones << nombreConexionLocal;
 
   QString filtro = ui->lineEditBuscarProducto->text().toLower();
 
   for (const QString &conn : conexiones) {
-    if (!QSqlDatabase::database(conn).isOpen()) continue;
-    QSqlQuery q = base.productosPorClienteFecha(conn, codigoCliente, 
-                                                 ui->dateEditDesde_2->date(), 
-                                                 ui->dateEditHasta_2->date());
+    if (!QSqlDatabase::database(conn).isOpen())
+      continue;
+    QSqlQuery q = base.productosPorClienteFecha(conn, codigoCliente,
+                                                ui->dateEditDesde_2->date(),
+                                                ui->dateEditHasta_2->date());
     while (q.next()) {
-        QString cod = q.value(0).toString();
-        QString desc = q.value(1).toString();
-        
-        if (!filtro.isEmpty() && !cod.toLower().contains(filtro) && !desc.toLower().contains(filtro)) {
-            continue;
-        }
+      QString cod = q.value(0).toString();
+      QString desc = q.value(1).toString();
 
-        QList<QStandardItem *> items;
-        
-        QStandardItem *itemCod = new QStandardItem(cod);
-        itemCod->setData(cod, Qt::UserRole);
-        items << itemCod;
+      if (!filtro.isEmpty() && !cod.toLower().contains(filtro) &&
+          !desc.toLower().contains(filtro)) {
+        continue;
+      }
 
-        QStandardItem *itemDesc = new QStandardItem(desc);
-        itemDesc->setData(desc, Qt::UserRole);
-        items << itemDesc;
+      QList<QStandardItem *> items;
 
-        QStandardItem *itemCant = new QStandardItem();
-        itemCant->setData(QVariant::fromValue(q.value(2).toDouble()), Qt::UserRole);
-        itemCant->setData(q.value(2).toString(), Qt::DisplayRole);
-        items << itemCant;
+      QStandardItem *itemCod = new QStandardItem(cod);
+      itemCod->setData(cod, Qt::UserRole);
+      items << itemCod;
 
-        QStandardItem *itemFecha = new QStandardItem();
-        QDate fecha = q.value(3).toDate();
-        itemFecha->setData(QVariant::fromValue(fecha), Qt::UserRole);
-        itemFecha->setData(fecha.toString("dd/MM/yyyy"), Qt::DisplayRole);
-        items << itemFecha;
+      QStandardItem *itemDesc = new QStandardItem(desc);
+      itemDesc->setData(desc, Qt::UserRole);
+      items << itemDesc;
 
-        modeloProductos->appendRow(items);
+      QStandardItem *itemCant = new QStandardItem();
+      itemCant->setData(QVariant::fromValue(q.value(2).toDouble()),
+                        Qt::UserRole);
+      itemCant->setData(q.value(2).toString(), Qt::DisplayRole);
+      items << itemCant;
+
+      QStandardItem *itemFecha = new QStandardItem();
+      QDate fecha = q.value(3).toDate();
+      itemFecha->setData(QVariant::fromValue(fecha), Qt::UserRole);
+      itemFecha->setData(fecha.toString("dd/MM/yyyy"), Qt::DisplayRole);
+      items << itemFecha;
+
+      modeloProductos->appendRow(items);
     }
   }
   ui->tableViewProductos->setSortingEnabled(true);
@@ -693,24 +749,32 @@ void Clientes::on_radioButtonFecha_clicked() {
 }
 
 void Clientes::on_checkBoxTiendasConectadasProductos_clicked() {
-    if (ui->radioButtonCantidad->isChecked()) on_radioButtonCantidad_clicked();
-    else if (ui->radioButtonFecha->isChecked()) on_radioButtonFecha_clicked();
+  if (ui->radioButtonCantidad->isChecked())
+    on_radioButtonCantidad_clicked();
+  else if (ui->radioButtonFecha->isChecked())
+    on_radioButtonFecha_clicked();
 }
 
 void Clientes::on_lineEditBuscarProducto_textChanged(const QString &arg1) {
-    Q_UNUSED(arg1);
-    if (ui->radioButtonCantidad->isChecked()) on_radioButtonCantidad_clicked();
-    else if (ui->radioButtonFecha->isChecked()) on_radioButtonFecha_clicked();
+  Q_UNUSED(arg1);
+  if (ui->radioButtonCantidad->isChecked())
+    on_radioButtonCantidad_clicked();
+  else if (ui->radioButtonFecha->isChecked())
+    on_radioButtonFecha_clicked();
 }
 
 void Clientes::on_dateEditDesde_2_dateChanged(const QDate &date) {
-    Q_UNUSED(date);
-    if (ui->radioButtonCantidad->isChecked()) on_radioButtonCantidad_clicked();
-    else if (ui->radioButtonFecha->isChecked()) on_radioButtonFecha_clicked();
+  Q_UNUSED(date);
+  if (ui->radioButtonCantidad->isChecked())
+    on_radioButtonCantidad_clicked();
+  else if (ui->radioButtonFecha->isChecked())
+    on_radioButtonFecha_clicked();
 }
 
 void Clientes::on_dateEditHasta_2_dateChanged(const QDate &date) {
-    Q_UNUSED(date);
-    if (ui->radioButtonCantidad->isChecked()) on_radioButtonCantidad_clicked();
-    else if (ui->radioButtonFecha->isChecked()) on_radioButtonFecha_clicked();
+  Q_UNUSED(date);
+  if (ui->radioButtonCantidad->isChecked())
+    on_radioButtonCantidad_clicked();
+  else if (ui->radioButtonFecha->isChecked())
+    on_radioButtonFecha_clicked();
 }
