@@ -317,25 +317,8 @@ DatosGrafico Articulos::extraerVentasPorFechas(QSqlQueryModel *modelo)
 
 QStringList Articulos::crearConexionesRemotas(QSqlQuery consultaRemota)
 {
-    //    QStringList listaConexionesRemotas;
-    //    listaConexionesRemotas.clear();
-    //    QSqlQuery tiendas = consultaRemota;
-    //    tiendas.first();
-    //    for (int i = 0; i < tiendas.numRowsAffected();i++) {
-    //        QString host = tiendas.value("ip").toString();
-    //        QString puerto = "3306";
-    //        QString baseDatos = "tienda";
-    //        QString usuario = tiendas.value("usuario").toString();
-    //        QString constrasena = tiendas.value("password").toString();
-    //        QString nombreConexion = tiendas.value("nombre").toString();
-    //        if(createConnection(host,puerto,baseDatos,usuario,constrasena,nombreConexion)){
-    //            qDebug() << "conexion creada: " << nombreConexion;
-    //            listaConexionesRemotas.append(nombreConexion);
-    //        }
-
-    //        tiendas.next();
-    //    }
-    //    return listaConexionesRemotas;
+    Q_UNUSED(consultaRemota);
+    return QStringList();
 }
 
 void Articulos::cargarDatosGrafico(DatosGrafico nuevosDatos)
@@ -608,9 +591,7 @@ void Articulos::on_lineEditCod_returnPressed()
         qDebug() << "Entrando en buscar";
         qDebug() << "Lista conexiones:" << listaConexionesRemotas.length();
         if (listaConexionesRemotas.isEmpty()) {
-            listaConexionesRemotas = crearConexionesRemotas(
-                base.tiendas(QSqlDatabase::database(conf->getConexionLocal())));
-            qDebug() << "Lista conexiones remotas vacia." << listaConexionesRemotas;
+            qDebug() << "No hay conexiones remotas activas.";
         }
         for (int i = 0; i < listaConexionesRemotas.length(); i++) {
             QSqlQuery consulta = base.consulta_producto(listaConexionesRemotas.at(i),
@@ -803,10 +784,10 @@ void Articulos::on_pushButtonVerFactura_clicked()
 void Articulos::on_checkBoxRemoto_stateChanged(int arg1)
 {
     if (remoto == false && arg1 == 2) {
-        //        QSqlQuery consultaRemota = base.tiendas(QSqlDatabase::database(conf->getConexionLocal()));
-        //        listaConexionesRemotas = crearConexionesRemotas(consultaRemota);
-        //        qDebug() << listaConexionesRemotas;
-        //        remoto = true;
+        // QSqlQuery consultaRemota = base.tiendas(QSqlDatabase::database(conf->getConexionLocal()));
+        // listaConexionesRemotas = crearConexionesRemotas(consultaRemota);
+        // qDebug() << listaConexionesRemotas;
+        // remoto = true;
     }
     refrescarBotones(mapper.currentIndex());
 }
