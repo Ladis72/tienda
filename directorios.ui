@@ -18,150 +18,7 @@
     <normaloff>:/imagenes/Emeicjac logo.jpg</normaloff>:/imagenes/Emeicjac logo.jpg</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
-   <item row="0" column="0" colspan="2">
-    <layout class="QGridLayout" name="gridLayout">
-     <item row="5" column="0">
-      <widget class="QLabel" name="label_6">
-       <property name="text">
-        <string>Movimientos efectivo:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QLineEdit" name="lineEditEtiquetas"/>
-     </item>
-     <item row="0" column="1">
-      <widget class="QLineEdit" name="lineEditFactura"/>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Caducados:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QLineEdit" name="lineEditCaducados"/>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_5">
-       <property name="text">
-        <string>Listado arqueos:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="1">
-      <widget class="QLineEdit" name="lineEditMovimientos"/>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Ventas:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="2">
-      <widget class="QToolButton" name="toolButtonEtiquetas">
-       <property name="text">
-        <string>...</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="2">
-      <widget class="QToolButton" name="toolButtonArqueos">
-       <property name="text">
-        <string>...</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="2">
-      <widget class="QToolButton" name="toolButtonCaducados">
-       <property name="text">
-        <string>...</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>Etiquetas:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="2">
-      <widget class="QToolButton" name="toolButtonMovimientos">
-       <property name="text">
-        <string>...</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_4">
-       <property name="text">
-        <string>Factura:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="2">
-      <widget class="QToolButton" name="toolButtonVentas">
-       <property name="text">
-        <string>...</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="0">
-      <widget class="QLabel" name="label_7">
-       <property name="text">
-        <string>Copia de seguridad</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="2">
-      <widget class="QToolButton" name="toolButtonCseg">
-       <property name="text">
-        <string>...</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="1">
-      <widget class="QLineEdit" name="lineEditCseg"/>
-     </item>
-     <item row="1" column="1">
-      <widget class="QLineEdit" name="lineEditVentas"/>
-     </item>
-     <item row="0" column="2">
-      <widget class="QToolButton" name="toolButtonFactura">
-       <property name="text">
-        <string>...</string>
-       </property>
-       <property name="popupMode">
-        <enum>QToolButton::ToolButtonPopupMode::DelayedPopup</enum>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QLineEdit" name="lineEditArqueos"/>
-     </item>
-     <item row="7" column="0">
-      <widget class="QLabel" name="label_8">
-       <property name="text">
-        <string>Logo</string>
-       </property>
-      </widget>
-     </item>
-     <item row="7" column="1">
-      <widget class="QLineEdit" name="lineEditLogo"/>
-     </item>
-     <item row="7" column="2">
-      <widget class="QToolButton" name="toolButtonLogo">
-       <property name="text">
-        <string>...</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="1" column="0">
+   <item row="3" column="0">
     <widget class="QPushButton" name="pushButtonAceptar">
      <property name="text">
       <string>Aceptar</string>
@@ -171,7 +28,99 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="1">
+   <item row="0" column="0" colspan="2">
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_7">
+       <property name="text">
+        <string>Copia de seguridad</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="2">
+      <widget class="QToolButton" name="toolButtonCseg">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLineEdit" name="lineEditLogFactura"/>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLineEdit" name="lineEditCseg"/>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Documentos</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QLineEdit" name="lineEditLogo"/>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>Logo factura</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="2">
+      <widget class="QToolButton" name="toolButtonLogo">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_8">
+       <property name="text">
+        <string>Logo</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="lineEditDocumentos"/>
+     </item>
+     <item row="0" column="2">
+      <widget class="QToolButton" name="toolButtonDocumentos">
+       <property name="text">
+        <string>...</string>
+       </property>
+       <property name="popupMode">
+        <enum>QToolButton::ToolButtonPopupMode::DelayedPopup</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2">
+      <widget class="QToolButton" name="toolButtonLogoFactura">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Imagenes</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QLineEdit" name="lineEditImagenes"/>
+     </item>
+     <item row="4" column="2">
+      <widget class="QToolButton" name="toolButton">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="1">
     <widget class="QPushButton" name="pushButtonCancelar">
      <property name="text">
       <string>Cancelar</string>
@@ -184,18 +133,10 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>lineEditFactura</tabstop>
-  <tabstop>toolButtonFactura</tabstop>
-  <tabstop>lineEditVentas</tabstop>
-  <tabstop>toolButtonVentas</tabstop>
-  <tabstop>lineEditEtiquetas</tabstop>
-  <tabstop>toolButtonEtiquetas</tabstop>
-  <tabstop>lineEditCaducados</tabstop>
-  <tabstop>toolButtonCaducados</tabstop>
-  <tabstop>lineEditArqueos</tabstop>
-  <tabstop>toolButtonArqueos</tabstop>
-  <tabstop>lineEditMovimientos</tabstop>
-  <tabstop>toolButtonMovimientos</tabstop>
+  <tabstop>lineEditDocumentos</tabstop>
+  <tabstop>toolButtonDocumentos</tabstop>
+  <tabstop>lineEditLogFactura</tabstop>
+  <tabstop>toolButtonLogoFactura</tabstop>
   <tabstop>pushButtonAceptar</tabstop>
   <tabstop>pushButtonCancelar</tabstop>
  </tabstops>

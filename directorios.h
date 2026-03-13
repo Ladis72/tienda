@@ -19,21 +19,13 @@ public:
 private slots:
     void on_pushButtonAceptar_clicked();
 
-    void on_toolButtonFactura_clicked();
-
-    void on_toolButtonVentas_clicked();
-
-    void on_toolButtonEtiquetas_clicked();
-
-    void on_toolButtonCaducados_clicked();
-
-    void on_toolButtonArqueos_clicked();
-
-    void on_toolButtonMovimientos_clicked();
-
     void on_toolButtonCseg_clicked();
 
     void on_toolButtonLogo_clicked();
+
+    void on_toolButtonLogoFactura_clicked();
+
+    void on_toolButton_clicked();
 
 private:
     Ui::Directorios *ui;

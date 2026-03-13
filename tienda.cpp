@@ -8,6 +8,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QPalette>
+#include <QSizePolicy>
 
 Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   ui->setupUi(this);
@@ -28,9 +29,10 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
     ui->pushButtonActualizarClientes->setEnabled(false);
   }
 
-  QPixmap logo;
-  logo.load("./documentos/logo.jpg");
-  ui->logo->setPixmap(logo);
+  cargarLogo();
+  ui->logo->setScaledContents(false);
+  ui->logo->setAlignment(Qt::AlignCenter);
+  ui->logo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   conexiones = new conexionesRemotas(this);
   conexiones->base = &base;
@@ -40,12 +42,15 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   connect(sincroVales, SIGNAL(clicked()), this, SLOT(sincronizarVales()));
   comprobarVales();
   usuario = new QPushButton(conf->getUsuario());
-  QPalette paleta = usuario->palette();
-  paleta.setColor(QPalette::Button, QColor(Qt::green));
-  usuario->setPalette(paleta);
+  usuario->setObjectName("usuarioButton");
   ui->statusBar->addPermanentWidget(usuario);
   connect(usuario, SIGNAL(clicked()), this,
           SLOT(on_pushButtonSesion_clicked()));
+  
+  // Initial logo scaling
+  if (!logoOriginal.isNull()) {
+    ui->logo->setPixmap(logoOriginal.scaled(ui->logo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+  }
   // on_pushButtonSesion_clicked();
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
@@ -321,7 +326,9 @@ void Tienda::on_pushButtonFormatos_clicked() {
 
 void Tienda::on_pushButtonInformes_clicked() {
   Director = new Directorios(this);
-  Director->exec();
+  if (Director->exec() == QDialog::Accepted || true) { // Refresh anyway if it was modal and could have changed things
+    cargarLogo();
+  }
 }
 
 void Tienda::on_pushButtonTiendas_clicked() {
@@ -333,10 +340,10 @@ void Tienda::refrescarConexiones() {
   foreach (QLabel *lab, ui->statusBar->findChildren<QLabel *>()) {
     lab->deleteLater();
   }
-  QLabel *button[conexiones->lista().length()];
+  QList<QLabel *> button;
   for (int i = 0; i < conexiones->lista().length(); i++) {
-    button[i] = new QLabel(conexiones->lista().at(i));
-    ui->statusBar->insertWidget(i, button[i]);
+    button.append(new QLabel(conexiones->lista().at(i)));
+    ui->statusBar->insertWidget(i, button.at(i));
   }
   QStringList conexionesActivas;
   QStringList conn;
@@ -344,9 +351,9 @@ void Tienda::refrescarConexiones() {
   conn = conexiones->crear();
   for (int i = 0; i < conn.length(); i = i + 2) {
     if (conn.at(i + 1) == "0") {
-      button[i / 2]->setStyleSheet("QLabel {background-color : red}");
+      button[i / 2]->setStyleSheet("QLabel {background-color : #ef5350; color: white; border-radius: 4px; padding: 2px;}");
     } else {
-      button[i / 2]->setStyleSheet("QLabel {background-color : green}");
+      button[i / 2]->setStyleSheet("QLabel {background-color : #7cb342; color: white; border-radius: 4px; padding: 2px;}");
       conexionesActivas << conn.at(i);
     }
   }
@@ -444,4 +451,35 @@ void Tienda::login() {
 void Tienda::on_pushButtonImpuestos_clicked() {
   impuestos *editarImpuestos = new impuestos(this);
   editarImpuestos->exec();
+}
+
+void Tienda::resizeEvent(QResizeEvent *event) {
+  if (!logoOriginal.isNull()) {
+    ui->logo->setPixmap(logoOriginal.scaled(ui->logo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+  }
+  QMainWindow::resizeEvent(event);
+}
+
+void Tienda::cargarLogo() {
+    QString rutaLogo = base.devolverDirectorio("logo");
+
+        if (!QFile::exists(rutaLogo)) {
+             // Try absolute path if it was relative
+             rutaLogo = QCoreApplication::applicationDirPath() + "/" + rutaLogo;
+        }
+
+    if (rutaLogo.isEmpty() || !QFile::exists(rutaLogo)) {
+        // Fallback to default logos if not configured or not found
+        rutaLogo = "/home/ladis/AndroidStudioProjects/tienda/documentos/logo.png";
+        if (!QFile::exists(rutaLogo)) {
+            rutaLogo = "/home/ladis/AndroidStudioProjects/tienda/documentos/logo.jpg";
+        }
+    }
+
+    if (QFile::exists(rutaLogo)) {
+        logoOriginal.load(rutaLogo);
+        if (!logoOriginal.isNull()) {
+            ui->logo->setPixmap(logoOriginal.scaled(ui->logo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        }
+    }
 }

@@ -43,7 +43,7 @@ BuscarProducto::BuscarProducto(QWidget *parent, QSqlQuery query)
     if (stockCol != -1) ui->tableView->setColumnWidth(stockCol, 80);
     if (caduCol != -1) ui->tableView->setColumnWidth(caduCol, 100);
 
-    ui->frame_detalles->setStyleSheet("QFrame#frame_detalles { border-left: 1px solid #ddd; background-color: #fff; }");
+
     
     // Connect selection change to update details (keyboard & mouse)
     connect(ui->tableView->selectionModel(), &QItemSelectionModel::currentRowChanged,

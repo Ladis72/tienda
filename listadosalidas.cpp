@@ -75,9 +75,9 @@ void ListadoSalidas::on_pushButton_2_clicked()
 
     QPrinter printer(QPrinter::HighResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName(base->devolverDirectorio("movimientos") + "/Movimientos.pdf");
+    printer.setOutputFileName(base->devolverDirectorio("documentos") + "/Movimientos.pdf");
     document.print(&printer);
     QProcess::startDetached("xdg-open",
                             QStringList()
-                                << base->devolverDirectorio("movimientos") + "/Movimientos.pdf");
+                                << base->devolverDirectorio("documentos") + "/Movimientos.pdf");
 }
