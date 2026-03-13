@@ -506,7 +506,7 @@ void Articulos::on_pushButtonBorrar_clicked()
 void Articulos::on_pushButtonPonerFoto_clicked()
 {
     int curr = mapper.currentIndex();
-    QString dir = QDir::currentPath();
+    QString dir = base.devolverDirectorio("imagenes");
     int i = dir.length();
     QString fichero = QFileDialog::getOpenFileName(this, "Elige el archivo", dir);
     fichero.remove(

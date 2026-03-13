@@ -138,9 +138,9 @@ void Cajas::actualizarEfectivo()
     ui->labelEfectivoTotal->setText(QString::number(totalEfectivo));
     descuadre = efectivoReal - totalEfectivo;
     if (descuadre < 0) {
-        ui->labelDescuadre->setStyleSheet("color:red");
+        ui->labelDescuadre->setStyleSheet("color: #ef5350; font-weight: bold;");
     } else {
-        ui->labelDescuadre->setStyleSheet("color:green");
+        ui->labelDescuadre->setStyleSheet("color: #7cb342; font-weight: bold;");
     }
     ui->labelDescuadre->setText(QString::number(descuadre));
 }
@@ -193,9 +193,9 @@ void Cajas::ES()
     salidas = base->ESdesdeFecha(fechaUltimoArqueo, horaUltimoArqueo, conf->getConexionLocal());
     ui->labelEntradas->setText(QString::number(salidas));
     if (salidas < 0) {
-        ui->labelEntradas->setStyleSheet("color:red");
+        ui->labelEntradas->setStyleSheet("color: #ef5350; font-weight: bold;");
     } else {
-        ui->labelEntradas->setStyleSheet("color:blue");
+        ui->labelEntradas->setStyleSheet("color: #0288d1; font-weight: bold;");
     }
 }
 

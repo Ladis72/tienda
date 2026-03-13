@@ -67,7 +67,7 @@ void Etiquetas::on_pushButtonImprimir_clicked()
     generarPDF(datos);
     QProcess::startDetached("xdg-open",
                             QStringList()
-                                << base->devolverDirectorio("etiquetas") + "/Etiquetas.pdf");
+                                << base->devolverDirectorio("documentos") + "/Etiquetas.pdf");
 
     //abriPDF(QUrl::fromLocalFile(base->cargarDirectorios(conf->getConexionLocal()).at(2)).toString());
 }
@@ -169,7 +169,7 @@ void Etiquetas::generarPDF(const QList<QList<QString>> datos)
 {
     QPrinter printer(QPrinter::PrinterResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName(base->devolverDirectorio("etiquetas") + "/Etiquetas.pdf");
+    printer.setOutputFileName(base->devolverDirectorio("documentos") + "/Etiquetas.pdf");
     qDebug() << base->cargarDirectorios(conf->getConexionLocal()).at(2);
 
     //printer.setPaperSize(QPrinter::A4);

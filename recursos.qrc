@@ -5,5 +5,7 @@
     </qresource>
     <qresource prefix="/imagenes">
         <file>Emeicjac logo.jpg</file>
+        <file>logo.png</file>
+        <file>documentos/Cabecera factura.png</file>
     </qresource>
 </RCC>

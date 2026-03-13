@@ -2,6 +2,11 @@
 #define TIENDA_H
 
 #include <QMainWindow>
+#include <QResizeEvent>
+#include <QPixmap>
+#include <QLabel>
+#include <QPushButton>
+#include <QPalette>
 
 #include "actualizarclientes.h"
 #include "articulos.h"
@@ -161,8 +166,13 @@ private:
     GenerarVales *genVales;
     impuestos *editatImpuestos;
 
-    QLabel *button[];
+
     void cerrarAplicacion();
+    void cargarLogo();
+protected:
+    void resizeEvent(QResizeEvent *event) override;
+private:
+    QPixmap logoOriginal;
 };
 
 #endif // TIENDA_H
