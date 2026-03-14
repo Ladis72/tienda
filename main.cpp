@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     // Apply global stylesheet
-    QFile styleFile("/home/ladis/AndroidStudioProjects/tienda/style.qss");
+    QFile styleFile(":/documentos/style.qss");
     if (styleFile.open(QFile::ReadOnly)) {
         QString styleSheet = QLatin1String(styleFile.readAll());
         a.setStyleSheet(styleSheet);

@@ -1,11 +1,11 @@
 <RCC>
-    <qresource prefix="/archivos">
-        <file>ventas.xml</file>
-        <file>factura.xml</file>
-    </qresource>
+    <qresource prefix="/archivos"/>
     <qresource prefix="/imagenes">
         <file>Emeicjac logo.jpg</file>
         <file>logo.png</file>
         <file>documentos/Cabecera factura.png</file>
+    </qresource>
+    <qresource prefix="/">
+        <file>documentos/style.qss</file>
     </qresource>
 </RCC>

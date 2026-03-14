@@ -51,7 +51,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   if (!logoOriginal.isNull()) {
     ui->logo->setPixmap(logoOriginal.scaled(ui->logo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
   }
-  // on_pushButtonSesion_clicked();
+  on_pushButtonSesion_clicked();
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
   conf->setNombreconexiones(conexiones->lista());
