@@ -170,7 +170,7 @@ void Etiquetas::generarPDF(const QList<QList<QString>> datos)
     QPrinter printer(QPrinter::PrinterResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setOutputFileName(base->devolverDirectorio("documentos") + "/Etiquetas.pdf");
-    qDebug() << base->cargarDirectorios(conf->getConexionLocal()).at(2);
+    qDebug() << base->cargarDirectorios(conf->getConexionLocal());
 
     //printer.setPaperSize(QPrinter::A4);
     printer.setPageSize(QPageSize::A4);

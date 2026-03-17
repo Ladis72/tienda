@@ -1,3 +1,18 @@
 MODIFICAR BASE DE DATOS PARA AGRUPAR ALBARANES:
 ----------------------------------------------
 ALTER TABLE `albaranes` ADD COLUMN `idFactura` VARCHAR(50) DEFAULT NULL;
+
+SISTEMA DE NOTAS Y AVISOS:
+--------------------------
+Ejecutar esta sentencia en MySQL para crear la tabla de notas:
+
+CREATE TABLE IF NOT EXISTS `notas` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `titulo` VARCHAR(200) NOT NULL,
+  `descripcion` TEXT,
+  `usuario` VARCHAR(100) NOT NULL,
+  `fecha_creacion` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `fecha_limite` DATE DEFAULT NULL,
+  `estado` ENUM('Pendiente','Completada') DEFAULT 'Pendiente',
+  `prioridad` ENUM('Alta','Normal','Baja') DEFAULT 'Normal'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

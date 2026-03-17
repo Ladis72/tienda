@@ -83,7 +83,8 @@ SOURCES += main.cpp\
     directorios.cpp \
     tiendas.cpp \
     comprasventasremoto.cpp \
-    facturaralbaranes.cpp
+    facturaralbaranes.cpp \
+    notaswidget.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -151,7 +152,8 @@ HEADERS  += tienda.h \
     directorios.h \
     tiendas.h \
     comprasventasremoto.h \
-    facturaralbaranes.h
+    facturaralbaranes.h \
+    notaswidget.h
 
 FORMS    += tienda.ui \
     actualizarclientes.ui \

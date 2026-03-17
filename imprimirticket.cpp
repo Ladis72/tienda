@@ -220,9 +220,10 @@ bool ImprimirTicket::imprimirPie()
 
 bool ImprimirTicket::imprimirLogo()
 {
-    QStringList directorios = base.cargarDirectorios(conf->getConexionLocal());
-    if (QFile::exists(directorios.at(7))) {
-        if (printer->imprimirImagen(directorios.at(7), true)) {
+    QMap<QString, QString> directorios = base.cargarDirectorios(conf->getConexionLocal());
+    QString logoTicket = directorios.value("logoticket");
+    if (!logoTicket.isEmpty() && QFile::exists(logoTicket)) {
+        if (printer->imprimirImagen(logoTicket, true)) {
             return true;
         }
     }
