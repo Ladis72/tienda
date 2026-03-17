@@ -24,23 +24,23 @@ void Directorios::on_pushButtonAceptar_clicked()
     }
 }
 
-void Directorios::llenarListaBase(QStringList lista)
+void Directorios::llenarListaBase(const QMap<QString, QString> &mapa)
 {
-    ui->lineEditDocumentos->setText(lista.at(0));
-    ui->lineEditLogFactura->setText(lista.at(1));
-    ui->lineEditCseg->setText(lista.at(2));
-    ui->lineEditLogo->setText(lista.at(3));
-    ui->lineEditImagenes->setText(lista.at(4));
+    ui->lineEditDocumentos->setText(mapa.value("documentos"));
+    ui->lineEditLogFactura->setText(mapa.value("logofactura"));
+    ui->lineEditCseg->setText(mapa.value("cseg"));
+    ui->lineEditLogo->setText(mapa.value("logo"));
+    ui->lineEditImagenes->setText(mapa.value("imagenes"));
 }
 
 void Directorios::cargarListaLineEdit()
 {
     listaDatos.clear();
-    listaDatos.append(ui->lineEditDocumentos->text());
-    listaDatos.append(ui->lineEditLogFactura->text());
-    listaDatos.append(ui->lineEditCseg->text());
-    listaDatos.append(ui->lineEditLogo->text());
-    listaDatos.append(ui->lineEditImagenes->text());
+    listaDatos.insert("documentos", ui->lineEditDocumentos->text());
+    listaDatos.insert("logofactura", ui->lineEditLogFactura->text());
+    listaDatos.insert("cseg", ui->lineEditCseg->text());
+    listaDatos.insert("logo", ui->lineEditLogo->text());
+    listaDatos.insert("imagenes", ui->lineEditImagenes->text());
 }
 
 void Directorios::cargalListaBase()
@@ -98,3 +98,13 @@ void Directorios::on_toolButton_clicked()
     ui->lineEditImagenes->setText(rutaRelativa(directorio));
 }
 
+
+void Directorios::on_toolButtonDocumentos_clicked()
+{
+    QString directorio = QFileDialog::getExistingDirectory(this,
+                                                           "Selecciona el directorio de documentos",
+                                                           ui->lineEditDocumentos->text(),
+                                                           QFileDialog::ShowDirsOnly
+                                                               | QFileDialog::DontResolveSymlinks);
+    ui->lineEditDocumentos->setText(rutaRelativa(directorio));
+}

@@ -2,6 +2,7 @@
 #define BASE_DATOS_H
 
 #include <QDataWidgetMapper>
+#include <QMap>
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
@@ -180,8 +181,8 @@ public:
     //Funciones de configuración
     QString leerConfiguracion();
     bool GuardarConfiguracion(int datos);
-    bool guardarDirectorios(QString base, QStringList directorios);
-    QStringList cargarDirectorios(QString base);
+    bool guardarDirectorios(QString base, QMap<QString, QString> directorios);
+    QMap<QString, QString> cargarDirectorios(QString base);
     QString devolverDirectorio(QString tipo);
     QString nombreConexionMaster();
     QString nombreConexionLocal();
@@ -206,6 +207,17 @@ public:
                                       const QString hashAnterior,
                                       const QString datosFactura,
                                       const int ususario);
+
+    //Funciones NOTAS
+    bool crearNota(const QString &db, const QString &titulo, const QString &descripcion,
+                   const QString &usuario, const QString &fechaLimite, const QString &prioridad);
+    bool actualizarEstadoNota(const QString &db, int idNota, const QString &estado);
+    bool actualizarPrioridadNota(const QString &db, int idNota, const QString &prioridad);
+    bool editarNota(const QString &db, int idNota, const QString &titulo,
+                    const QString &descripcion, const QString &fechaLimite, const QString &prioridad);
+    bool eliminarNota(const QString &db, int idNota);
+    QSqlQueryModel *consultarNotas(const QString &db, const QString &filtroEstado = "");
+    int contarNotasPendientes(const QString &db);
 
 private:
     QSqlDatabase db;

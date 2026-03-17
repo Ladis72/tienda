@@ -16,8 +16,6 @@ ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent)
     idCliente = consultaTicket.value(2).toString();
     idVendedor = consultaTicket.value(1).toString();
 
-    //double totalBases = consultaTicket.value(5).toDouble();
-    //double totalIVAS = consultaTicket.value(6).toDouble();
     totalFactura = consultaTicket.value(8).toString();
     cliente = base.etiquetaCliente(idCliente);
     fPago = base.nombreFormaPago(consultaTicket.value(9).toString(), conf->getConexionLocal());

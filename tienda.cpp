@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QPalette>
 #include <QSizePolicy>
+#include <QSplitter>
 
 Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   ui->setupUi(this);
@@ -51,7 +52,52 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   if (!logoOriginal.isNull()) {
     ui->logo->setPixmap(logoOriginal.scaled(ui->logo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
   }
-  on_pushButtonSesion_clicked();
+  // ── Integración del widget de notas ──────────────────────
+  // Creamos un splitter horizontal: logo a la izquierda, notas a la derecha
+  mainSplitter = new QSplitter(Qt::Horizontal, ui->centralWidget);
+
+  // Logo en el lado izquierdo
+  QWidget *logoContainer = new QWidget(mainSplitter);
+  QVBoxLayout *logoLayout = new QVBoxLayout(logoContainer);
+  logoLayout->setContentsMargins(0, 0, 0, 0);
+  logoLayout->addWidget(ui->logo);
+  logoContainer->setLayout(logoLayout);
+  mainSplitter->addWidget(logoContainer);
+
+  // Panel de notas en el lado derecho
+  notasWidget = new NotasWidget(mainSplitter);
+  mainSplitter->addWidget(notasWidget);
+
+  // Proporciones: 55% logo, 45% notas
+  mainSplitter->setSizes({550, 450});
+  mainSplitter->setHandleWidth(8);
+  mainSplitter->setStyleSheet(
+      "QSplitter::handle { background-color: #F5F5F5; border-left: 1px solid #E0E0E0; border-right: 1px solid #E0E0E0; }"
+      "QSplitter::handle:hover { background-color: #1565C0; }");
+  mainSplitter->setChildrenCollapsible(true);
+
+  // Sustituimos el logo en el layout del centralWidget
+  QGridLayout *grid = qobject_cast<QGridLayout*>(ui->centralWidget->layout());
+  if (grid) {
+      grid->addWidget(mainSplitter, 1, 0);
+  }
+
+  // Notificación en barra de estado
+  btnNotifNotas = new QPushButton(tr("📋 Notas: 0"), this);
+  btnNotifNotas->setFlat(true);
+  btnNotifNotas->setCursor(Qt::PointingHandCursor);
+  btnNotifNotas->setStyleSheet("font-weight: bold; color: #558b2f; padding: 0 10px;");
+  ui->statusBar->addPermanentWidget(btnNotifNotas);
+
+  // Conexiones de notas
+  connect(notasWidget, &NotasWidget::pendingCountChanged, this, &Tienda::actualizarNotificacionNotas);
+  connect(notasWidget, &NotasWidget::hideRequested, this, &Tienda::onToggleNotas);
+  connect(btnNotifNotas, &QPushButton::clicked, this, &Tienda::onToggleNotas);
+
+  // Forzamos un refresco inicial ahora que las señales están conectadas
+  notasWidget->refrescar();
+
+  //on_pushButtonSesion_clicked();
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
   conf->setNombreconexiones(conexiones->lista());
@@ -160,6 +206,35 @@ void Tienda::permisos(int i) {
   }
 }
 void Tienda::activar_btn_tpv() {}
+
+void Tienda::on_pushButtonConsultarLog_clicked() {}
+
+void Tienda::onToggleNotas() {
+  if (notasWidget->isVisible()) {
+    notasWidget->hide();
+    btnNotifNotas->setToolTip(tr("Mostrar panel de notas"));
+  } else {
+    notasWidget->show();
+    btnNotifNotas->setToolTip(tr("Ocultar panel de notas"));
+    // Restaurar tamaño si estaba colapsado
+    mainSplitter->setSizes({550, 450});
+  }
+}
+
+void Tienda::actualizarNotificacionNotas(int count) {
+  btnNotifNotas->setText(QString(tr("📋 Notas: %1")).arg(count));
+  if (count > 0) {
+    btnNotifNotas->setStyleSheet(
+        "QPushButton { font-weight: bold; color: white; background-color: #ef5350; "
+        "border-radius: 10px; padding: 2px 10px; margin: 2px; }"
+        "QPushButton:hover { background-color: #d32f2f; }");
+  } else {
+    btnNotifNotas->setStyleSheet(
+        "QPushButton { font-weight: bold; color: #558b2f; background-color: transparent; "
+        "padding: 0 10px; }"
+        "QPushButton:hover { color: #33691e; }");
+  }
+}
 
 void Tienda::on_pushButtonUsuarios_clicked() {
   U = new Ususarios();

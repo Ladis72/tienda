@@ -2,6 +2,7 @@
 #define DIRECTORIOS_H
 
 #include <QDialog>
+#include <QMap>
 #include "base_datos.h"
 
 namespace Ui {
@@ -27,12 +28,14 @@ private slots:
 
     void on_toolButton_clicked();
 
+    void on_toolButtonDocumentos_clicked();
+
 private:
     Ui::Directorios *ui;
     baseDatos *base;
-    QStringList listaDatos;
+    QMap<QString, QString> listaDatos;
 
-    void llenarListaBase(QStringList lista);
+    void llenarListaBase(const QMap<QString, QString> &mapa);
     void cargarListaLineEdit();
     void cargalListaBase();
     QString rutaRelativa(QString directorio);

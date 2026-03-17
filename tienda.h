@@ -46,6 +46,7 @@
 #include "tiposentradassalidas.h"
 #include "tpv.h"
 #include "verfacturas.h"
+#include "notaswidget.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -110,6 +111,10 @@ private slots:
 
     void on_pushButtonConectar_clicked();
 
+    void on_pushButtonConsultarLog_clicked();
+    void onToggleNotas();
+    void actualizarNotificacionNotas(int count);
+
     void on_pushButtonActualizarClientes_clicked();
 
     void on_pushButtonGenerarVales_clicked();
@@ -169,6 +174,9 @@ private:
 
     void cerrarAplicacion();
     void cargarLogo();
+    NotasWidget *notasWidget;
+    QPushButton *btnNotifNotas;
+    QSplitter   *mainSplitter;
 protected:
     void resizeEvent(QResizeEvent *event) override;
 private:

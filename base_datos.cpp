@@ -1844,29 +1844,33 @@ bool baseDatos::GuardarConfiguracion(int datos)
     return false;
 }
 
-bool baseDatos::guardarDirectorios(QString base, QStringList directorios)
+bool baseDatos::guardarDirectorios(QString base, QMap<QString, QString> directorios)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
-    consulta.prepare("UPDATE directorios SET directorio = ? WHERE id = ?");
-    for (int i = 1; i < directorios.count() + 1; i++) {
-        consulta.bindValue(0, directorios.at(i - 1));
-        consulta.bindValue(1, i);
+    consulta.prepare("UPDATE directorios SET directorio = ? WHERE nombre = ?");
+    QMapIterator<QString, QString> it(directorios);
+    while (it.hasNext()) {
+        it.next();
+        consulta.bindValue(0, it.value());
+        consulta.bindValue(1, it.key());
         if (!consulta.exec()) {
+            qWarning() << "Error al guardar directorio '" + it.key() + "':" << consulta.lastError().text();
             return false;
         }
     }
     return true;
 }
 
-QStringList baseDatos::cargarDirectorios(QString base)
+QMap<QString, QString> baseDatos::cargarDirectorios(QString base)
 {
-    QStringList resultado;
+    QMap<QString, QString> resultado;
     QSqlQuery consulta(QSqlDatabase::database(base));
-    consulta.exec("SELECT directorio FROM directorios");
-    consulta.first();
-    for (int i = 0; i <= consulta.numRowsAffected(); i++) {
-        resultado.append(consulta.record().value(0).toString());
-        consulta.next();
+    if (!consulta.exec("SELECT nombre, directorio FROM directorios")) {
+        qWarning() << "Error al cargar directorios:" << consulta.lastError().text();
+        return resultado;
+    }
+    while (consulta.next()) {
+        resultado.insert(consulta.value(0).toString(), consulta.value(1).toString());
     }
     return resultado;
 }
@@ -2057,3 +2061,133 @@ QStringList baseDatos::datosTiendaLocal(QString db)
     }
     return datos;
 }
+
+// ============================================================
+// FUNCIONES NOTAS
+// ============================================================
+
+bool baseDatos::crearNota(const QString &db,
+                          const QString &titulo,
+                          const QString &descripcion,
+                          const QString &usuario,
+                          const QString &fechaLimite,
+                          const QString &prioridad)
+{
+    if (!QSqlDatabase::database(db).isOpen()) return false;
+    QSqlQuery q(QSqlDatabase::database(db));
+    q.prepare("INSERT INTO notas (titulo, descripcion, usuario, fecha_limite, estado, prioridad) "
+              "VALUES (:titulo, :descripcion, :usuario, :fechaLimite, 'Pendiente', :prioridad)");
+    q.bindValue(":titulo", titulo);
+    q.bindValue(":descripcion", descripcion);
+    q.bindValue(":usuario", usuario);
+    q.bindValue(":fechaLimite", fechaLimite.isEmpty() ? QVariant(QVariant::String) : QVariant(fechaLimite));
+    q.bindValue(":prioridad", prioridad.isEmpty() ? "Normal" : prioridad);
+    if (!q.exec()) {
+        qWarning() << "Error al crear nota:" << q.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+bool baseDatos::actualizarEstadoNota(const QString &db, int idNota, const QString &estado)
+{
+    if (!QSqlDatabase::database(db).isOpen()) return false;
+    QSqlQuery q(QSqlDatabase::database(db));
+    q.prepare("UPDATE notas SET estado = :estado WHERE id = :id");
+    q.bindValue(":estado", estado);
+    q.bindValue(":id", idNota);
+    if (!q.exec()) {
+        qWarning() << "Error al actualizar estado nota:" << q.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+bool baseDatos::actualizarPrioridadNota(const QString &db, int idNota, const QString &prioridad)
+{
+    if (!QSqlDatabase::database(db).isOpen()) return false;
+    QSqlQuery q(QSqlDatabase::database(db));
+    q.prepare("UPDATE notas SET prioridad = :prioridad WHERE id = :id");
+    q.bindValue(":prioridad", prioridad);
+    q.bindValue(":id", idNota);
+    if (!q.exec()) {
+        qWarning() << "Error al actualizar prioridad nota:" << q.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+bool baseDatos::editarNota(const QString &db, int idNota,
+                           const QString &titulo,
+                           const QString &descripcion,
+                           const QString &fechaLimite,
+                           const QString &prioridad)
+{
+    if (!QSqlDatabase::database(db).isOpen()) return false;
+    QSqlQuery q(QSqlDatabase::database(db));
+    q.prepare("UPDATE notas SET titulo = :titulo, descripcion = :descripcion, "
+              "fecha_limite = :fechaLimite, prioridad = :prioridad WHERE id = :id");
+    q.bindValue(":titulo", titulo);
+    q.bindValue(":descripcion", descripcion);
+    q.bindValue(":fechaLimite", fechaLimite.isEmpty() ? QVariant(QVariant::String) : QVariant(fechaLimite));
+    q.bindValue(":prioridad", prioridad);
+    q.bindValue(":id", idNota);
+    if (!q.exec()) {
+        qWarning() << "Error al editar nota:" << q.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+bool baseDatos::eliminarNota(const QString &db, int idNota)
+{
+    if (!QSqlDatabase::database(db).isOpen()) return false;
+    QSqlQuery q(QSqlDatabase::database(db));
+    q.prepare("DELETE FROM notas WHERE id = :id");
+    q.bindValue(":id", idNota);
+    if (!q.exec()) {
+        qWarning() << "Error al eliminar nota:" << q.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+QSqlQueryModel *baseDatos::consultarNotas(const QString &db, const QString &filtroEstado)
+{
+    QString sql = "SELECT id, prioridad, titulo, usuario, "
+                  "DATE_FORMAT(fecha_creacion, '%d/%m/%Y %H:%i') AS fecha_creacion, "
+                  "IFNULL(DATE_FORMAT(fecha_limite, '%d/%m/%Y'), '') AS fecha_limite, "
+                  "estado, descripcion "
+                  "FROM notas";
+    if (!filtroEstado.isEmpty() && filtroEstado != "Todas")
+        sql += " WHERE estado = '" + filtroEstado + "'";
+    sql += " ORDER BY FIELD(prioridad,'Alta','Normal','Baja'), fecha_creacion DESC";
+
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.exec(sql);
+    if (query.lastError().isValid())
+        qWarning() << "Error al consultar notas:" << query.lastError().text();
+
+    QSqlQueryModel *model = new QSqlQueryModel();
+    model->setQuery(query);
+    model->setHeaderData(0, Qt::Horizontal, "ID");
+    model->setHeaderData(1, Qt::Horizontal, "Prioridad");
+    model->setHeaderData(2, Qt::Horizontal, "Título");
+    model->setHeaderData(3, Qt::Horizontal, "Usuario");
+    model->setHeaderData(4, Qt::Horizontal, "Creada");
+    model->setHeaderData(5, Qt::Horizontal, "Límite");
+    model->setHeaderData(6, Qt::Horizontal, "Estado");
+    model->setHeaderData(7, Qt::Horizontal, "Descripción");
+    return model;
+}
+
+int baseDatos::contarNotasPendientes(const QString &db)
+{
+    if (!QSqlDatabase::database(db).isOpen()) return 0;
+    QSqlQuery q(QSqlDatabase::database(db));
+    q.exec("SELECT COUNT(*) FROM notas WHERE estado = 'Pendiente'");
+    if (q.first())
+        return q.value(0).toInt();
+    return 0;
+}
+
