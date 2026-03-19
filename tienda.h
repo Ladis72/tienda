@@ -179,6 +179,7 @@ private:
     QSplitter   *mainSplitter;
 protected:
     void resizeEvent(QResizeEvent *event) override;
+    bool eventFilter(QObject *obj, QEvent *event) override;
 private:
     QPixmap logoOriginal;
 };

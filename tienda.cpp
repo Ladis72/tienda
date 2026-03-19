@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QPalette>
 #include <QSizePolicy>
+#include <QEvent>
 #include <QSplitter>
 
 Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
@@ -34,6 +35,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   ui->logo->setScaledContents(false);
   ui->logo->setAlignment(Qt::AlignCenter);
   ui->logo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  ui->logo->installEventFilter(this);
 
   conexiones = new conexionesRemotas(this);
   conexiones->base = &base;
@@ -47,11 +49,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   ui->statusBar->addPermanentWidget(usuario);
   connect(usuario, SIGNAL(clicked()), this,
           SLOT(on_pushButtonSesion_clicked()));
-  
-  // Initial logo scaling
-  if (!logoOriginal.isNull()) {
-    ui->logo->setPixmap(logoOriginal.scaled(ui->logo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-  }
+
   // ── Integración del widget de notas ──────────────────────
   // Creamos un splitter horizontal: logo a la izquierda, notas a la derecha
   mainSplitter = new QSplitter(Qt::Horizontal, ui->centralWidget);
@@ -72,32 +70,35 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   mainSplitter->setSizes({550, 450});
   mainSplitter->setHandleWidth(8);
   mainSplitter->setStyleSheet(
-      "QSplitter::handle { background-color: #F5F5F5; border-left: 1px solid #E0E0E0; border-right: 1px solid #E0E0E0; }"
+      "QSplitter::handle { background-color: #F5F5F5; border-left: 1px solid "
+      "#E0E0E0; border-right: 1px solid #E0E0E0; }"
       "QSplitter::handle:hover { background-color: #1565C0; }");
   mainSplitter->setChildrenCollapsible(true);
 
   // Sustituimos el logo en el layout del centralWidget
-  QGridLayout *grid = qobject_cast<QGridLayout*>(ui->centralWidget->layout());
+  QGridLayout *grid = qobject_cast<QGridLayout *>(ui->centralWidget->layout());
   if (grid) {
-      grid->addWidget(mainSplitter, 1, 0);
+    grid->addWidget(mainSplitter, 1, 0);
   }
 
   // Notificación en barra de estado
   btnNotifNotas = new QPushButton(tr("📋 Notas: 0"), this);
   btnNotifNotas->setFlat(true);
   btnNotifNotas->setCursor(Qt::PointingHandCursor);
-  btnNotifNotas->setStyleSheet("font-weight: bold; color: #558b2f; padding: 0 10px;");
+  btnNotifNotas->setStyleSheet(
+      "font-weight: bold; color: #558b2f; padding: 0 10px;");
   ui->statusBar->addPermanentWidget(btnNotifNotas);
 
   // Conexiones de notas
-  connect(notasWidget, &NotasWidget::pendingCountChanged, this, &Tienda::actualizarNotificacionNotas);
-  connect(notasWidget, &NotasWidget::hideRequested, this, &Tienda::onToggleNotas);
+  connect(notasWidget, &NotasWidget::pendingCountChanged, this,
+          &Tienda::actualizarNotificacionNotas);
+  connect(notasWidget, &NotasWidget::hideRequested, this,
+          &Tienda::onToggleNotas);
   connect(btnNotifNotas, &QPushButton::clicked, this, &Tienda::onToggleNotas);
 
   // Forzamos un refresco inicial ahora que las señales están conectadas
   notasWidget->refrescar();
 
-  //on_pushButtonSesion_clicked();
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
   conf->setNombreconexiones(conexiones->lista());
@@ -225,14 +226,15 @@ void Tienda::actualizarNotificacionNotas(int count) {
   btnNotifNotas->setText(QString(tr("📋 Notas: %1")).arg(count));
   if (count > 0) {
     btnNotifNotas->setStyleSheet(
-        "QPushButton { font-weight: bold; color: white; background-color: #ef5350; "
+        "QPushButton { font-weight: bold; color: white; background-color: "
+        "#ef5350; "
         "border-radius: 10px; padding: 2px 10px; margin: 2px; }"
         "QPushButton:hover { background-color: #d32f2f; }");
   } else {
-    btnNotifNotas->setStyleSheet(
-        "QPushButton { font-weight: bold; color: #558b2f; background-color: transparent; "
-        "padding: 0 10px; }"
-        "QPushButton:hover { color: #33691e; }");
+    btnNotifNotas->setStyleSheet("QPushButton { font-weight: bold; color: "
+                                 "#558b2f; background-color: transparent; "
+                                 "padding: 0 10px; }"
+                                 "QPushButton:hover { color: #33691e; }");
   }
 }
 
@@ -401,7 +403,8 @@ void Tienda::on_pushButtonFormatos_clicked() {
 
 void Tienda::on_pushButtonInformes_clicked() {
   Director = new Directorios(this);
-  if (Director->exec() == QDialog::Accepted || true) { // Refresh anyway if it was modal and could have changed things
+  if (Director->exec() == QDialog::Accepted ||
+      true) { // Refresh anyway if it was modal and could have changed things
     cargarLogo();
   }
 }
@@ -426,9 +429,11 @@ void Tienda::refrescarConexiones() {
   conn = conexiones->crear();
   for (int i = 0; i < conn.length(); i = i + 2) {
     if (conn.at(i + 1) == "0") {
-      button[i / 2]->setStyleSheet("QLabel {background-color : #ef5350; color: white; border-radius: 4px; padding: 2px;}");
+      button[i / 2]->setStyleSheet("QLabel {background-color : #ef5350; color: "
+                                   "white; border-radius: 4px; padding: 2px;}");
     } else {
-      button[i / 2]->setStyleSheet("QLabel {background-color : #7cb342; color: white; border-radius: 4px; padding: 2px;}");
+      button[i / 2]->setStyleSheet("QLabel {background-color : #7cb342; color: "
+                                   "white; border-radius: 4px; padding: 2px;}");
       conexionesActivas << conn.at(i);
     }
   }
@@ -530,31 +535,44 @@ void Tienda::on_pushButtonImpuestos_clicked() {
 
 void Tienda::resizeEvent(QResizeEvent *event) {
   if (!logoOriginal.isNull()) {
-    ui->logo->setPixmap(logoOriginal.scaled(ui->logo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    ui->logo->setPixmap(logoOriginal.scaled(
+        ui->logo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
   }
   QMainWindow::resizeEvent(event);
 }
+bool Tienda::eventFilter(QObject *obj, QEvent *event) {
+  if (obj == ui->logo && event->type() == QEvent::Resize) {
+    if (!logoOriginal.isNull() && ui->logo->width() > 0) {
+      ui->logo->setPixmap(logoOriginal.scaled(
+          ui->logo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    }
+  }
+  return QMainWindow::eventFilter(obj, event);
+}
 
 void Tienda::cargarLogo() {
-    QString rutaLogo = base.devolverDirectorio("logo");
+  QString rutaLogo = base.devolverDirectorio("logo");
 
-        if (!QFile::exists(rutaLogo)) {
-             // Try absolute path if it was relative
-             rutaLogo = QCoreApplication::applicationDirPath() + "/" + rutaLogo;
-        }
+  if (!QFile::exists(rutaLogo)) {
+    // Try absolute path if it was relative
+    rutaLogo = QCoreApplication::applicationDirPath() + "/" + rutaLogo;
+  }
 
-    if (rutaLogo.isEmpty() || !QFile::exists(rutaLogo)) {
-        // Fallback to default logos if not configured or not found
-        rutaLogo = "/home/ladis/AndroidStudioProjects/tienda/documentos/logo.png";
-        if (!QFile::exists(rutaLogo)) {
-            rutaLogo = "/home/ladis/AndroidStudioProjects/tienda/documentos/logo.jpg";
-        }
+  if (rutaLogo.isEmpty() || !QFile::exists(rutaLogo)) {
+    // Fallback to default logos if not configured or not found
+    rutaLogo = QCoreApplication::applicationDirPath() + "/documentos/logo.png";
+    if (!QFile::exists(rutaLogo)) {
+      rutaLogo = "/home/ladis/AndroidStudioProjects/tienda/documentos/logo.jpg";
     }
+  }
 
-    if (QFile::exists(rutaLogo)) {
-        logoOriginal.load(rutaLogo);
-        if (!logoOriginal.isNull()) {
-            ui->logo->setPixmap(logoOriginal.scaled(ui->logo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-        }
+  if (QFile::exists(rutaLogo)) {
+    logoOriginal.load(rutaLogo);
+    // Only set the pixmap here if the label already has a valid size.
+    // Otherwise, the deferred QTimer or resizeEvent will handle it.
+    if (!logoOriginal.isNull() && ui->logo->width() > 0) {
+      ui->logo->setPixmap(logoOriginal.scaled(
+          ui->logo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
+  }
 }

@@ -102,6 +102,7 @@ void NotasWidget::setupUi()
     cboFiltro = new QComboBox(this);
     cboFiltro->addItems({tr("Todas"), tr("Pendientes"), tr("Completadas")});
     cboFiltro->setFixedWidth(120);
+    cboFiltro->setCurrentText("Pendientes");
 
     lblContador = new QLabel(this);
     lblContador->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
