@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>910</width>
+    <width>1051</width>
     <height>367</height>
    </rect>
   </property>
@@ -34,6 +34,20 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="pushButtonCancelar">
+       <property name="text">
+        <string>Cancelar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonGuardar">
+       <property name="text">
+        <string>Guardar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="pushButtonBorrar">
        <property name="enabled">
         <bool>true</bool>
@@ -47,42 +61,9 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButtonModificar">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="text">
-        <string>Modificar</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
       <widget class="QPushButton" name="pushButtonRefrescar">
        <property name="text">
         <string>Refrescar</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonAnterior">
-       <property name="text">
-        <string>Anterior</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonSiguiente">
-       <property name="text">
-        <string>Siguiente</string>
        </property>
        <property name="autoDefault">
         <bool>false</bool>
@@ -101,7 +82,7 @@
      </item>
     </layout>
    </item>
-   <item row="0" column="0" rowspan="3" colspan="8">
+   <item row="0" column="1" rowspan="3" colspan="7">
     <widget class="QWidget" name="general_2" native="true">
      <layout class="QGridLayout" name="general">
       <item row="6" column="0">
@@ -269,6 +250,13 @@
      </layout>
     </widget>
    </item>
+   <item row="0" column="0" rowspan="3">
+    <widget class="QTableView" name="tableViewTiendas">
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>
@@ -281,10 +269,7 @@
   <tabstop>lineEditIP</tabstop>
   <tabstop>pushButtonNuevo</tabstop>
   <tabstop>pushButtonBorrar</tabstop>
-  <tabstop>pushButtonModificar</tabstop>
   <tabstop>pushButtonRefrescar</tabstop>
-  <tabstop>pushButtonAnterior</tabstop>
-  <tabstop>pushButtonSiguiente</tabstop>
   <tabstop>pushButtonCerrar</tabstop>
   <tabstop>lineEditId</tabstop>
  </tabstops>

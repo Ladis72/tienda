@@ -12,7 +12,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1049</width>
+    <width>1209</width>
     <height>629</height>
    </rect>
   </property>
@@ -453,6 +453,12 @@ color: rgb(255, 25, 5);</string>
           </item>
           <item row="1" column="7" rowspan="5">
            <widget class="QTreeWidget" name="treeWidgetStockTiendas">
+            <property name="minimumSize">
+             <size>
+              <width>200</width>
+              <height>0</height>
+             </size>
+            </property>
             <property name="contextMenuPolicy">
              <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
             </property>

@@ -142,7 +142,8 @@ public:
     QSqlQuery ventasPorUsusario(QString fecha, QString base);
     QSqlQuery ventasDesdeUltimoArqueo(QString fechaI, QString horaI, QString tabla, QString base);
     QSqlQuery recuperarDatosUltimoArqueo(QString base);
-    bool grabarArqueo(QStringList datos, QString base);
+    bool grabarArqueo(QStringList datos, QString base,
+                      const QMap<double, int> &desglose = QMap<double, int>());
     QSqlQuery ventasEntreFechas(QString fechaI, QString FechaF, QString tabla, QString base);
     int nTarjetasDesdeUltimoArqueo(QString fechaI, QString horaI, QString base);
     //Funciones GENERALISTAS
@@ -218,8 +219,10 @@ public:
     bool eliminarNota(const QString &db, int idNota);
     QSqlQueryModel *consultarNotas(const QString &db, const QString &filtroEstado = "");
     int contarNotasPendientes(const QString &db);
+    QString getLastError() const { return m_lastError; }
 
 private:
+    QString m_lastError;
     QSqlDatabase db;
     QSqlQuery consulta;
     QSqlQueryModel modelo;

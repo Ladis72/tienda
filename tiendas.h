@@ -23,11 +23,9 @@ public:
 private slots:
     void on_pushButtonNuevo_clicked();
 
-    void on_pushButtonSiguiente_clicked();
+    void on_pushButtonGuardar_clicked();
 
-    void on_pushButtonAnterior_clicked();
-
-    void on_pushButtonModificar_clicked();
+    void on_pushButtonCancelar_clicked();
 
     void on_pushButtonBorrar_clicked();
 
@@ -37,14 +35,17 @@ private slots:
 
     void on_checkBoxLocal_stateChanged(int arg1);
 
+    void on_tableViewTiendas_clicked(const QModelIndex &index);
+
 private:
     Ui::tiendas *ui;
     baseDatos *base;
     QSqlQueryModel *modeloTabla;
     QDataWidgetMapper mapper;
+    bool editandoNuevo;
 
     void recargarTabla();
-    void refrescarBotones(int i);
+    void refrescarBotones();
     void borrarFormulario();
     QStringList recogerDatos();
     QString nombreConexionMaster;

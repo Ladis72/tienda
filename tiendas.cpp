@@ -1,6 +1,7 @@
 #include "tiendas.h"
 #include <QMessageBox>
 #include "ui_tiendas.h"
+#include <QDebug>
 
 tiendas::tiendas(QWidget *parent)
     : QDialog(parent)
@@ -8,9 +9,18 @@ tiendas::tiendas(QWidget *parent)
 {
     nombreConexionMaster = conf->getConexionMaster();
     ui->setupUi(this);
-    modeloTabla = new QSqlQueryModel;
+    editandoNuevo = false;
+    
+    modeloTabla = new QSqlQueryModel(this);
+    ui->tableViewTiendas->setModel(modeloTabla);
+    ui->tableViewTiendas->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableViewTiendas->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->tableViewTiendas->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    
     recargarTabla();
-    mapper.setCurrentIndex(0);
+    ui->tableViewTiendas->hideColumn(0); // hide password column
+    ui->tableViewTiendas->hideColumn(9); // hide password column
+
     mapper.addMapping(ui->lineEditId, 0);
     mapper.addMapping(ui->lineEditNombre, 1);
     mapper.addMapping(ui->lineEditDireccion, 2);
@@ -23,9 +33,13 @@ tiendas::tiendas(QWidget *parent)
     mapper.addMapping(ui->lineEditPassword, 9);
     mapper.addMapping(ui->checkBoxMaster, 10);
     mapper.addMapping(ui->checkBoxLocal, 11);
+    mapper.addMapping(ui->lineEditBase, 12);
 
-    mapper.toFirst();
-    refrescarBotones(mapper.currentIndex());
+    if(modeloTabla->rowCount() > 0) {
+        ui->tableViewTiendas->selectRow(0);
+        mapper.setCurrentIndex(0);
+    }
+    refrescarBotones();
 }
 
 tiendas::~tiendas()
@@ -33,47 +47,45 @@ tiendas::~tiendas()
     delete ui;
 }
 
-void tiendas::on_pushButtonNuevo_clicked()
+void tiendas::on_tableViewTiendas_clicked(const QModelIndex &index)
 {
-    QStringList datos = recogerDatos();
-    datos.replace(0, "");
-    QMessageBox msgBox;
-    qDebug() << datos;
-    if (base->crearTienda(datos)) {
-        msgBox.setText("Guardado con exito");
-        msgBox.setInformativeText("El registro se ha creado correctamente");
-        msgBox.setStandardButtons(QMessageBox::Ok);
-        msgBox.exec();
-    } else {
-        msgBox.setText("Error al guardar");
-        msgBox.setInformativeText(
-            "Revise los datos del formulario o contacte con el administrador");
-        msgBox.setStandardButtons(QMessageBox::Ok);
-        msgBox.exec();
-    }
-    recargarTabla();
+    mapper.setCurrentIndex(index.row());
+    editandoNuevo = false;
+    refrescarBotones();
 }
 
 void tiendas::recargarTabla()
 {
     modeloTabla->setQuery("SELECT * FROM tiendas", QSqlDatabase::database("DB"));
     mapper.setModel(modeloTabla);
-    mapper.toFirst();
-    refrescarBotones(mapper.currentIndex());
+    
+    if(modeloTabla->rowCount() > 0) {
+        ui->tableViewTiendas->selectRow(0);
+        mapper.setCurrentIndex(0);
+    } else {
+        borrarFormulario();
+    }
 }
 
-void tiendas::refrescarBotones(int i)
+void tiendas::refrescarBotones()
 {
-    ui->pushButtonAnterior->setEnabled(i > 0);
-    ui->pushButtonSiguiente->setEnabled(i < modeloTabla->rowCount() - 1);
+    ui->pushButtonNuevo->setVisible(!editandoNuevo);
+    ui->pushButtonBorrar->setVisible(!editandoNuevo);
+    ui->pushButtonRefrescar->setVisible(!editandoNuevo);
+    
+    ui->pushButtonGuardar->setVisible(true); // Siempre visible par editar o crear
+    ui->pushButtonCancelar->setVisible(editandoNuevo);
+    
+    ui->tableViewTiendas->setEnabled(!editandoNuevo);
 }
 
 void tiendas::borrarFormulario()
 {
     foreach (QLineEdit *le, ui->general_2->findChildren<QLineEdit *>()) {
         le->clear();
-        qDebug() << "Borrando line edit";
     }
+    ui->checkBoxLocal->setChecked(false);
+    ui->checkBoxMaster->setChecked(false);
     ui->lineEditNombre->setFocus();
 }
 
@@ -91,90 +103,102 @@ QStringList tiendas::recogerDatos()
     listaDatos.append(ui->lineEditIP->text());
     listaDatos.append(ui->lineEditUsusario->text());
     listaDatos.append(ui->lineEditPassword->text());
-    if (ui->checkBoxMaster->isChecked()) {
-        listaDatos.append("1");
-    } else {
-        listaDatos.append("0");
-    }
-    if (ui->checkBoxLocal->isChecked()) {
-        listaDatos.append("1");
-    } else {
-        listaDatos.append("0");
-    }
+    listaDatos.append(ui->checkBoxMaster->isChecked() ? "1" : "0");
+    listaDatos.append(ui->checkBoxLocal->isChecked() ? "1" : "0");
+    listaDatos.append(ui->lineEditBase->text());
     return listaDatos;
 }
 
-void tiendas::on_pushButtonSiguiente_clicked()
+void tiendas::on_pushButtonNuevo_clicked()
 {
+    editandoNuevo = true;
     borrarFormulario();
-    mapper.toNext();
-    refrescarBotones(mapper.currentIndex());
+    refrescarBotones();
 }
 
-void tiendas::on_pushButtonAnterior_clicked()
-{
-    borrarFormulario();
-    mapper.toPrevious();
-    refrescarBotones(mapper.currentIndex());
-}
-
-void tiendas::on_pushButtonModificar_clicked()
+void tiendas::on_pushButtonGuardar_clicked()
 {
     QStringList datos = recogerDatos();
-    int i = mapper.currentIndex();
-    qDebug() << datos;
+    
     QMessageBox msgBox;
-    if (base->modificarTienda(datos)) {
-        msgBox.setText("Guardado con exito");
-        msgBox.setInformativeText("El registro se ha modificado correctamente");
-        msgBox.setStandardButtons(QMessageBox::Ok);
-        msgBox.exec();
-        if (ui->checkBoxMaster->isChecked()) {
-            conf->setConexionMaster(base->nombreConexionMaster());
+    bool exito = false;
+    
+    if (editandoNuevo || ui->lineEditId->text().isEmpty()) {
+        datos.replace(0, ""); // Asegurar ID vacío para INSERT
+        if (base->crearTienda(datos)) {
+            exito = true;
+            msgBox.setText("Guardado con exito");
+            msgBox.setInformativeText("El registro se ha creado correctamente.");
         }
     } else {
+        if (base->modificarTienda(datos)) {
+            exito = true;
+            msgBox.setText("Modificado con exito");
+            msgBox.setInformativeText("El registro se ha modificado correctamente.");
+            if (ui->checkBoxMaster->isChecked()) {
+                conf->setConexionMaster(base->nombreConexionMaster());
+            }
+        }
+    }
+    
+    if (exito) {
+        msgBox.setStandardButtons(QMessageBox::Ok);
+        msgBox.exec();
+        editandoNuevo = false;
+        recargarTabla();
+        refrescarBotones();
+    } else {
         msgBox.setText("Error al guardar");
-        msgBox.setInformativeText(
-            "Revise los datos del formulario o contacte con el administrador");
+        msgBox.setInformativeText("Revise los datos del formulario.\nError SQL: " + base->getLastError());
         msgBox.setStandardButtons(QMessageBox::Ok);
         msgBox.exec();
     }
-    recargarTabla();
-    mapper.setCurrentIndex(i);
-    refrescarBotones(mapper.currentIndex());
+}
+
+void tiendas::on_pushButtonCancelar_clicked()
+{
+    editandoNuevo = false;
+    refrescarBotones();
+    if(modeloTabla->rowCount() > 0) {
+        int r = ui->tableViewTiendas->currentIndex().row();
+        if (r < 0) r = 0;
+        mapper.setCurrentIndex(r);
+        ui->tableViewTiendas->selectRow(r);
+    } else {
+        borrarFormulario();
+    }
 }
 
 void tiendas::on_pushButtonBorrar_clicked()
 {
-    int i = mapper.currentIndex();
+    if (ui->lineEditId->text().isEmpty()) return;
+    
     QMessageBox msgBox;
     msgBox.setText("Borrar");
-    msgBox.setInformativeText("Seguro que quiere borrar esta tienda.");
+    msgBox.setInformativeText("Seguro que quiere borrar esta tienda?");
     msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
     msgBox.setDefaultButton(QMessageBox::Cancel);
-    int resp = msgBox.exec();
-    if (resp == QMessageBox::Ok) {
+    
+    if (msgBox.exec() == QMessageBox::Ok) {
         if (base->borrarTienda(ui->lineEditId->text())) {
             msgBox.setText("Borrado con exito");
-            msgBox.setInformativeText("El registro se ha borrado correctamente");
+            msgBox.setInformativeText("El registro se ha borrado correctamente.");
             msgBox.setStandardButtons(QMessageBox::Ok);
             msgBox.exec();
+            recargarTabla();
         } else {
             msgBox.setText("Error al borrar");
-            msgBox.setInformativeText(
-                "Revise los datos del formulario o contacte con el administrador");
+            msgBox.setInformativeText("Revise los datos o contacte con el administrador.");
             msgBox.setStandardButtons(QMessageBox::Ok);
             msgBox.exec();
         }
     }
-    recargarTabla();
-    mapper.setCurrentIndex(i);
-    refrescarBotones(mapper.currentIndex());
 }
 
 void tiendas::on_pushButtonRefrescar_clicked()
 {
     mapper.revert();
+    recargarTabla();
 }
 
 void tiendas::on_checkBoxMaster_stateChanged(int arg1)
