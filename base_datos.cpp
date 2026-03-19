@@ -98,7 +98,7 @@ QStringList baseDatos::datosConexionMaster()
 QStringList baseDatos::datosConexionLocal()
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.exec("SELECT nombre , ip , usuario , password FROM tiendas WHERE local = 1");
+    consulta.exec("SELECT nombre , ip , usuario , password , baseDatos FROM tiendas WHERE local = 1");
     consulta.first();
     QStringList datos;
     datos.clear();
@@ -107,7 +107,7 @@ QStringList baseDatos::datosConexionLocal()
     }
 
     qDebug() << consulta.size();
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 5; ++i) {
         datos.append(consulta.value(i).toString());
     }
     return datos;
@@ -757,7 +757,7 @@ bool baseDatos::modificarTienda(QStringList datos)
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.prepare(
         "UPDATE tiendas SET nombre = ? , direccion = ? , ciudad = ? , telefono = ? , whatsapp = ? "
-        ", email = ? , ip = ? , usuario = ? , password = ? , master = ? , local = ? WHERE id = ?");
+        ", email = ? , ip = ? , usuario = ? , password = ? , master = ? , local = ?, baseDatos = ? WHERE id = ?");
     consulta.bindValue(0, datos.at(1));
     consulta.bindValue(1, datos.at(2));
     consulta.bindValue(2, datos.at(3));
@@ -769,10 +769,12 @@ bool baseDatos::modificarTienda(QStringList datos)
     consulta.bindValue(8, datos.at(9));
     consulta.bindValue(9, datos.at(10));
     consulta.bindValue(10, datos.at(11));
-    consulta.bindValue(11, datos.at(0));
+    consulta.bindValue(11, datos.at(12));
+    consulta.bindValue(12, datos.at(0));
     if (consulta.exec()) {
         return true;
     }
+    m_lastError = consulta.lastError().text();
     return false;
 }
 
@@ -791,17 +793,18 @@ bool baseDatos::crearTienda(QStringList datos)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.prepare(
-        "INSERT INTO tiendas (id, nombre, direccion, ciudad, telefono, whatsapp, email, ip, "
-        "usuario, password, master) VALUES (? , ? , ? , ? , ? , ? , ? , ? , ? ,?,?)");
-    qDebug() << datos.length();
-    for (int i = 0; i < datos.length(); i++) {
-        consulta.bindValue(i, datos.at(i));
-        qDebug() << i;
-        //qDebug() << datos.at(i);
+        "INSERT INTO tiendas (nombre, direccion, ciudad, telefono, whatsapp, email, ip, "
+        "usuario, password, master, local, baseDatos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    
+    // Ignoramos datos.at(0) porque es un ID vacío que falla en MySQL Strict Mode para auto increment
+    for (int i = 1; i < datos.length(); i++) {
+        consulta.bindValue(i - 1, datos.at(i));
     }
     if (consulta.exec()) {
         return true;
     }
+    m_lastError = consulta.lastError().text();
+    qDebug() << "Error en crearTienda:" << m_lastError;
     return false;
 }
 
@@ -1536,22 +1539,43 @@ QSqlQuery baseDatos::ventasDesdeUltimoArqueo(QString fechaI,
 QSqlQuery baseDatos::recuperarDatosUltimoArqueo(QString base)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
-    consulta.exec("SELECT * FROM arqueos");
+    consulta.exec("SELECT * FROM arqueos ORDER BY id DESC LIMIT 1");
     return consulta;
 }
 
-bool baseDatos::grabarArqueo(QStringList datos, QString base)
+bool baseDatos::grabarArqueo(QStringList datos, QString base,
+                             const QMap<double, int> &desglose)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
-    consulta.prepare("INSERT INTO arqueos VALUES (NULL,?,?,?,?,?,?,?)");
+    consulta.prepare("INSERT INTO arqueos VALUES (NULL,?,?,?,?,?,?,?,?,?)");
     for (int i = 0; i < datos.length(); i++) {
         consulta.bindValue(i, datos.at(i));
     }
-    if (consulta.exec()) {
-        return true;
+    if (!consulta.exec()) {
+        qDebug() << consulta.lastError().text();
+        return false;
     }
-    qDebug() << consulta.lastError().text();
-    return false;
+
+    // Guardar desglose de denominaciones si se proporcionó
+    if (!desglose.isEmpty()) {
+        int idArqueo = consulta.lastInsertId().toInt();
+        QSqlQuery detalle(QSqlDatabase::database(base));
+        detalle.prepare("INSERT INTO arqueos_detalle (idArqueo, denominacion, cantidad) "
+                        "VALUES (?, ?, ?)");
+        QMapIterator<double, int> it(desglose);
+        while (it.hasNext()) {
+            it.next();
+            if (it.value() > 0) {
+                detalle.bindValue(0, idArqueo);
+                detalle.bindValue(1, it.value() > 0 ? it.key() : 0);
+                detalle.bindValue(2, it.value());
+                if (!detalle.exec()) {
+                    qDebug() << "Error guardando detalle:" << detalle.lastError().text();
+                }
+            }
+        }
+    }
+    return true;
 }
 
 QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF, QString tabla, QString base)

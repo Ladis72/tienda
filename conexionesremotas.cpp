@@ -12,7 +12,10 @@ QStringList conexionesRemotas::crear()
     while (conexiones.next()) {
         QString host = conexiones.value("ip").toString();
         QString puerto = "3306";
-        QString baseDatos = "tiendaNueva";
+        QString baseDatos = conexiones.value("baseDatos").toString();
+        if (baseDatos.isEmpty()) {
+            baseDatos = "tiendaNueva";
+        }
         QString usuario = conexiones.value("usuario").toString();
         QString constrasena = conexiones.value("password").toString();
         QString nombreConexion = conexiones.value("nombre").toString();
@@ -48,7 +51,10 @@ QStringList conexionesRemotas::listaOnLine()
     while (conexiones.next()) {
         QString host = conexiones.value("ip").toString();
         QString puerto = "3306";
-        QString baseDatos = "tiendaNueva";
+        QString baseDatos = conexiones.value("baseDatos").toString();
+        if (baseDatos.isEmpty()) {
+            baseDatos = "tiendaNueva";
+        }
         QString usuario = conexiones.value("usuario").toString();
         QString constrasena = conexiones.value("password").toString();
         QString nombreConexion = conexiones.value("nombre").toString();

@@ -61,11 +61,13 @@ void ListadoArqueos::on_pushButtonImprimir_clicked()
   <tr>
     <th>Fecha</th>
     <th>Hora</th>
-    <th>Ventas efecivo</th>
+    <th>Ventas efectivo</th>
     <th>Ventas tarjeta</th>
     <th>Entradas</th>
     <th>Efectivo</th>
     <th>Descuadre</th>
+    <th>Efectivo contado</th>
+    <th>Usuario</th>
   </tr>
   %LINEAS%
 </table>
@@ -82,10 +84,13 @@ void ListadoArqueos::on_pushButtonImprimir_clicked()
         QString entradas = modeloTabla->data(modeloTabla->index(i, 5)).toString();
         QString efectivo = modeloTabla->data(modeloTabla->index(i, 6)).toString();
         QString descuadre = modeloTabla->data(modeloTabla->index(i, 7)).toString();
+        QString efectContado = modeloTabla->data(modeloTabla->index(i, 8)).toString();
+        QString usuario = modeloTabla->data(modeloTabla->index(i, 9)).toString();
 
         lineasHtml += QString("<tr><td>%1</td><td>%2</td><td>%3 €</td><td>%4 €</td><td>%5 "
-                              "€</td><td>%6 €</td><td>%7 €</td></tr>")
-                          .arg(fecha, hora, vefect, vtarj, entradas, efectivo, descuadre);
+                              "€</td><td>%6 €</td><td>%7 €</td><td>%8 €</td><td>%9</td></tr>")
+                          .arg(fecha, hora, vefect, vtarj, entradas, efectivo, descuadre,
+                               efectContado, usuario);
     }
     html.replace("%DESDE%", ui->dateEditDesde->text());
     html.replace("%HASTA%", ui->dateEditHasta->text());

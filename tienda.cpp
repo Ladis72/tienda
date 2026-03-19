@@ -20,7 +20,9 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                      "DB");
     conf->setConexionLocal("DB");
   } else {
-    createConnection(datos.at(1), "3306", "tiendaNueva", datos.at(2),
+    QString baseDatos = datos.at(4);
+    if (baseDatos.isEmpty()) baseDatos = "tiendaNueva";
+    createConnection(datos.at(1), "3306", baseDatos, datos.at(2),
                      datos.at(3), datos.at(0));
     conf->setConexionLocal(datos.at(0));
   }

@@ -148,7 +148,7 @@ void Cajas::actualizarEfectivo()
 bool Cajas::recuperarDatosUltimoArqueo()
 {
     QSqlQuery resultado = base->recuperarDatosUltimoArqueo(conf->getConexionLocal());
-    resultado.last();
+    resultado.first();
     fechaUltimoArqueo = resultado.value("fecha").toString();
     horaUltimoArqueo = resultado.value("hora").toString();
     saldoAnterior = resultado.value("efectivoReal").toDouble();
@@ -236,6 +236,27 @@ void Cajas::on_pushButtonAceptar_clicked()
     datos.append(QString::number(salidas));
     datos.append(QString::number(totalEfectivo));
     datos.append(QString::number(descuadre));
+    datos.append(QString::number(efectivoReal));     // efectivoContado
+    datos.append(conf->getUsuario());                 // usuario
+
+    // Construir desglose de denominaciones
+    QMap<double, int> desglose;
+    desglose.insert(500, ui->spinBox500->value());
+    desglose.insert(200, ui->spinBox200->value());
+    desglose.insert(100, ui->spinBox100->value());
+    desglose.insert(50, ui->spinBox50->value());
+    desglose.insert(20, ui->spinBox20->value());
+    desglose.insert(10, ui->spinBox10->value());
+    desglose.insert(5, ui->spinBox5->value());
+    desglose.insert(2, ui->spinBox2->value());
+    desglose.insert(1, ui->spinBox1->value());
+    desglose.insert(0.50, ui->spinBox50c->value());
+    desglose.insert(0.20, ui->spinBox20c->value());
+    desglose.insert(0.10, ui->spinBox10c->value());
+    desglose.insert(0.05, ui->spinBox5c->value());
+    desglose.insert(0.02, ui->spinBox2c->value());
+    desglose.insert(0.01, ui->spinBox1c->value());
+
     MsgBox->setText("Confirmación");
     MsgBox->setInformativeText("¿Quiere guardar el arqueo?.\nEsta operación no se puede deshacer");
     MsgBox->setStandardButtons(QMessageBox::Save | QMessageBox::Cancel);
@@ -243,14 +264,14 @@ void Cajas::on_pushButtonAceptar_clicked()
     int resp = MsgBox->exec();
     switch (resp) {
     case QMessageBox::Save:
-        if (!base->grabarArqueo(datos, conf->getConexionLocal())) {
+        if (!base->grabarArqueo(datos, conf->getConexionLocal(), desglose)) {
             MsgBox->setText("ERROR");
             MsgBox->setInformativeText("No se ha podido grabar la información.");
-
-            break;
-        default:
-            break;
+            MsgBox->exec();
         }
+        break;
+    default:
+        break;
     }
     close();
 }
