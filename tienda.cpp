@@ -14,6 +14,7 @@
 
 Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   ui->setupUi(this);
+  estadisticasDialog = nullptr;
   QStringList datos = base.datosConexionLocal();
   if (datos.isEmpty()) {
     createConnection("localhost", "3306", "tiendaNueva", "root", "meganizado",
@@ -577,4 +578,11 @@ void Tienda::cargarLogo() {
           ui->logo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
   }
+}
+
+void Tienda::on_pushButtonEstadisticas_clicked() {
+  if (!estadisticasDialog) {
+    estadisticasDialog = new Estadisticas(this);
+  }
+  estadisticasDialog->exec();
 }

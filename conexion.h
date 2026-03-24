@@ -19,6 +19,7 @@
 static bool createConnection()
 {
     QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", "DB");
+    db.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=3");
     db.setHostName("localhost");
     db.setDatabaseName("tiendaNueva");
     db.setUserName("root");
@@ -42,6 +43,7 @@ static bool createConnection(QString host,
                              QString nombreConexion)
 {
     QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", nombreConexion);
+    db.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=3");
     db.setHostName(host);
     db.setDatabaseName(baseDatos);
     db.setUserName(usuario);
