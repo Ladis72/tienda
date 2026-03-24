@@ -54,6 +54,7 @@ SOURCES += main.cpp\
     cambiodatosproducto.cpp \
     historicotickets.cpp \
     ventasusuariowidget.cpp \
+    estadisticas.cpp \
     verfacturas.cpp \
     listadoventas.cpp \
     dialogfecha.cpp \
@@ -123,6 +124,7 @@ HEADERS  += tienda.h \
     cambiodatosproducto.h \
     historicotickets.h \
     ventasusuariowidget.h \
+    estadisticas.h \
     verfacturas.h \
     listadoventas.h \
     dialogfecha.h \
@@ -183,6 +185,7 @@ FORMS    += tienda.ui \
     cambiodatosproducto.ui \
     historicotickets.ui \
     ventasusuariowidget.ui \
+    estadisticas.ui \
     verfacturas.ui \
     listadoventas.ui \
     dialogfecha.ui \

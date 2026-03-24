@@ -19,10 +19,14 @@ void GraficoVentasWidget::configurar(const QString &titulo,
                                      const QList<QColor> &colores,
                                      const QString tipo)
 {
+    // Limpiar series y ejes anteriores de forma segura
     chart->removeAllSeries();
-    chart->removeAxis(chart->axisX());
-    chart->removeAxis(chart->axisY());
+    for (QAbstractAxis *axis : chart->axes()) {
+        chart->removeAxis(axis);
+        delete axis;
+    }
     chart->setTitle(titulo);
+    // Verificar que hay datos para mostrar
     if (!chart || categorias.isEmpty() || series.isEmpty())
         return;
     int puntos = categorias.size();

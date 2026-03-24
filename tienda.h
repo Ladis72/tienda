@@ -40,6 +40,7 @@
 #include "prestamistas.h"
 #include "prestamos.h"
 #include "proveedores.h"
+#include "estadisticas.h"
 #include "salidas.h"
 #include "tabwidget.h"
 #include "tiendas.h"
@@ -81,6 +82,7 @@ private slots:
     void on_cajasButton_clicked();
     void on_pushButtonEntradaSalida_clicked();
     void on_movimientosButton_clicked();
+    void on_pushButtonEstadisticas_clicked();
     void on_pushButtonTickets_clicked();
     void on_pushButtonFacturas_clicked();
     void on_listadoVentasButton_clicked();
@@ -164,6 +166,10 @@ private:
     ListadoArqueos *ListaArqueos;
     ListadoCaducados *ListaCaducados;
     Formatos *Format;
+    Estadisticas *estadisticasDialog;
+
+    // Métodos para cambiar estilos de cabecera
+    void setupHeaderStyles();
     Directorios *Director;
     tiendas *Sucursal;
     conexionesRemotas *conexiones;

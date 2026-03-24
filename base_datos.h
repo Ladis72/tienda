@@ -179,6 +179,22 @@ public:
     QSqlQuery listadoMovimientosEfectivo(QString db, QString inicio, QString final);
     QSqlQuery listadoCaducados(QString base, QString desde, QString hasta);
 
+    // Funciones ESTADÍSTICAS
+    QSqlQuery estadisticasVentasPorPeriodo(const QString &db, const QDate &desde, const QDate &hasta, const QString &agrupacion);
+    QSqlQuery estadisticasVentasPorUsuario(const QString &db, const QDate &desde, const QDate &hasta);
+    QSqlQuery estadisticasVentasPorFormaPago(const QString &db, const QDate &desde, const QDate &hasta);
+    QSqlQuery estadisticasVentasPorFamilia(const QString &db, const QDate &desde, const QDate &hasta);
+    QSqlQuery estadisticasTopArticulosVendidos(const QString &db, const QDate &desde, const QDate &hasta, int limite);
+    QSqlQuery estadisticasTopArticulosRentables(const QString &db, const QDate &desde, const QDate &hasta, int limite);
+    QSqlQuery estadisticasArticulosSinMovimiento(const QString &db, int diasSinVenta);
+    QSqlQuery estadisticasMejoresClientes(const QString &db, const QDate &desde, const QDate &hasta, int limite);
+    double estadisticasTotalVentas(const QString &db, const QDate &desde, const QDate &hasta);
+    int estadisticasNumeroTickets(const QString &db, const QDate &desde, const QDate &hasta);
+    int estadisticasTotalArticulosStock(const QString &db);
+    int estadisticasClientesActivos(const QString &db, const QDate &desde, const QDate &hasta);
+    double estadisticasTotalCompras(const QString &db, const QDate &desde, const QDate &hasta);
+    int estadisticasNumeroPedidos(const QString &db, const QDate &desde, const QDate &hasta);
+
     //Funciones de configuración
     QString leerConfiguracion();
     bool GuardarConfiguracion(int datos);

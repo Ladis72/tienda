@@ -10,6 +10,7 @@ bool baseDatos::conectar(
     QString host, QString puerto, QString baseDatos, QString usuario, QString clave)
 {
     QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", "DB");
+    db.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=3");
     db.setHostName(host);
     db.setDatabaseName(baseDatos);
     db.setUserName(usuario);
@@ -2212,6 +2213,259 @@ int baseDatos::contarNotasPendientes(const QString &db)
     q.exec("SELECT COUNT(*) FROM notas WHERE estado = 'Pendiente'");
     if (q.first())
         return q.value(0).toInt();
+    return 0;
+}
+
+// ============================================================
+// FUNCIONES ESTADÍSTICAS
+// ============================================================
+
+QSqlQuery baseDatos::estadisticasVentasPorPeriodo(const QString &db, const QDate &desde, const QDate &hasta, const QString &agrupacion)
+{
+    QString formatoFechaSQL;
+    if (agrupacion == "dia")
+        formatoFechaSQL = "DATE(fecha)";
+    else if (agrupacion == "mes")
+        formatoFechaSQL = "DATE_FORMAT(fecha, '%Y-%m')";
+    else if (agrupacion == "anio")
+        formatoFechaSQL = "YEAR(fecha)";
+    else
+        formatoFechaSQL = "DATE(fecha)";
+
+    QString sql = QString(
+        "SELECT %1 AS periodo, SUM(total) AS total_ventas "
+        "FROM tickets "
+        "WHERE fecha BETWEEN :desde AND :hasta "
+        "GROUP BY periodo "
+        "ORDER BY periodo ASC"
+    ).arg(formatoFechaSQL);
+
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.prepare(sql);
+    query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+    query.exec();
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasVentasPorPeriodo:" << query.lastError().text();
+    return query;
+}
+
+QSqlQuery baseDatos::estadisticasVentasPorUsuario(const QString &db, const QDate &desde, const QDate &hasta)
+{
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.prepare(
+        "SELECT u.nombre, SUM(t.total) AS total "
+        "FROM tickets t "
+        "JOIN usuarios u ON t.usuario = u.id "
+        "WHERE t.fecha BETWEEN :desde AND :hasta "
+        "GROUP BY u.nombre "
+        "ORDER BY total DESC"
+    );
+    query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+    query.exec();
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasVentasPorUsuario:" << query.lastError().text();
+    return query;
+}
+
+QSqlQuery baseDatos::estadisticasVentasPorFormaPago(const QString &db, const QDate &desde, const QDate &hasta)
+{
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.prepare(
+        "SELECT fp.formapago, SUM(t.total) AS total "
+        "FROM tickets t "
+        "JOIN formapago fp ON t.fpago = fp.id "
+        "WHERE t.fecha BETWEEN :desde AND :hasta "
+        "GROUP BY fp.formapago "
+        "ORDER BY total DESC"
+    );
+    query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+    query.exec();
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasVentasPorFormaPago:" << query.lastError().text();
+    return query;
+}
+
+QSqlQuery baseDatos::estadisticasVentasPorFamilia(const QString &db, const QDate &desde, const QDate &hasta)
+{
+    QSqlQuery query(QSqlDatabase::database(db));
+    // Asumiendo lineasticket (nticket, cod, descripcion, cantidad, pvp...) y tickets (ticket, fecha) y articulos (cod, familia)
+    query.prepare(
+        "SELECT COALESCE(f.id, 0) AS id_fam, "
+        "COALESCE(f.descripcion, 'SIN FAMILIA') AS nombre_fam, "
+        "ROUND(SUM(COALESCE(lt.cantidad, 0) * COALESCE(lt.pvp, 0)), 2) AS total "
+        "FROM lineasticket lt "
+        "JOIN tickets t ON lt.nticket = t.ticket "
+        "JOIN articulos a ON lt.cod = a.cod "
+        "LEFT JOIN familias f ON a.familia = f.id "
+        "WHERE t.fecha BETWEEN :desde AND :hasta "
+        "GROUP BY id_fam, nombre_fam "
+        "ORDER BY total DESC"
+    );
+    query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+    query.exec();
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasVentasPorFamilia:" << query.lastError().text();
+    return query;
+}
+
+QSqlQuery baseDatos::estadisticasTopArticulosVendidos(const QString &db, const QDate &desde, const QDate &hasta, int limite)
+{
+    // NOTA: MySQL no permite LIMIT con parámetros vinculados (bindValue),
+    // por lo que se inyecta el valor como literal en la cadena SQL.
+    QSqlQuery query(QSqlDatabase::database(db));
+    QString sql = QString(
+        "SELECT lt.cod, lt.descripcion, SUM(lt.cantidad) AS cantidad_total "
+        "FROM lineasticket lt "
+        "JOIN tickets t ON lt.nticket = t.ticket "
+        "WHERE t.fecha BETWEEN :desde AND :hasta "
+        "GROUP BY lt.cod, lt.descripcion "
+        "ORDER BY cantidad_total DESC "
+        "LIMIT %1"
+    ).arg(limite);
+    query.prepare(sql);
+    query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+    query.exec();
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasTopArticulosVendidos:" << query.lastError().text();
+    return query;
+}
+
+QSqlQuery baseDatos::estadisticasTopArticulosRentables(const QString &db, const QDate &desde, const QDate &hasta, int limite)
+{
+    // NOTA: MySQL no permite LIMIT con parámetros vinculados (bindValue),
+    // por lo que se inyecta el valor como literal en la cadena SQL.
+    QSqlQuery query(QSqlDatabase::database(db));
+    QString sql = QString(
+        "SELECT lt.cod, lt.descripcion, ROUND(SUM(lt.cantidad * (lt.pvp - COALESCE(a.precio_compra,0))), 2) AS rentabilidad "
+        "FROM lineasticket lt "
+        "JOIN tickets t ON lt.nticket = t.ticket "
+        "LEFT JOIN articulos a ON lt.cod = a.cod "
+        "WHERE t.fecha BETWEEN :desde AND :hasta "
+        "GROUP BY lt.cod, lt.descripcion "
+        "ORDER BY rentabilidad DESC "
+        "LIMIT %1"
+    ).arg(limite);
+    query.prepare(sql);
+    query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+    query.exec();
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasTopArticulosRentables:" << query.lastError().text();
+    return query;
+}
+
+QSqlQuery baseDatos::estadisticasArticulosSinMovimiento(const QString &db, int diasSinVenta)
+{
+    // Devuelve los artículos que no se han vendido en los últimos X días o nunca
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.prepare(
+        "SELECT cod, descripcion, stock, ultima_venta "
+        "FROM articulos "
+        "WHERE ultima_venta IS NULL OR DATEDIFF(CURRENT_DATE(), ultima_venta) >= :dias "
+        "ORDER BY ultima_venta ASC, stock DESC"
+    );
+    query.bindValue(":dias", diasSinVenta);
+    query.exec();
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasArticulosSinMovimiento:" << query.lastError().text();
+    return query;
+}
+
+QSqlQuery baseDatos::estadisticasMejoresClientes(const QString &db, const QDate &desde, const QDate &hasta, int limite)
+{
+    // NOTA: MySQL no permite LIMIT con parámetros vinculados (bindValue),
+    // por lo que se inyecta el valor como literal en la cadena SQL.
+    QSqlQuery query(QSqlDatabase::database(db));
+    QString sql = QString(
+        "SELECT c.nif, CONCAT(c.nombre, ' ', c.apellidos) AS nombre_completo, SUM(t.total) AS total_compras "
+        "FROM tickets t "
+        "JOIN clientes c ON t.cliente = c.idCliente "
+        "WHERE t.fecha BETWEEN :desde AND :hasta AND t.cliente != 0 AND t.cliente IS NOT NULL "
+        "GROUP BY c.idCliente "
+        "ORDER BY total_compras DESC "
+        "LIMIT %1"
+    ).arg(limite);
+    query.prepare(sql);
+    query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+    query.exec();
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasMejoresClientes:" << query.lastError().text();
+    return query;
+}
+
+double baseDatos::estadisticasTotalVentas(const QString &db, const QDate &desde, const QDate &hasta)
+{
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.prepare("SELECT COALESCE(SUM(total), 0) FROM tickets WHERE fecha BETWEEN :desde AND :hasta");
+    query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+    if (query.exec() && query.first()) {
+        return query.value(0).toDouble();
+    }
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasTotalVentas:" << query.lastError().text();
+    return 0.0;
+}
+
+int baseDatos::estadisticasNumeroTickets(const QString &db, const QDate &desde, const QDate &hasta)
+{
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.prepare("SELECT COUNT(*) FROM tickets WHERE fecha BETWEEN :desde AND :hasta");
+    query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+    if (query.exec() && query.first()) {
+        return query.value(0).toInt();
+    }
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasNumeroTickets:" << query.lastError().text();
+    return 0;
+}
+
+int baseDatos::estadisticasTotalArticulosStock(const QString &db)
+{
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.prepare("SELECT COALESCE(SUM(cantidad), 0) FROM lotes"); // El stock real es la suma de lotes
+    if (query.exec() && query.first()) {
+        return query.value(0).toInt();
+    }
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasTotalArticulosStock:" << query.lastError().text();
+    return 0;
+}
+
+int baseDatos::estadisticasClientesActivos(const QString &db, const QDate &desde, const QDate &hasta)
+{
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.prepare("SELECT COUNT(DISTINCT cliente) FROM tickets WHERE fecha BETWEEN :desde AND :hasta AND cliente IS NOT NULL AND cliente > 0");
+    query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+    if (query.exec() && query.first()) {
+        return query.value(0).toInt();
+    }
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasClientesActivos:" << query.lastError().text();
+    return 0;
+}
+
+double baseDatos::estadisticasTotalCompras(const QString &db, const QDate &desde, const QDate &hasta)
+{
+    QSqlQuery query(QSqlDatabase::database(db));
+    // Asumiendo que albaranes tiene total o algo similar. Usamos base_datos.sumarBasesPedido
+    // Si la tabla facturas o pedidos tiene el total, lo sumaremos de ahí. Verifiquemos si existe 'total' en albaranes o facturas
+    query.prepare("SELECT COALESCE(SUM(base + iva + re), 0) FROM facturas WHERE fecha BETWEEN :desde AND :hasta");
+    query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+    if (query.exec() && query.first()) {
+        return query.value(0).toDouble();
+    }
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasTotalCompras:" << query.lastError().text();
+    return 0.0;
+}
+
+int baseDatos::estadisticasNumeroPedidos(const QString &db, const QDate &desde, const QDate &hasta)
+{
+    QSqlQuery query(QSqlDatabase::database(db));
+    query.prepare("SELECT COUNT(*) FROM pedidos WHERE fechaPedido BETWEEN :desde AND :hasta");
+    query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+    if (query.exec() && query.first()) {
+        return query.value(0).toInt();
+    }
+    if (query.lastError().isValid()) qDebug() << "Error en estadisticasNumeroPedidos:" << query.lastError().text();
     return 0;
 }
 
