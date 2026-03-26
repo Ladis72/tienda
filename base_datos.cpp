@@ -1261,6 +1261,20 @@ bool baseDatos::insertarES(QStringList datos, QString base)
     return false;
 }
 
+/**
+ * @brief Recupera la configuración del ticket desde la base de datos.
+ *
+ * Devuelve una lista con los siguientes campos en orden:
+ * 0 - cabecera (texto de cabecera del ticket)
+ * 1 - pie (texto del pie del ticket)
+ * 2 - promocion (ruta de la imagen de cabecera del ticket)
+ * 3 - ruta (ruta de la impresora de tickets)
+ * 4 - codApertura (código de apertura del cajón)
+ * 5 - codCorte (código de corte del papel)
+ * 6 - imagenPromo (ruta de la imagen promocional al final del ticket)
+ *
+ * @return QStringList con los valores de configuración
+ */
 QStringList baseDatos::recuperarConfigTicket()
 {
     QStringList configTicket;
@@ -1276,6 +1290,8 @@ QStringList baseDatos::recuperarConfigTicket()
     configTicket << consulta.value("ruta").toString();
     configTicket << consulta.value("codApertura").toString();
     configTicket << consulta.value("codCorte").toString();
+    // Nuevo campo: ruta de la imagen promocional que se imprime al final del ticket
+    configTicket << consulta.value("imagenPromo").toString();
     return configTicket;
 }
 
@@ -1288,22 +1304,32 @@ bool baseDatos::ticketPromo(QString base)
     return consulta.value("boolPromocion").toBool();
 }
 
+/**
+ * @brief Graba la configuración del ticket en la base de datos.
+ *
+ * Recibe una lista con los campos en el siguiente orden:
+ * 0 - cabecera, 1 - pie, 2 - promocion (imagen cabecera),
+ * 3 - boolPromocion, 4 - ruta impresora, 5 - codApertura,
+ * 6 - codCorte, 7 - imagenPromo (imagen promocional)
+ *
+ * @param configTicket Lista de valores a grabar
+ * @return true si se grabó correctamente, false en caso de error
+ */
 bool baseDatos::grabarConfiguracionTicket(QStringList configTicket)
 {
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.prepare("UPDATE configTicket SET cabecera = ? , pie = ? , promocion = ? , "
-                     "boolPromocion = ? , ruta = ? , codApertura = ? , codCorte = ? WHERE id = 1");
+                     "boolPromocion = ? , ruta = ? , codApertura = ? , codCorte = ? , "
+                     "imagenPromo = ? WHERE id = 1");
     consulta.bindValue(0, configTicket.at(0));
     consulta.bindValue(1, configTicket.at(1));
     consulta.bindValue(2, configTicket.at(2));
-    //    if (configTicket.at(3) == "0") {
-    //        consulta.bindValue(3,"FALSE");
-    //    } else {consulta.bindValue(3,"TRUE");
-    //    }
     consulta.bindValue(3, configTicket.at(3));
     consulta.bindValue(4, configTicket.at(4));
     consulta.bindValue(5, configTicket.at(5));
     consulta.bindValue(6, configTicket.at(6));
+    // Nuevo campo: ruta de la imagen promocional
+    consulta.bindValue(7, configTicket.at(7));
     if (consulta.exec())
         return true;
     qDebug() << consulta.lastError().text();
