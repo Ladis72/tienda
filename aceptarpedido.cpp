@@ -312,7 +312,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         }
     } else {
         datosFactura.append("0");
-        datosFactura.append(ui->lineEditNDoc->text());
+        datosFactura.append(NULL);
         if (!base.grabarAlbaran(conf->getConexionLocal(), datosFactura)) {
             base.insertarLog(conf->getConexionLocal(),
                              "Error",
