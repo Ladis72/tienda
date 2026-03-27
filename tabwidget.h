@@ -39,6 +39,8 @@ private slots:
 
     void on_lineEditCod_editingFinished();
 
+    void on_pushButtonEditarPermisos_clicked();
+
 private:
     Ui::Ususarios *ui;
 
