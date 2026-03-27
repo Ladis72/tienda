@@ -4,6 +4,7 @@
 #include "ui_tienda.h"
 
 #include "facturaralbaranes.h"
+#include "gestorpermisos.h"
 #include <QDebug>
 #include <QEvent>
 #include <QFileDialog>
@@ -28,6 +29,10 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                      datos.at(0));
     conf->setConexionLocal(datos.at(0));
   }
+  // Inicializar tabla de permisos (crea la tabla si no existe
+  // y rellena con valores por defecto la primera vez)
+  GestorPermisos::inicializar(conf->getConexionLocal());
+
   QString conexionMaster = base.nombreConexionMaster();
   conf->setConexionMaster(conexionMaster);
   if (conf->getConexionMaster() != conf->getConexionLocal()) {
@@ -142,75 +147,87 @@ void Tienda::on_ventasButton_clicked() {
   return;
 }
 
-void Tienda::permisos(int i) {
-  switch (i) {
-  case 0: {
-    QList<QPushButton *> buttons = this->findChildren<QPushButton *>();
+/**
+ * @brief Aplica los permisos del rol activo a los widgets de la ventana
+ * principal.
+ *
+ * Utiliza el GestorPermisos centralizado para consultar si el rol actual
+ * tiene acceso a cada funcionalidad. Los permisos se definen en la tabla
+ * MySQL `permisos` y se cargan automáticamente al hacer setRol().
+ *
+ * Para añadir una nueva funcionalidad, solo hay que:
+ *  1. Añadir una entrada al mapa clave→widget de esta función
+ *  2. Insertar la fila en la tabla `permisos` para los roles que deban tener
+ * acceso
+ */
+void Tienda::permisos(int rol) {
+  // Mapa: cada clave de permiso → widget que controla
+  // Al añadir un nuevo botón/funcionalidad, solo hay que añadir aquí una línea
+  QMap<QString, QWidget *> mapa = {
+      {"ventas", ui->ventasButton},
+      {"articulos", ui->pushButton},
+      {"familias", ui->pushButtonFamilias},
+      {"fabricantes", ui->pushButtonFabricantes},
+      {"clientes", ui->pushButton_3},
+      {"proveedores", ui->pushButtonProveedores},
+      {"formas_pago", ui->pushButtonFormasPago},
+      {"prestamistas", ui->pushButtonPrestamistas},
+      {"usuarios", ui->pushButtonUsuarios},
+      {"tiendas", ui->pushButtonTiendas},
+      {"formatos", ui->pushButtonFormatos},
+      {"tipos_entrada_salida", ui->pushButtonEntradaSalida},
+      {"etiquetas", ui->pushButtonEtiquetas},
+      {"entradas", ui->pushButtonEntradas},
+      {"salidas", ui->pushButtonSalidas},
+      {"venta_articulos", ui->pushButton_2},
+      {"caducidades", ui->pushButton_5},
+      {"caducados", ui->pushButtonCaducados},
+      {"movimientos", ui->movimientosButton},
+      {"tickets", ui->pushButtonTickets},
+      {"facturas", ui->pushButtonFacturas},
+      {"albaranes", ui->pushButtonAlbaranes},
+      {"facturar", ui->pushButtonFacturar},
+      {"gestionar_pedidos", ui->pushButtonGestionar},
+      {"cajas", ui->cajasButton},
+      {"prestamos", ui->pushButtonPrestamos},
+      {"generar_vales", ui->pushButtonGenerarVales},
+      {"actualizar_clientes", ui->pushButtonActualizarClientes},
+      {"listado_ventas", ui->listadoVentasButton},
+      {"listado_movimientos", ui->pushButtonListadoMovimientos},
+      {"listado_arqueos", ui->pushButtonListadoArqueos},
+      {"listado_caducados", ui->pushButtonCaducados_2},
+      {"estadisticas", ui->pushButtonEstadisticas},
+      {"config_ticket", ui->pushButtonTicket},
+      {"configuracion", ui->pushButtonConfiguracion},
+      {"informes", ui->pushButtonInformes},
+      {"impuestos", ui->pushButtonImpuestos},
+      {"copia_seguridad", ui->pushButtonCopia},
+      {"conectar", ui->pushButtonConectar},
+      {"config_base", this->findChild<QWidget *>("pushButtonConfigDB")},
+      {"tab_config", ui->tabConfig},
+  };
 
-    // Recorre la lista de botones y desactiva cada uno
-    foreach (QPushButton *button, buttons) {
-      button->setEnabled(true);
-    }
-    break;
-  }
-  case 1:
-    ui->pushButtonListadoArqueos->setDisabled(true);
-    ui->pushButtonListadoMovimientos->setDisabled(true);
-    ui->pushButtonUsuarios->setDisabled(true);
-    ui->listadoVentasButton->setDisabled(true);
-    ui->pushButtonActualizarClientes->setDisabled(true);
-    ui->pushButtonTiendas->setDisabled(true);
-    ui->pushButtonEntradaSalida->setDisabled(true);
-    ui->pushButtonFormatos->setDisabled(true);
-    ui->pushButtonGenerarVales->setDisabled(true);
-    ui->tabConfig->setDisabled(true);
-    // Solo nivel 0 puede acceder a estadísticas
-    ui->pushButtonEstadisticas->setDisabled(true);
-    break;
-
-  case 2:
-    ui->pushButton_2->setDisabled(true);
-    ui->pushButtonTiendas->setDisabled(true);
-    ui->pushButtonEntradaSalida->setDisabled(true);
-    ui->pushButtonFormatos->setDisabled(true);
-    ui->pushButtonListadoArqueos->setDisabled(true);
-    ui->pushButtonListadoMovimientos->setDisabled(true);
-    ui->pushButtonUsuarios->setDisabled(true);
-    ui->listadoVentasButton->setDisabled(true);
-    ui->movimientosButton->setDisabled(true);
-    ui->pushButtonActualizarClientes->setDisabled(true);
-    ui->cajasButton->setDisabled(true);
-    ui->pushButtonTickets->setDisabled(true);
-    ui->pushButtonGenerarVales->setDisabled(true);
-    ui->pushButtonInformes->setDisabled(true);
-    ui->pushButtonTicket->setDisabled(true);
-    ui->pushButtonConfiguracion->setDisabled(true);
-    ui->tabConfig->setDisabled(true);
-    // Solo nivel 0 puede acceder a estadísticas
-    ui->pushButtonEstadisticas->setDisabled(true);
-    break;
-  case -1: {
-    // Sin sesión: deshabilitar todo excepto el botón de sesión
-    QList<QPushButton *> buttons = this->findChildren<QPushButton *>();
-    foreach (QPushButton *button, buttons) {
-      button->setDisabled(true);
+  // Caso especial: sin sesión → todo bloqueado
+  if (rol < 0) {
+    for (auto it = mapa.begin(); it != mapa.end(); ++it) {
+      if (it.value())
+        it.value()->setEnabled(false); // guard: widget puede ser nullptr
     }
     ui->pushButtonSesion->setEnabled(true);
     usuario->setEnabled(true);
-    // pushButtonEstadisticas ya queda deshabilitado por el bucle anterior
-    break;
+    return;
   }
-  default:
-    // Rol desconocido: deshabilitar todo excepto el botón de sesión
-    QList<QPushButton *> buttons = this->findChildren<QPushButton *>();
-    foreach (QPushButton *button, buttons) {
-      button->setDisabled(true);
-    }
-    ui->pushButtonSesion->setEnabled(true);
-    usuario->setEnabled(true);
-    // pushButtonEstadisticas ya queda deshabilitado por el bucle anterior
-    break;
+
+  // Caso normal: consultar al GestorPermisos para cada widget
+  for (auto it = mapa.begin(); it != mapa.end(); ++it) {
+    if (it.value())
+      it.value()->setEnabled(
+          conf->permisos()->tiene(it.key())); // guard: widget puede ser nullptr
   }
+
+  // Botón de sesión y usuario siempre accesibles
+  ui->pushButtonSesion->setEnabled(true);
+  usuario->setEnabled(true);
 }
 void Tienda::activar_btn_tpv() {}
 
