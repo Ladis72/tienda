@@ -16,7 +16,6 @@ public:
     explicit ImprimirTicket(QString nTicket, QString formato, QObject *parent = nullptr);
     ~ImprimirTicket();
 
-    void ImprimirTicketRegalo();
 
 private:
     baseDatos base;
@@ -33,6 +32,9 @@ private:
     bool imprimirLineasProductos();
     bool imprimirPie();
     bool imprimirLogo();
+    bool ImprimirTicketRegalo(QString ruta);
+    bool cortarPapel();
+
 };
 
 #endif // IMPRIMIRTICKET_H

@@ -469,7 +469,7 @@ void Tpv::on_btn_cobrar_clicked()
 {
     tabla = "tickets";
 
-    QStringList confTicket = base.recuperarConfigTicket();
+    QStringList confTicket = base.recuperarConfigTicket(conf->getConexionLocal());
     QFile cajon(confTicket.at(3));
     qDebug() << confTicket.at(3);
     cajon.open(QIODevice::WriteOnly);
@@ -759,7 +759,7 @@ void Tpv::on_btn_preTicket_clicked()
 {
     QStringList lineaTicket;
 
-    QStringList confTicket = base.recuperarConfigTicket();
+    QStringList confTicket = base.recuperarConfigTicket(conf->getConexionLocal());
 
     QFile impresora("ticket.txt");
     impresora.open(QIODevice::WriteOnly);
