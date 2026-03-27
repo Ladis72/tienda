@@ -67,6 +67,27 @@ Estadisticas::~Estadisticas() {
  * 'lineasticketss'). Tras conmutar, recarga automáticamente todas las
  * estadísticas.
  */
+/**
+ * @brief Se dispara automáticamente cada vez que el diálogo se va a mostrar.
+ *
+ * Recarga el combo de tiendas para reflejar las conexiones que estén
+ * activas en ese momento. Esto corrige el problema de que tiendas
+ * conectadas DESPUÉS de la primera apertura no aparecían en el combo.
+ */
+void Estadisticas::showEvent(QShowEvent *event) {
+  // Bloquear señales del combo para evitar recargar estadísticas
+  // por cada item que se añade durante la recarga de tiendas
+  ui->comboTienda->blockSignals(true);
+  cargarTiendas();
+  ui->comboTienda->blockSignals(false);
+
+  // Cargar estadísticas con la tienda seleccionada actualmente
+  cargarEstadisticas();
+
+  // Propagar el evento al padre (obligatorio)
+  QDialog::showEvent(event);
+}
+
 void Estadisticas::keyPressEvent(QKeyEvent *event) {
   if (event->key() == Qt::Key_F2) {
     // Conmutar modo consolidado

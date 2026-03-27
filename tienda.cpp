@@ -5,11 +5,11 @@
 
 #include "facturaralbaranes.h"
 #include <QDebug>
+#include <QEvent>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QPalette>
 #include <QSizePolicy>
-#include <QEvent>
 #include <QSplitter>
 
 Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
@@ -22,9 +22,10 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
     conf->setConexionLocal("DB");
   } else {
     QString baseDatos = datos.at(4);
-    if (baseDatos.isEmpty()) baseDatos = "tiendaNueva";
-    createConnection(datos.at(1), "3306", baseDatos, datos.at(2),
-                     datos.at(3), datos.at(0));
+    if (baseDatos.isEmpty())
+      baseDatos = "tiendaNueva";
+    createConnection(datos.at(1), "3306", baseDatos, datos.at(2), datos.at(3),
+                     datos.at(0));
     conf->setConexionLocal(datos.at(0));
   }
   QString conexionMaster = base.nombreConexionMaster();
@@ -105,7 +106,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
   conf->setNombreconexiones(conexiones->lista());
-  //login();
+  login();
 }
 
 Tienda::~Tienda() {
@@ -163,6 +164,8 @@ void Tienda::permisos(int i) {
     ui->pushButtonFormatos->setDisabled(true);
     ui->pushButtonGenerarVales->setDisabled(true);
     ui->tabConfig->setDisabled(true);
+    // Solo nivel 0 puede acceder a estadísticas
+    ui->pushButtonEstadisticas->setDisabled(true);
     break;
 
   case 2:
@@ -183,30 +186,29 @@ void Tienda::permisos(int i) {
     ui->pushButtonTicket->setDisabled(true);
     ui->pushButtonConfiguracion->setDisabled(true);
     ui->tabConfig->setDisabled(true);
-
+    // Solo nivel 0 puede acceder a estadísticas
+    ui->pushButtonEstadisticas->setDisabled(true);
     break;
   case -1: {
+    // Sin sesión: deshabilitar todo excepto el botón de sesión
     QList<QPushButton *> buttons = this->findChildren<QPushButton *>();
-
-    // Recorre la lista de botones y desactiva cada uno
     foreach (QPushButton *button, buttons) {
       button->setDisabled(true);
     }
     ui->pushButtonSesion->setEnabled(true);
     usuario->setEnabled(true);
-
+    // pushButtonEstadisticas ya queda deshabilitado por el bucle anterior
     break;
   }
   default:
+    // Rol desconocido: deshabilitar todo excepto el botón de sesión
     QList<QPushButton *> buttons = this->findChildren<QPushButton *>();
-
-    // Recorre la lista de botones y desactiva cada uno
     foreach (QPushButton *button, buttons) {
       button->setDisabled(true);
     }
     ui->pushButtonSesion->setEnabled(true);
     usuario->setEnabled(true);
-
+    // pushButtonEstadisticas ya queda deshabilitado por el bucle anterior
     break;
   }
 }
