@@ -3,6 +3,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include "base_datos.h"
+#include "editorpermisos.h"
 #include "ui_tabwidget.h"
 #include "ventasusuariowidget.h"
 
@@ -254,4 +255,19 @@ void Ususarios::on_lineEditCod_editingFinished()
             break;
         }
     }
+}
+
+/**
+ * @brief Abre el diálogo de edición de permisos por rol.
+ *
+ * Toma el valor del campo lineEditPermisos como rol inicial para
+ * preseleccionar en el combo del editor. El diálogo se abre como modal.
+ */
+void Ususarios::on_pushButtonEditarPermisos_clicked()
+{
+    int rol = ui->lineEditPermisos->text().toInt();
+    EditorPermisos *editor = new EditorPermisos(
+        rol, conf->getConexionLocal(), this);
+    editor->setAttribute(Qt::WA_DeleteOnClose);
+    editor->exec();
 }

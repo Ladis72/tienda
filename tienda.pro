@@ -23,6 +23,7 @@ SOURCES += main.cpp\
     conexionesremotas.cpp \
     generarvales.cpp \
     graficoventaswidget.cpp \
+    gestorpermisos.cpp \
     imprimirfacturaproveedor.cpp \
     imprimirpedido.cpp \
     impuestos.cpp \
@@ -55,6 +56,7 @@ SOURCES += main.cpp\
     historicotickets.cpp \
     ventasusuariowidget.cpp \
     estadisticas.cpp \
+    editorpermisos.cpp \
     verfacturas.cpp \
     listadoventas.cpp \
     dialogfecha.cpp \
@@ -93,6 +95,7 @@ HEADERS  += tienda.h \
     conexionesremotas.h \
     generarvales.h \
     graficoventaswidget.h \
+    gestorpermisos.h \
     imprimirfacturaproveedor.h \
     imprimirpedido.h \
     impuestos.h \
@@ -125,6 +128,7 @@ HEADERS  += tienda.h \
     historicotickets.h \
     ventasusuariowidget.h \
     estadisticas.h \
+    editorpermisos.h \
     verfacturas.h \
     listadoventas.h \
     dialogfecha.h \
@@ -186,6 +190,7 @@ FORMS    += tienda.ui \
     historicotickets.ui \
     ventasusuariowidget.ui \
     estadisticas.ui \
+    editorpermisos.ui \
     verfacturas.ui \
     listadoventas.ui \
     dialogfecha.ui \
