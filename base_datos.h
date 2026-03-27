@@ -116,7 +116,7 @@ public:
                      QString campoCondicion = NULL,
                      QString condicion = "%%");
     bool insertarES(QStringList datos, QString base);
-    QStringList recuperarConfigTicket();
+    QStringList recuperarConfigTicket(QString base);
     bool ticketPromo(QString base);
     bool grabarConfiguracionTicket(QStringList configTicket);
     //Funciones PEDIDOS
@@ -179,19 +179,21 @@ public:
     QSqlQuery listadoMovimientosEfectivo(QString db, QString inicio, QString final);
     QSqlQuery listadoCaducados(QString base, QString desde, QString hasta);
 
-    // Funciones ESTADÍSTICAS
-    QSqlQuery estadisticasVentasPorPeriodo(const QString &db, const QDate &desde, const QDate &hasta, const QString &agrupacion);
-    QSqlQuery estadisticasVentasPorUsuario(const QString &db, const QDate &desde, const QDate &hasta);
-    QSqlQuery estadisticasVentasPorFormaPago(const QString &db, const QDate &desde, const QDate &hasta);
-    QSqlQuery estadisticasVentasPorFamilia(const QString &db, const QDate &desde, const QDate &hasta);
-    QSqlQuery estadisticasTopArticulosVendidos(const QString &db, const QDate &desde, const QDate &hasta, int limite);
-    QSqlQuery estadisticasTopArticulosRentables(const QString &db, const QDate &desde, const QDate &hasta, int limite);
+    // Funciones ESTADÍSTICAS.
+    // El parámetro 'consolidado' indica si incluir las tablas ticketss y lineasticketss
+    // además de tickets y lineasticket (se activa con F2 en el panel de estadísticas).
+    QSqlQuery estadisticasVentasPorPeriodo(const QString &db, const QDate &desde, const QDate &hasta, const QString &agrupacion, bool consolidado = false);
+    QSqlQuery estadisticasVentasPorUsuario(const QString &db, const QDate &desde, const QDate &hasta, bool consolidado = false);
+    QSqlQuery estadisticasVentasPorFormaPago(const QString &db, const QDate &desde, const QDate &hasta, bool consolidado = false);
+    QSqlQuery estadisticasVentasPorFamilia(const QString &db, const QDate &desde, const QDate &hasta, bool consolidado = false);
+    QSqlQuery estadisticasTopArticulosVendidos(const QString &db, const QDate &desde, const QDate &hasta, int limite, bool consolidado = false);
+    QSqlQuery estadisticasTopArticulosRentables(const QString &db, const QDate &desde, const QDate &hasta, int limite, bool consolidado = false);
     QSqlQuery estadisticasArticulosSinMovimiento(const QString &db, int diasSinVenta);
-    QSqlQuery estadisticasMejoresClientes(const QString &db, const QDate &desde, const QDate &hasta, int limite);
-    double estadisticasTotalVentas(const QString &db, const QDate &desde, const QDate &hasta);
-    int estadisticasNumeroTickets(const QString &db, const QDate &desde, const QDate &hasta);
+    QSqlQuery estadisticasMejoresClientes(const QString &db, const QDate &desde, const QDate &hasta, int limite, bool consolidado = false);
+    double estadisticasTotalVentas(const QString &db, const QDate &desde, const QDate &hasta, bool consolidado = false);
+    int estadisticasNumeroTickets(const QString &db, const QDate &desde, const QDate &hasta, bool consolidado = false);
     int estadisticasTotalArticulosStock(const QString &db);
-    int estadisticasClientesActivos(const QString &db, const QDate &desde, const QDate &hasta);
+    int estadisticasClientesActivos(const QString &db, const QDate &desde, const QDate &hasta, bool consolidado = false);
     double estadisticasTotalCompras(const QString &db, const QDate &desde, const QDate &hasta);
     int estadisticasNumeroPedidos(const QString &db, const QDate &desde, const QDate &hasta);
 

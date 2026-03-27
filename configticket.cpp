@@ -20,7 +20,7 @@ ConfigTicket::ConfigTicket(QWidget *parent)
     ui->setupUi(this);
 
     // Recuperar la configuración actual del ticket desde la base de datos
-    QStringList configuracionTicket = base->recuperarConfigTicket();
+    QStringList configuracionTicket = base->recuperarConfigTicket(conf->getConexionLocal());
 
     // Configurar los campos de texto de cabecera y pie
     ui->plainTextEditCabecera->setPlainText(configuracionTicket.at(0));

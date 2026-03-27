@@ -18,62 +18,9 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, QObject *parent
     fPago = base.nombreFormaPago(consulta.value(9).toString(), conf->getConexionLocal());
     entrega = consulta.value(11).toString();
     cambio = consulta.value(12).toString();
-    confTicket = base.recuperarConfigTicket();
+    confTicket = base.recuperarConfigTicket(conf->getConexionLocal());
     if (formato == "ticket") {
-        // if (!printer->abrirImpresora()) {
-        //     qDebug() << "No se pudo abrir la impresora "
-        //                 "usando metodo antiguo";
 
-        // QFile impresora("ticket.txt");
-        // impresora.open(QIODevice::WriteOnly);
-        // QTextStream texto(&impresora);
-
-        // texto << confTicket.at(0) + "\n\n";
-        // texto << QDate::fromString(fecha, "yyyy-MM-dd").toString("dd-MMM-yyyy") + "  " + hora
-        //              + "    " + "Ticket: " + ticket;
-        // texto << "\n";
-        // texto << "UDS|  Producto            |Prec.|Dto|Total\n";
-        // texto << "------------------------------------------\n";
-
-        // consulta = base.consultarLineasTicket(conf->getConexionLocal(), ticket);
-        // while (consulta.next()) {
-        //     uds = consulta.value(4).toString();
-        //     producto = consulta.value(3).toString();
-        //     precio = consulta.value(6).toString();
-        //     dto = consulta.value(7).toString();
-        //     totalLinea = consulta.value(8).toString();
-        //     texto << formatearCadena(uds, 3);
-        //     texto << formatearCadena(producto, 24) + " ";
-        //     texto << formatearCadena(precio, 6);
-        //     texto << formatearCadena(dto, 2);
-        //     texto << formatearCadena(totalLinea, 6);
-        //     texto << "\n";
-        // }
-        // texto << "\n\n";
-        // texto << "Total: " + total + "\n";
-        // texto << "Forma de pago. " + fPago;
-        // texto << "\n";
-        // texto << "Entrega: " + entrega + "\n";
-        // texto << "Cambio:  " + cambio;
-        // texto << "\n\n\n";
-        // texto << confTicket.at(1);
-        // texto << "\n\n\n\n";
-        // //    texto << char(0x1D) << char(0x56) << char(0x30);
-        // QString codCorte = confTicket.at(5);
-        // qDebug() << codCorte;
-        // QStringList cadaCodCorte = codCorte.split(",");
-        // for (int i = 0; i < cadaCodCorte.size(); ++i) {
-        //     texto << char(cadaCodCorte.at(i).toInt());
-        // }
-        // //texto << confTicket.at(4);
-        // texto << "\n\n";
-        // impresora.close();
-        // QString imprimir = "cat ./ticket.txt >> " + confTicket.at(3);
-        // const char *ch = imprimir.toLocal8Bit().constData();
-        // system(ch);
-        // return;
-        //    }
-        // IMPRESIÓN DIRECTA A /dev/usb/lp0
         qDebug() << "Imprimiendo ticket" << ticket << "directamente a impresora...";
 
         // 1. Imprimir logo si existe
@@ -98,27 +45,18 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, QObject *parent
         // 7. Imprimir mensaje final
         printer->imprimirLineaCentrada(confTicket.at(1));
 
-        // 8. Espacios y corte
+        // 8. Imprimir promoción si corresponde
+        if (confTicket.at(7) == "1") {
+            cortarPapel();
+            ImprimirTicketRegalo(confTicket.at(6));
+        }
+        // 9. Espacios y corte
         printer->alimentarLineas(3);
 
-        // 9. Corte de papel
-        QString codCorte = confTicket.at(5);
-        if (!codCorte.isEmpty()) {
-            // Si hay configuración de corte específica
-            QStringList cadaCodCorte = codCorte.split(",");
-            QByteArray comandoCorte;
-            for (int i = 0; i < cadaCodCorte.size(); ++i) {
-                comandoCorte.append(static_cast<char>(cadaCodCorte.at(i).toInt()));
-            }
-            printer->enviarComando(comandoCorte);
-            qDebug() << "Corte de configuración";
-        } else {
-            // Corte estándar
-            printer->cortarPapel(true);
-            qDebug() << "Corte standar";
-        }
+        // 10. Corte de papel
+        cortarPapel();
 
-        // 10. Cerrar impresora
+        // 11. Cerrar impresora
         printer->cerrarImpresora();
 
         qDebug() << "Ticket" << ticket << "impreso correctamente";
@@ -127,7 +65,36 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, QObject *parent
 
 ImprimirTicket::~ImprimirTicket() {}
 
-void ImprimirTicket::ImprimirTicketRegalo() {}
+bool ImprimirTicket::ImprimirTicketRegalo(QString ruta)
+{
+    if (!ruta.isEmpty() && QFile::exists(ruta)) {
+        if (printer->imprimirImagen(ruta,true)) {
+            return true;
+        }
+        return false;
+    }
+    return false;
+}
+
+bool ImprimirTicket::cortarPapel()
+{
+    QString codCorte = confTicket.at(5);
+    if (!codCorte.isEmpty()) {
+        // Si hay configuración de corte específica
+        QStringList cadaCodCorte = codCorte.split(",");
+        QByteArray comandoCorte;
+        for (int i = 0; i < cadaCodCorte.size(); ++i) {
+            comandoCorte.append(static_cast<char>(cadaCodCorte.at(i).toInt()));
+        }
+        printer->enviarComando(comandoCorte);
+        qDebug() << "Corte de configuración";
+    } else {
+        // Corte estándar
+        printer->cortarPapel(true);
+        qDebug() << "Corte standar";
+    }
+    return true;
+}
 
 QString ImprimirTicket::formatearCadena(QString cadena, int tamano)
 {
@@ -144,7 +111,7 @@ QString ImprimirTicket::formatearCadena(QString cadena, int tamano)
 
 bool ImprimirTicket::imprimirCabecera()
 {
-    QStringList confTicket = base.recuperarConfigTicket();
+    QStringList confTicket = base.recuperarConfigTicket(conf->getConexionLocal());
 
     // Nombre de empresa
     if (!confTicket.isEmpty() && !confTicket.at(0).isEmpty()) {
@@ -220,8 +187,8 @@ bool ImprimirTicket::imprimirPie()
 
 bool ImprimirTicket::imprimirLogo()
 {
-    QMap<QString, QString> directorios = base.cargarDirectorios(conf->getConexionLocal());
-    QString logoTicket = directorios.value("logoticket");
+
+    QString logoTicket = base.recuperarConfigTicket(conf->getConexionLocal()).at(2);
     if (!logoTicket.isEmpty() && QFile::exists(logoTicket)) {
         if (printer->imprimirImagen(logoTicket, true)) {
             return true;
@@ -247,7 +214,7 @@ bool ImprimirTicket::imprimirLogo()
     }
 
     // Si no hay logo, imprimir nombre de empresa centrado
-    QStringList confTicket = base.recuperarConfigTicket();
+    QStringList confTicket = base.recuperarConfigTicket(conf->getConexionLocal());
     if (!confTicket.isEmpty() && !confTicket.at(0).isEmpty()) {
         printer->setTamanio(2, 2);
         printer->imprimirLineaCentrada(confTicket.at(0));
@@ -257,3 +224,5 @@ bool ImprimirTicket::imprimirLogo()
 
     return true;
 }
+
+
