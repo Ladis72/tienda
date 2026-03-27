@@ -6,6 +6,7 @@
 #include "graficoventaswidget.h"
 #include <QDate>
 #include <QDialog>
+#include <QEvent>
 #include <QKeyEvent>
 #include <QSqlQueryModel>
 
@@ -28,6 +29,11 @@ public:
 protected:
   /// @brief Captura F2 para conmutar el modo consolidado tickets+ticketss
   void keyPressEvent(QKeyEvent *event) override;
+
+  /// @brief Se llama cada vez que el diálogo se va a mostrar.
+  /// Recarga la lista de tiendas conectadas para reflejar cambios
+  /// producidos desde la última vez que se abrió la ventana.
+  void showEvent(QShowEvent *event) override;
 
 private slots:
   void on_btnActualizar_clicked();
