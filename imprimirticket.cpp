@@ -49,6 +49,7 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, QObject *parent
         if (confTicket.at(7) == "1") {
             cortarPapel();
             ImprimirTicketRegalo(confTicket.at(6));
+            printer->alimentarLineas(1);
         }
         // 9. Espacios y corte
         printer->alimentarLineas(3);
