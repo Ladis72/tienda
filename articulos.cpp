@@ -78,6 +78,41 @@ void Articulos::refrescarBotones(int i)
     ui->lineEditStock->setText(
         base.sumarStockArticulo(ui->lineEditCod->text(), conf->getConexionLocal()));
 
+    double sumEntrada = 0.0;
+    double sumSalida = 0.0;
+    QString codArticulo = ui->lineEditCod->text();
+    QSqlQuery qEntrada = base.ejecutarSentencia("SELECT sum(cantidad) FROM entradaGenero_tmp WHERE cod = '" + codArticulo + "'", conf->getConexionLocal());
+    if (qEntrada.next()) sumEntrada = qEntrada.value(0).toDouble();
+
+    QSqlQuery qSalida = base.ejecutarSentencia("SELECT sum(cantidad) FROM salidaGenero_tmp WHERE cod = '" + codArticulo + "'", conf->getConexionLocal());
+    if (qSalida.next()) sumSalida = qSalida.value(0).toDouble();
+
+    if (sumEntrada > 0 && sumSalida > 0) {
+        // Si está en ambas tablas, mostramos el detalle (ej. "E: 5 | S: 2") y un color neutro (ej. naranja).
+        ui->lineEditPendientes->setText(QString("E: %1 | S: %2").arg(sumEntrada).arg(sumSalida));
+        ui->lineEditPendientes->setStyleSheet("color: #d97706;"); // Un color naranja / ámbar
+    } else if (sumEntrada > 0) {
+        ui->lineEditPendientes->setText(QString::number(sumEntrada));
+        ui->lineEditPendientes->setStyleSheet("color: green;");
+    } else if (sumSalida > 0) {
+        ui->lineEditPendientes->setText(QString::number(sumSalida));
+        ui->lineEditPendientes->setStyleSheet("color: red;");
+    } else {
+        ui->lineEditPendientes->setText("0");
+        ui->lineEditPendientes->setStyleSheet("");
+    }
+
+    // AÑADIDO: Lógica de encargados
+    QSqlQuery qEncargos = base.ejecutarSentencia("SELECT sum(cantidad) FROM encargos WHERE cod_articulo = '" + codArticulo + "' AND estado IN ('Pendiente', 'Recibido')", conf->getConexionLocal());
+    double sumEncargos = 0.0;
+    if (qEncargos.next()) sumEncargos = qEncargos.value(0).toDouble();
+    ui->lineEditEncargados->setText(QString::number(sumEncargos));
+    if (sumEncargos > 0) {
+        ui->lineEditEncargados->setStyleSheet("color: #1976D2; font-weight: bold;"); // Azul destacado
+    } else {
+        ui->lineEditEncargados->setStyleSheet("");
+    }
+
     cargarVentas();
     cargarCompras();
     cargarCodAux();

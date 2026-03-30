@@ -86,7 +86,6 @@ private slots:
     void on_pushButtonTickets_clicked();
     void on_pushButtonFacturas_clicked();
     void on_listadoVentasButton_clicked();
-    void on_pushButton_2_clicked();
     void on_pushButtonEntradas_clicked();
     void on_pushButton_5_clicked();
     void on_pushButtonSalidas_clicked();
@@ -103,6 +102,7 @@ private slots:
     void on_pushButtonListadoArqueos_clicked();
     void on_pushButtonCaducados_2_clicked();
 
+
     void on_pushButtonFormatos_clicked();
 
     void on_pushButtonInformes_clicked();
@@ -113,7 +113,6 @@ private slots:
 
     void on_pushButtonConectar_clicked();
 
-    void on_pushButtonConsultarLog_clicked();
     void onToggleNotas();
     void actualizarNotificacionNotas(int count);
 

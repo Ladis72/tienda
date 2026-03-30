@@ -80,6 +80,16 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="btn_encargos_cliente">
+       <property name="text">
+        <string>Encargos</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="pushButtonCerrar">
        <property name="text">
         <string>Cerrar</string>

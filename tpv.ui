@@ -173,6 +173,32 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="btn_encargo">
+       <property name="text">
+        <string>Hacer Encargo</string>
+       </property>
+       <property name="toolTip">
+        <string>Crear un encargo / reserva (F9)</string>
+       </property>
+       <property name="shortcut">
+        <string>F9</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnGestorEncargos">
+       <property name="text">
+        <string>Gestor Encargos</string>
+       </property>
+       <property name="toolTip">
+        <string>Abrir el Gestor de Encargos (F10)</string>
+       </property>
+       <property name="shortcut">
+        <string>F10</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btn_cerrar">
        <property name="toolTip">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Cerrar Esc&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>

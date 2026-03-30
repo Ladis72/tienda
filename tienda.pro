@@ -87,7 +87,9 @@ SOURCES += main.cpp\
     tiendas.cpp \
     comprasventasremoto.cpp \
     facturaralbaranes.cpp \
-    notaswidget.cpp
+    notaswidget.cpp \
+    encargosdialog.cpp \
+    gestorencargosdialog.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -159,7 +161,9 @@ HEADERS  += tienda.h \
     tiendas.h \
     comprasventasremoto.h \
     facturaralbaranes.h \
-    notaswidget.h
+    notaswidget.h \
+    encargosdialog.h \
+    gestorencargosdialog.h
 
 FORMS    += tienda.ui \
     actualizarclientes.ui \
@@ -215,7 +219,8 @@ FORMS    += tienda.ui \
     directorios.ui \
     tiendas.ui \
     comprasventasremoto.ui \
-    comprasventasremoto.ui
+    encargosdialog.ui \
+    gestorencargosdialog.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
