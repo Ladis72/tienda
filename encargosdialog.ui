@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>EncargosDialog</class>
+ <widget class="QDialog" name="EncargosDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>500</width>
+    <height>350</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Nuevo Encargo</string>
+  </property>
+  <layout class="QFormLayout" name="formLayout">
+   <item row="0" column="0">
+    <widget class="QLabel" name="labelCliente">
+     <property name="text"><string>Cliente:</string></property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <layout class="QHBoxLayout" name="horizontalLayout_cliente">
+     <item>
+      <widget class="QLineEdit" name="lineEditCliente">
+       <property name="readOnly"><bool>true</bool></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnBuscarCliente">
+       <property name="text"><string>...</string></property>
+       <property name="maximumWidth"><number>30</number></property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="labelArticulo">
+     <property name="text"><string>Artículo:</string></property>
+    </widget>
+   </item>
+   <item row="1" column="1">
+    <layout class="QHBoxLayout" name="horizontalLayout_articulo">
+     <item>
+      <widget class="QLineEdit" name="lineEditArticulo">
+       <property name="readOnly"><bool>true</bool></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnBuscarArticulo">
+       <property name="text"><string>...</string></property>
+       <property name="maximumWidth"><number>30</number></property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="labelCantidad">
+     <property name="text"><string>Cantidad:</string></property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QSpinBox" name="spinBoxCantidad">
+     <property name="minimum"><number>1</number></property>
+     <property name="maximum"><number>9999</number></property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="labelAnticipo">
+     <property name="text"><string>Anticipo a cuenta (€):</string></property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QDoubleSpinBox" name="doubleSpinBoxAnticipo">
+     <property name="maximum"><double>9999.99</double></property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="labelEmpleado">
+     <property name="text"><string>Empleado:</string></property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QLineEdit" name="lineEditEmpleado">
+     <property name="readOnly"><bool>true</bool></property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QLabel" name="labelNotas">
+     <property name="text"><string>Notas:</string></property>
+    </widget>
+   </item>
+   <item row="5" column="1">
+    <widget class="QTextEdit" name="textEditNotas"/>
+   </item>
+   <item row="6" column="0" colspan="2">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+     <property name="centerButtons"><bool>true</bool></property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>EncargosDialog</receiver>
+   <slot>accept()</slot>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>EncargosDialog</receiver>
+   <slot>reject()</slot>
+  </connection>
+ </connections>
+</ui>

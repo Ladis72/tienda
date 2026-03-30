@@ -16,3 +16,19 @@ CREATE TABLE IF NOT EXISTS `notas` (
   `estado` ENUM('Pendiente','Completada') DEFAULT 'Pendiente',
   `prioridad` ENUM('Alta','Normal','Baja') DEFAULT 'Normal'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+SISTEMA DE ENCARGOS:
+--------------------
+Ejecutar esta sentencia en MySQL para crear la tabla de encargos (reservas):
+
+CREATE TABLE IF NOT EXISTS `encargos` (
+  `id_encargo` INT AUTO_INCREMENT PRIMARY KEY,
+  `id_cliente` INT NOT NULL,
+  `cod_articulo` VARCHAR(15) NOT NULL,
+  `cantidad` INT NOT NULL,
+  `fecha_encargo` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `notas` VARCHAR(255) DEFAULT NULL,
+  `empleado` VARCHAR(100) DEFAULT NULL,
+  `anticipo` DOUBLE(10,2) DEFAULT '0.00',
+  `estado` ENUM('Pendiente', 'Recibido', 'Entregado', 'Cancelado') DEFAULT 'Pendiente'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

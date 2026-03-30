@@ -12,6 +12,8 @@
 #include "ui_tpv.h"
 #include <QCursor>
 #include "buscarcliente.h"
+#include "encargosdialog.h"
+#include "gestorencargosdialog.h"
 
 Tpv::Tpv(QWidget *parent)
     : QWidget(parent)
@@ -828,6 +830,80 @@ void Tpv::on_btn_preTicket_clicked()
     system(ch);
 }
 
+#include "encargosdialog.h"
+
+void Tpv::on_btn_encargo_clicked()
+{
+    QString codCliente = ui->lineEdit_cod_cliente->text();
+    QString nombreCliente = ui->lineEdit_nobre_cliente->text();
+    QString codArticulo = ui->lineEdit_cod->text();
+    QString descArticulo = ui->lineEdit_desc->text();
+    QString usuarioSistema = conf->getUsuario();
+    if (usuarioSistema.isEmpty()) usuarioSistema = ui->comboBox_vendedor->currentText();
+
+    EncargosDialog dialog(codCliente, nombreCliente, codArticulo, descArticulo, usuarioSistema, this);
+    if (dialog.exec() == QDialog::Accepted) {
+        QString finalCodArticulo = dialog.getCodArticulo();
+        QString finalCodCliente = dialog.getCodCliente();
+        int cantidad = dialog.getCantidad();
+        double anticipo = dialog.getAnticipo();
+        QString notas = dialog.getNotas();
+
+        if (finalCodArticulo.isEmpty() || finalCodCliente.isEmpty()) {
+            QMessageBox::warning(this, "Aviso", "No se puede crear el encargo, faltan datos (artículo o cliente vacío).");
+            return;
+        }
+
+        // Insertar en la tabla encargos
+        QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
+        query.prepare("INSERT INTO encargos (id_cliente, cod_articulo, cantidad, notas, empleado, anticipo, estado) "
+                      "VALUES (?, ?, ?, ?, ?, ?, 'Pendiente')");
+        query.bindValue(0, finalCodCliente.toInt());
+        query.bindValue(1, finalCodArticulo);
+        query.bindValue(2, cantidad);
+        query.bindValue(3, notas);
+        query.bindValue(4, usuarioSistema);
+        query.bindValue(5, anticipo);
+        
+        if (!query.exec()) {
+            QMessageBox::critical(this, "Error", "No se pudo guardar el encargo:\n" + query.lastError().text());
+        } else {
+            baseDatos base;
+            base.crearNota(conf->getConexionLocal(),
+                           "Nuevo Encargo: " + finalCodArticulo,
+                           "Cliente ID: " + finalCodCliente + "\nCantidad: " + QString::number(cantidad) + "\nNotas: " + notas,
+                           usuarioSistema,
+                           "",
+                           "Alta");
+            
+            QMessageBox::information(this, "Éxito", "Encargo creado y guardado.");
+        }
+        
+        // Si hay un anticipo, registrarlo en movimientos (entradasSalidas)
+        if (anticipo > 0) {
+            QStringList datosES;
+            datosES.append(QDate::currentDate().toString("yyyy-MM-dd"));
+            datosES.append(QTime::currentTime().toString("hh:mm:ss"));
+            datosES.append(QString::number(anticipo));
+            // Suponemos ID 1 como ingreso por defecto, se puede crear un motivo específico
+            datosES.append("1"); 
+            datosES.append(QString("Anticipo Encargo (Cliente %1) - %2").arg(codCliente).arg(codArticulo));
+            
+            if (!base.insertarES(datosES, conf->getConexionLocal())) {
+                QMessageBox::warning(this, "Aviso", "El encargo se guardó, pero no se pudo registrar el anticipo en la caja fuerte.");
+            } else {
+                QMessageBox::information(this, "Éxito", "Encargo creado y anticipo registrado en caja correctamente.");
+            }
+        } else {
+            QMessageBox::information(this, "Éxito", "Encargo creado correctamente (sin anticipo).");
+        }
+        
+        ui->lineEdit_cod->clear();
+        ui->lineEdit_desc->clear();
+        ui->lineEdit_cod->setFocus();
+    }
+}
+
 void Tpv::usarVale(int ticket, int idVale, double cantVale)
 {
     QStringList lineaTicket;
@@ -906,3 +982,8 @@ void Tpv::usarVale(int ticket, int idVale, double cantVale)
 //{
 //    emit clicked();
 //}
+void Tpv::on_btnGestorEncargos_clicked()
+{
+    GestorEncargosDialog dial("", this);
+    dial.exec();
+}

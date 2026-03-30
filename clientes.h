@@ -60,6 +60,7 @@ private slots:
 
   void on_dateEditDesde_dateChanged(const QDate &date);
   void on_lineEditBuscarProducto_textChanged(const QString &arg1);
+  void on_btn_encargos_cliente_clicked();
 
   void on_dateEditHasta_dateChanged(const QDate &date);
   void on_dateEditDesde_2_dateChanged(const QDate &date);

@@ -61,6 +61,10 @@ private slots:
 
     void on_btn_preTicket_clicked();
 
+    void on_btn_encargo_clicked();
+    
+    void on_btnGestorEncargos_clicked();
+
     void usarVale(int ticket, int idVale, double cantVale);
 
     void mostrarFoto();

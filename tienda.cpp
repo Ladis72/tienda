@@ -2,6 +2,7 @@
 #include "conexion.h"
 #include "login.h"
 #include "ui_tienda.h"
+#include "gestorencargosdialog.h"
 
 #include "facturaralbaranes.h"
 #include "gestorpermisos.h"
@@ -14,24 +15,34 @@
 #include <QSplitter>
 
 Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
+
   ui->setupUi(this);
   estadisticasDialog = nullptr;
+
   QStringList datos = base.datosConexionLocal();
   if (datos.isEmpty()) {
     createConnection("localhost", "3306", "tiendaNueva", "root", "meganizado",
                      "DB");
-    conf->setConexionLocal("DB");
-  } else {
-    QString baseDatos = datos.at(4);
-    if (baseDatos.isEmpty())
-      baseDatos = "tiendaNueva";
-    createConnection(datos.at(1), "3306", baseDatos, datos.at(2), datos.at(3),
-                     datos.at(0));
-    conf->setConexionLocal(datos.at(0));
   }
-  // Inicializar tabla de permisos (crea la tabla si no existe
-  // y rellena con valores por defecto la primera vez)
+  conf->setConexionLocal("DB");
+  
+
   GestorPermisos::inicializar(conf->getConexionLocal());
+  
+
+  base.ejecutarSentencia(
+    "CREATE TABLE IF NOT EXISTS `encargos` ("
+    "  `id_encargo` INT AUTO_INCREMENT PRIMARY KEY,"
+    "  `id_cliente` INT DEFAULT '0',"
+    "  `cod_articulo` VARCHAR(15) NOT NULL,"
+    "  `cantidad` INT NOT NULL,"
+    "  `fecha_encargo` DATETIME DEFAULT CURRENT_TIMESTAMP,"
+    "  `notas` VARCHAR(255) DEFAULT NULL,"
+    "  `empleado` VARCHAR(100) DEFAULT NULL,"
+    "  `anticipo` DOUBLE(10,2) DEFAULT '0.00',"
+    "  `estado` ENUM('Pendiente', 'Recibido', 'Entregado', 'Cancelado') DEFAULT 'Pendiente'"
+    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;", conf->getConexionLocal());
+
 
   QString conexionMaster = base.nombreConexionMaster();
   conf->setConexionMaster(conexionMaster);
@@ -40,11 +51,15 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
     ui->pushButtonActualizarClientes->setEnabled(false);
   }
 
+
   cargarLogo();
-  ui->logo->setScaledContents(false);
-  ui->logo->setAlignment(Qt::AlignCenter);
-  ui->logo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-  ui->logo->installEventFilter(this);
+  if (ui->logo) {
+    ui->logo->setScaledContents(false);
+    ui->logo->setAlignment(Qt::AlignCenter);
+    ui->logo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    ui->logo->installEventFilter(this);
+  }
+
 
   conexiones = new conexionesRemotas(this);
   conexiones->base = &base;
@@ -59,23 +74,22 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   connect(usuario, SIGNAL(clicked()), this,
           SLOT(on_pushButtonSesion_clicked()));
 
-  // ── Integración del widget de notas ──────────────────────
-  // Creamos un splitter horizontal: logo a la izquierda, notas a la derecha
+
   mainSplitter = new QSplitter(Qt::Horizontal, ui->centralWidget);
 
-  // Logo en el lado izquierdo
   QWidget *logoContainer = new QWidget(mainSplitter);
   QVBoxLayout *logoLayout = new QVBoxLayout(logoContainer);
   logoLayout->setContentsMargins(0, 0, 0, 0);
-  logoLayout->addWidget(ui->logo);
+  if (ui->logo) {
+    logoLayout->addWidget(ui->logo);
+  }
   logoContainer->setLayout(logoLayout);
   mainSplitter->addWidget(logoContainer);
 
-  // Panel de notas en el lado derecho
+
   notasWidget = new NotasWidget(mainSplitter);
   mainSplitter->addWidget(notasWidget);
 
-  // Proporciones: 55% logo, 45% notas
   mainSplitter->setSizes({550, 450});
   mainSplitter->setHandleWidth(8);
   mainSplitter->setStyleSheet(
@@ -84,13 +98,12 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
       "QSplitter::handle:hover { background-color: #1565C0; }");
   mainSplitter->setChildrenCollapsible(true);
 
-  // Sustituimos el logo en el layout del centralWidget
   QGridLayout *grid = qobject_cast<QGridLayout *>(ui->centralWidget->layout());
   if (grid) {
     grid->addWidget(mainSplitter, 1, 0);
   }
 
-  // Notificación en barra de estado
+
   btnNotifNotas = new QPushButton(tr("📋 Notas: 0"), this);
   btnNotifNotas->setFlat(true);
   btnNotifNotas->setCursor(Qt::PointingHandCursor);
@@ -98,14 +111,13 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
       "font-weight: bold; color: #558b2f; padding: 0 10px;");
   ui->statusBar->addPermanentWidget(btnNotifNotas);
 
-  // Conexiones de notas
   connect(notasWidget, &NotasWidget::pendingCountChanged, this,
           &Tienda::actualizarNotificacionNotas);
   connect(notasWidget, &NotasWidget::hideRequested, this,
           &Tienda::onToggleNotas);
   connect(btnNotifNotas, &QPushButton::clicked, this, &Tienda::onToggleNotas);
 
-  // Forzamos un refresco inicial ahora que las señales están conectadas
+
   notasWidget->refrescar();
 
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
@@ -231,7 +243,6 @@ void Tienda::permisos(int rol) {
 }
 void Tienda::activar_btn_tpv() {}
 
-void Tienda::on_pushButtonConsultarLog_clicked() {}
 
 void Tienda::onToggleNotas() {
   if (notasWidget->isVisible()) {
@@ -338,10 +349,7 @@ void Tienda::on_listadoVentasButton_clicked() {
   ListVent->exec();
 }
 
-void Tienda::on_pushButton_2_clicked() {
-  VentaArticulos = new ListadoVentaArticulos(this);
-  VentaArticulos->exec();
-}
+
 
 void Tienda::on_pushButtonEntradas_clicked() {
   Entradas = new EntradaMercancia(this);
@@ -606,3 +614,5 @@ void Tienda::on_pushButtonEstadisticas_clicked() {
   }
   estadisticasDialog->exec();
 }
+
+

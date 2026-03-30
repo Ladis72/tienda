@@ -1,5 +1,6 @@
 #include "notaswidget.h"
 #include "configuracion.h"
+#include "gestorencargosdialog.h"
 #include <QAbstractItemDelegate>
 #include <QPainter>
 #include <QStyledItemDelegate>
@@ -76,6 +77,7 @@ NotasWidget::NotasWidget(QWidget *parent)
     , modelo(nullptr)
     , proxyModel(nullptr)
     , btnNueva(nullptr)
+    , btnEncargos(nullptr)
     , cboFiltro(nullptr)
     , lblContador(nullptr)
     , delegate(new NotasColorDelegate(this))
@@ -96,8 +98,15 @@ void NotasWidget::setupUi()
     // ── Barra superior ──────────────────────────────────────
     btnNueva = new QPushButton(tr("➕ Nueva nota"), this);
     btnNueva->setObjectName("btnNuevaNota");
-    // Usamos el estilo del tema GreenLeaf (se hereda, pero añadimos padding específico)
     btnNueva->setMinimumHeight(40);
+
+    btnEncargos = new QPushButton(tr("📦 Encargos"), this);
+    btnEncargos->setObjectName("btnEncargos");
+    btnEncargos->setMinimumHeight(40);
+    connect(btnEncargos, &QPushButton::clicked, this, [this](){
+        GestorEncargosDialog dial("", this);
+        dial.exec();
+    });
 
     cboFiltro = new QComboBox(this);
     cboFiltro->addItems({tr("Todas"), tr("Pendientes"), tr("Completadas")});
@@ -110,6 +119,7 @@ void NotasWidget::setupUi()
 
     QHBoxLayout *topBar = new QHBoxLayout;
     topBar->addWidget(btnNueva);
+    topBar->addWidget(btnEncargos);
     topBar->addSpacing(10);
     topBar->addWidget(new QLabel(tr("Filtrar:"), this));
     topBar->addWidget(cboFiltro);

@@ -63,6 +63,7 @@ private:
     QSqlQueryModel      *modelo;
     QSortFilterProxyModel *proxyModel;
     QPushButton         *btnNueva;
+    QPushButton         *btnEncargos;
     QComboBox           *cboFiltro;
     QLabel              *lblContador;
     NotasColorDelegate  *delegate;

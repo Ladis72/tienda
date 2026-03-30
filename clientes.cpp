@@ -3,6 +3,7 @@
 #include "ui_clientes.h"
 #include <QMessageBox>
 #include <QToolTip>
+#include "gestorencargosdialog.h"
 
 Clientes::Clientes(QWidget *parent) : QDialog(parent), ui(new Ui::Clientes) {
   ui->setupUi(this);
@@ -777,4 +778,14 @@ void Clientes::on_dateEditHasta_2_dateChanged(const QDate &date) {
     on_radioButtonCantidad_clicked();
   else if (ui->radioButtonFecha->isChecked())
     on_radioButtonFecha_clicked();
+}
+
+void Clientes::on_btn_encargos_cliente_clicked() {
+    QString codigo = ui->lineEditCod->text();
+    if (codigo.isEmpty()) {
+        QMessageBox::warning(this, "Aviso", "Seleccione un cliente primero");
+        return;
+    }
+    GestorEncargosDialog dial(codigo, this);
+    dial.exec();
 }
