@@ -31,6 +31,10 @@ public:
     explicit Tpv(QWidget *parent = nullptr);
     ~Tpv();
 
+    // Carga un encargo en el ticket actual
+    bool cargarEncargo(QString codArticulo, double anticipo, int cantidad);
+    bool cargarEncargoConId(QString codArticulo, double anticipo, int cantidad, int idEncargo);
+
 private slots:
     void on_btn_cerrar_clicked();
     void on_lineEdit_cod_returnPressed();
@@ -90,6 +94,7 @@ private:
     Clientes *clien;
     VisorImagenes *visor;
     QString currentFotoPath;
+    int idEncargoPendiente;
 
     void keyPressEvent(QKeyEvent *e);
     bool llenar_usuarios(QSqlDatabase db);

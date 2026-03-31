@@ -34,6 +34,7 @@ Tpv::Tpv(QWidget *parent)
     ui->tableViewTicketsPendientes->hideColumn(0);
     ui->lineEdit_cod_cliente->setText("1");
     on_lineEdit_cod_cliente_editingFinished();
+    idEncargoPendiente = 0;
 }
 
 Tpv::~Tpv()
@@ -399,6 +400,64 @@ void Tpv::on_lineEdit_cod_returnPressed()
     }
 }
 
+bool Tpv::cargarEncargo(QString codArticulo, double anticipo, int cantidad)
+{
+    // 1. Buscamos el producto para obtener sus datos (descripción, precio, etc)
+    consulta = base.consulta_producto(conf->getConexionLocal(), codArticulo);
+    if (!consulta.first()) {
+        return false;
+    }
+
+    // 2. Si no hay ticket abierto, creamos uno
+    if (modeloTicket->rowCount() == 0 && ui->tableView->rowAt(0) < 0) {
+        ticketNuevo(base.maxTicketPendiente(QSqlDatabase::database(conf->getConexionLocal())) + 1);
+    }
+
+    // 3. Añadimos el artículo principal
+    QList<QString> lineaArt;
+    lineaArt << codArticulo;
+    lineaArt << consulta.value("descripcion").toString();
+    lineaArt << QString::number(cantidad);
+    lineaArt << consulta.value("iva").toString();
+    lineaArt << QString::number(consulta.value("pvp").toDouble(), 'f', 2);
+    lineaArt << "0"; // Descuento
+    double totalLinea = consulta.value("pvp").toDouble() * cantidad;
+    lineaArt << QString::number(totalLinea, 'f', 2);
+
+    if (!actualizarLineaTicket(lineaArt)) return false;
+
+    // 4. Si hay anticipo, añadimos una línea negativa para descontarlo
+    if (anticipo > 0) {
+        QList<QString> lineaAnticipo;
+        lineaAnticipo << "0"; // Código genérico o 0 para anticipos
+        lineaAnticipo << "ANTICIPO ENCARGO: " + codArticulo;
+        lineaAnticipo << "1"; // 1 unidad
+        lineaAnticipo << "0"; // Sin IVA (ya se cobró en el anticipo original o se ajusta aquí)
+        lineaAnticipo << QString::number(-anticipo, 'f', 2); // Precio negativo
+        lineaAnticipo << "0"; // Descuento
+        lineaAnticipo << QString::number(-anticipo, 'f', 2); // Total negativo
+
+        if (!actualizarLineaTicket(lineaAnticipo)) return false;
+    }
+
+    actualizarParrillaVentas();
+    ui->lineEdit_cod->setFocus();
+    
+    // Guardamos el ID del encargo para marcarlo como entregado cuando se cobre el ticket
+    // Nota: Deberíamos extraer el ID si viene de cargarEncargo. 
+    // He añadido una sobrecarga o modificado la firma para recibir el ID.
+    return true;
+}
+
+bool Tpv::cargarEncargoConId(QString codArticulo, double anticipo, int cantidad, int idEncargo)
+{
+    if (cargarEncargo(codArticulo, anticipo, cantidad)) {
+        this->idEncargoPendiente = idEncargo;
+        return true;
+    }
+    return false;
+}
+
 void Tpv::keyPressEvent(QKeyEvent *e)
 {
     switch (e->key()) {
@@ -564,6 +623,17 @@ void Tpv::on_btn_cobrar_clicked()
         if (!db.commit()) {
             throw std::runtime_error("Error al confirmar la transacción: "
                                      + db.lastError().text().toStdString());
+        }
+
+        // Si veníamos de cobrar un encargo, ahora que el ticket se ha grabado, lo marcamos como entregado
+        if (idEncargoPendiente > 0) {
+            QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
+            q.prepare("UPDATE encargos SET estado = 'Entregado' WHERE id_encargo = ?");
+            q.bindValue(0, idEncargoPendiente);
+            if (q.exec()) {
+                qDebug() << "Encargo ID" << idEncargoPendiente << "marcado como ENTREGADO tras cobro de ticket.";
+            }
+            idEncargoPendiente = 0; // Reset para el siguiente ticket
         }
 
     } catch (const std::exception &e) {
