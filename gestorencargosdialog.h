@@ -28,6 +28,7 @@ private slots:
     void on_btnBorrar_clicked();
     void on_btnCerrar_clicked();
     void on_btnNuevoEncargo_clicked();
+    void on_btnCobrarTPV_clicked();
 
 private:
     Ui::GestorEncargosDialog *ui;

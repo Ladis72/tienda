@@ -109,6 +109,18 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="btnCobrarTPV">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(0, 170, 0);
+color: rgb(255, 255, 255);
+font: 75 10pt &quot;MS Shell Dlg 2&quot;;</string>
+       </property>
+       <property name="text">
+        <string>Cobrar en TPV</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btnBorrar">
        <property name="text">
         <string>Borrar Encargo</string>

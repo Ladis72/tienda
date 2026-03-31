@@ -9,6 +9,10 @@
 #include <QDebug>
 #include <QStyledItemDelegate>
 #include <QPainter>
+#include "tienda.h"
+#include "tpv.h"
+
+
 
 // Delegado para colorear las filas según el estado del encargo
 class EncargosDelegate : public QStyledItemDelegate {
@@ -56,9 +60,20 @@ public:
 
 GestorEncargosDialog::GestorEncargosDialog(QString autoFilterCliente, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::GestorEncargosDialog)
+    ui(new Ui::GestorEncargosDialog),
+    modelEncargos(nullptr)
 {
+    qDebug() << "GestorEncargosDialog: Iniciando constructor...";
     ui->setupUi(this);
+
+    if (!conf) {
+        qCritical() << "GestorEncargosDialog: ERROR - 'conf' es NULL";
+        return;
+    }
+
+    // Configurar ComboBox de estados con la opción por defecto
+    ui->comboBoxEstado->insertItem(0, "Pendientes (Todos)");
+    ui->comboBoxEstado->setCurrentIndex(0);
 
     modelEncargos = new QSqlQueryModel(this);
     ui->tableViewEncargos->setModel(modelEncargos);
@@ -67,6 +82,26 @@ GestorEncargosDialog::GestorEncargosDialog(QString autoFilterCliente, QWidget *p
     ui->tableViewEncargos->setItemDelegate(new EncargosDelegate(this));
     ui->tableViewEncargos->setSelectionBehavior(QAbstractItemView::SelectRows);
     
+    // Estilo mejorado para el botón de cobrar
+    if (ui->btnCobrarTPV) {
+        ui->btnCobrarTPV->setStyleSheet("QPushButton { "
+                                        "background-color: #2e7d32; "
+                                        "color: white; "
+                                        "font-weight: bold; "
+                                        "font-size: 14px; "
+                                        "padding: 10px; "
+                                        "border-radius: 5px; "
+                                        "min-width: 150px; "
+                                        "} "
+                                        "QPushButton:hover { background-color: #1b5e20; }");
+    }
+
+    // Si se pasa un cliente desde la ficha, lo ponemos en el filtro
+    if (!autoFilterCliente.isEmpty() && ui->lineEditFiltroCliente) {
+        ui->lineEditFiltroCliente->setText(autoFilterCliente);
+    }
+
+    qDebug() << "GestorEncargosDialog: Realizando filtrado inicial...";
     ajustarFiltro();
 }
 
@@ -77,6 +112,11 @@ GestorEncargosDialog::~GestorEncargosDialog()
 
 void GestorEncargosDialog::ajustarFiltro()
 {
+    if (!ui || !modelEncargos || !conf) {
+        qWarning() << "GestorEncargosDialog::ajustarFiltro: Objetos no inicializados";
+        return;
+    }
+
     QString estado = ui->comboBoxEstado->currentText();
     QString cliente = ui->lineEditFiltroCliente->text();
 
@@ -84,16 +124,18 @@ void GestorEncargosDialog::ajustarFiltro()
                        "FROM encargos e LEFT JOIN articulos a ON e.cod_articulo = a.cod";
     
     QString where;
-    if (estado != "Todos") {
+    if (estado == "Pendientes (Todos)") {
+        where = "e.estado != 'Entregado'";
+    } else if (estado != "Todos") {
         where = "e.estado = '" + estado + "'";
     }
 
     if (!cliente.isEmpty()) {
         if (!where.isEmpty()) where += " AND ";
-        where += "(e.id_cliente LIKE '%" + cliente + "%' \
-                  OR e.id_cliente IN (SELECT idCliente FROM clientes WHERE nombre LIKE '%" + cliente + "%' OR apellidos LIKE '%" + cliente + "%') \
-                  OR e.cod_articulo LIKE '%" + cliente + "%' \
-                  OR a.descripcion LIKE '%" + cliente + "%')";
+        where += "(e.id_cliente LIKE '%" + cliente + "%' "
+                  "OR e.id_cliente IN (SELECT idCliente FROM clientes WHERE nombre LIKE '%" + cliente + "%' OR apellidos LIKE '%" + cliente + "%') "
+                  "OR e.cod_articulo LIKE '%" + cliente + "%' "
+                  "OR a.descripcion LIKE '%" + cliente + "%')";
     }
 
     if (!where.isEmpty()) {
@@ -102,7 +144,13 @@ void GestorEncargosDialog::ajustarFiltro()
     
     queryStr += " ORDER BY e.fecha_encargo DESC";
 
-    modelEncargos->setQuery(queryStr, QSqlDatabase::database(conf->getConexionLocal()));
+    QString connLocal = conf->getConexionLocal();
+    if (connLocal.isEmpty()) {
+        qWarning() << "GestorEncargosDialog::ajustarFiltro: Conexión local vacía";
+        return;
+    }
+
+    modelEncargos->setQuery(queryStr, QSqlDatabase::database(connLocal));
     
     // Cabeceras
     modelEncargos->setHeaderData(0, Qt::Horizontal, tr("ID"));
@@ -122,7 +170,6 @@ void GestorEncargosDialog::ajustarFiltro()
 
 void GestorEncargosDialog::on_comboBoxEstado_currentTextChanged(const QString &arg1)
 {
-    // Ignoramos arg1 porque leeremos todo desde ajustarFiltro()
     Q_UNUSED(arg1);
     ajustarFiltro();
 }
@@ -142,16 +189,16 @@ void GestorEncargosDialog::on_btnMarcarRecibido_clicked()
     }
     
     int row = index.row();
-    int idEncargo = modelEncargos->data(modelEncargos->index(row, 0)).toInt(); // assuming id is at column 0
+    int idEncargo = modelEncargos->data(modelEncargos->index(row, 0)).toInt();
     
     QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
     q.prepare("UPDATE encargos SET estado = 'Recibido' WHERE id_encargo = ?");
     q.bindValue(0, idEncargo);
     
     if (q.exec()) {
-        ajustarFiltro(); // refresh
+        ajustarFiltro();
     } else {
-        QMessageBox::critical(this, "Error", "No se pudo actualizar el estado:\n" + q.lastError().text());
+        QMessageBox::critical(this, "Error", "No se pudo actualizar el estado.");
     }
 }
 
@@ -164,7 +211,7 @@ void GestorEncargosDialog::on_btnMarcarEntregado_clicked()
     }
     
     int row = index.row();
-    int idEncargo = modelEncargos->data(modelEncargos->index(row, 0)).toInt(); // assuming id is at column 0
+    int idEncargo = modelEncargos->data(modelEncargos->index(row, 0)).toInt();
     
     QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
     q.prepare("UPDATE encargos SET estado = 'Entregado' WHERE id_encargo = ?");
@@ -173,7 +220,7 @@ void GestorEncargosDialog::on_btnMarcarEntregado_clicked()
     if (q.exec()) {
         ajustarFiltro();
     } else {
-        QMessageBox::critical(this, "Error", "No se pudo actualizar el estado:\n" + q.lastError().text());
+        QMessageBox::critical(this, "Error", "No se pudo actualizar el estado.");
     }
 }
 
@@ -187,7 +234,7 @@ void GestorEncargosDialog::on_btnBorrar_clicked()
     
     if (QMessageBox::question(this, "Borrar", "¿Está seguro de que desea borrar este encargo? Esto no devolverá el anticipo a la caja automáticamente.", QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
         int row = index.row();
-        int idEncargo = modelEncargos->data(modelEncargos->index(row, 0)).toInt(); // assuming id is at column 0
+        int idEncargo = modelEncargos->data(modelEncargos->index(row, 0)).toInt();
         
         QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
         q.prepare("DELETE FROM encargos WHERE id_encargo = ?");
@@ -208,8 +255,6 @@ void GestorEncargosDialog::on_btnCerrar_clicked()
 
 void GestorEncargosDialog::on_btnNuevoEncargo_clicked()
 {
-    // Mostrar Dialog para un nuevo encargo, con usuario de la app
-    // Assuming the main window or configuracion has the user info, if not just "Sistema"
     QString usuario = conf->getUsuario();
     if (usuario.isEmpty()) usuario = "Sistema";
     
@@ -224,8 +269,6 @@ void GestorEncargosDialog::on_btnNuevoEncargo_clicked()
         QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
         q.prepare("INSERT INTO encargos (id_cliente, cod_articulo, cantidad, notas, empleado, anticipo, estado) "
                   "VALUES (?, ?, ?, ?, ?, ?, 'Pendiente')");
-        // We need id_cliente, not just cod_cliente as text.
-        // Or if id_cliente is a string/int. Let's assume cod_cliente maps to id_cliente.
         q.bindValue(0, enc.getCodCliente().toInt());
         q.bindValue(1, enc.getCodArticulo());
         q.bindValue(2, enc.getCantidad());
@@ -234,23 +277,9 @@ void GestorEncargosDialog::on_btnNuevoEncargo_clicked()
         q.bindValue(5, enc.getAnticipo());
 
         if (q.exec()) {
-            QMessageBox::information(this, "Éxito", "Encargo creado y guardado.");
             ajustarFiltro();
-            
-            // Si hay anticipo, lo registramos en caja diaria si es necesario
-            double anticipo = enc.getAnticipo();
-            if (anticipo > 0) {
-                QStringList datosES;
-                datosES << QDate::currentDate().toString("yyyy-MM-dd");
-                datosES << QTime::currentTime().toString("hh:mm:ss");
-                datosES << QString::number(anticipo, 'f', 2);
-                datosES << "Anticipo";
-                datosES << "Anticipo Encargo Art: " + enc.getCodArticulo();
-                base.insertarES(datosES, conf->getConexionLocal());
-            }
-
             base.crearNota(conf->getConexionLocal(),
-                           "Nuevo Encargo: " + enc.getCodArticulo() + " (" + enc.getDescArticulo() + ")",
+                           "Encargo: " + enc.getDescArticulo() + "(" + enc.getCodArticulo() +")",
                            "Cliente ID: " + enc.getCodCliente() + "\nCantidad: " + QString::number(enc.getCantidad()) + "\nNotas: " + enc.getNotas(),
                            usuario,
                            "",
@@ -258,5 +287,45 @@ void GestorEncargosDialog::on_btnNuevoEncargo_clicked()
         } else {
             QMessageBox::critical(this, "Error", "No se pudo guardar el encargo:\n" + q.lastError().text());
         }
+    }
+}
+
+void GestorEncargosDialog::on_btnCobrarTPV_clicked()
+{
+    QModelIndex index = ui->tableViewEncargos->currentIndex();
+    if (!index.isValid()) {
+        QMessageBox::warning(this, "Aviso", "Seleccione un encargo primero.");
+        return;
+    }
+
+    int row = index.row();
+    QString estado = modelEncargos->data(modelEncargos->index(row, 9)).toString();
+
+    if (estado == "Entregado" || estado == "Cancelado") {
+        QMessageBox::warning(this, "Aviso", "Este encargo ya ha sido procesado o cancelado.");
+        return;
+    }
+
+    Tpv *tpv = nullptr;
+    foreach (QWidget *widget, QApplication::topLevelWidgets()) {
+        tpv = qobject_cast<Tpv *>(widget);
+        if (tpv) break;
+    }
+
+    if (!tpv) {
+        QMessageBox::warning(this, "TPV no detectado", "Debe tener el TPV abierto para cobrar el encargo.");
+        return;
+    }
+
+    int idEncargo = modelEncargos->data(modelEncargos->index(row, 0)).toInt();
+    QString codArticulo = modelEncargos->data(modelEncargos->index(row, 2)).toString();
+    int cantidad = modelEncargos->data(modelEncargos->index(row, 4)).toInt();
+    double anticipo = modelEncargos->data(modelEncargos->index(row, 8)).toDouble();
+
+    if (tpv->cargarEncargoConId(codArticulo, anticipo, cantidad, idEncargo)) {
+        QMessageBox::information(this, "Éxito", "Encargo enviado al TPV.\n\nEl estado se actualizará a 'Entregado' automáticamente al cobrar el ticket.");
+        ajustarFiltro();
+    } else {
+        QMessageBox::critical(this, "Error", "No se pudo cargar el artículo en el TPV. Verifique que el código existe.");
     }
 }
