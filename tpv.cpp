@@ -960,7 +960,7 @@ void Tpv::on_btn_encargo_clicked()
             datosES.append("1"); 
             datosES.append(QString("Anticipo Encargo (Cliente %1) - %2").arg(codCliente).arg(codArticulo));
             
-            if (!base.insertarES(datosES, conf->getConexionLocal())) {
+            if (!base.insertarES(datosES, conf->getConexionLocal(), conf->getUsuario())) {
                 QMessageBox::warning(this, "Aviso", "El encargo se guardó, pero no se pudo registrar el anticipo en la caja fuerte.");
             } else {
                 QMessageBox::information(this, "Éxito", "Encargo creado y anticipo registrado en caja correctamente.");

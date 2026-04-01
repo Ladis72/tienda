@@ -115,7 +115,7 @@ public:
                      QString base,
                      QString campoCondicion = NULL,
                      QString condicion = "%%");
-    bool insertarES(QStringList datos, QString base);
+    bool insertarES(QStringList datos, QString base, QString usuario);
     QStringList recuperarConfigTicket(QString base);
     bool ticketPromo(QString base);
     bool grabarConfiguracionTicket(QStringList configTicket);

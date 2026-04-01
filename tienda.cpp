@@ -1,8 +1,8 @@
 #include "tienda.h"
 #include "conexion.h"
+#include "gestorencargosdialog.h"
 #include "login.h"
 #include "ui_tienda.h"
-#include "gestorencargosdialog.h"
 
 #include "facturaralbaranes.h"
 #include "gestorpermisos.h"
@@ -25,24 +25,22 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                      "DB");
   }
   conf->setConexionLocal("DB");
-  
 
   GestorPermisos::inicializar(conf->getConexionLocal());
-  
 
-  base.ejecutarSentencia(
-    "CREATE TABLE IF NOT EXISTS `encargos` ("
-    "  `id_encargo` INT AUTO_INCREMENT PRIMARY KEY,"
-    "  `id_cliente` INT DEFAULT '0',"
-    "  `cod_articulo` VARCHAR(15) NOT NULL,"
-    "  `cantidad` INT NOT NULL,"
-    "  `fecha_encargo` DATETIME DEFAULT CURRENT_TIMESTAMP,"
-    "  `notas` VARCHAR(255) DEFAULT NULL,"
-    "  `empleado` VARCHAR(100) DEFAULT NULL,"
-    "  `anticipo` DOUBLE(10,2) DEFAULT '0.00',"
-    "  `estado` ENUM('Pendiente', 'Recibido', 'Entregado', 'Cancelado') DEFAULT 'Pendiente'"
-    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;", conf->getConexionLocal());
-
+  base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `encargos` ("
+                         "  `id_encargo` INT AUTO_INCREMENT PRIMARY KEY,"
+                         "  `id_cliente` INT DEFAULT '0',"
+                         "  `cod_articulo` VARCHAR(15) NOT NULL,"
+                         "  `cantidad` INT NOT NULL,"
+                         "  `fecha_encargo` DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                         "  `notas` VARCHAR(255) DEFAULT NULL,"
+                         "  `empleado` VARCHAR(100) DEFAULT NULL,"
+                         "  `anticipo` DOUBLE(10,2) DEFAULT '0.00',"
+                         "  `estado` ENUM('Pendiente', 'Recibido', "
+                         "'Entregado', 'Cancelado') DEFAULT 'Pendiente'"
+                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+                         conf->getConexionLocal());
 
   QString conexionMaster = base.nombreConexionMaster();
   conf->setConexionMaster(conexionMaster);
@@ -51,7 +49,6 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
     ui->pushButtonActualizarClientes->setEnabled(false);
   }
 
-
   cargarLogo();
   if (ui->logo) {
     ui->logo->setScaledContents(false);
@@ -59,7 +56,6 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
     ui->logo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     ui->logo->installEventFilter(this);
   }
-
 
   conexiones = new conexionesRemotas(this);
   conexiones->base = &base;
@@ -74,7 +70,6 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   connect(usuario, SIGNAL(clicked()), this,
           SLOT(on_pushButtonSesion_clicked()));
 
-
   mainSplitter = new QSplitter(Qt::Horizontal, ui->centralWidget);
 
   QWidget *logoContainer = new QWidget(mainSplitter);
@@ -85,7 +80,6 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   }
   logoContainer->setLayout(logoLayout);
   mainSplitter->addWidget(logoContainer);
-
 
   notasWidget = new NotasWidget(mainSplitter);
   mainSplitter->addWidget(notasWidget);
@@ -103,7 +97,6 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
     grid->addWidget(mainSplitter, 1, 0);
   }
 
-
   btnNotifNotas = new QPushButton(tr("📋 Notas: 0"), this);
   btnNotifNotas->setFlat(true);
   btnNotifNotas->setCursor(Qt::PointingHandCursor);
@@ -117,13 +110,12 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
           &Tienda::onToggleNotas);
   connect(btnNotifNotas, &QPushButton::clicked, this, &Tienda::onToggleNotas);
 
-
   notasWidget->refrescar();
 
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
   conf->setNombreconexiones(conexiones->lista());
-  //login();
+  login();
 }
 
 Tienda::~Tienda() {
@@ -248,7 +240,6 @@ void Tienda::permisos(int rol) {
 }
 void Tienda::activar_btn_tpv() {}
 
-
 void Tienda::onToggleNotas() {
   if (notasWidget->isVisible()) {
     notasWidget->hide();
@@ -353,8 +344,6 @@ void Tienda::on_listadoVentasButton_clicked() {
   ListVent = new ListadoVentas;
   ListVent->exec();
 }
-
-
 
 void Tienda::on_pushButtonEntradas_clicked() {
   Entradas = new EntradaMercancia(this);
@@ -620,11 +609,7 @@ void Tienda::on_pushButtonEstadisticas_clicked() {
   estadisticasDialog->exec();
 }
 
-
-
-void Tienda::on_pushButton_2_clicked()
-{
-    ListadoVentaArticulos *listVentArticulos = new ListadoVentaArticulos(this);
-    listVentArticulos->exec();
+void Tienda::on_pushButton_2_clicked() {
+  ListadoVentaArticulos *listVentArticulos = new ListadoVentaArticulos(this);
+  listVentArticulos->exec();
 }
-
