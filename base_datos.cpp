@@ -812,8 +812,7 @@ bool baseDatos::crearTienda(QStringList datos)
 QSqlQuery baseDatos::tiendas(QSqlDatabase db)
 {
     QSqlQuery consulta(db);
-    QString nombreLocal = conf->getConexionLocal();
-    if (!consulta.exec("SELECT * FROM tiendas WHERE nombre != '" + nombreLocal + "'")) {
+    if (!consulta.exec("SELECT * FROM tiendas WHERE local = 0")) {
         qDebug() << consulta.lastError();
     }
     return consulta;

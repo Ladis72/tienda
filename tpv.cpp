@@ -20,6 +20,7 @@ Tpv::Tpv(QWidget *parent)
     , ui(new Ui::Tpv)
 {
     ui->setupUi(this);
+    setAttribute(Qt::WA_DeleteOnClose);
     ui->labelFoto->setCursor(Qt::PointingHandCursor);
     connect(ui->labelFoto, SIGNAL(clicked()), this, SLOT(mostrarFoto()));
     ticketActual = ticketActualizado();

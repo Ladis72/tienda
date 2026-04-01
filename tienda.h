@@ -128,6 +128,8 @@ private slots:
 
     void on_pushButtonImpuestos_clicked();
 
+    void on_pushButton_2_clicked();
+
 private:
     QPushButton *sincroVales;
     QPushButton *usuario;
