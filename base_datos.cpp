@@ -1246,15 +1246,17 @@ int baseDatos::contarLineas(QString tabla, QString base, QString campoCondicion,
     return consulta.numRowsAffected();
 }
 
-bool baseDatos::insertarES(QStringList datos, QString base)
+bool baseDatos::insertarES(QStringList datos, QString base, QString usuario)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
-    consulta.prepare("INSERT INTO entradasSalidas VALUES (NULL,?,?,?,?,?)");
-    consulta.bindValue(0, datos.at(0));
-    consulta.bindValue(1, datos.at(1));
-    consulta.bindValue(2, datos.at(2));
-    consulta.bindValue(3, datos.at(3));
-    consulta.bindValue(4, datos.at(4));
+    // Se añade un parámetro más para el campo 'usuario'
+    consulta.prepare("INSERT INTO entradasSalidas VALUES (NULL,?,?,?,?,?,?)");
+    consulta.bindValue(0, datos.at(0)); // fecha
+    consulta.bindValue(1, datos.at(1)); // hora
+    consulta.bindValue(2, datos.at(2)); // cantidad
+    consulta.bindValue(3, datos.at(3)); // idTiposRentrada
+    consulta.bindValue(4, datos.at(4)); // descripcion
+    consulta.bindValue(5, usuario);      // usuario
     if (consulta.exec())
         return true;
     return false;
