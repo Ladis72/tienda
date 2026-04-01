@@ -123,7 +123,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
   conf->setNombreconexiones(conexiones->lista());
-  login();
+  //login();
 }
 
 Tienda::~Tienda() {
@@ -151,6 +151,11 @@ void Tienda::cerrarAplicacion() {
 }
 
 void Tienda::on_ventasButton_clicked() {
+  if (T && T->isVisible()) {
+    T->raise();
+    T->activateWindow();
+    return;
+  }
   T = new Tpv();
   connect(T, SIGNAL(cerrar_tpv()), this, SLOT(activar_btn_tpv()));
 
@@ -615,4 +620,11 @@ void Tienda::on_pushButtonEstadisticas_clicked() {
   estadisticasDialog->exec();
 }
 
+
+
+void Tienda::on_pushButton_2_clicked()
+{
+    ListadoVentaArticulos *listVentArticulos = new ListadoVentaArticulos(this);
+    listVentArticulos->exec();
+}
 

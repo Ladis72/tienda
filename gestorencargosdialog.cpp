@@ -308,12 +308,15 @@ void GestorEncargosDialog::on_btnCobrarTPV_clicked()
 
     Tpv *tpv = nullptr;
     foreach (QWidget *widget, QApplication::topLevelWidgets()) {
-        tpv = qobject_cast<Tpv *>(widget);
-        if (tpv) break;
+        Tpv *candidate = qobject_cast<Tpv *>(widget);
+        if (candidate && candidate->isVisible()) {
+            tpv = candidate;
+            break;
+        }
     }
 
     if (!tpv) {
-        QMessageBox::warning(this, "TPV no detectado", "Debe tener el TPV abierto para cobrar el encargo.");
+        QMessageBox::warning(this, "TPV no detectado", "Debe tener el TPV abierto y visible para cobrar el encargo.");
         return;
     }
 
@@ -323,7 +326,9 @@ void GestorEncargosDialog::on_btnCobrarTPV_clicked()
     double anticipo = modelEncargos->data(modelEncargos->index(row, 8)).toDouble();
 
     if (tpv->cargarEncargoConId(codArticulo, anticipo, cantidad, idEncargo)) {
-        QMessageBox::information(this, "Éxito", "Encargo enviado al TPV.\n\nEl estado se actualizará a 'Entregado' automáticamente al cobrar el ticket.");
+        tpv->raise();
+        tpv->activateWindow();
+        QMessageBox::information(this, "Éxito", "Encargo enviado al TPV.\n\nLa parrilla de ventas se ha actualizado.");
         ajustarFiltro();
     } else {
         QMessageBox::critical(this, "Error", "No se pudo cargar el artículo en el TPV. Verifique que el código existe.");
