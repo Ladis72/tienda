@@ -2,7 +2,7 @@
 #include <QDate>
 #include <QFile>
 
-ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, QObject *parent)
+ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, bool noTicketRegalo, QObject *parent)
     : QObject(parent)
     , printer(new PrinterManager(this))
 {
@@ -46,11 +46,12 @@ ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, QObject *parent
         printer->imprimirLineaCentrada(confTicket.at(1));
 
         // 8. Imprimir promoción si corresponde
-        if (confTicket.at(7) == "1") {
+        if (confTicket.at(7) == "1" && !noTicketRegalo) {
             cortarPapel();
             ImprimirTicketRegalo(confTicket.at(6));
             printer->alimentarLineas(1);
         }
+
         // 9. Espacios y corte
         printer->alimentarLineas(3);
 

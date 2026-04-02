@@ -7,6 +7,7 @@
 #include <QString>
 #include <QStandardItemModel>
 #include <QWidget>
+#include <QCloseEvent>
 #include "ClickableLabel.h"
 #include "base_datos.h"
 #include "buscarproducto.h"
@@ -96,7 +97,9 @@ private:
     QString currentFotoPath;
     int idEncargoPendiente;
 
-    void keyPressEvent(QKeyEvent *e);
+protected:
+    void keyPressEvent(QKeyEvent *e) override;
+    void closeEvent(QCloseEvent *event) override;
     bool llenar_usuarios(QSqlDatabase db);
     double calcularPrecioTotal();
     double redondear(double num, int dec);
