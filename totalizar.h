@@ -24,6 +24,7 @@ public:
     bool ticket;
     bool factura;
     bool valeUsado;
+    bool noTicketRegalo;
 
 private slots:
     void on_pushButtonTicket_clicked();
@@ -41,6 +42,8 @@ private slots:
     void on_pushButtonFactura_clicked();
 
     void on_checkBoxVale_stateChanged(int arg1);
+
+    void on_checkBoxNoTicketRegalo_stateChanged(int arg1);
 
 private:
     Ui::totalizar *ui;

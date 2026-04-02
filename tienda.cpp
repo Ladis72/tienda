@@ -17,7 +17,42 @@
 Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
 
   ui->setupUi(this);
+  T = nullptr;
+  U = nullptr;
+  A = nullptr;
+  F = nullptr;
+  Fab = nullptr;
+  FPago = nullptr;
+  Cli = nullptr;
+  Prov = nullptr;
+  GestPed = nullptr;
+  caja = nullptr;
+  TiposEntSal = nullptr;
+  ES = nullptr;
+  HT = nullptr;
+  VFact = nullptr;
+  ListVent = nullptr;
+  VentaArticulos = nullptr;
+  Entradas = nullptr;
+  Cad = nullptr;
+  Salid = nullptr;
+  Etiq = nullptr;
+  Caduca = nullptr;
+  CTicket = nullptr;
+  CBase = nullptr;
+  Prest = nullptr;
+  ConfigOtros = nullptr;
+  Prestamis = nullptr;
+  ListSalidas = nullptr;
+  ListaArqueos = nullptr;
+  ListaCaducados = nullptr;
+  Format = nullptr;
   estadisticasDialog = nullptr;
+  Director = nullptr;
+  Sucursal = nullptr;
+  actClientes = nullptr;
+  genVales = nullptr;
+  editatImpuestos = nullptr;
 
   QStringList datos = base.datosConexionLocal();
   if (datos.isEmpty()) {
@@ -238,7 +273,9 @@ void Tienda::permisos(int rol) {
   ui->pushButtonSesion->setEnabled(true);
   usuario->setEnabled(true);
 }
-void Tienda::activar_btn_tpv() {}
+void Tienda::activar_btn_tpv() {
+  T = nullptr;
+}
 
 void Tienda::onToggleNotas() {
   if (notasWidget->isVisible()) {

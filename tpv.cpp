@@ -19,6 +19,15 @@ Tpv::Tpv(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::Tpv)
 {
+    buscar = nullptr;
+    totalizacion = nullptr;
+    clien = nullptr;
+    visor = nullptr;
+    idVale = 0;
+    idEncargoPendiente = 0;
+    cliente = 0;
+    descuentoCliente = 0;
+    vale = 0;
     ui->setupUi(this);
     setAttribute(Qt::WA_DeleteOnClose);
     ui->labelFoto->setCursor(Qt::PointingHandCursor);
@@ -35,7 +44,6 @@ Tpv::Tpv(QWidget *parent)
     ui->tableViewTicketsPendientes->hideColumn(0);
     ui->lineEdit_cod_cliente->setText("1");
     on_lineEdit_cod_cliente_editingFinished();
-    idEncargoPendiente = 0;
 }
 
 Tpv::~Tpv()
@@ -46,8 +54,13 @@ Tpv::~Tpv()
 
 void Tpv::on_btn_cerrar_clicked()
 {
+    this->close();
+}
+
+void Tpv::closeEvent(QCloseEvent *event)
+{
     emit cerrar_tpv();
-    //this->deleteLater();
+    event->accept();
 }
 
 bool Tpv::llenar_usuarios(QSqlDatabase db)
@@ -703,7 +716,7 @@ void Tpv::on_btn_cobrar_clicked()
     //        impresora.close();
     if (totalizacion->ticket == true && totalizacion->factura == false) {
         //            system("less ./ticket.txt >> /dev/lp0");
-        ImprimirTicket(ticketImpresion, "ticket");
+        ImprimirTicket(ticketImpresion, "ticket", totalizacion->noTicketRegalo);
     } else if (totalizacion->factura == true) {
         ImprimirFactura(ticketImpresion, this);
     }
@@ -749,8 +762,7 @@ void Tpv::on_btn_modificar_clicked()
     ui->lineEdit_cod->setFocus();
 }
 
-void Tpv::on_lineEdit_cod_cliente_editingFinished()
-{
+void Tpv::on_lineEdit_cod_cliente_editingFinished() {
     QString nombreCliente;
     nombreCliente = base.nombreCliente(ui->lineEdit_cod_cliente->text());
     if (nombreCliente == "Sin asignar") {

@@ -22,6 +22,7 @@ totalizar::totalizar(QString datos, double vale, QWidget *parent)
     facturacion = "0";
     ticket = false;
     factura = false;
+    noTicketRegalo = false; // Por defecto se imprime el regalo
     entrega = 0;
     cambio = 0;
     cantVale = vale;
@@ -93,6 +94,11 @@ void totalizar::keyPressEvent(QKeyEvent *e)
     case Qt::Key_F9:
         emit on_pushButtonTicket_clicked();
         break;
+    case Qt::Key_F10:
+        // F10: Activar el checkbox de "no regalo" y cobrar con ticket
+        ui->checkBoxNoTicketRegalo->setChecked(true);
+        emit on_pushButtonTicket_clicked();
+        break;
     default:
         qDebug() << "Otra tecla pulsada";
         break;
@@ -128,4 +134,10 @@ void totalizar::on_checkBoxVale_stateChanged(int arg1)
         valeUsado = false;
     }
     qDebug() << arg1;
+}
+
+void totalizar::on_checkBoxNoTicketRegalo_stateChanged(int arg1)
+{
+    // Actualizar el flag segun el estado del checkbox
+    noTicketRegalo = (arg1 == Qt::Checked);
 }

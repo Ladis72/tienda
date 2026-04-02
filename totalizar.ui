@@ -248,13 +248,28 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="0">
-    <widget class="QCheckBox" name="checkBoxVale">
-     <property name="text">
-      <string>Usar vale</string>
-     </property>
-    </widget>
-   </item>
+    <item row="1" column="0">
+     <layout class="QHBoxLayout" name="horizontalLayout_3">
+      <item>
+       <widget class="QCheckBox" name="checkBoxVale">
+        <property name="text">
+         <string>Usar vale</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBoxNoTicketRegalo">
+        <property name="text">
+         <string>No imprimir ticket regalo</string>
+        </property>
+        <property name="shortcut">
+         <string>F10</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+
   </layout>
  </widget>
  <tabstops>

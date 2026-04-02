@@ -13,7 +13,7 @@ extern Configuracion *conf;
 class ImprimirTicket : public QObject
 {
 public:
-    explicit ImprimirTicket(QString nTicket, QString formato, QObject *parent = nullptr);
+    explicit ImprimirTicket(QString nTicket, QString formato, bool noTicketRegalo = false, QObject *parent = nullptr);
     ~ImprimirTicket();
 
 
