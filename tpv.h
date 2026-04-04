@@ -31,6 +31,7 @@ class Tpv : public QWidget
 public:
     explicit Tpv(QWidget *parent = nullptr);
     ~Tpv();
+    void permisos();
 
     // Carga un encargo en el ticket actual
     bool cargarEncargo(QString codArticulo, double anticipo, int cantidad);

@@ -98,8 +98,15 @@ QStringList baseDatos::datosConexionMaster()
 
 QStringList baseDatos::datosConexionLocal()
 {
+    // Recupera los datos de conexión de la tienda marcada como local.
+    // El QStringList devuelto tiene el siguiente orden:
+    //   [0] nombre, [1] ip, [2] usuario, [3] password, [4] baseDatos, [5] puerto
+    // Primero busca por la bandera local=1; si no, busca por IP de loopback como fallback.
     QSqlQuery consulta(QSqlDatabase::database("DB"));
-    consulta.exec("SELECT nombre , ip , usuario , password , baseDatos FROM tiendas WHERE local = 1");
+    consulta.exec("SELECT nombre , ip , usuario , password , baseDatos , "
+                  "COALESCE(puerto, 3306) AS puerto FROM tiendas "
+                  "WHERE local = 1 OR ip IN ('localhost','127.0.0.1','::1') "
+                  "ORDER BY local DESC LIMIT 1");
     consulta.first();
     QStringList datos;
     datos.clear();
@@ -108,7 +115,7 @@ QStringList baseDatos::datosConexionLocal()
     }
 
     qDebug() << consulta.size();
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 6; ++i) {
         datos.append(consulta.value(i).toString());
     }
     return datos;
@@ -758,7 +765,7 @@ bool baseDatos::modificarTienda(QStringList datos)
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.prepare(
         "UPDATE tiendas SET nombre = ? , direccion = ? , ciudad = ? , telefono = ? , whatsapp = ? "
-        ", email = ? , ip = ? , usuario = ? , password = ? , master = ? , local = ?, baseDatos = ? WHERE id = ?");
+        ", email = ? , ip = ? , usuario = ? , password = ? , master = ? , local = ?, baseDatos = ?, puerto = ?, ssl_ca = ? WHERE id = ?");
     consulta.bindValue(0, datos.at(1));
     consulta.bindValue(1, datos.at(2));
     consulta.bindValue(2, datos.at(3));
@@ -771,7 +778,9 @@ bool baseDatos::modificarTienda(QStringList datos)
     consulta.bindValue(9, datos.at(10));
     consulta.bindValue(10, datos.at(11));
     consulta.bindValue(11, datos.at(12));
-    consulta.bindValue(12, datos.at(0));
+    consulta.bindValue(12, datos.at(13).toInt());
+    consulta.bindValue(13, datos.at(14)); // ssl_ca
+    consulta.bindValue(14, datos.at(0)); // id
     if (consulta.exec()) {
         return true;
     }
@@ -795,7 +804,7 @@ bool baseDatos::crearTienda(QStringList datos)
     QSqlQuery consulta(QSqlDatabase::database("DB"));
     consulta.prepare(
         "INSERT INTO tiendas (nombre, direccion, ciudad, telefono, whatsapp, email, ip, "
-        "usuario, password, master, local, baseDatos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        "usuario, password, master, local, baseDatos, puerto, ssl_ca) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
     // Ignoramos datos.at(0) porque es un ID vacío que falla en MySQL Strict Mode para auto increment
     for (int i = 1; i < datos.length(); i++) {
@@ -811,8 +820,10 @@ bool baseDatos::crearTienda(QStringList datos)
 
 QSqlQuery baseDatos::tiendas(QSqlDatabase db)
 {
+    // Devuelve las tiendas remotas (excluye la marcada como local y las IP de loopback)
     QSqlQuery consulta(db);
-    if (!consulta.exec("SELECT * FROM tiendas WHERE local = 0")) {
+    if (!consulta.exec("SELECT * FROM tiendas WHERE local = 0 "
+                       "AND ip NOT IN ('localhost','127.0.0.1','::1')")) {
         qDebug() << consulta.lastError();
     }
     return consulta;
@@ -2072,16 +2083,19 @@ QString baseDatos::obtenerUltimoHash(const QString db)
 
 QString baseDatos::registrarTickeckVerifactu(const QString db,
                                              const int ticket,
+                                             const QString fecha,
+                                             const QString hora,
                                              const QString hashActual,
                                              const QString hashAnterior,
                                              const QString datosFactura,
                                              const int ususario)
 {
     QSqlQuery query(QSqlDatabase::database(db));
-    query.prepare("INSERT INTO verifactu_logs (id_factura, hash_actual, hash_anterior, "
+    query.prepare("INSERT INTO verifactu_logs (id_factura, fecha_hora, hash_actual, hash_anterior, "
                   "cadena_firmada, usuario) "
-                  "VALUES (:ticket, :hash_actual, :hash_anterior, :cadena_firmada, :usuario)");
+                  "VALUES (:ticket, :fecha_hora, :hash_actual, :hash_anterior, :cadena_firmada, :usuario)");
     query.bindValue(":ticket", ticket);
+    query.bindValue(":fecha_hora", fecha + " " + hora);
     query.bindValue(":hash_actual", hashActual);
     query.bindValue(":hash_anterior", hashAnterior);
     query.bindValue(":cadena_firmada", datosFactura);

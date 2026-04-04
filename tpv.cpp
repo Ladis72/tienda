@@ -44,6 +44,30 @@ Tpv::Tpv(QWidget *parent)
     ui->tableViewTicketsPendientes->hideColumn(0);
     ui->lineEdit_cod_cliente->setText("1");
     on_lineEdit_cod_cliente_editingFinished();
+    permisos();
+}
+
+void Tpv::permisos() {
+    if (!conf) return;
+    int rol = conf->getRol();
+    if (rol < 0) return;
+
+    // Mapa de permisos granulares para el TPV
+    QMap<QString, QWidget*> mapa = {
+        {"tpv.anadir", ui->btn_anadir},
+        {"tpv.borrar", ui->btn_borrar},
+        {"tpv.borrar_todo", ui->pushButtonBorrarTodo},
+        {"tpv.cobrar", ui->btn_cobrar},
+        {"tpv.preticket", ui->btn_preTicket},
+        {"tpv.hacer_encargo", ui->btn_encargo},
+        {"tpv.gestor_encargos", ui->btnGestorEncargos}
+    };
+
+    for (auto it = mapa.begin(); it != mapa.end(); ++it) {
+        if (it.value()) {
+            it.value()->setEnabled(conf->permisos()->tiene(it.key()));
+        }
+    }
 }
 
 Tpv::~Tpv()
@@ -625,6 +649,8 @@ void Tpv::on_btn_cobrar_clicked()
             QString hashFactura = generarHashFactura(datosFactura);
             if (base.registrarTickeckVerifactu(conf->getConexionLocal(),
                                                totalTicket.at(0).toInt(),
+                                               totalTicket.at(3),
+                                               totalTicket.at(4),
                                                hashFactura,
                                                ultimoHash,
                                                datosFactura,

@@ -31,6 +31,8 @@ private slots:
 
     void on_pushButtonRefrescar_clicked();
 
+    void on_pushButtonSslCa_clicked();
+
     void on_checkBoxMaster_stateChanged(int arg1);
 
     void on_checkBoxLocal_stateChanged(int arg1);
