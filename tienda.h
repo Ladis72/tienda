@@ -183,6 +183,9 @@ private:
     void cargarLogo();
     NotasWidget *notasWidget;
     QPushButton *btnNotifNotas;
+    QPushButton *btnEditorPermisos;
+    QPushButton *btnVerifactu;
+    QPushButton *btnEncargosMain;
     QSplitter   *mainSplitter;
 protected:
     void resizeEvent(QResizeEvent *event) override;

@@ -5,7 +5,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 
-GestorPermisos::GestorPermisos() {}
+GestorPermisos::GestorPermisos() : m_rolActivo(-1) {}
 
 /**
  * @brief Carga los permisos del rol dado desde la tabla `permisos`.
@@ -14,6 +14,7 @@ GestorPermisos::GestorPermisos() {}
  * Si el rol es negativo (sin sesión), el conjunto queda vacío → todo denegado.
  */
 void GestorPermisos::cargarPermisos(int rol, const QString &conexion) {
+  m_rolActivo = rol;
   m_permisos.clear();
 
   // Sin sesión = sin permisos
@@ -47,6 +48,10 @@ void GestorPermisos::cargarPermisos(int rol, const QString &conexion) {
  * @param clave Identificador como "ventas", "articulos.borrar", etc.
  */
 bool GestorPermisos::tiene(const QString &clave) const {
+  // El administrador (rol 0) siempre tiene acceso a todo de forma automática.
+  if (m_rolActivo == 0) {
+    return true;
+  }
   return m_permisos.contains(clave);
 }
 
@@ -351,6 +356,25 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
 
       // ── Preparar (pedidos) ──
       {"preparar",                  {0, 1, 4}},
+
+      // ── Notas y Avisos ──
+      {"notas",                     {0, 1, 2, 3, 4}},
+
+      // ── Sistema de Encargos ──
+      {"encargos",                  {0, 1, 2, 4}},
+
+      // ── Configuración Avanzada ──
+      {"editor_permisos",           {0}},
+      {"verifactu",                 {0, 1}},
+
+      // ── TPV (Acciones granulares) ──
+      {"tpv.anadir",                {0, 1, 2, 3}},
+      {"tpv.borrar",                {0, 1, 2}},
+      {"tpv.borrar_todo",           {0, 1}},
+      {"tpv.cobrar",                {0, 1, 2, 3}},
+      {"tpv.preticket",             {0, 1, 2, 3}},
+      {"tpv.hacer_encargo",         {0, 1, 2, 4}},
+      {"tpv.gestor_encargos",       {0, 1, 2, 4}},
   };
 
   // Insertar todas las filas con INSERT IGNORE (idempotente)

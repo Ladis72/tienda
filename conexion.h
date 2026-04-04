@@ -40,7 +40,8 @@ static bool createConnection(QString host,
                              QString baseDatos,
                              QString usuario,
                              QString clave,
-                             QString nombreConexion)
+                             QString nombreConexion,
+                             QString sslCa = QString())
 {
     QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", nombreConexion);
     db.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=3");
@@ -49,6 +50,12 @@ static bool createConnection(QString host,
     db.setUserName(usuario);
     db.setPassword(clave);
     db.setPort(puerto.toInt());
+
+    // Si se indica un fichero CA, activar SSL para MySQL/MariaDB
+    if (!sslCa.isEmpty()) {
+        db.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=3;SSL_CA=" + sslCa);
+    }
+
     if (!db.open()) {
         QMessageBox mensaje;
         mensaje.setText("No se puede continuar" + db.lastError().text());

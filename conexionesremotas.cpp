@@ -11,7 +11,11 @@ QStringList conexionesRemotas::crear()
     QSqlQuery conexiones = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
     while (conexiones.next()) {
         QString host = conexiones.value("ip").toString();
-        QString puerto = "3306";
+        // Leer el puerto desde la BD; si está vacío o es 0, usar 3306 por defecto
+        QString puerto = conexiones.value("puerto").toString();
+        if (puerto.isEmpty() || puerto == "0") {
+            puerto = "3306";
+        }
         QString baseDatos = conexiones.value("baseDatos").toString();
         if (baseDatos.isEmpty()) {
             baseDatos = "tiendaNueva";
@@ -19,7 +23,9 @@ QStringList conexionesRemotas::crear()
         QString usuario = conexiones.value("usuario").toString();
         QString constrasena = conexiones.value("password").toString();
         QString nombreConexion = conexiones.value("nombre").toString();
-        if (createConnection(host, puerto, baseDatos, usuario, constrasena, nombreConexion)) {
+        // Leer el certificado CA para SSL (vacío = sin SSL)
+        QString sslCa = conexiones.value("ssl_ca").toString();
+        if (createConnection(host, puerto, baseDatos, usuario, constrasena, nombreConexion, sslCa)) {
             qDebug() << "conexion creada: " << nombreConexion;
             listaConexionesRemotas << nombreConexion << "1";
         } else {
@@ -50,7 +56,11 @@ QStringList conexionesRemotas::listaOnLine()
     QSqlQuery conexiones = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
     while (conexiones.next()) {
         QString host = conexiones.value("ip").toString();
-        QString puerto = "3306";
+        // Leer el puerto desde la BD; si está vacío o es 0, usar 3306 por defecto
+        QString puerto = conexiones.value("puerto").toString();
+        if (puerto.isEmpty() || puerto == "0") {
+            puerto = "3306";
+        }
         QString baseDatos = conexiones.value("baseDatos").toString();
         if (baseDatos.isEmpty()) {
             baseDatos = "tiendaNueva";
@@ -58,7 +68,9 @@ QStringList conexionesRemotas::listaOnLine()
         QString usuario = conexiones.value("usuario").toString();
         QString constrasena = conexiones.value("password").toString();
         QString nombreConexion = conexiones.value("nombre").toString();
-        if (createConnection(host, puerto, baseDatos, usuario, constrasena, nombreConexion)) {
+        // Leer el certificado CA para SSL (vacío = sin SSL)
+        QString sslCa = conexiones.value("ssl_ca").toString();
+        if (createConnection(host, puerto, baseDatos, usuario, constrasena, nombreConexion, sslCa)) {
             qDebug() << "conexion creada: " << nombreConexion;
             listaConexionesActivas << nombreConexion;
         }

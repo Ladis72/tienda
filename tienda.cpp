@@ -3,6 +3,8 @@
 #include "gestorencargosdialog.h"
 #include "login.h"
 #include "ui_tienda.h"
+#include "editorpermisos.h"
+#include "verfacturas.h"
 
 #include "facturaralbaranes.h"
 #include "gestorpermisos.h"
@@ -54,10 +56,16 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   genVales = nullptr;
   editatImpuestos = nullptr;
 
+  // datos = [0:nombre, 1:ip, 2:usuario, 3:password, 4:baseDatos, 5:puerto]
   QStringList datos = base.datosConexionLocal();
   if (datos.isEmpty()) {
-    createConnection("localhost", "3306", "tiendaNueva", "root", "meganizado",
-                     "DB");
+      // No hay tienda local configurada: usar valores por defecto
+      createConnection("localhost", "3306", "tiendaNueva", "root", "meganizado", "DB");
+  } else {
+      // Usar el puerto almacenado en la tabla tiendas; fallback a 3306 si falta
+      QString puerto = (datos.size() > 5 && !datos.at(5).isEmpty() && datos.at(5) != "0")
+                           ? datos.at(5) : "3306";
+      createConnection(datos.at(1), puerto, datos.at(4), datos.at(2), datos.at(3), "DB");
   }
   conf->setConexionLocal("DB");
 
@@ -146,6 +154,39 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   connect(btnNotifNotas, &QPushButton::clicked, this, &Tienda::onToggleNotas);
 
   notasWidget->refrescar();
+  
+  // Botones dinámicos para nuevas opciones de configuración
+  btnEditorPermisos = new QPushButton(tr("Editor de Permisos"), this);
+  btnVerifactu = new QPushButton(tr("Logs Verifactu"), this);
+  
+  QGridLayout *configLayout = qobject_cast<QGridLayout *>(ui->tabConfig->layout());
+  if (configLayout) {
+      // Los añado a la segunda fila (row 1) del layout de configuración
+      configLayout->addWidget(btnEditorPermisos, 1, 1);
+      configLayout->addWidget(btnVerifactu, 1, 2);
+  }
+
+  connect(btnEditorPermisos, &QPushButton::clicked, this, [this]() {
+      EditorPermisos dial(conf->getRol(), conf->getConexionLocal(), this);
+      dial.exec();
+  });
+
+  connect(btnVerifactu, &QPushButton::clicked, this, [this]() {
+      VerFacturas dial("verifactu_logs", this);
+      dial.exec();
+  });
+
+  // Botón para iniciar el Gestor de Encargos desde la pantalla principal
+  btnEncargosMain = new QPushButton(tr("Gestor de Encargos"), this);
+  QGridLayout *pedidosLayout = qobject_cast<QGridLayout *>(ui->TabPedidos->layout());
+  if (pedidosLayout) {
+      // Se añade en una nueva posición del grid de pedidos
+      pedidosLayout->addWidget(btnEncargosMain, 1, 1);
+  }
+  connect(btnEncargosMain, &QPushButton::clicked, this, [this]() {
+      GestorEncargosDialog dial("", this);
+      dial.exec();
+  });
 
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
@@ -249,6 +290,11 @@ void Tienda::permisos(int rol) {
       {"conectar", ui->pushButtonConectar},
       {"config_base", this->findChild<QWidget *>("pushButtonConfigDB")},
       {"tab_config", ui->tabConfig},
+      {"preparar", ui->pushButtonPreparar},
+      {"notas", btnNotifNotas},
+      {"editor_permisos", btnEditorPermisos},
+      {"verifactu", btnVerifactu},
+      {"encargos", btnEncargosMain},
   };
 
   // Caso especial: sin sesión → todo bloqueado

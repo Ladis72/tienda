@@ -1,4 +1,5 @@
 #include "tiendas.h"
+#include <QFileDialog>
 #include <QMessageBox>
 #include "ui_tiendas.h"
 #include <QDebug>
@@ -34,6 +35,9 @@ tiendas::tiendas(QWidget *parent)
     mapper.addMapping(ui->checkBoxMaster, 10);
     mapper.addMapping(ui->checkBoxLocal, 11);
     mapper.addMapping(ui->lineEditBase, 12);
+    mapper.addMapping(ui->lineEditPuerto, 13);
+    // Índice 14 corresponde al campo ssl_ca
+    mapper.addMapping(ui->lineEditSslCa, 14);
 
     if(modeloTabla->rowCount() > 0) {
         ui->tableViewTiendas->selectRow(0);
@@ -106,6 +110,8 @@ QStringList tiendas::recogerDatos()
     listaDatos.append(ui->checkBoxMaster->isChecked() ? "1" : "0");
     listaDatos.append(ui->checkBoxLocal->isChecked() ? "1" : "0");
     listaDatos.append(ui->lineEditBase->text());
+    listaDatos.append(ui->lineEditPuerto->text());
+    listaDatos.append(ui->lineEditSslCa->text());
     return listaDatos;
 }
 
@@ -207,3 +213,16 @@ void tiendas::on_checkBoxMaster_stateChanged(int arg1)
 }
 
 void tiendas::on_checkBoxLocal_stateChanged(int arg1) {}
+
+void tiendas::on_pushButtonSslCa_clicked()
+{
+    // Abre un diálogo para seleccionar el fichero del certificado CA para SSL
+    QString ruta = QFileDialog::getOpenFileName(
+        this,
+        tr("Seleccionar certificado CA"),
+        QDir::homePath(),
+        tr("Certificados (*.pem *.crt *.cer *.ca-bundle);;Todos los ficheros (*)"));
+    if (!ruta.isEmpty()) {
+        ui->lineEditSslCa->setText(ruta);
+    }
+}

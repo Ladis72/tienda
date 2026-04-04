@@ -222,6 +222,8 @@ public:
     QString obtenerUltimoHash(const QString db);
     QString registrarTickeckVerifactu(const QString db,
                                       const int ticket,
+                                      const QString fecha,
+                                      const QString hora,
                                       const QString hashActual,
                                       const QString hashAnterior,
                                       const QString datosFactura,

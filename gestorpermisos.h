@@ -72,6 +72,9 @@ private:
   /// @brief Inserta los permisos por defecto de todos los roles.
   /// Se llama desde inicializar() la primera vez.
   static void insertarPermisosPorDefecto(const QString &conexion);
+
+  /// ID del rol cargado actualmente en el gestor.
+  int m_rolActivo = -1;
 };
 
 #endif // GESTORPERMISOS_H
