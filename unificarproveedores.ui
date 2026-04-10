@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>UnificarProveedores</class>
+ <widget class="QDialog" name="UnificarProveedores">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>850</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Asistente de Unificación de Maestros</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tabSaneamiento">
+      <attribute name="title">
+       <string>1. Saneamiento de NIFs</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Paso 0: Normalización de Formatos&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Este botón limpiará guiones, espacios y pondrá en mayúsculas todos los NIF de todas las tiendas para facilitar el cruce de datos.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButtonNormalizarNIF">
+         <property name="text">
+          <string>Normalizar todos los NIF (Global)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>&lt;span style=&quot; font-weight:700;&quot;&gt;Paso 1: Propagación de NIFs&lt;/span&gt;&lt;br&gt;Busca proveedores con el mismo nombre en distintas tiendas donde en una falte el NIF y en otra esté presente, y rellena los huecos.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButtonDetectarNIF">
+         <property name="text">
+          <string>Detectar y Rellenar NIFs Faltantes</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="textEditLogSaneamiento">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabUnificacion">
+      <attribute name="title">
+       <string>2. Unificación de IDs</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>&lt;b&gt;Generador de Scripts de Unificación&lt;/b&gt;&lt;br&gt;Selecciona una tienda para ver qué IDs deben cambiarse para coincidir con la Tienda Local (Maestra).</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QComboBox" name="comboBoxTiendas"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonAnalizarIDs">
+           <property name="text">
+            <string>Analizar Discrepancias</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="tableWidgetIDs">
+         <column>
+          <property name="text">
+           <string>Proveedor</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>NIF</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>ID Local</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>ID Remoto</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Acción</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <widget class="QPushButton" name="pushButtonGenerarSQL">
+           <property name="text">
+            <string>Generar Script SQL</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonEjecutarUnificacion">
+           <property name="styleSheet">
+            <string notr="true">background-color: #f44336; color: white;</string>
+           </property>
+           <property name="text">
+            <string>Ejecutar Unificación (Auto)</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

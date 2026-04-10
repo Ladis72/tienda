@@ -474,7 +474,17 @@
         <item row="0" column="5">
          <widget class="QPushButton" name="pushButtonConfigDB">
           <property name="text">
-           <string>Base de Datos</string>
+           <string>Servidor Nube</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="6">
+         <widget class="QPushButton" name="pushButtonUnificarGlobal">
+          <property name="styleSheet">
+           <string notr="true">background-color: #ff9800; color: white; font-weight: bold;</string>
+          </property>
+          <property name="text">
+           <string>Unificar Proveedores</string>
           </property>
          </widget>
         </item>

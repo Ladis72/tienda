@@ -19,9 +19,13 @@ public:
     QString resultado;
 
 private slots:
+    void on_pushButtonSeleccionar_clicked();
+
+    void on_tableView_doubleClicked(const QModelIndex &index);
+
     void on_pushButtonAnadir_clicked();
 
-    void on_pushButtonModificar_clicked();
+    void on_pushButtonGuardar_clicked();
 
     void on_pushButtonDeshacer_clicked();
 

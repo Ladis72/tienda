@@ -7,11 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>324</width>
-    <height>236</height>
+    <height>280</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Configuración base de datos</string>
+   <string>Configuración servidor en la nube</string>
   </property>
   <layout class="QFormLayout" name="formLayout">
    <item row="0" column="0">
@@ -70,14 +70,14 @@
      </property>
     </widget>
    </item>
-   <item row="5" column="0">
+   <item row="6" column="0">
     <widget class="QPushButton" name="pushButton">
      <property name="text">
       <string>Aceptar</string>
      </property>
     </widget>
    </item>
-   <item row="5" column="1">
+   <item row="6" column="1">
     <widget class="QPushButton" name="pushButton_2">
      <property name="text">
       <string>Cancelar</string>
@@ -93,6 +93,47 @@
    </item>
    <item row="3" column="1">
     <widget class="QLineEdit" name="lineEditBaseDatos"/>
+   </item>
+   <item row="5" column="0">
+    <widget class="QLabel" name="label_6">
+     <property name="text">
+      <string>Certificado SSL (CA)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1">
+    <layout class="QHBoxLayout" name="horizontalLayoutSsl">
+     <item>
+      <widget class="QLineEdit" name="lineEditSSLCA">
+       <property name="placeholderText">
+        <string>Ruta relativa al certificado .pem</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonBuscarCa">
+       <property name="maximumSize">
+        <size>
+         <width>30</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>...</string>
+       </property>
+       <property name="toolTip">
+        <string>Buscar fichero de certificado CA</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="7" column="0" colspan="2">
+    <widget class="QPushButton" name="pushButtonTest">
+     <property name="text">
+      <string>Probar conexión</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

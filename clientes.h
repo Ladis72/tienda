@@ -43,8 +43,8 @@ private slots:
 
   void on_lineEditCod_editingFinished();
 
-  void on_checkBoxTiendasConectadasVentas_clicked();
-  void on_checkBoxTiendasConectadasProductos_clicked();
+  // Slot unificado: gestiona Ventas y Productos a la vez
+  void on_checkBoxTiendasConectadas_clicked();
 
   void on_tableView2_doubleClicked(const QModelIndex &index);
 
@@ -80,7 +80,6 @@ private:
   QSqlQueryModel modeloCompras;
   QDataWidgetMapper mapper;
   QSqlQuery consulta;
-  QString nombreConexionMaster;
   QString nombreConexionLocal;
   QString fechaI, fechaF;
   QSqlQueryModel *listaTickets;
