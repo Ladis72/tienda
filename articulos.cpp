@@ -20,6 +20,21 @@ Articulos::Articulos(QWidget *parent)
     qDebug() << "Lista conexiones remotas: ";
     qDebug() << listaConexionesRemotas;
     ui->setupUi(this);
+
+    // Configuración de iconos profesionales para los botones
+    ui->pushButtonNuevo->setIcon(style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+    ui->pushButtonBorrar->setIcon(style()->standardIcon(QStyle::SP_TrashIcon));
+    ui->pushButtonModificar->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
+    ui->pushButtonRefrescar->setIcon(style()->standardIcon(QStyle::SP_ArrowBack));
+    ui->pushButtonAnterior->setIcon(style()->standardIcon(QStyle::SP_ArrowLeft));
+    ui->pushButtonSiguiente->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
+    ui->pushButtonCaducados->setIcon(style()->standardIcon(QStyle::SP_MessageBoxWarning));
+    ui->pushButtonCerrar->setIcon(style()->standardIcon(QStyle::SP_DialogCloseButton));
+    
+    // Iconos para los botones de búsqueda (Familia y Fabricante)
+    ui->pushButtonBuscarFamilia->setIcon(style()->standardIcon(QStyle::SP_FileDialogContentsView));
+    ui->pushButtonBuscarFabricante->setIcon(style()->standardIcon(QStyle::SP_FileDialogContentsView));
+
     ClickableLabel *fotoHR = new ClickableLabel(ui->labelFoto);
     fotoHR->setMinimumSize(200, 200);
     connect(fotoHR, SIGNAL(clicked()), this, SLOT(mostrarFoto()));
@@ -477,29 +492,24 @@ void Articulos::on_pushButtonSiguiente_clicked()
 void Articulos::on_pushButtonModificar_clicked()
 {
     QStringList datos = recogerDatosFormulario();
-    qDebug() << datos;
     int i = mapper.currentIndex();
 
-    QMessageBox msgBox;
-    msgBox.setText("MODIFICACION.");
-    msgBox.setInformativeText("Quiere guardar los cambios?");
-    msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-    msgBox.setDefaultButton(QMessageBox::Ok);
-    int resp = msgBox.exec();
-    if (resp == QMessageBox::Ok) {
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Confirmar Cambios");
+    msgBox.setText("¿Desea guardar los cambios realizados en este artículo?");
+    msgBox.setIcon(QMessageBox::Question);
+    msgBox.setStandardButtons(QMessageBox::Save | QMessageBox::Cancel);
+    msgBox.setDefaultButton(QMessageBox::Save);
+    msgBox.setButtonText(QMessageBox::Save, "Guardar");
+    msgBox.setButtonText(QMessageBox::Cancel, "Cancelar");
+
+    if (msgBox.exec() == QMessageBox::Save) {
         if (base.modificarArticulo(QSqlDatabase::database(conf->getConexionLocal()),
                                    datos,
                                    ui->lineEditCod->text())) {
-            msgBox.setText("Guardado con exito");
-            msgBox.setInformativeText("El registro se ha modificado correctamente");
-            msgBox.setStandardButtons(QMessageBox::Ok);
-            msgBox.exec();
+            QMessageBox::information(this, "Éxito", "Los cambios se han guardado correctamente.");
         } else {
-            msgBox.setText("Error al guardar");
-            msgBox.setInformativeText(
-                "Revise los datos del formulario o contacte con el administrador");
-            msgBox.setStandardButtons(QMessageBox::Ok);
-            msgBox.exec();
+            QMessageBox::critical(this, "Error", "No se pudo guardar la modificación. Verifique los datos.");
         }
         recargarTabla();
         mapper.setCurrentIndex(i);
@@ -511,29 +521,26 @@ void Articulos::on_pushButtonBorrar_clicked()
 {
     int i = mapper.currentIndex();
 
-    QMessageBox msgBox;
-    msgBox.setText("Borrar.");
-    msgBox.setInformativeText("Seguro que quiere borrar este articulo?");
-    msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-    msgBox.setDefaultButton(QMessageBox::Ok);
-    int resp = msgBox.exec();
-    if (resp == QMessageBox::Ok) {
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Confirmar Eliminación");
+    msgBox.setText("¿Está seguro de que desea eliminar este artículo?");
+    msgBox.setInformativeText("Esta acción borrará también los lotes asociados y no se puede deshacer.");
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox.setDefaultButton(QMessageBox::No);
+    msgBox.setButtonText(QMessageBox::Yes, "Eliminar");
+    msgBox.setButtonText(QMessageBox::No, "Cancelar");
+
+    if (msgBox.exec() == QMessageBox::Yes) {
         base.borrarLotesArticulo(conf->getConexionLocal(), ui->lineEditCod->text());
         if (base.borrarArticulo(QSqlDatabase::database(conf->getConexionLocal()),
                                 ui->lineEditCod->text())) {
-            msgBox.setText("Borrado con exito");
-            msgBox.setInformativeText("El registro se ha borrado correctamente");
-            msgBox.setStandardButtons(QMessageBox::Ok);
-            msgBox.exec();
+            QMessageBox::information(this, "Éxito", "El artículo ha sido eliminado correctamente.");
         } else {
-            msgBox.setText("Error al borrar");
-            msgBox.setInformativeText(
-                "Revise los datos del formulario o contacte con el administrador");
-            msgBox.setStandardButtons(QMessageBox::Ok);
-            msgBox.exec();
+            QMessageBox::critical(this, "Error", "No se pudo eliminar el artículo.");
         }
         recargarTabla();
-        mapper.setCurrentIndex(i);
+        mapper.setCurrentIndex(qMax(0, i - 1));
         refrescarBotones(mapper.currentIndex());
     }
 }
@@ -672,7 +679,7 @@ void Articulos::on_pushButtonBuscarFamilia_clicked()
     }
 }
 
-void Articulos::on_pushButton_2_clicked()
+void Articulos::on_pushButtonBuscarFabricante_clicked()
 {
     Fabricantes *fab = new Fabricantes(this);
     fab->exec();
@@ -691,9 +698,9 @@ void Articulos::on_pushButtonNuevo_clicked()
 
     QStringList datos = recogerDatosFormulario();
     if (base.insertarArticulo(QSqlDatabase::database(conf->getConexionLocal()), datos)) {
-        QMessageBox::about(this, "Atención", "Artículo creado con éxito");
+        QMessageBox::information(this, "Éxito", "Artículo creado correctamente.");
     } else {
-        QMessageBox::warning(this, "Error", "No se ha podido crear el artículo");
+        QMessageBox::critical(this, "Error", "No se ha podido crear el artículo. Verifique los datos obligatorios.");
     }
     recargarTabla();
 }

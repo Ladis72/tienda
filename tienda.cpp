@@ -1,9 +1,10 @@
 #include "tienda.h"
 #include "conexion.h"
+#include "editorpermisos.h"
 #include "gestorencargosdialog.h"
 #include "login.h"
 #include "ui_tienda.h"
-#include "editorpermisos.h"
+#include "unificarproveedores.h"
 #include "verfacturas.h"
 
 #include "facturaralbaranes.h"
@@ -59,13 +60,17 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   // datos = [0:nombre, 1:ip, 2:usuario, 3:password, 4:baseDatos, 5:puerto]
   QStringList datos = base.datosConexionLocal();
   if (datos.isEmpty()) {
-      // No hay tienda local configurada: usar valores por defecto
-      createConnection("localhost", "3306", "tiendaNueva", "root", "meganizado", "DB");
+    // No hay tienda local configurada: usar valores por defecto
+    createConnection("localhost", "3306", "tiendaNueva", "root", "meganizado",
+                     "DB");
   } else {
-      // Usar el puerto almacenado en la tabla tiendas; fallback a 3306 si falta
-      QString puerto = (datos.size() > 5 && !datos.at(5).isEmpty() && datos.at(5) != "0")
-                           ? datos.at(5) : "3306";
-      createConnection(datos.at(1), puerto, datos.at(4), datos.at(2), datos.at(3), "DB");
+    // Usar el puerto almacenado en la tabla tiendas; fallback a 3306 si falta
+    QString puerto =
+        (datos.size() > 5 && !datos.at(5).isEmpty() && datos.at(5) != "0")
+            ? datos.at(5)
+            : "3306";
+    createConnection(datos.at(1), puerto, datos.at(4), datos.at(2), datos.at(3),
+                     "DB");
   }
   conf->setConexionLocal("DB");
 
@@ -82,6 +87,26 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          "  `anticipo` DOUBLE(10,2) DEFAULT '0.00',"
                          "  `estado` ENUM('Pendiente', 'Recibido', "
                          "'Entregado', 'Cancelado') DEFAULT 'Pendiente'"
+                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+                         conf->getConexionLocal());
+
+  base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `proveedores` ("
+                         "  `idProveedor` INT PRIMARY KEY,"
+                         "  `nombre` VARCHAR(255),"
+                         "  `nif` VARCHAR(20),"
+                         "  `direccion` VARCHAR(255),"
+                         "  `cp` VARCHAR(10),"
+                         "  `localidad` VARCHAR(100),"
+                         "  `provincia` VARCHAR(100),"
+                         "  `representante` VARCHAR(100),"
+                         "  `telefonor` VARCHAR(20),"
+                         "  `mailr` VARCHAR(100),"
+                         "  `telefono` VARCHAR(20),"
+                         "  `mail` VARCHAR(100),"
+                         "  `descuento` DOUBLE(10,2) DEFAULT '0.00',"
+                         "  `fechaUltimaCompra` DATE DEFAULT '2000-01-01',"
+                         "  `formapago` INT DEFAULT '0',"
+                         "  `notas` TEXT"
                          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
                          conf->getConexionLocal());
 
@@ -149,43 +174,81 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
 
   connect(notasWidget, &NotasWidget::pendingCountChanged, this,
           &Tienda::actualizarNotificacionNotas);
+
+  // --- Inicialización del Sistema de Sincronización Nube ---
+  managerSync = new SyncManager(this);
+  labelEstadoNube = new QLabel("Nube: 🔴", this);
+  labelEstadoNube->setStyleSheet(
+      "font-weight: bold; color: #c62828; padding: 0 10px;");
+  ui->statusBar->addPermanentWidget(labelEstadoNube);
+
+  // Conectar cambios de estado de conexión
+  connect(managerSync, &SyncManager::conexionRecuperada, this, [this]() {
+    labelEstadoNube->setText("Nube: 🟢");
+    labelEstadoNube->setStyleSheet(
+        "font-weight: bold; color: #2e7d32; padding: 0 10px;");
+    ui->statusBar->showMessage(tr("Conexión con la nube establecida"), 3000);
+  });
+
+  connect(managerSync, &SyncManager::conexionPerdida, this, [this]() {
+    labelEstadoNube->setText("Nube: 🔴");
+    labelEstadoNube->setStyleSheet(
+        "font-weight: bold; color: #c62828; padding: 0 10px;");
+    ui->statusBar->showMessage(tr("Conexión con la nube perdida"), 3000);
+  });
+
+  // Mostrar aviso al terminar una sincronización exitosa
+  connect(managerSync, &SyncManager::syncCompletado, this,
+          [this](int subidos, int bajados) {
+            if (subidos > 0 || bajados > 0) {
+              ui->statusBar->showMessage(
+                  tr("Sincronización: %1 subidos, %2 bajados")
+                      .arg(subidos)
+                      .arg(bajados),
+                  5000);
+            }
+          });
+
+  // Arrancar el mánager (triggers, cola y timers)
+  managerSync->iniciar();
   connect(notasWidget, &NotasWidget::hideRequested, this,
           &Tienda::onToggleNotas);
   connect(btnNotifNotas, &QPushButton::clicked, this, &Tienda::onToggleNotas);
 
   notasWidget->refrescar();
-  
+
   // Botones dinámicos para nuevas opciones de configuración
   btnEditorPermisos = new QPushButton(tr("Editor de Permisos"), this);
   btnVerifactu = new QPushButton(tr("Logs Verifactu"), this);
-  
-  QGridLayout *configLayout = qobject_cast<QGridLayout *>(ui->tabConfig->layout());
+
+  QGridLayout *configLayout =
+      qobject_cast<QGridLayout *>(ui->tabConfig->layout());
   if (configLayout) {
-      // Los añado a la segunda fila (row 1) del layout de configuración
-      configLayout->addWidget(btnEditorPermisos, 1, 1);
-      configLayout->addWidget(btnVerifactu, 1, 2);
+    // Los añado a la segunda fila (row 1) del layout de configuración
+    configLayout->addWidget(btnEditorPermisos, 1, 1);
+    configLayout->addWidget(btnVerifactu, 1, 2);
   }
 
   connect(btnEditorPermisos, &QPushButton::clicked, this, [this]() {
-      EditorPermisos dial(conf->getRol(), conf->getConexionLocal(), this);
-      dial.exec();
+    EditorPermisos dial(conf->getRol(), conf->getConexionLocal(), this);
+    dial.exec();
   });
 
   connect(btnVerifactu, &QPushButton::clicked, this, [this]() {
-      VerFacturas dial("verifactu_logs", this);
-      dial.exec();
+    VerFacturas dial("verifactu_logs", this);
+    dial.exec();
   });
 
   // Botón para iniciar el Gestor de Encargos desde la pantalla principal
-  btnEncargosMain = new QPushButton(tr("Gestor de Encargos"), this);
-  QGridLayout *pedidosLayout = qobject_cast<QGridLayout *>(ui->TabPedidos->layout());
-  if (pedidosLayout) {
+  // btnEncargosMain = new QPushButton(tr("Gestor de Encargos"), this);
+  /*QGridLayout *pedidosLayout = qobject_cast<QGridLayout
+  *>(ui->TabPedidos->layout()); if (pedidosLayout) {
       // Se añade en una nueva posición del grid de pedidos
       pedidosLayout->addWidget(btnEncargosMain, 1, 1);
-  }
+  }*/
   connect(btnEncargosMain, &QPushButton::clicked, this, [this]() {
-      GestorEncargosDialog dial("", this);
-      dial.exec();
+    GestorEncargosDialog dial("", this);
+    dial.exec();
   });
 
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
@@ -319,9 +382,7 @@ void Tienda::permisos(int rol) {
   ui->pushButtonSesion->setEnabled(true);
   usuario->setEnabled(true);
 }
-void Tienda::activar_btn_tpv() {
-  T = nullptr;
-}
+void Tienda::activar_btn_tpv() { T = nullptr; }
 
 void Tienda::onToggleNotas() {
   if (notasWidget->isVisible()) {
@@ -378,12 +439,6 @@ void Tienda::on_pushButtonFormasPago_clicked() {
 }
 
 void Tienda::on_pushButton_3_clicked() {
-  if (!QSqlDatabase::database(conf->getConexionMaster()).isOpen()) {
-    QMessageBox::warning(
-        this, "No hay definida una tienda MASTER",
-        "Los cambios que realice no serán guardados \n"
-        "Debe especificar una tienda master y estar conectado para operar");
-  }
   Cli = new Clientes(this);
   Cli->show();
 }
@@ -459,7 +514,8 @@ void Tienda::on_pushButtonTicket_clicked() {
 }
 
 void Tienda::on_pushButtonConfigDB_clicked() {
-  CBase = new ConfigBase("configBase", this);
+  // Abre el diálogo de configuración del servidor MariaDB en la nube
+  CBase = new ConfigBase(this);
   CBase->exec();
 }
 
@@ -523,13 +579,21 @@ void Tienda::on_pushButtonTiendas_clicked() {
 }
 
 void Tienda::refrescarConexiones() {
+  // Eliminar solo las etiquetas de conexión previas, evitando borrar el
+  // indicador de nube u otros widgets permanentes de la barra de estado.
   foreach (QLabel *lab, ui->statusBar->findChildren<QLabel *>()) {
-    lab->deleteLater();
+    if (lab->objectName() == "connLabel" ||
+        (lab != labelEstadoNube && lab->objectName().isEmpty())) {
+      lab->deleteLater();
+    }
   }
+
   QList<QLabel *> button;
   for (int i = 0; i < conexiones->lista().length(); i++) {
-    button.append(new QLabel(conexiones->lista().at(i)));
-    ui->statusBar->insertWidget(i, button.at(i));
+    QLabel *lab = new QLabel(conexiones->lista().at(i), this);
+    lab->setObjectName("connLabel"); // Identificador para poder borrarlas luego
+    button.append(lab);
+    ui->statusBar->insertWidget(i, lab);
   }
   QStringList conexionesActivas;
   QStringList conn;
@@ -695,4 +759,9 @@ void Tienda::on_pushButtonEstadisticas_clicked() {
 void Tienda::on_pushButton_2_clicked() {
   ListadoVentaArticulos *listVentArticulos = new ListadoVentaArticulos(this);
   listVentArticulos->exec();
+}
+
+void Tienda::on_pushButtonUnificarGlobal_clicked() {
+  UnificarProveedores dlg(this);
+  dlg.exec();
 }

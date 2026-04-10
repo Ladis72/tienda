@@ -854,7 +854,8 @@ QString baseDatos::nombreProveedor(QString id, QString base)
 QString baseDatos::idProveedor(QString nombre, QString base)
 {
     QSqlQuery consulta(QSqlDatabase::database(base));
-    consulta.prepare("SELECT idProveedor FROM proveedores WHERE nombre LIKE ?");
+    // Limpieza de espacios para mayor robustez
+    consulta.prepare("SELECT idProveedor FROM proveedores WHERE TRIM(nombre) = TRIM(?) LIMIT 1");
     consulta.bindValue(0, nombre);
     if (consulta.exec() && consulta.first()) {
         return consulta.value(0).toString();

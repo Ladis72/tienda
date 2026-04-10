@@ -67,7 +67,7 @@ private slots:
 
     void on_pushButtonBuscarFamilia_clicked();
 
-    void on_pushButton_2_clicked();
+    void on_pushButtonBuscarFabricante_clicked();
 
     void on_pushButtonNuevo_clicked();
 

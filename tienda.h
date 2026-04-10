@@ -48,6 +48,7 @@
 #include "tpv.h"
 #include "verfacturas.h"
 #include "notaswidget.h"
+#include "syncmanager.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -129,6 +130,7 @@ private slots:
     void on_pushButtonImpuestos_clicked();
 
     void on_pushButton_2_clicked();
+    void on_pushButtonUnificarGlobal_clicked();
 
 private:
     QPushButton *sincroVales;
@@ -177,6 +179,8 @@ private:
     ActualizarClientes *actClientes;
     GenerarVales *genVales;
     impuestos *editatImpuestos;
+    SyncManager *managerSync;
+    QLabel *labelEstadoNube;
 
 
     void cerrarAplicacion();

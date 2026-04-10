@@ -35,12 +35,7 @@ void Clientes::inicializarComponentes() {
   modeloTabla = new QSqlQueryModel(this);
   nTicket = "";
 
-  nombreConexionMaster = conf->getConexionMaster();
   nombreConexionLocal = conf->getConexionLocal();
-  if (!QSqlDatabase::database(nombreConexionMaster).isOpen()) {
-    ui->pushButtonNuevo->setEnabled(false);
-    ui->pushButtonModificar->setEnabled(false);
-  }
 
   listaConexionesRemotas = conf->getNombreConexionesActivas();
   listaConexionesRemotas.insert(0, nombreConexionLocal);
@@ -74,8 +69,9 @@ void Clientes::inicializarComponentes() {
           &Clientes::on_dateEditDesde_2_dateChanged);
   connect(ui->dateEditHasta_2, &QDateEdit::dateChanged, this,
           &Clientes::on_dateEditHasta_2_dateChanged);
-  connect(ui->checkBoxTiendasConectadasProductos, &QCheckBox::clicked, this,
-          &Clientes::on_checkBoxTiendasConectadasProductos_clicked);
+  // Checkbox unificado: aplica a Ventas y Productos simultáneamente
+  connect(ui->checkBoxTiendasConectadas, &QCheckBox::clicked, this,
+          &Clientes::on_checkBoxTiendasConectadas_clicked);
   connect(ui->lineEditBuscarProducto, &QLineEdit::textChanged, this,
           &Clientes::on_lineEditBuscarProducto_textChanged);
   ui->tableViewProductos->setSortingEnabled(true);
@@ -155,7 +151,9 @@ bool Clientes::eventFilter(QObject *obj, QEvent *event) {
   if (obj == ui->lineEditCod) {
     if (event->type() == QEvent::MouseButtonPress) {
       borrarFormulario();
-      qDebug() << "event";
+      // El usuario hizo clic en el campo código: se limpia el formulario
+      // para facilitar la búsqueda de otro cliente.
+      qDebug() << "Clientes: clic en lineEditCod, limpiando formulario";
       return true;
     }
   }
@@ -204,7 +202,7 @@ void Clientes::cargarCompras() {
   mapeoCategRango.clear();
 
   QStringList conexionesConsultar;
-  if (ui->checkBoxTiendasConectadasVentas->isChecked()) {
+  if (ui->checkBoxTiendasConectadas->isChecked()) {
     conexionesConsultar = listaConexionesRemotas;
   } else {
     conexionesConsultar << nombreConexionLocal;
@@ -330,7 +328,7 @@ void Clientes::cargarTicketsPorRango(const QString &rangoMapeado) {
     return;
 
   QStringList conexionesConsultar;
-  if (ui->checkBoxTiendasConectadasVentas->isChecked()) {
+  if (ui->checkBoxTiendasConectadas->isChecked()) {
     conexionesConsultar = listaConexionesRemotas;
   } else {
     conexionesConsultar << nombreConexionLocal;
@@ -460,7 +458,8 @@ void Clientes::on_pushButtonSiguiente_clicked() {
 }
 
 void Clientes::on_pushButtonNuevo_clicked() {
-  if (base.existeDatoEnTabla(QSqlDatabase::database(nombreConexionMaster),
+  // Verificar que el código no exista ya en LOCAL antes de crear
+  if (base.existeDatoEnTabla(QSqlDatabase::database(nombreConexionLocal),
                              "clientes", "idCliente",
                              ui->lineEditCod->text())) {
     QMessageBox::warning(this, "ATENCION", "El registro ya existe");
@@ -468,18 +467,14 @@ void Clientes::on_pushButtonNuevo_clicked() {
   }
 
   QStringList datos = recogerDatosFormulario();
-  if (base.crearCliente(QSqlDatabase::database(nombreConexionMaster), datos)) {
-    QMessageBox::about(this, "Atención", "Cliente creado con éxito en MASTER");
-  } else {
-    QMessageBox::warning(this, "Error",
-                         "No se ha podido crear el Cliente en MASTER");
-    return;
-  }
+
+  // Solo escribir en LOCAL: el SyncManager propagará el cambio a la nube
+  // mediante la cola de sincronización (sync_cola) de forma automática.
   if (base.crearCliente(QSqlDatabase::database(nombreConexionLocal), datos)) {
-    QMessageBox::about(this, "Atención", "Cliente creado con éxito en LOCAL");
+    QMessageBox::about(this, "Atención", "Cliente creado con éxito");
   } else {
     QMessageBox::warning(this, "Error",
-                         "No se ha podido crear el Cliente en LOCAL");
+                         "No se ha podido crear el Cliente");
     return;
   }
 
@@ -497,27 +492,13 @@ void Clientes::on_pushButtonModificar_clicked() {
   msgBox.setDefaultButton(QMessageBox::Ok);
   int resp = msgBox.exec();
   if (resp == QMessageBox::Ok) {
-    if (base.modificarCliente(QSqlDatabase::database(nombreConexionMaster),
-                              datos, ui->lineEditCod->text())) {
-      msgBox.setText("Guardado con exito");
-      msgBox.setInformativeText(
-          "El registro se ha modificado correctamente en MASTER");
-      msgBox.setStandardButtons(QMessageBox::Ok);
-      msgBox.exec();
-
-    } else {
-      msgBox.setText("Error al guardar");
-      msgBox.setInformativeText(
-          "Revise los datos del formulario o contacte con el administrador");
-      msgBox.setStandardButtons(QMessageBox::Ok);
-      msgBox.exec();
-      return;
-    }
+    // Solo modificar en LOCAL: el SyncManager propagará a la nube
+    // automáticamente según la cola de sincronización (sync_cola).
     if (base.modificarCliente(QSqlDatabase::database(nombreConexionLocal),
                               datos, ui->lineEditCod->text())) {
       msgBox.setText("Guardado con exito");
       msgBox.setInformativeText(
-          "El registro se ha modificado correctamente en LOCAL");
+          "El registro se ha modificado correctamente");
       msgBox.setStandardButtons(QMessageBox::Ok);
       msgBox.exec();
     } else {
@@ -543,6 +524,7 @@ void Clientes::on_pushButtonBorrar_clicked() {
   msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
   msgBox.setDefaultButton(QMessageBox::Cancel);
   if (msgBox.exec() == QMessageBox::Ok) {
+    // Borrar en LOCAL: el SyncManager gestionará la propagación.
     if (base.borrarCliente(QSqlDatabase::database(nombreConexionLocal),
                            ui->lineEditCod->text().toInt())) {
       msgBox.setText("Borrado");
@@ -592,7 +574,14 @@ void Clientes::on_lineEditCod_editingFinished() {
   }
 }
 
-void Clientes::on_checkBoxTiendasConectadasVentas_clicked() { cargarCompras(); }
+// Slot del checkbox unificado de tiendas: recarga ventas y productos
+void Clientes::on_checkBoxTiendasConectadas_clicked() {
+  cargarCompras();
+  if (ui->radioButtonCantidad->isChecked())
+    on_radioButtonCantidad_clicked();
+  else if (ui->radioButtonFecha->isChecked())
+    on_radioButtonFecha_clicked();
+}
 
 void Clientes::on_tableView2_clicked(const QModelIndex &index) {
   on_tableView2_doubleClicked(index);
@@ -628,7 +617,7 @@ void Clientes::on_radioButtonCantidad_clicked() {
     return;
 
   QStringList conexiones;
-  if (ui->checkBoxTiendasConectadasProductos->isChecked())
+  if (ui->checkBoxTiendasConectadas->isChecked())
     conexiones = listaConexionesRemotas;
   else
     conexiones << nombreConexionLocal;
@@ -695,7 +684,7 @@ void Clientes::on_radioButtonFecha_clicked() {
     return;
 
   QStringList conexiones;
-  if (ui->checkBoxTiendasConectadasProductos->isChecked())
+  if (ui->checkBoxTiendasConectadas->isChecked())
     conexiones = listaConexionesRemotas;
   else
     conexiones << nombreConexionLocal;
@@ -749,12 +738,7 @@ void Clientes::on_radioButtonFecha_clicked() {
   ui->tableViewProductos->resizeColumnsToContents();
 }
 
-void Clientes::on_checkBoxTiendasConectadasProductos_clicked() {
-  if (ui->radioButtonCantidad->isChecked())
-    on_radioButtonCantidad_clicked();
-  else if (ui->radioButtonFecha->isChecked())
-    on_radioButtonFecha_clicked();
-}
+// Este slot ya no existe; la lógica se consolidó en on_checkBoxTiendasConectadas_clicked()
 
 void Clientes::on_lineEditBuscarProducto_textChanged(const QString &arg1) {
   Q_UNUSED(arg1);

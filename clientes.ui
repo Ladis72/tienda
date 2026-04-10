@@ -7,108 +7,203 @@
     <x>0</x>
     <y>0</y>
     <width>1290</width>
-    <height>651</height>
+    <height>700</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Clientes</string>
+   <string>Gestión de Clientes</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
-   <item row="2" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QPushButton" name="pushButtonNuevo">
-       <property name="text">
-        <string>Nuevo</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonBorrar">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Borrar</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonModificar">
-       <property name="text">
-        <string>Modificar</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonReffrescar">
-       <property name="text">
-        <string>Refrescar</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonAnterior">
-       <property name="text">
-        <string>Anterior</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonSiguiente">
-       <property name="text">
-        <string>Siguiente</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btn_encargos_cliente">
-       <property name="text">
-        <string>Encargos</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonCerrar">
-       <property name="text">
-        <string>Cerrar</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
+  <property name="styleSheet">
+   <string notr="true">QDialog { background-color: #f8f9fa; }</string>
+  </property>
+  <!-- Layout principal vertical con márgenes amplios, igual que Proveedores -->
+  <layout class="QVBoxLayout" name="mainVerticalLayout">
+   <property name="spacing">
+    <number>15</number>
+   </property>
+   <property name="leftMargin">
+    <number>20</number>
+   </property>
+   <property name="topMargin">
+    <number>20</number>
+   </property>
+   <property name="rightMargin">
+    <number>20</number>
+   </property>
+   <property name="bottomMargin">
+    <number>20</number>
+   </property>
+   <!-- ============================================================ -->
+   <!-- ENCABEZADO: icono + nombre cliente + checkbox + filtro fechas -->
+   <!-- ============================================================ -->
+   <item>
+    <widget class="QFrame" name="headerFrame">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>80</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QFrame#headerFrame {
+    background-color: #e8f5e9;
+    border-radius: 10px;
+    border: 1px solid #c8e6c9;
+}</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayoutHeader">
+      <!-- Icono del módulo -->
+      <item>
+       <widget class="QLabel" name="labelIcono">
+        <property name="maximumSize">
+         <size>
+          <width>48</width>
+          <height>48</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap>../iconos/clientes.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <!-- Nombre del cliente en grande -->
+      <item>
+       <widget class="QLabel" name="labelNombreCliente">
+        <property name="font">
+         <font>
+          <pointsize>18</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">color: #2e7d32;</string>
+        </property>
+        <property name="text">
+         <string>Cliente</string>
+        </property>
+       </widget>
+      </item>
+      <!-- Checkbox unificado "Incluir todas las tiendas" junto al nombre -->
+      <item>
+       <widget class="QCheckBox" name="checkBoxTiendasConectadas">
+        <property name="toolTip">
+         <string>Incluir datos de todas las tiendas conectadas en Ventas y Productos</string>
+        </property>
+        <property name="text">
+         <string>Múltiples tiendas</string>
+        </property>
+       </widget>
+      </item>
+      <!-- Spacer para empujar el filtro de fechas a la derecha -->
+      <item>
+       <spacer name="horizontalSpacerHeader">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <!-- GroupBox de filtro de fechas global, idéntico al de Proveedores -->
+      <item>
+       <widget class="QGroupBox" name="groupBoxFiltros">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="title">
+         <string>Filtro de Fechas Global</string>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayoutFiltros">
+         <item>
+          <widget class="QLabel" name="label_17">
+           <property name="text">
+            <string>Desde:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDateEdit" name="dateEditDesde">
+           <property name="minimumSize">
+            <size>
+             <width>110</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="displayFormat">
+            <string>yyyy-MM-dd</string>
+           </property>
+           <property name="calendarPopup">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_18">
+           <property name="text">
+            <string>Hasta:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDateEdit" name="dateEditHasta">
+           <property name="minimumSize">
+            <size>
+             <width>110</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="displayFormat">
+            <string>yyyy-MM-dd</string>
+           </property>
+           <property name="calendarPopup">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonRefrescar">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Refrescar</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
    </item>
-   <item row="1" column="0">
+   <!-- ============================================================ -->
+   <!-- TAB WIDGET con las tres pestañas                             -->
+   <!-- ============================================================ -->
+   <item>
     <widget class="QTabWidget" name="tabWidgetProductos">
      <property name="currentIndex">
       <number>0</number>
      </property>
+     <!-- ======= PESTAÑA 1: Datos Generales ======= -->
      <widget class="QWidget" name="tab_3">
       <attribute name="title">
-       <string>General</string>
+       <string>👤 Datos Generales</string>
       </attribute>
       <widget class="QWidget" name="Principal" native="true">
        <property name="geometry">
@@ -120,557 +215,383 @@
         </rect>
        </property>
        <layout class="QGridLayout" name="General">
-        <item row="1" column="2">
-         <widget class="QLabel" name="label_2">
-          <property name="text">
-           <string>N.I.F.:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="13" column="3">
-         <widget class="QDateEdit" name="dateEdit">
-          <property name="displayFormat">
-           <string>yyyy/MM/dd</string>
-          </property>
-         </widget>
-        </item>
-        <item row="14" column="0">
-         <widget class="QLabel" name="label_14">
-          <property name="text">
-           <string>Notas:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <spacer name="verticalSpacer">
-          <property name="orientation">
-           <enum>Qt::Orientation::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="3" column="1">
-         <widget class="QLineEdit" name="lineEditNombre"/>
-        </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label">
-          <property name="text">
-           <string>Código:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="1">
-         <spacer name="verticalSpacer_3">
-          <property name="orientation">
-           <enum>Qt::Orientation::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="5" column="0">
-         <widget class="QLabel" name="label_5">
-          <property name="text">
-           <string>Dirección:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="9" column="0">
-         <widget class="QLabel" name="label_9">
-          <property name="text">
-           <string>Teléfono 1:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="11" column="0">
-         <widget class="QLabel" name="label_11">
-          <property name="text">
-           <string>E-mail:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="3">
-         <widget class="QLineEdit" name="lineEditProvincia"/>
-        </item>
-        <item row="3" column="2">
-         <widget class="QLabel" name="label_4">
-          <property name="text">
-           <string>Apellidos:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="2">
-         <widget class="QLabel" name="label_8">
-          <property name="text">
-           <string>Provincia:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="11" column="1">
-         <widget class="QLineEdit" name="lineEditMail"/>
-        </item>
-        <item row="10" column="1">
-         <spacer name="verticalSpacer_5">
-          <property name="orientation">
-           <enum>Qt::Orientation::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="13" column="0">
-         <widget class="QLabel" name="label_12">
-          <property name="text">
-           <string>Descuento</string>
-          </property>
-         </widget>
-        </item>
-        <item row="13" column="2">
-         <widget class="QLabel" name="label_13">
-          <property name="text">
-           <string>Fecha alta:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="13" column="1">
-         <widget class="QLineEdit" name="lineEditDescuento"/>
-        </item>
-        <item row="8" column="1">
-         <spacer name="verticalSpacer_4">
-          <property name="orientation">
-           <enum>Qt::Orientation::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="7" column="1">
-         <widget class="QLineEdit" name="lineEditLocalidad"/>
-        </item>
-        <item row="7" column="0">
-         <widget class="QLabel" name="label_7">
-          <property name="text">
-           <string>Localidad:</string>
-          </property>
+          <property name="text"><string>Código:</string></property>
          </widget>
         </item>
         <item row="1" column="1">
          <widget class="QLineEdit" name="lineEditCod">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
+          <property name="enabled"><bool>true</bool></property>
          </widget>
         </item>
-        <item row="5" column="3">
-         <widget class="QLineEdit" name="lineEditCP"/>
-        </item>
-        <item row="5" column="1">
-         <widget class="QLineEdit" name="lineEditDireccion"/>
-        </item>
-        <item row="12" column="1">
-         <spacer name="verticalSpacer_6">
-          <property name="orientation">
-           <enum>Qt::Orientation::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="3" column="3">
-         <widget class="QLineEdit" name="lineEditApellidos"/>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="label_3">
-          <property name="text">
-           <string>Nombre:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="1">
-         <spacer name="verticalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Orientation::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="15" column="0" colspan="4">
-         <widget class="QPlainTextEdit" name="plainTextEdit">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-         </widget>
-        </item>
-        <item row="9" column="2">
-         <widget class="QLabel" name="label_10">
-          <property name="text">
-           <string>Teléfono 2:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="2">
-         <widget class="QLabel" name="label_6">
-          <property name="text">
-           <string>C.P.:</string>
-          </property>
+        <item row="1" column="2">
+         <widget class="QLabel" name="label_2">
+          <property name="text"><string>N.I.F.:</string></property>
          </widget>
         </item>
         <item row="1" column="3">
          <widget class="QLineEdit" name="lineEditNIF"/>
         </item>
-        <item row="9" column="3">
-         <widget class="QLineEdit" name="lineEditTlfn2"/>
+        <item row="2" column="1">
+         <spacer name="verticalSpacer">
+          <property name="orientation"><enum>Qt::Orientation::Vertical</enum></property>
+          <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+         </spacer>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_3">
+          <property name="text"><string>Nombre:</string></property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLineEdit" name="lineEditNombre"/>
+        </item>
+        <item row="3" column="2">
+         <widget class="QLabel" name="label_4">
+          <property name="text"><string>Apellidos:</string></property>
+         </widget>
+        </item>
+        <item row="3" column="3">
+         <widget class="QLineEdit" name="lineEditApellidos"/>
+        </item>
+        <item row="4" column="1">
+         <spacer name="verticalSpacer_2">
+          <property name="orientation"><enum>Qt::Orientation::Vertical</enum></property>
+          <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+         </spacer>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="label_5">
+          <property name="text"><string>Dirección:</string></property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QLineEdit" name="lineEditDireccion"/>
+        </item>
+        <item row="5" column="2">
+         <widget class="QLabel" name="label_6">
+          <property name="text"><string>C.P.:</string></property>
+         </widget>
+        </item>
+        <item row="5" column="3">
+         <widget class="QLineEdit" name="lineEditCP"/>
+        </item>
+        <item row="6" column="1">
+         <spacer name="verticalSpacer_3">
+          <property name="orientation"><enum>Qt::Orientation::Vertical</enum></property>
+          <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+         </spacer>
+        </item>
+        <item row="7" column="0">
+         <widget class="QLabel" name="label_7">
+          <property name="text"><string>Localidad:</string></property>
+         </widget>
+        </item>
+        <item row="7" column="1">
+         <widget class="QLineEdit" name="lineEditLocalidad"/>
+        </item>
+        <item row="7" column="2">
+         <widget class="QLabel" name="label_8">
+          <property name="text"><string>Provincia:</string></property>
+         </widget>
+        </item>
+        <item row="7" column="3">
+         <widget class="QLineEdit" name="lineEditProvincia"/>
+        </item>
+        <item row="8" column="1">
+         <spacer name="verticalSpacer_4">
+          <property name="orientation"><enum>Qt::Orientation::Vertical</enum></property>
+          <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+         </spacer>
+        </item>
+        <item row="9" column="0">
+         <widget class="QLabel" name="label_9">
+          <property name="text"><string>Teléfono 1:</string></property>
+         </widget>
         </item>
         <item row="9" column="1">
          <widget class="QLineEdit" name="lineEditTlfn1"/>
         </item>
+        <item row="9" column="2">
+         <widget class="QLabel" name="label_10">
+          <property name="text"><string>Teléfono 2:</string></property>
+         </widget>
+        </item>
+        <item row="9" column="3">
+         <widget class="QLineEdit" name="lineEditTlfn2"/>
+        </item>
+        <item row="10" column="1">
+         <spacer name="verticalSpacer_5">
+          <property name="orientation"><enum>Qt::Orientation::Vertical</enum></property>
+          <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+         </spacer>
+        </item>
+        <item row="11" column="0">
+         <widget class="QLabel" name="label_11">
+          <property name="text"><string>E-mail:</string></property>
+         </widget>
+        </item>
+        <item row="11" column="1">
+         <widget class="QLineEdit" name="lineEditMail"/>
+        </item>
+        <item row="12" column="1">
+         <spacer name="verticalSpacer_6">
+          <property name="orientation"><enum>Qt::Orientation::Vertical</enum></property>
+          <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+         </spacer>
+        </item>
+        <item row="13" column="0">
+         <widget class="QLabel" name="label_12">
+          <property name="text"><string>Descuento:</string></property>
+         </widget>
+        </item>
+        <item row="13" column="1">
+         <widget class="QLineEdit" name="lineEditDescuento"/>
+        </item>
+        <item row="13" column="2">
+         <widget class="QLabel" name="label_13">
+          <property name="text"><string>Fecha alta:</string></property>
+         </widget>
+        </item>
+        <item row="13" column="3">
+         <widget class="QDateEdit" name="dateEdit">
+          <property name="displayFormat"><string>yyyy-MM-dd</string></property>
+         </widget>
+        </item>
+        <item row="14" column="0">
+         <widget class="QLabel" name="label_14">
+          <property name="text"><string>Notas:</string></property>
+         </widget>
+        </item>
+        <item row="15" column="0" colspan="4">
+         <widget class="QPlainTextEdit" name="plainTextEdit"/>
+        </item>
        </layout>
       </widget>
      </widget>
+     <!-- ======= PESTAÑA 2: Historial de Ventas ======= -->
      <widget class="QWidget" name="tab_4">
       <attribute name="title">
-       <string>Ventas</string>
+       <string>📊 Historial de Ventas</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_Ventas">
+       <!-- Panel de resumen KPI -->
        <item>
         <widget class="QGroupBox" name="groupBoxKPIs">
-         <property name="title">
-          <string>Panel de Resumen</string>
-         </property>
+         <property name="title"><string>Panel de Resumen</string></property>
          <layout class="QHBoxLayout" name="horizontalLayoutKPI">
           <item>
            <widget class="QLabel" name="labelKpiGasto">
-            <property name="font">
-             <font>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Gasto Total:</string>
-            </property>
+            <property name="font"><font><bold>true</bold></font></property>
+            <property name="text"><string>Gasto Total:</string></property>
            </widget>
           </item>
           <item>
            <widget class="QLabel" name="labelKpiTotalGasto">
-            <property name="text">
-             <string>0.00 €</string>
-            </property>
+            <property name="text"><string>0.00 €</string></property>
            </widget>
           </item>
           <item>
            <widget class="QLabel" name="labelKpiTickets">
-            <property name="font">
-             <font>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>  Tickets:</string>
-            </property>
+            <property name="font"><font><bold>true</bold></font></property>
+            <property name="text"><string>  Tickets:</string></property>
            </widget>
           </item>
           <item>
            <widget class="QLabel" name="labelKpiTotalTickets">
-            <property name="text">
-             <string>0</string>
-            </property>
+            <property name="text"><string>0</string></property>
            </widget>
           </item>
           <item>
            <widget class="QLabel" name="labelKpiUltima">
-            <property name="font">
-             <font>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>  Última Visita:</string>
-            </property>
+            <property name="font"><font><bold>true</bold></font></property>
+            <property name="text"><string>  Última Visita:</string></property>
            </widget>
           </item>
           <item>
            <widget class="QLabel" name="labelKpiFechaUltima">
-            <property name="text">
-             <string>-</string>
-            </property>
+            <property name="text"><string>-</string></property>
            </widget>
           </item>
           <item>
            <widget class="QLabel" name="labelAgrupacion">
-            <property name="text">
-             <string>Agrupar por:</string>
-            </property>
+            <property name="text"><string>Agrupar por:</string></property>
            </widget>
           </item>
           <item>
            <widget class="QComboBox" name="comboBoxAgrupacion">
-            <item>
-             <property name="text">
-              <string>Meses</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Años</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Semanas</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Días</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="labelDesde">
-            <property name="text">
-             <string>Desde:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QDateEdit" name="dateEditDesde">
-            <property name="calendarPopup">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="labelHasta">
-            <property name="text">
-             <string>Hasta:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QDateEdit" name="dateEditHasta">
-            <property name="calendarPopup">
-             <bool>true</bool>
-            </property>
+            <item><property name="text"><string>Meses</string></property></item>
+            <item><property name="text"><string>Años</string></property></item>
+            <item><property name="text"><string>Semanas</string></property></item>
+            <item><property name="text"><string>Días</string></property></item>
            </widget>
           </item>
           <item>
            <widget class="QLabel" name="labelTipoGrafico">
-            <property name="text">
-             <string>Tipo de Gráfico:</string>
-            </property>
+            <property name="text"><string>Tipo gráfico:</string></property>
            </widget>
           </item>
           <item>
            <widget class="QComboBox" name="comboBoxTipoGrafico">
-            <item>
-             <property name="text">
-              <string>Agrupado</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Apilado</string>
-             </property>
-            </item>
+            <item><property name="text"><string>Agrupado</string></property></item>
+            <item><property name="text"><string>Apilado</string></property></item>
            </widget>
           </item>
           <item>
            <spacer name="horizontalSpacerKPI">
-            <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
+            <property name="orientation"><enum>Qt::Orientation::Horizontal</enum></property>
+            <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
            </spacer>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="checkBoxTiendasConectadasVentas">
-            <property name="text">
-             <string>Incluir datos de Múltiples Tiendas</string>
-            </property>
-           </widget>
           </item>
          </layout>
         </widget>
        </item>
+       <!-- Gráfico de ventas -->
        <item>
         <widget class="QWidget" name="widgetGraficoVentas" native="true">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>200</height>
-          </size>
-         </property>
+         <property name="minimumSize"><size><width>0</width><height>200</height></size></property>
          <layout class="QVBoxLayout" name="verticalLayoutGrafico"/>
         </widget>
        </item>
+       <!-- Tablas de ventas -->
        <item>
         <widget class="QSplitter" name="splitterVentas">
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
+         <property name="orientation"><enum>Qt::Orientation::Horizontal</enum></property>
          <widget class="QTableView" name="tableView2">
-          <property name="editTriggers">
-           <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
-          </property>
-          <property name="selectionBehavior">
-           <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
-          </property>
+          <property name="editTriggers"><set>QAbstractItemView::EditTrigger::NoEditTriggers</set></property>
+          <property name="selectionBehavior"><enum>QAbstractItemView::SelectionBehavior::SelectRows</enum></property>
          </widget>
          <widget class="QTableView" name="tableViewDetalleTicket">
-          <property name="editTriggers">
-           <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
-          </property>
+          <property name="editTriggers"><set>QAbstractItemView::EditTrigger::NoEditTriggers</set></property>
          </widget>
         </widget>
        </item>
       </layout>
      </widget>
+     <!-- ======= PESTAÑA 3: Productos Comprados ======= -->
      <widget class="QWidget" name="Productos">
       <attribute name="title">
-       <string>Productos</string>
+       <string>📦 Productos Comprados</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_3">
        <item row="0" column="0">
         <widget class="QRadioButton" name="radioButtonCantidad">
-         <property name="text">
-          <string>Cantidad</string>
-         </property>
+         <property name="text"><string>Cantidad</string></property>
         </widget>
        </item>
        <item row="0" column="1">
         <widget class="QRadioButton" name="radioButtonFecha">
-         <property name="text">
-          <string>Fecha</string>
-         </property>
+         <property name="text"><string>Fecha</string></property>
         </widget>
        </item>
+       <!-- Fechas específicas de Productos (rango independiente) -->
        <item row="0" column="2">
         <widget class="QLabel" name="labelDesde_2">
-         <property name="text">
-          <string>Desde:</string>
-         </property>
+         <property name="text"><string>Desde:</string></property>
         </widget>
        </item>
        <item row="0" column="3">
         <widget class="QDateEdit" name="dateEditDesde_2">
-         <property name="calendarPopup">
-          <bool>true</bool>
-         </property>
+         <property name="minimumSize"><size><width>110</width><height>0</height></size></property>
+         <property name="displayFormat"><string>yyyy-MM-dd</string></property>
+         <property name="calendarPopup"><bool>true</bool></property>
         </widget>
        </item>
        <item row="0" column="4">
         <widget class="QLabel" name="labelHasta_2">
-         <property name="text">
-          <string>Hasta:</string>
-         </property>
+         <property name="text"><string>Hasta:</string></property>
         </widget>
        </item>
        <item row="0" column="5">
         <widget class="QDateEdit" name="dateEditHasta_2">
-         <property name="calendarPopup">
-          <bool>true</bool>
-         </property>
+         <property name="minimumSize"><size><width>110</width><height>0</height></size></property>
+         <property name="displayFormat"><string>yyyy-MM-dd</string></property>
+         <property name="calendarPopup"><bool>true</bool></property>
         </widget>
        </item>
        <item row="0" column="6">
         <spacer name="horizontalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
+         <property name="orientation"><enum>Qt::Orientation::Horizontal</enum></property>
+         <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
         </spacer>
-       </item>
-       <item row="0" column="7">
-        <widget class="QCheckBox" name="checkBoxTiendasConectadasProductos">
-         <property name="text">
-          <string>Incluir datos de Múltiples Tiendas</string>
-         </property>
-        </widget>
        </item>
        <item row="1" column="0">
         <widget class="QLabel" name="labelBuscar">
-         <property name="text">
-          <string>Buscar:</string>
-         </property>
+         <property name="text"><string>Buscar:</string></property>
         </widget>
        </item>
-       <item row="1" column="1" colspan="7">
+       <item row="1" column="1" colspan="6">
         <widget class="QLineEdit" name="lineEditBuscarProducto">
-         <property name="placeholderText">
-          <string>Filtrar por código o descripción...</string>
-         </property>
+         <property name="placeholderText"><string>Filtrar por código o descripción...</string></property>
         </widget>
        </item>
-       <item row="2" column="0" colspan="8">
+       <item row="2" column="0" colspan="7">
         <widget class="QTableView" name="tableViewProductos">
-         <property name="editTriggers">
-          <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
-         </property>
-         <property name="sortingEnabled">
-          <bool>true</bool>
-         </property>
-         <property name="cornerButtonEnabled">
-          <bool>false</bool>
-         </property>
+         <property name="editTriggers"><set>QAbstractItemView::EditTrigger::NoEditTriggers</set></property>
+         <property name="sortingEnabled"><bool>true</bool></property>
+         <property name="cornerButtonEnabled"><bool>false</bool></property>
         </widget>
        </item>
       </layout>
      </widget>
     </widget>
    </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="labelNombreCliente">
-     <property name="font">
-      <font>
-       <family>Bitstream Charter</family>
-       <pointsize>14</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>Nombre cliente</string>
-     </property>
-    </widget>
+   <!-- ============================================================ -->
+   <!-- BOTONERA INFERIOR                                            -->
+   <!-- ============================================================ -->
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayoutButtons">
+     <item>
+      <widget class="QPushButton" name="pushButtonNuevo">
+       <property name="text"><string>Nuevo</string></property>
+       <property name="autoDefault"><bool>false</bool></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonBorrar">
+       <property name="enabled"><bool>false</bool></property>
+       <property name="text"><string>Borrar</string></property>
+       <property name="autoDefault"><bool>false</bool></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonModificar">
+       <property name="text"><string>Modificar</string></property>
+       <property name="autoDefault"><bool>false</bool></property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacerButtons">
+       <property name="orientation"><enum>Qt::Orientation::Horizontal</enum></property>
+       <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonAnterior">
+       <property name="text"><string>Anterior</string></property>
+       <property name="autoDefault"><bool>false</bool></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonSiguiente">
+       <property name="text"><string>Siguiente</string></property>
+       <property name="autoDefault"><bool>false</bool></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_encargos_cliente">
+       <property name="text"><string>Encargos</string></property>
+       <property name="autoDefault"><bool>false</bool></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonCerrar">
+       <property name="text"><string>Cerrar</string></property>
+       <property name="autoDefault"><bool>false</bool></property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
