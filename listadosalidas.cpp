@@ -47,28 +47,61 @@ double ListadoSalidas::sumar(QSqlQueryModel *modelo)
 
 void ListadoSalidas::on_pushButton_2_clicked()
 {
-    QString html;
-    html += "<html><body>";
-    html += "<h1>Informe de Movimientos</h1>";
-    html += "<p>Desde: " + ui->dateEditDesde->text() + " Hasta: " + ui->dateEditHasta->text()
-            + "</p>";
-    html += "<table border='1'>";
-    html
-        += "<tr><th>Fecha</th><th>Hora</th><th>Cantidad</th><th>Tipo</th><th>Descripción</th></tr>";
+    QString html = R"(
+<html>
+<head>
+  <meta charset='utf-8'>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 10pt; color: #333; }
+    .header { text-align: center; padding: 10px; border-bottom: 2px solid #2c3e50; margin-bottom: 20px; }
+    h2 { color: #2c3e50; margin-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { background-color: #2c3e50; color: white; padding: 8px; font-size: 9pt; }
+    td { border: 1px solid #ccc; padding: 6px; text-align: center; font-size: 9pt; }
+    .total-row { font-weight: bold; background-color: #f9f9f9; color: #e74c3c; font-size: 12pt; margin-top: 20px; text-align: right; }
+  </style>
+</head>
+<body>
+  <div class='header'>
+    <h2>Informe de Movimientos de Efectivo</h2>
+    <div>Desde: %DESDE% | Hasta: %HASTA%</div>
+  </div>
 
+  <table>
+    <thead>
+      <tr>
+        <th>FECHA</th>
+        <th>HORA</th>
+        <th>CANTIDAD</th>
+        <th>TIPO</th>
+        <th>DESCRIPCIÓN</th>
+      </tr>
+    </thead>
+    <tbody>
+      %FILAS%
+    </tbody>
+  </table>
+
+  <div class='total-row'>TOTAL ACUMULADO: %TOTAL% €</div>
+</body>
+</html>
+)";
+
+    html.replace("%DESDE%", ui->dateEditDesde->text());
+    html.replace("%HASTA%", ui->dateEditHasta->text());
+    html.replace("%TOTAL%", ui->labelTotal->text());
+
+    QString filas = "";
     for (int row = 0; row < modeloTabla->rowCount(); ++row) {
-        html += "<tr>";
-        html += "<td>" + modeloTabla->record(row).value("fecha").toString() + "</td>";
-        html += "<td>" + modeloTabla->record(row).value("hora").toString() + "</td>";
-        html += "<td>" + modeloTabla->record(row).value("cantidad").toString() + "</td>";
-        html += "<td>" + modeloTabla->record(row).value("descripcion").toString() + "</td>";
-        html += "<td>" + modeloTabla->record(row).value(4).toString() + "</td>";
-        html += "</tr>";
+        filas += "<tr>";
+        filas += "<td>" + modeloTabla->record(row).value("fecha").toString() + "</td>";
+        filas += "<td>" + modeloTabla->record(row).value("hora").toString() + "</td>";
+        filas += "<td>" + modeloTabla->record(row).value("cantidad").toString() + " €</td>";
+        filas += "<td>" + modeloTabla->record(row).value("descripcion").toString() + "</td>";
+        filas += "<td>" + modeloTabla->record(row).value(4).toString() + "</td>";
+        filas += "</tr>";
     }
-
-    html += "</table>";
-    html += "<p><b>Total: " + ui->labelTotal->text() + "</b></p>";
-    html += "</body></html>";
+    html.replace("%FILAS%", filas);
 
     QTextDocument document;
     document.setHtml(html);

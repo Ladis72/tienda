@@ -455,10 +455,12 @@ color: rgb(255, 25, 5);</string>
            <widget class="QTreeWidget" name="treeWidgetStockTiendas">
             <property name="minimumSize">
              <size>
-              <width>200</width>
+              <width>400</width>
               <height>0</height>
              </size>
             </property>
+             <property name="alternatingRowColors"><bool>true</bool></property>
+             <property name="sortingEnabled"><bool>true</bool></property>
             <property name="contextMenuPolicy">
              <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
             </property>
@@ -611,6 +613,13 @@ color: rgb(255, 25, 5);</string>
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QRadioButton" name="radioButtonProveedores">
+            <property name="text">
+             <string>Proveedores</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -701,16 +710,6 @@ color: rgb(255, 25, 5);</string>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButtonCaducados">
-       <property name="text">
-        <string>Caducados</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
       <widget class="QPushButton" name="pushButtonCerrar">
        <property name="text">
         <string>Cerrar</string>
@@ -745,7 +744,7 @@ color: rgb(255, 25, 5);</string>
   <tabstop>pushButtonRefrescar</tabstop>
   <tabstop>pushButtonAnterior</tabstop>
   <tabstop>pushButtonSiguiente</tabstop>
-  <tabstop>pushButtonCaducados</tabstop>
+
   <tabstop>pushButtonCerrar</tabstop>
   <tabstop>pushButtonVer</tabstop>
   <tabstop>pushButtonPonerFoto</tabstop>

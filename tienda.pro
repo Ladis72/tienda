@@ -68,7 +68,6 @@ SOURCES += main.cpp\
     etiquetas.cpp \
     formateo.cpp \
     imprimirticket.cpp \
-    caducados.cpp \
     imprimirfactura.cpp \
     configticket.cpp \
     configbase.cpp \
@@ -144,7 +143,6 @@ HEADERS  += tienda.h \
     etiquetas.h \
     formateo.h \
     imprimirticket.h \
-    caducados.h \
     imprimirfactura.h \
     configticket.h \
     configbase.h \
@@ -208,7 +206,6 @@ FORMS    += tienda.ui \
     caducidades.ui \
     salidas.ui \
     etiquetas.ui \
-    caducados.ui \
     configticket.ui \
     configbase.ui \
     visorimagenes.ui \

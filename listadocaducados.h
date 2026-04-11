@@ -2,6 +2,7 @@
 #define LISTADOCADUCADOS_H
 
 #include <QDialog>
+#include <QSortFilterProxyModel>
 #include "base_datos.h"
 
 namespace Ui {
@@ -18,10 +19,9 @@ public:
 
 private slots:
     void on_dateEditDesde_userDateChanged(const QDate &date);
-
     void on_dateEditHasta_userDateChanged(const QDate &date);
-
     void on_pushButtonImprimir_clicked();
+    void on_lineEditBuscar_textChanged(const QString &text);
 
 private:
     Ui::ListadoCaducados *ui;
@@ -29,6 +29,7 @@ private:
     void llenarTabla(QString desde, QString hasta);
     QString desde, hasta;
     QSqlQueryModel *mCaducados;
+    QSortFilterProxyModel *proxyModel;
     baseDatos *base;
 };
 

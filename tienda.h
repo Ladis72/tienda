@@ -11,7 +11,7 @@
 #include "actualizarclientes.h"
 #include "articulos.h"
 #include "base_datos.h"
-#include "caducados.h"
+
 #include "caducidades.h"
 #include "cajas.h"
 #include "clientes.h"
@@ -91,7 +91,7 @@ private slots:
     void on_pushButton_5_clicked();
     void on_pushButtonSalidas_clicked();
     void on_pushButtonEtiquetas_clicked();
-    void on_pushButtonCaducados_clicked();
+
     void on_pushButtonTicket_clicked();
     void on_pushButtonConfigDB_clicked();
     void on_pushButtonPrestamos_clicked();
@@ -120,8 +120,8 @@ private slots:
     void on_pushButtonActualizarClientes_clicked();
 
     void on_pushButtonGenerarVales_clicked();
-    void sincronizarVales();
-    void comprobarVales();
+    // sincronizarVales y comprobarVales eliminados: la propagación de vales
+    // se hace ahora vía nube por SyncManager
     void on_pushButtonCopia_clicked();
 
     void on_pushButtonSesion_clicked();
@@ -133,7 +133,7 @@ private slots:
     void on_pushButtonUnificarGlobal_clicked();
 
 private:
-    QPushButton *sincroVales;
+    // sincroVales eliminado: ya no se usa el mecanismo de vales pendientes marcar
     QPushButton *usuario;
     QPalette paleta;
 
@@ -159,7 +159,7 @@ private:
     Caducidades *Cad;
     Salidas *Salid;
     Etiquetas *Etiq;
-    Caducados *Caduca;
+
     ConfigTicket *CTicket;
     ConfigBase *CBase;
     Prestamos *Prest;
@@ -189,7 +189,7 @@ private:
     QPushButton *btnNotifNotas;
     QPushButton *btnEditorPermisos;
     QPushButton *btnVerifactu;
-    QPushButton *btnEncargosMain;
+    QPushButton *btnEncargosMain = nullptr;
     QSplitter   *mainSplitter;
 protected:
     void resizeEvent(QResizeEvent *event) override;

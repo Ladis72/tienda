@@ -82,6 +82,7 @@ private slots:
     void on_radioButtonMeses_clicked();
 
     void on_radioButtonAnos_clicked();
+    void on_radioButtonProveedores_clicked();
 
     void on_pushButtonVer_clicked();
 
@@ -93,7 +94,7 @@ private slots:
 
     void on_pushButtonEtiqueta_clicked();
 
-    void on_pushButtonCaducados_clicked();
+
 
     void on_pushButtonVer_2_clicked();
     void mostrarFoto();

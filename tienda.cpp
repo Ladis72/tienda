@@ -40,7 +40,6 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   Cad = nullptr;
   Salid = nullptr;
   Etiq = nullptr;
-  Caduca = nullptr;
   CTicket = nullptr;
   CBase = nullptr;
   Prest = nullptr;
@@ -90,6 +89,20 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
                          conf->getConexionLocal());
 
+  base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `historico_stock` ("
+                         "  `id` INT AUTO_INCREMENT PRIMARY KEY,"
+                         "  `ean` VARCHAR(15) NOT NULL,"
+                         "  `lote` VARCHAR(50),"
+                         "  `fecha_caducidad_ant` DATE,"
+                         "  `fecha_caducidad_new` DATE,"
+                         "  `stock_ant` DOUBLE(10,2),"
+                         "  `stock_new` DOUBLE(10,2),"
+                         "  `motivo` VARCHAR(255),"
+                         "  `usuario` VARCHAR(100),"
+                         "  `fecha_hora` DATETIME DEFAULT CURRENT_TIMESTAMP"
+                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+                         conf->getConexionLocal());
+
   base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `proveedores` ("
                          "  `idProveedor` INT PRIMARY KEY,"
                          "  `nombre` VARCHAR(255),"
@@ -129,9 +142,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   conexiones->base = &base;
   ui->statusBar->addPermanentWidget(ui->pushButtonConectar);
 
-  sincroVales = new QPushButton("Sincro vales", this);
-  connect(sincroVales, SIGNAL(clicked()), this, SLOT(sincronizarVales()));
-  comprobarVales();
+  // Botón de usuario en la barra de estado
   usuario = new QPushButton(conf->getUsuario());
   usuario->setObjectName("usuarioButton");
   ui->statusBar->addPermanentWidget(usuario);
@@ -246,15 +257,17 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
       // Se añade en una nueva posición del grid de pedidos
       pedidosLayout->addWidget(btnEncargosMain, 1, 1);
   }*/
+  /*
   connect(btnEncargosMain, &QPushButton::clicked, this, [this]() {
     GestorEncargosDialog dial("", this);
     dial.exec();
   });
+  */
 
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
   conf->setNombreconexiones(conexiones->lista());
-  login();
+  // login();
 }
 
 Tienda::~Tienda() {
@@ -329,7 +342,7 @@ void Tienda::permisos(int rol) {
       {"salidas", ui->pushButtonSalidas},
       {"venta_articulos", ui->pushButton_2},
       {"caducidades", ui->pushButton_5},
-      {"caducados", ui->pushButtonCaducados},
+
       {"movimientos", ui->movimientosButton},
       {"tickets", ui->pushButtonTickets},
       {"facturas", ui->pushButtonFacturas},
@@ -503,11 +516,6 @@ void Tienda::on_pushButtonEtiquetas_clicked() {
   Etiq->exec();
 }
 
-void Tienda::on_pushButtonCaducados_clicked() {
-  Caduca = new Caducados(this);
-  Caduca->exec();
-}
-
 void Tienda::on_pushButtonTicket_clicked() {
   CTicket = new ConfigTicket(this);
   CTicket->exec();
@@ -579,38 +587,50 @@ void Tienda::on_pushButtonTiendas_clicked() {
 }
 
 void Tienda::refrescarConexiones() {
-  // Eliminar solo las etiquetas de conexión previas, evitando borrar el
-  // indicador de nube u otros widgets permanentes de la barra de estado.
-  foreach (QLabel *lab, ui->statusBar->findChildren<QLabel *>()) {
-    if (lab->objectName() == "connLabel" ||
-        (lab != labelEstadoNube && lab->objectName().isEmpty())) {
-      lab->deleteLater();
+    // 1. Limpiar etiquetas de conexión previas de forma precisa usando su objectName
+    QList<QLabel*> existingLabels = ui->statusBar->findChildren<QLabel*>("connLabel");
+    for (QLabel* oldLab : existingLabels) {
+        ui->statusBar->removeWidget(oldLab);
+        oldLab->deleteLater();
     }
-  }
 
-  QList<QLabel *> button;
-  for (int i = 0; i < conexiones->lista().length(); i++) {
-    QLabel *lab = new QLabel(conexiones->lista().at(i), this);
-    lab->setObjectName("connLabel"); // Identificador para poder borrarlas luego
-    button.append(lab);
-    ui->statusBar->insertWidget(i, lab);
-  }
-  QStringList conexionesActivas;
-  QStringList conn;
-  conn.clear();
-  conn = conexiones->crear();
-  for (int i = 0; i < conn.length(); i = i + 2) {
-    if (conn.at(i + 1) == "0") {
-      button[i / 2]->setStyleSheet("QLabel {background-color : #ef5350; color: "
-                                   "white; border-radius: 4px; padding: 2px;}");
-    } else {
-      button[i / 2]->setStyleSheet("QLabel {background-color : #7cb342; color: "
-                                   "white; border-radius: 4px; padding: 2px;}");
-      conexionesActivas << conn.at(i);
+    // 2. Obtener la lista de tiendas y sus estados de conexión (una sola vez)
+    QStringList nombresTiendas = conexiones->lista();
+    QStringList estadosConexiones = conexiones->crear(); // Devuelve pares [nombre, "1" o "0"]
+    
+    QStringList conexionesActivas;
+
+    // 3. Crear y configurar las nuevas etiquetas en la barra de estado
+    // Usamos el índice de nombresTiendas para mantener el orden
+    for (int i = 0; i < nombresTiendas.length(); i++) {
+        QString nombre = nombresTiendas.at(i);
+        QLabel *lab = new QLabel(nombre, this);
+        lab->setObjectName("connLabel");
+        
+        // Buscar el estado correspondiente en la lista devuelta por crear()
+        bool isOnline = false;
+        int idx = estadosConexiones.indexOf(nombre);
+        if (idx != -1 && idx + 1 < estadosConexiones.length()) {
+            isOnline = (estadosConexiones.at(idx + 1) == "1");
+        }
+
+        if (isOnline) {
+            lab->setStyleSheet("QLabel { background-color: #2e7d32; color: white; border-radius: 4px; "
+                               "padding: 2px 6px; font-weight: bold; margin-right: 4px; }");
+            conexionesActivas << nombre;
+        } else {
+            lab->setStyleSheet("QLabel { background-color: #c62828; color: white; border-radius: 4px; "
+                               "padding: 2px 6px; font-weight: bold; margin-right: 4px; }");
+        }
+
+        // Insertar al principio de la barra de estado (lado izquierdo)
+        ui->statusBar->insertWidget(i, lab);
+        lab->show();
     }
-  }
-  conf->setNombreConexionesActivas(conexionesActivas);
-  conf->setConexionMaster(conexiones->conexionMaster());
+
+    // 4. Actualizar configuración global
+    conf->setNombreConexionesActivas(conexionesActivas);
+    conf->setConexionMaster(conexiones->conexionMaster());
 }
 
 void Tienda::on_pushButtonConectar_clicked() { refrescarConexiones(); }
@@ -620,43 +640,53 @@ void Tienda::on_pushButtonActualizarClientes_clicked() {
   actClientes->exec();
 }
 
+/**
+ * @brief Comprueba si los vales del mes anterior ya están generados.
+ *
+ * Si no existen vales para el mes anterior, pide confirmación al usuario
+ * y lanza el proceso de generación. Los vales generados en local son
+ * propagados a la nube automáticamente por el SyncManager.
+ */
 void Tienda::on_pushButtonGenerarVales_clicked() {
-  //    if(conf->getNombreConexionesActivas().isEmpty() ||
-  //    conf->getNombreConexionesActivas() != conf->getNombreConexiones()){
-  //        QMessageBox::information(this,"No se puede generar ahora","Para
-  //        generar los vales deben estar todos los ordenadores conectados.");
-  //        return;
-  //    }
-  genVales = new GenerarVales(this);
-  genVales->exec();
-}
+  // Calcular el primer día del mes anterior (referencia para comprobar)
+  QDate hoy = QDate::currentDate();
+  QDate primerDiaMesAnterior = QDate(hoy.year(), hoy.month(), 1).addMonths(-1);
+  QString mesRef = primerDiaMesAnterior.toString("yyyy-MM");
+  QString mesLabel = primerDiaMesAnterior.toString("MMMM yyyy");
 
-void Tienda::sincronizarVales() {
-  QSqlQuery vales = base.valesPendientes(conf->getConexionLocal());
-  vales.first();
-  for (int i = 0; i < vales.numRowsAffected(); i++) {
-    if (base.usarVale(vales.record().value(2).toString(),
-                      vales.record().value(1).toInt())) {
-      base.borrarValePendiente(conf->getConexionLocal(),
-                               vales.record().value(1).toInt());
-    }
-    vales.next();
-  }
-  qDebug() << "Sincronizando vales";
-  comprobarVales();
-}
+  // Comprobar si ya existen vales generados para ese mes
+  QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
+  q.prepare("SELECT COUNT(*) FROM vales WHERE fechaEmision LIKE ?");
+  q.bindValue(0, mesRef + "%");
+  q.exec();
 
-void Tienda::comprobarVales() {
-  if (base.hayValesPendientesMarcar(conf->getConexionLocal())) {
-    QPalette pal = sincroVales->palette();
-    pal.setColor(QPalette::Button, QColor(Qt::red));
-    sincroVales->setAutoFillBackground(true);
-    sincroVales->setPalette(pal);
-    sincroVales->update();
-    ui->statusBar->addPermanentWidget(sincroVales);
+  if (q.first() && q.value(0).toInt() > 0) {
+    // Ya están generados: sólo informamos
+    QMessageBox::information(
+        this, "Vales ya generados",
+        QString("Los vales de %1 ya están generados (%2 vales)."
+                "\n\nSi necesitas regenerarlos, hazlo desde la base de datos.")
+            .arg(mesLabel)
+            .arg(q.value(0).toInt()));
     return;
   }
-  sincroVales->hide();
+
+  // No están generados: pedir confirmación
+  int resp = QMessageBox::question(
+      this, "Generar vales",
+      QString("No se han encontrado vales para %1.\n"
+              "¿Deseas generar los vales de fidelidad ahora?")
+          .arg(mesLabel),
+      QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+
+  if (resp != QMessageBox::Yes)
+    return;
+
+  // Lanzar el proceso de generación
+  genVales = new GenerarVales(this);
+  genVales->exec();
+  // Los vales insertados en local serán propagados a la nube
+  // en el próximo ciclo de SyncManager (máx. 5 minutos)
 }
 
 void Tienda::on_pushButtonCopia_clicked() {

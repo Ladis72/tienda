@@ -82,44 +82,51 @@ bool informes1::imprimir(QString tienda, QString fechaI, QString fechaF, QStanda
     double total = 0;
     double totalB = 0;
     QString html = R"(
-        <html>
-        <head>
-          <meta charset='utf-8'>
-          <style>
-            body { font-family: Arial, sans-serif; font-size: 10pt; }
-            h2 { text-align: center; margin-bottom: 10px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid #444; padding: 6px; text-align: right; }
-            th:first-child, td:first-child { text-align: left; }
-            th { background-color: #e0e0e0; }
-            tfoot td { font-weight: bold; border-top: 2px solid #000; }
-          </style>
-        </head>
-        <body>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 10pt; color: #333; }
+    .header { text-align: center; padding: 10px; border-bottom: 2px solid #2c3e50; margin-bottom: 20px; }
+    h2 { color: #2c3e50; margin-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { background-color: #2c3e50; color: white; padding: 8px; font-size: 9pt; }
+    td { border: 1px solid #ccc; padding: 6px; text-align: center; font-size: 9pt; }
+    tfoot td { font-weight: bold; background-color: #f9f9f9; border-top: 2px solid #2c3e50; }
+    .info { font-size: 10pt; color: #666; }
+  </style>
+</head>
+<body>
+  <div class='header'>
+    <h2>Informe de Ventas</h2>
+    <div class='info'>%TIENDA% | %DESDE_HASTA%</div>
+  </div>
 
-        <h2>Ventas de %FECHAS%</h2>
-
-        <table>
-          <thead>
-            <tr>
-              %CABECERAS%
-            </tr>
-          </thead>
-          <tbody>
-            %LINEAS%
-          </tbody>
-          <tfoot>
-            <tr>
-              <td>Total:</td>
-              %TOTALES%
-            </tr>
-          </tfoot>
-        </table>
-
-        </body>
-        </html>
-        )";
-    html.replace("%FECHAS%", tienda + " desde " + fechaI + " hasta" + fechaF);
+  <table>
+    <thead>
+      <tr>
+        %CABECERAS%
+      </tr>
+    </thead>
+    <tbody>
+      %LINEAS%
+    </tbody>
+    <tfoot>
+      <tr>
+        <td>TOTAL:</td>
+        %TOTALES%
+      </tr>
+    </tfoot>
+  </table>
+</body>
+</html>
+)";
+    html.replace("%TIENDA%", tienda);
+    html.replace("%DESDE_HASTA%", "Desde " + fechaI + " hasta " + fechaF);
+    
+    QString cabeceras = "<th>FECHA</th><th>VENTAS</th>";
+    if (tabla->columnCount() > 2) cabeceras += "<th>VENTAS B</th>";
+    html.replace("%CABECERAS%", cabeceras);
     if (tabla->columnCount() == 2) {
         for (int i = 0; i < tabla->rowCount(); ++i) {
             QString fecha = tabla->item(i, 0)->text();
