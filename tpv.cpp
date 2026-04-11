@@ -1013,49 +1013,58 @@ void Tpv::on_btn_encargo_clicked()
     }
 }
 
+/**
+ * @brief Marca el vale como usado en la BD local y propaga el cambio a la nube.
+ *
+ * Graba la l\u00ednea de descuento en el ticket, marca el vale como USADO (estado=2)
+ * en la BD local y, si hay conexi\u00f3n, tambi\u00e9n en la nube. El SyncManager se
+ * encarga de bajar el cambio al resto de tiendas en su pr\u00f3ximo ciclo (5 min).
+ * Si la nube no est\u00e1 disponible, el trigger local de sync_cola garantiza que
+ * el cambio se subir\u00e1 autom\u00e1ticamente cuando se recupere la conexi\u00f3n.
+ *
+ * @param ticket   N\u00famero de ticket al que se a\u00f1ade la l\u00ednea de vale
+ * @param idVale   ID del vale a marcar como usado
+ * @param cantVale Importe del vale (se descuenta en el ticket)
+ */
 void Tpv::usarVale(int ticket, int idVale, double cantVale)
 {
+    // --- 1. Grabar l\u00ednea negativa de descuento en el ticket ---
     QStringList lineaTicket;
-    lineaTicket.clear();
     lineaTicket.append(QString::number(ticket));
-    lineaTicket.append("9999999999999");
+    lineaTicket.append("9999999999999");          // c\u00f3digo reservado para vales
     lineaTicket.append("Vale fidelidad");
-    lineaTicket.append("1");
-    lineaTicket.append("0");
-    lineaTicket.append(QString::number(cantVale));
-    lineaTicket.append("0");
-    lineaTicket.append("-" + QString::number(cantVale));
+    lineaTicket.append("1");                       // cantidad
+    lineaTicket.append("0");                       // IVA
+    lineaTicket.append(QString::number(cantVale)); // precio
+    lineaTicket.append("0");                       // descuento
+    lineaTicket.append("-" + QString::number(cantVale)); // total negativo
     lineaTicket.append(QDate::currentDate().toString("yyyy-MM-dd"));
     lineaTicket.append(QTime::currentTime().toString("hh:mm"));
     base.grabarLineaTicket(lineaTicket);
 
-    // 2025-10-12
-
     QString conexionLocal = conf->getConexionLocal();
-    listaConexionesRemotas = conf->getNombreConexiones();
-    qDebug() << "🧩 Sincronizando vale usado con tiendas remotas en hilo separado...";
-    qDebug() << "Tienda local:" << conexionLocal;
-    qDebug() << "Tiendas remotas:" << listaConexionesRemotas;
 
-    //Marcar local
+    // --- 2. Marcar vale como USADO en la BD local ---
     if (base.usarVale(conexionLocal, idVale)) {
-        qDebug() << "Vale marcado correctamente en tienda local";
+        qDebug() << "Vale" << idVale << "marcado como usado en BD local";
     } else {
-        qWarning() << "Error al marcar en tienda local";
+        qWarning() << "Error al marcar el vale" << idVale << "en BD local";
     }
 
-    //Intentar en tiendas remotas
-    for (const QString &tienda : listaConexionesRemotas) {
-        QSqlDatabase db = QSqlDatabase::database(tienda);
-        if (!db.isOpen()) {
-            qWarning() << "Conexion cerrada con tienda " << tienda;
-            base.valesPendientesMarcar(conexionLocal, tienda, idVale);
-            continue;
+    // --- 3. Propagar a la nube si est\u00e1 disponible ---
+    // El SyncManager bajar\u00e1 el cambio al resto de tiendas en su pr\u00f3ximo ciclo.
+    // Si no hay conexi\u00f3n, el trigger local en sync_cola garantiza la propagaci\u00f3n
+    // autom\u00e1tica cuando se recupere la conexi\u00f3n con la nube.
+    QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    if (dbNube.isOpen()) {
+        if (base.usarVale(SyncManager::CONEXION_NUBE, idVale)) {
+            qDebug() << "Vale" << idVale << "marcado como usado en la nube";
+        } else {
+            qWarning() << "No se pudo marcar el vale" << idVale
+                       << "en la nube (se sincronizar\u00e1 en el pr\u00f3ximo ciclo)";
         }
-        if (!base.usarVale(tienda, idVale)) {
-            qWarning() << "Error al marcar el vale en la tienda remota " << tienda;
-            base.valesPendientesMarcar(conexionLocal, tienda, idVale);
-        }
+    } else {
+        qDebug() << "Vale" << idVale << ": nube no disponible, sync_cola propagar\u00e1 el cambio";
     }
 }
 

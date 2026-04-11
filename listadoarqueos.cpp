@@ -41,38 +41,39 @@ void ListadoArqueos::on_pushButtonImprimir_clicked()
 <head>
   <meta charset='utf-8'>
   <style>
-    body { font-family: Arial, sans-serif; font-size: 10pt; }
-    h2 { text-align: center; margin-bottom: 20px; }
-    .rango { text-align: center; margin-bottom: 15px; }
+    body { font-family: Arial, sans-serif; font-size: 9pt; color: #333; }
+    .header { text-align: center; padding: 10px; border-bottom: 2px solid #2c3e50; margin-bottom: 20px; }
+    h2 { color: #2c3e50; margin-bottom: 5px; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #333; padding: 6px; text-align: left; }
-    th { background-color: #f0f0f0; }
-    .total { text-align: right; margin-top: 20px; font-weight: bold; }
+    th { background-color: #2c3e50; color: white; padding: 6px; font-size: 8pt; }
+    td { border: 1px solid #ccc; padding: 5px; text-align: center; font-size: 8pt; }
+    .rango { font-size: 10pt; color: #666; }
   </style>
 </head>
 <body>
+  <div class='header'>
+    <h2>Listado de Arqueos de Caja</h2>
+    <div class='rango'>Desde: <strong>%DESDE%</strong> | Hasta: <strong>%HASTA%</strong></div>
+  </div>
 
-<h2>Listado de Arqueos</h2>
-<div class='rango'>
-  Desde: <b>%DESDE%</b> &nbsp;&nbsp;&nbsp; Hasta: <b>%HASTA%</b>
-</div>
-
-<table>
-  <tr>
-    <th>Fecha</th>
-    <th>Hora</th>
-    <th>Ventas efectivo</th>
-    <th>Ventas tarjeta</th>
-    <th>Entradas</th>
-    <th>Efectivo</th>
-    <th>Descuadre</th>
-    <th>Efectivo contado</th>
-    <th>Usuario</th>
-  </tr>
-  %LINEAS%
-</table>
-
-
+  <table>
+    <thead>
+      <tr>
+        <th>FECHA</th>
+        <th>HORA</th>
+        <th>V. EFECT.</th>
+        <th>V. TARJ.</th>
+        <th>ENTR.</th>
+        <th>EFECT.</th>
+        <th>DESCUAD.</th>
+        <th>CONTADO</th>
+        <th>USUARIO</th>
+      </tr>
+    </thead>
+    <tbody>
+      %LINEAS%
+    </tbody>
+  </table>
 </body>
 </html>
 )";

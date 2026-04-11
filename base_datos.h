@@ -54,10 +54,8 @@ public:
     bool caducarVales(QString nombreConexion);
     int idVale(QString nombreConexion, QString idCliente);
     bool usarVale(QString nombreConexion, int idVale);
-    bool valesPendientesMarcar(QString nombreConexion, QString tienda, int idVale);
-    bool hayValesPendientesMarcar(QString nombreConexion);
-    QSqlQuery valesPendientes(QString nombreConexion);
-    bool borrarValePendiente(QString nombreConexion, int vale);
+    // valesPendientesMarcar, hayValesPendientesMarcar, valesPendientes y borrarValePendiente
+    // han sido eliminados: la propagaci\u00f3n del estado del vale se hace v\u00eda nube (SyncManager)
     QSqlQuery tickesPorCLiente(QString nombreConexion,
                                QString fechaI,
                                QString fechaF,

@@ -16,7 +16,15 @@ ListadoCaducados::ListadoCaducados(QWidget *parent)
     hasta = fechaActual.toString("yyyy-MM-dd");
     desde = targetDate.toString("yyyy-MM-dd");
 
-    mCaducados = new QSqlQueryModel;
+    mCaducados = new QSqlQueryModel(this);
+    proxyModel = new QSortFilterProxyModel(this);
+    proxyModel->setSourceModel(mCaducados);
+    proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
+    proxyModel->setFilterKeyColumn(-1); // Filtrar en todas las columnas visibles
+
+    ui->tableView->setModel(proxyModel);
+    ui->tableView->setSortingEnabled(true);
+    
     llenarTabla(desde, hasta);
     ui->dateEditHasta->setDate(fechaActual);
     ui->dateEditDesde->setDate(targetDate);
@@ -39,6 +47,11 @@ void ListadoCaducados::on_dateEditHasta_userDateChanged(const QDate &date)
     llenarTabla(desde, hasta);
 }
 
+void ListadoCaducados::on_lineEditBuscar_textChanged(const QString &text)
+{
+    proxyModel->setFilterFixedString(text);
+}
+
 void ListadoCaducados::on_pushButtonImprimir_clicked()
 {
     QTextDocument documento;
@@ -48,28 +61,33 @@ void ListadoCaducados::on_pushButtonImprimir_clicked()
 <head>
   <meta charset='utf-8'>
   <style>
-    body { font-family: Arial, sans-serif; font-size: 10pt; }
-    h2 { text-align: center; margin-bottom: 10px; }
+    body { font-family: Arial, sans-serif; font-size: 10pt; color: #333; }
+    .header { text-align: center; padding: 10px; border-bottom: 2px solid #2c3e50; margin-bottom: 20px; }
+    h2 { color: #2c3e50; margin-bottom: 5px; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #444; padding: 6px; text-align: right; }
+    th { background-color: #2c3e50; color: white; padding: 8px; font-size: 9pt; }
+    td { border: 1px solid #ccc; padding: 6px; text-align: center; font-size: 9pt; }
     th:first-child, td:first-child { text-align: left; }
-    th { background-color: #e0e0e0; }
-    tfoot td { font-weight: bold; border-top: 2px solid #000; }
+    tfoot td { font-weight: bold; background-color: #f9f9f9; border-top: 2px solid #2c3e50; }
   </style>
 </head>
 <body>
 
-<h2>Resumen de Caducados entre %FECHAS%</h2>
+<div class='header'>
+  <h2>Resumen de Caducados</h2>
+  <div>Rango: %FECHAS%</div>
+</div>
 
 <table>
   <thead>
     <tr>
-    <th>Cod.</th>
-    <th>Cantidad</th>
-    <th>Producto</th>
-    <th>Fecha op.</th>
-    <th>Precio</th>
-    <th>Fecha cad.</th>    </tr>
+      <th>CÓDIGO</th>
+      <th>CANTIDAD</th>
+      <th>PRODUCTO</th>
+      <th>FECHA OP.</th>
+      <th>PRECIO</th>
+      <th>FECHA CAD.</th>
+    </tr>
   </thead>
   <tbody>
     %LINEAS%
@@ -87,20 +105,45 @@ void ListadoCaducados::on_pushButtonImprimir_clicked()
 )";
 
     html.replace("%FECHAS%", desde + " hasta " + hasta);
-    for (int i = 0; i < mCaducados->rowCount(); ++i) {
-        QString cod = mCaducados->data(mCaducados->index(i, 1)).toString();
-        QString cantidad = mCaducados->data(mCaducados->index(i, 2)).toString();
-        QString descripcion = mCaducados->data(mCaducados->index(i, 3)).toString();
-        QString fecha = mCaducados->data(mCaducados->index(i, 4)).toString();
-        QString precio = mCaducados->data(mCaducados->index(i, 5)).toString();
-        QString fechaCad = mCaducados->data(mCaducados->index(i, 6)).toString();
+    
+    double totalCantidad = 0;
+    double totalImporte = 0;
+
+    // Usamos el proxyModel para que el PDF refleje el orden y filtro de la pantalla
+    for (int i = 0; i < proxyModel->rowCount(); ++i) {
+        QString cod = proxyModel->data(proxyModel->index(i, 1)).toString();
+        double cantidad = proxyModel->data(proxyModel->index(i, 2)).toDouble();
+        QString descripcion = proxyModel->data(proxyModel->index(i, 3)).toString();
+        QString fecha = proxyModel->data(proxyModel->index(i, 4)).toString();
+        double precio = proxyModel->data(proxyModel->index(i, 5)).toDouble();
+        QString fechaCad = proxyModel->data(proxyModel->index(i, 6)).toString();
+
+        totalCantidad += cantidad;
+        totalImporte += (cantidad * precio);
 
         lineasHtml
             += QString(
                    "<tr><td>%1</td><td>%2</td><td>%3</td><td>%4</td><td>%5 €</td><td>%6</td></tr>")
-                   .arg(cod, cantidad, descripcion, fecha, precio, fechaCad);
+                   .arg(cod)
+                   .arg(cantidad, 0, 'f', 2)
+                   .arg(descripcion, fecha)
+                   .arg(precio, 0, 'f', 2)
+                   .arg(fechaCad);
     }
     html.replace("%LINEAS%", lineasHtml);
+
+    // Preparar la fila de totales (6 columnas en total)
+    // 1: "Total:" (ya está en el HTML)
+    // 2: Suma de cantidades
+    // 3: Vacío (Producto)
+    // 4: Vacío (Fecha op)
+    // 5: Suma de importes (Cantidad * Precio)
+    // 6: Vacío (Fecha cad)
+    QString totalesHtml = QString("<td>%1</td><td></td><td></td><td>%2 €</td><td></td>")
+                              .arg(totalCantidad, 0, 'f', 2)
+                              .arg(totalImporte, 0, 'f', 2);
+    
+    html.replace("%TOTALES%", totalesHtml);
 
     documento.setHtml(html);
 
@@ -116,7 +159,6 @@ void ListadoCaducados::on_pushButtonImprimir_clicked()
 void ListadoCaducados::llenarTabla(QString desde, QString hasta)
 {
     mCaducados->setQuery(base->listadoCaducados(conf->getConexionLocal(), desde, hasta));
-    ui->tableView->setModel(mCaducados);
     ui->tableView->resizeColumnsToContents();
     ui->tableView->hideColumn(0);
 }

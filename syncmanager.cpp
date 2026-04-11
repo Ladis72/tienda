@@ -30,7 +30,8 @@ const QStringList SyncManager::TABLAS_MAESTRAS = {
     "clientes",
     "codaux",       // depende de articulos
     "usuarios",
-    "permisos"
+    "permisos",
+    "vales"         // vales de fidelidad (estado se propaga via nube)
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -153,7 +154,8 @@ void SyncManager::crearTriggers()
         {"formatos",       "idformato"},
         {"motivosEntrada", "idtiposEntrada"},
         {"usuarios",       "id"},
-        {"permisos",       "id"}
+        {"permisos",       "id"},
+        {"vales",          "idvales"}  // clave primaria de la tabla vales
     };
 
     for (const QString &tabla : TABLAS_MAESTRAS) {
@@ -375,12 +377,13 @@ int SyncManager::subirCambios()
         } else {
             // Obtener el nombre de la clave primaria para esta tabla
             QString pk = "id";
-            if (tabla == "articulos") pk = "cod";
-            else if (tabla == "clientes") pk = "idCliente";
-            else if (tabla == "proveedores") pk = "idProveedor";
-            else if (tabla == "impuestos") pk = "tipoIva";
-            else if (tabla == "formatos") pk = "idformato";
+            if (tabla == "articulos")      pk = "cod";
+            else if (tabla == "clientes")       pk = "idCliente";
+            else if (tabla == "proveedores")    pk = "idProveedor";
+            else if (tabla == "impuestos")      pk = "tipoIva";
+            else if (tabla == "formatos")       pk = "idformato";
             else if (tabla == "motivosEntrada") pk = "idtiposEntrada";
+            else if (tabla == "vales")          pk = "idvales";
 
             // Leer el registro completo de la BD local
             QSqlQuery reg(dbLocal);

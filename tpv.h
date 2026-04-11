@@ -14,6 +14,7 @@
 #include "clientes.h"
 #include "configuracion.h"
 #include "formateo.h"
+#include "syncmanager.h"  // para SyncManager::CONEXION_NUBE
 #include "totalizar.h"
 #include "visorimagenes.h"
 
@@ -82,7 +83,7 @@ private:
     int cliente;
     int idVale;
     double descuentoCliente, vale;
-    QStringList listaConexionesRemotas;
+    // listaConexionesRemotas eliminada: la propagación de vales se hace via nube
     QString conexionLocal, tabla;
     Formateo classFormatear;
     Ui::Tpv *ui;

@@ -18,27 +18,27 @@ class Stock : public QDialog
     Q_OBJECT
 
 public:
-    explicit Stock(QString cod, QWidget *parent = nullptr);
+    explicit Stock(QString cod, baseDatos *db, QWidget *parent = nullptr);
     ~Stock();
 
 private slots:
-    void on_pushButtonActualizar_clicked();
-
-    void on_pushButton_clicked();
-
-    void on_pushButtonBorrar_clicked();
-
     void on_tableView_clicked(const QModelIndex &index);
+    void on_pushButtonValidar_clicked();
+    void on_pushButtonHistory_clicked();
+    void on_pushButtonNuevoLote_clicked();
+    void on_pushButtonCerrar_clicked();
 
 private:
     Ui::Stock *ui;
     baseDatos *base;
     QString codProducto;
     QSqlTableModel *modeloLotes;
-    int filaSeleccionada;
+    int filaSeleccionada = -1;
+    QString currentLoteId;
     QSqlQuery producto;
 
-    void keyPressEvent(QKeyEvent *e);
+    void refrescarLotes();
+    void limpiarFormulario();
 };
 
 #endif // STOCK_H

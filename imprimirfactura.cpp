@@ -33,119 +33,67 @@ void ImprimirFactura::facturaPDF()
 <head>
   <meta charset='utf-8'>
   <style>
-    body {
-        font-family: Arial, sans-serif;
-        font-size: 10pt;
-        margin: 0;
-        padding: 0;
-        border: 9;
-    }
-    .cabecera-superior {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin: 0;
-        padding: 0;
-    }
-    .numero-factura {
-        font-size: 12pt;
-        font-weight: bold;
-        text-align: center
-    }
-    .fecha-factura {
-        font-size: 12pt;
-        font-weight: bold;
-        text-align: right;
-    }
-    table.cabecera {
-        width: 100%;
-        border: none;
-        margin-bottom: 8px;
-    }
-    td {
-        vertical-align: top;
-    }
-    .lineas {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 8px;
-        font-size: 10pt;
-    }
-    .lineas th {
-        background-color: #f0f0f0;
-        font-weight: bold;
-        padding: 5px;
-    }
-    .lineas th, .lineas td {
-        border: 1px solid black;
-        padding: 4px;
-    }
-    .lineas td {
-        text-align: right;
-    }
-    .lineas td:nth-child(2) {
-        text-align: left;
-    }
-    .totales {
-        text-align: right;
-        margin-top: 12px;
-        font-size: 10pt;
-        font-weight: bold;
-    }
-    .seccion {
-        margin-bottom: 2px;
-    }
-    .borde-superior {
-        border-top: 2px solid #000;
-        padding-top: 6px;
-    }
+    body { font-family: Arial, sans-serif; font-size: 10pt; color: #333; margin: 0; padding: 0; }
+    .cabecera-superior { padding: 10px; border-bottom: 2px solid #2c3e50; margin-bottom: 10px; text-align: right; }
+    .numero-factura { font-size: 14pt; font-weight: bold; color: #2c3e50; }
+    table.cabecera { width: 100%; border: none; margin-bottom: 20px; }
+    .lineas { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    .lineas th { background-color: #2c3e50; color: white; padding: 8px; font-size: 9pt; }
+    .lineas td { border: 1px solid #ccc; padding: 6px; text-align: right; font-size: 9pt; }
+    .lineas td:nth-child(2) { text-align: left; }
+    .totales { text-align: right; margin-top: 20px; font-size: 11pt; }
+    .total-final { font-size: 14pt; color: #e74c3c; font-weight: bold; border-top: 2px solid #2c3e50; padding-top: 10px; }
   </style>
 </head>
 <body>
 <!-- Número de factura y fecha en la parte SUPERIOR -->
 <div class='cabecera-superior'>
-    <div class='numero-factura'>FACTURA Nº %NUM_FACTURA% <br>FECHA: %FECHA%</div>
+    <div class='numero-factura'>FACTURA Nº %NUM_FACTURA%</div>
+    <div>FECHA: %FECHA%</div>
 </div>
 
 <table class='cabecera' style='width: 100%; border-collapse: collapse;'>
   <!-- Logo centrado y ancho -->
   <tr>
-    <td colspan='2' style='text-align: center; padding: 3px 0;'>
-      <img src=':/imagenes/documentos/Cabecera factura.png' width='500' style='max-width: 100%; height: auto;' alt='Logo Emeicjac'/>
+    <td colspan='2' style='text-align: center; padding: 10px 0;'>
+      <img src=':/imagenes/documentos/Cabecera factura.png' width='600' style='max-width: 100%; height: auto;' alt='Logo Emeicjac'/>
     </td>
   </tr>
 
   <!-- Información en dos columnas -->
   <tr>
-    <td style='width: 50%; vertical-align: top; padding: 7px 10px; border-top: 2px solid #000;'>
-
-      <b>%CLIENTE%<br/>
+    <td style='width: 50%; vertical-align: top; padding: 15px; background-color: #f9f9f9; border-radius: 5px;'>
+      <div style='color: #2c3e50; font-weight: bold; margin-bottom: 5px;'>CLIENTE:</div>
+      <b>%CLIENTE%</b>
     </td>
 
-    <td style='width: 50%; vertical-align: top; padding: 15px 10px; border-top: 2px solid #000; text-align: right;'>
-
-      <b>%TIENDA%<br/>
-
+    <td style='width: 50%; vertical-align: top; padding: 15px; text-align: right;'>
+      <div style='color: #2c3e50; font-weight: bold; margin-bottom: 5px;'>EMISOR:</div>
+      %TIENDA%
     </td>
   </tr>
 </table>
 
 <table class='lineas'>
-  <tr>
-    <th>Cantidad</th>
-    <th>Descripción</th>
-    <th>Precio</th>
-    <th>Descuento</th>
-    <th>IVA</th>
-    <th>Total</th>
-  </tr>
-  %LINEAS%
+  <thead>
+    <tr>
+      <th>CANTIDAD</th>
+      <th>DESCRIPCIÓN</th>
+      <th>PRECIO</th>
+      <th>DESC.</th>
+      <th>IVA</th>
+      <th>TOTAL</th>
+    </tr>
+  </thead>
+  <tbody>
+    %LINEAS%
+  </tbody>
 </table>
 
 <div class='totales'>
-  <p><b>Total base:</b> %BASE%</p>
-  <p><b>Total IVA:</b> %IVA%</p>
-  <p><b>Total factura:</b> %TOTAL%</p>
+  <p>Total Base: <strong>%BASE% €</strong></p>
+  <p>Total IVA: <strong>%IVA% €</strong></p>
+  <div class='total-final'>TOTAL FACTURA: %TOTAL% €</div>
 </div>
 
 </body>
