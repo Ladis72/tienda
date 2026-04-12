@@ -45,6 +45,8 @@ private slots:
     void on_pushButtonRetirarDinero_clicked();
 
     void on_pushButtonAceptar_clicked();
+    void on_pushButtonCerrar_clicked();
+    void on_lineEditVentasTarjeta_textChanged(const QString &arg1);
 
 private:
     Ui::Cajas *ui;

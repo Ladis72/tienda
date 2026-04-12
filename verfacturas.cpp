@@ -203,3 +203,8 @@ void VerFacturas::on_pushButtonVerFactura_clicked()
 
     imprimirFacturaProveedor factura(conf->getConexionLocal(), datos, idFactura);
 }
+
+void VerFacturas::on_pushButtonCerrar_clicked()
+{
+    close();
+}

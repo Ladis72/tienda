@@ -173,6 +173,30 @@ bool Clientes::eventFilter(QObject *obj, QEvent *event) {
   return false;
 }
 
+void Clientes::keyPressEvent(QKeyEvent *e) {
+  if (e->key() == Qt::Key_F2) {
+    mostrarVentasB = !mostrarVentasB;
+    if (mostrarVentasB) {
+      // Cambio a tonos rojizos/rosáceos para indicar modo "B" (consolidado)
+      ui->headerFrame->setStyleSheet(
+          "QFrame#headerFrame { background-color: #fce4ec; border-radius: 10px; "
+          "border: 1px solid #f8bbd0; }");
+      ui->labelNombreCliente->setStyleSheet("color: #c2185b;");
+      qDebug() << "Clientes: Modo Consolidado (F2) ACTIVADO";
+    } else {
+      // Volver a los tonos verdes originales
+      ui->headerFrame->setStyleSheet(
+          "QFrame#headerFrame { background-color: #e8f5e9; border-radius: 10px; "
+          "border: 1px solid #c8e6c9; }");
+      ui->labelNombreCliente->setStyleSheet("color: #2e7d32;");
+      qDebug() << "Clientes: Modo Consolidado (F2) DESACTIVADO";
+    }
+    refrescarBotones(mapper.currentIndex());
+  } else {
+    QDialog::keyPressEvent(e);
+  }
+}
+
 void Clientes::refrescarBotones(int i) {
   ui->pushButtonAnterior->setEnabled(i > 0);
   ui->pushButtonSiguiente->setEnabled(i < modeloTabla->rowCount() - 1);
@@ -235,11 +259,21 @@ void Clientes::cargarCompras() {
   // Llenar datos de tickets iterando las BDs (solo agregaciones)
   for (int c = 0; c < conexionesConsultar.length(); c++) {
     QString connName = conexionesConsultar.at(c);
-    QString queryStr =
-        "SELECT * FROM tickets WHERE cliente = " + codigoCliente +
-        " AND fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" +
-        hasta.toString("yyyy-MM-dd") + "'";
-    listaTickets->setQuery(queryStr, QSqlDatabase::database(connName));
+    QSqlDatabase db = QSqlDatabase::database(connName);
+    
+    QString queryStr;
+    if (mostrarVentasB && db.tables().contains("ticketss")) {
+        QString subQuery = QString("SELECT fecha, total FROM tickets WHERE cliente = %1 "
+                                   "UNION ALL "
+                                   "SELECT fecha, total FROM ticketss WHERE cliente = %1").arg(codigoCliente);
+        queryStr = "SELECT fecha, total FROM (" + subQuery + ") as sub "
+                   "WHERE fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" + hasta.toString("yyyy-MM-dd") + "'";
+    } else {
+        queryStr = "SELECT fecha, total FROM tickets WHERE cliente = " + codigoCliente +
+                   " AND fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" + hasta.toString("yyyy-MM-dd") + "'";
+    }
+        
+    listaTickets->setQuery(queryStr, db);
 
     for (int i = 0; i < listaTickets->rowCount(); i++) {
       QDate fecha = listaTickets->record(i).value("fecha").toDate();
@@ -355,11 +389,21 @@ void Clientes::cargarTicketsPorRango(const QString &rangoMapeado) {
 
   for (int c = 0; c < conexionesConsultar.length(); c++) {
     QString connName = conexionesConsultar.at(c);
-    QString queryStr =
-        "SELECT * FROM tickets WHERE cliente = " + codigoCliente +
-        " AND fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" +
-        hasta.toString("yyyy-MM-dd") + "'";
-    listaTickets->setQuery(queryStr, QSqlDatabase::database(connName));
+    QSqlDatabase db = QSqlDatabase::database(connName);
+    
+    QString queryStr;
+    if (mostrarVentasB && db.tables().contains("ticketss")) {
+        QString subQuery = QString("SELECT *, 'A' as tipo_sector FROM tickets WHERE cliente = %1 "
+                                   "UNION ALL "
+                                   "SELECT *, 'B' as tipo_sector FROM ticketss WHERE cliente = %1").arg(codigoCliente);
+        queryStr = "SELECT * FROM (" + subQuery + ") as t "
+                   "WHERE fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" + hasta.toString("yyyy-MM-dd") + "'";
+    } else {
+        queryStr = "SELECT *, 'A' as tipo_sector FROM tickets WHERE cliente = " + codigoCliente +
+                   " AND fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" + hasta.toString("yyyy-MM-dd") + "'";
+    }
+        
+    listaTickets->setQuery(queryStr, db);
 
     for (int i = 0; i < listaTickets->rowCount(); i++) {
       QDate fecha = listaTickets->record(i).value("fecha").toDate();
@@ -401,10 +445,24 @@ void Clientes::cargarTicketsPorRango(const QString &rangoMapeado) {
       listaItems << new QStandardItem(
           listaTickets->record(i).value("cambio").toString());
       listaItems << new QStandardItem(connName);
+      
+      // Columna oculta para el tipo de sector (A o B)
+      QStandardItem *itemTipo = new QStandardItem(listaTickets->record(i).value("tipo_sector").toString());
+      listaItems << itemTipo;
+      
       vistaTickets->appendRow(listaItems);
+      
+      // Resaltar en rojo claro si es del sector B
+      if (listaTickets->record(i).value("tipo_sector").toString() == "B") {
+          for (int col = 0; col < listaItems.count(); ++col) {
+              listaItems.at(col)->setBackground(QBrush(QColor(255, 235, 238)));
+              listaItems.at(col)->setForeground(QBrush(QColor(183, 28, 28)));
+          }
+      }
     }
   }
   ui->tableView2->resizeColumnsToContents();
+  ui->tableView2->hideColumn(11); // Ocultar el tipo_sector
   ui->tableView2->sortByColumn(2, Qt::DescendingOrder);
 }
 
@@ -607,7 +665,11 @@ void Clientes::on_tableView2_doubleClicked(const QModelIndex &index) {
   QModelIndex indiceTienda = vistaTickets->index(index.row(), 10);
   QString dbName = vistaTickets->data(indiceTienda, Qt::EditRole).toString();
 
-  ticket->setQuery("SELECT * FROM lineasticket WHERE nticket = '" + nTicket +
+  QModelIndex indiceTipo = vistaTickets->index(index.row(), 11);
+  QString sector = vistaTickets->data(indiceTipo, Qt::EditRole).toString();
+  QString tablaLineas = (sector == "B") ? "lineasticketss" : "lineasticket";
+
+  ticket->setQuery("SELECT * FROM " + tablaLineas + " WHERE nticket = '" + nTicket +
                        "'",
                    QSqlDatabase::database(dbName));
 
@@ -644,7 +706,8 @@ void Clientes::on_radioButtonCantidad_clicked() {
       continue;
     QSqlQuery q = base.productosPorClienteCantidad(conn, codigoCliente,
                                                    ui->dateEditDesde_2->date(),
-                                                   ui->dateEditHasta_2->date());
+                                                   ui->dateEditHasta_2->date(),
+                                                   mostrarVentasB);
     while (q.next()) {
       QString cod = q.value(0).toString();
       QString desc = q.value(1).toString();
@@ -709,7 +772,8 @@ void Clientes::on_radioButtonFecha_clicked() {
       continue;
     QSqlQuery q = base.productosPorClienteFecha(conn, codigoCliente,
                                                 ui->dateEditDesde_2->date(),
-                                                ui->dateEditHasta_2->date());
+                                                ui->dateEditHasta_2->date(),
+                                                mostrarVentasB);
     while (q.next()) {
       QString cod = q.value(0).toString();
       QString desc = q.value(1).toString();

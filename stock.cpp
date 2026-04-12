@@ -16,7 +16,7 @@ Stock::Stock(QString cod, baseDatos *db, QWidget *parent)
     QSqlRecord registroProd = base->consulta_producto(conf->getConexionLocal(), cod);
     if (!registroProd.isEmpty()) {
         codProducto = registroProd.value("cod").toString();
-        ui->label->setText(QString("Producto: %1 (EAN: %2)")
+        ui->labelProductoHeader->setText(QString("Producto: %1 (EAN: %2)")
                            .arg(registroProd.value("descripcion").toString())
                            .arg(codProducto));
     }

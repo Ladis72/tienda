@@ -74,10 +74,8 @@ SOURCES += main.cpp\
     verifactuclass.cpp \
     visorimagenes.cpp \
     visorfacturas.cpp \
-    prestamos.cpp \
     dateeditdelegate.cpp \
     configuracionotros.cpp \
-    prestamistas.cpp \
     listadosalidas.cpp \
     listadoarqueos.cpp \
     listadocaducados.cpp \
@@ -151,10 +149,8 @@ HEADERS  += tienda.h \
     verifactuclass.h \
     visorimagenes.h \
     visorfacturas.h \
-    prestamos.h \
     dateeditdelegate.h \
     configuracionotros.h \
-    prestamistas.h \
     listadosalidas.h \
     listadoarqueos.h \
     listadocaducados.h \
@@ -214,9 +210,7 @@ FORMS    += tienda.ui \
     configbase.ui \
     visorimagenes.ui \
     visorfacturas.ui \
-    prestamos.ui \
     configuracionotros.ui \
-    prestamistas.ui \
     listadosalidas.ui \
     listadoarqueos.ui \
     listadocaducados.ui \

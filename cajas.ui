@@ -6,1000 +6,200 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>665</width>
-    <height>572</height>
+    <width>750</width>
+    <height>850</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Arqueo de caja</string>
+   <string>Arqueo de Caja</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout_2">
-   <item row="0" column="0">
-    <widget class="QLabel" name="label_31">
-     <property name="text">
-      <string>Fecha último arqueo</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="1">
-    <widget class="QLabel" name="labelFUArqueo">
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">color: rgb(30, 90, 255);</string>
-     </property>
-     <property name="text">
-      <string>TextLabel</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0" rowspan="2">
-    <widget class="QFrame" name="frame">
-     <property name="frameShape">
-      <enum>QFrame::Shape::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Shadow::Raised</enum>
-     </property>
-     <layout class="QGridLayout" name="gridLayout">
-      <item row="1" column="3">
-       <widget class="QDoubleSpinBox" name="doubleSpinBoxCambios">
-        <property name="font">
-         <font>
-          <family>Fira Sans</family>
-         </font>
-        </property>
-        <property name="locale">
-         <locale language="Spanish" country="UnitedStates"/>
-        </property>
-        <property name="correctionMode">
-         <enum>QAbstractSpinBox::CorrectionMode::CorrectToPreviousValue</enum>
-        </property>
-        <property name="showGroupSeparator" stdset="0">
-         <bool>false</bool>
-        </property>
-        <property name="maximum">
-         <double>9999.989999999999782</double>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label_23">
-        <property name="font">
-         <font>
-          <family>Fira Sans</family>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>Caja F.</string>
-        </property>
-        <property name="buddy">
-         <cstring>doubleSpinBoxCajaF</cstring>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label_22">
-        <property name="font">
-         <font>
-          <family>Fira Sans</family>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>Ca&amp;mbios</string>
-        </property>
-        <property name="buddy">
-         <cstring>doubleSpinBoxCambios</cstring>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label_24">
-        <property name="font">
-         <font>
-          <family>Fira Sans</family>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>Tar&amp;jetas</string>
-        </property>
-        <property name="buddy">
-         <cstring>doubleSpinBoxTarjetas</cstring>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="3">
-       <widget class="QDoubleSpinBox" name="doubleSpinBoxTarjetas">
-        <property name="font">
-         <font>
-          <family>Fira Sans</family>
-         </font>
-        </property>
-        <property name="locale">
-         <locale language="Spanish" country="UnitedStates"/>
-        </property>
-        <property name="maximum">
-         <double>9999.989999999999782</double>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QGroupBox" name="groupBox">
-        <property name="font">
-         <font>
-          <family>Fira Sans</family>
-         </font>
-        </property>
-        <property name="title">
-         <string>Billetes</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_5">
-         <item row="2" column="0">
-          <widget class="QLabel" name="label_4">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>&amp;200€</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox200</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QSpinBox" name="spinBox500"/>
-         </item>
-         <item row="3" column="0">
-          <widget class="QLabel" name="label_5">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>&amp;100€</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox100</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="1">
-          <widget class="QSpinBox" name="spinBox20"/>
-         </item>
-         <item row="6" column="0">
-          <widget class="QLabel" name="label_7">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>20€</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox20</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="QSpinBox" name="spinBox100"/>
-         </item>
-         <item row="5" column="0">
-          <widget class="QLabel" name="label_6">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>5&amp;0€</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox50</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QSpinBox" name="spinBox200"/>
-         </item>
-         <item row="5" column="1">
-          <widget class="QSpinBox" name="spinBox50"/>
-         </item>
-         <item row="7" column="0">
-          <widget class="QLabel" name="label_8">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>10€</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox10</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="8" column="0">
-          <widget class="QLabel" name="label_9">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>5€</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox5</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_3">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>&amp;500€</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox500</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="8" column="1">
-          <widget class="QSpinBox" name="spinBox5"/>
-         </item>
-         <item row="7" column="1">
-          <widget class="QSpinBox" name="spinBox10"/>
-         </item>
-         <item row="0" column="2">
-          <widget class="QLabel" name="label500">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="2">
-          <widget class="QLabel" name="label200">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="2">
-          <widget class="QLabel" name="label100">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="2">
-          <widget class="QLabel" name="label50">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="2">
-          <widget class="QLabel" name="label20">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="7" column="2">
-          <widget class="QLabel" name="label10">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="8" column="2">
-          <widget class="QLabel" name="label5">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item row="0" column="3">
-       <widget class="QGroupBox" name="groupBox_2">
-        <property name="font">
-         <font>
-          <family>Fira Sans</family>
-         </font>
-        </property>
-        <property name="title">
-         <string>Monedas</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_7">
-         <item row="7" column="1">
-          <widget class="QSpinBox" name="spinBox5c"/>
-         </item>
-         <item row="5" column="1">
-          <widget class="QSpinBox" name="spinBox20c"/>
-         </item>
-         <item row="9" column="1">
-          <widget class="QSpinBox" name="spinBox1c"/>
-         </item>
-         <item row="4" column="0">
-          <widget class="QLabel" name="label_10">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>50c</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox50c</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="0">
-          <widget class="QLabel" name="label_16">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>10c</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox10c</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_14">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>2€</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox2</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QSpinBox" name="spinBox2"/>
-         </item>
-         <item row="7" column="0">
-          <widget class="QLabel" name="label_15">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>5c</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox5c</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1">
-          <widget class="QSpinBox" name="spinBox50c"/>
-         </item>
-         <item row="8" column="0">
-          <widget class="QLabel" name="label_11">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>2c</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox2c</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="9" column="0">
-          <widget class="QLabel" name="label_17">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>1c</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox1c</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="8" column="1">
-          <widget class="QSpinBox" name="spinBox2c"/>
-         </item>
-         <item row="3" column="0">
-          <widget class="QLabel" name="label_13">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>1€</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox1</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="0">
-          <widget class="QLabel" name="label_12">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>20c</string>
-           </property>
-           <property name="buddy">
-            <cstring>spinBox20c</cstring>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="QSpinBox" name="spinBox1"/>
-         </item>
-         <item row="6" column="1">
-          <widget class="QSpinBox" name="spinBox10c"/>
-         </item>
-         <item row="0" column="2">
-          <widget class="QLabel" name="label2">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="2">
-          <widget class="QLabel" name="label1">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="2">
-          <widget class="QLabel" name="label50c">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="2">
-          <widget class="QLabel" name="label20c">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="2">
-          <widget class="QLabel" name="label10c">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="7" column="2">
-          <widget class="QLabel" name="label5c">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="8" column="2">
-          <widget class="QLabel" name="label2c">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="9" column="2">
-          <widget class="QLabel" name="label1c">
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item row="3" column="3">
-       <widget class="QDoubleSpinBox" name="doubleSpinBoxCajaF">
-        <property name="font">
-         <font>
-          <family>Fira Sans</family>
-         </font>
-        </property>
-        <property name="locale">
-         <locale language="Spanish" country="UnitedStates"/>
-        </property>
-        <property name="maximum">
-         <double>9999.989999999999782</double>
-        </property>
-       </widget>
-      </item>
-     </layout>
-     <zorder>groupBox</zorder>
-     <zorder>groupBox_2</zorder>
-     <zorder>label_22</zorder>
-     <zorder>label_23</zorder>
-     <zorder>doubleSpinBoxCambios</zorder>
-     <zorder>doubleSpinBoxCajaF</zorder>
-     <zorder>label_24</zorder>
-     <zorder>doubleSpinBoxTarjetas</zorder>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QFrame" name="frame_2">
-     <property name="frameShape">
-      <enum>QFrame::Shape::StyledPanel</enum>
-     </property>
-     <property name="frameShadow">
-      <enum>QFrame::Shadow::Raised</enum>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_3">
-      <item row="1" column="0">
-       <widget class="QGroupBox" name="groupBox_3">
-        <property name="font">
-         <font>
-          <family>Fira Sans</family>
-         </font>
-        </property>
-        <property name="title">
-         <string>Movimientos</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_6">
-         <item row="3" column="0">
-          <widget class="QLabel" name="label_2">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>false</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>Ventas tarjeta</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="label">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>false</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>Ventas efectivo</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QLabel" name="labelNumeroTarjetas">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="7" column="0">
-          <widget class="QLabel" name="label_29">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>false</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>Efectivo total</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1">
-          <widget class="QLabel" name="labelSaldoAnterior">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="7" column="1">
-          <widget class="QLabel" name="labelEfectivoTotal">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">color: rgb(0, 0, 255);</string>
-           </property>
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="QLabel" name="label_ventasTarjeta">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">color: rgb(0, 0, 255);</string>
-           </property>
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="0">
-          <widget class="QLabel" name="label_20">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>false</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>Entradas</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="0">
-          <widget class="QLabel" name="label_19">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>false</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>Saldo anterior</string>
-           </property>
-          </widget>
-         </item>
-         <item row="9" column="0">
-          <widget class="QLabel" name="label_27">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>false</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>Descuadre</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="1">
-          <widget class="QLabel" name="labelEntradas">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">color: rgb(0, 0, 255);</string>
-           </property>
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="8" column="0">
-          <widget class="QLabel" name="label_28">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>false</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>Efectivo real</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="0">
-          <spacer name="verticalSpacer">
-           <property name="orientation">
-            <enum>Qt::Orientation::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item row="8" column="1">
-          <widget class="QLabel" name="labelEfectivoR">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">color: rgb(0, 170, 0);</string>
-           </property>
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="9" column="1">
-          <widget class="QLabel" name="labelDescuadre">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="label_18">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>false</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>Número de tarjetas</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QLabel" name="label_ventasEfectivo">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">color: rgb(0, 0, 255);</string>
-           </property>
-           <property name="frameShape">
-            <enum>QFrame::Shape::NoFrame</enum>
-           </property>
-           <property name="text">
-            <string>0</string>
-           </property>
-           <property name="textFormat">
-            <enum>Qt::TextFormat::AutoText</enum>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <widget class="QLabel" name="label_21">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>false</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>Ventas B</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLabel" name="label_ventasB">
-           <property name="font">
-            <font>
-             <family>Fira Sans</family>
-             <pointsize>12</pointsize>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>0</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" rowspan="2">
-          <widget class="QGroupBox" name="groupBox_4">
-           <property name="title">
-            <string>Total ventas</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_4">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_ventasTotales">
-              <property name="font">
-               <font>
-                <family>Fira Sans</family>
-                <pointsize>12</pointsize>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">color: rgb(0, 255, 127)</string>
-              </property>
-              <property name="text">
-               <string>0</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-        </layout>
-       </widget>
+  <property name="styleSheet">
+   <string notr="true">QDialog { background-color: #f5f7fa; }
+QFrame#headerFrame { background-color: #2e7d32; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; }
+QLabel#headerTitle { color: white; font-size: 24px; font-weight: bold; }
+QGroupBox { font-weight: bold; border: 2px solid #e0e0e0; border-radius: 10px; margin-top: 1.2em; padding: 15px; background-color: white; }
+QGroupBox::title { subcontrol-origin: margin; left: 15px; padding: 0 5px; color: #2e7d32; }
+QLineEdit, QDoubleSpinBox, QSpinBox { padding: 5px; border: 1px solid #d1d9e6; border-radius: 5px; background-color: #ffffff; }
+QLineEdit:focus, QDoubleSpinBox:focus, QSpinBox:focus { border: 2px solid #2e7d32; }
+QPushButton#pushButtonAceptar { background-color: #2e7d32; color: white; border-radius: 5px; padding: 10px 20px; font-weight: bold; }
+QPushButton#pushButtonAceptar:hover { background-color: #1b5e20; }
+QPushButton#pushButtonCerrar { background-color: #e0e0e0; color: #424242; border-radius: 5px; padding: 10px 20px; }
+QPushButton#pushButtonCerrar:hover { background-color: #bdbdbd; }
+QLabel { color: #424242; }</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing"><number>10</number></property>
+   <property name="leftMargin"><number>0</number></property>
+   <property name="topMargin"><number>0</number></property>
+   <property name="rightMargin"><number>0</number></property>
+   <property name="bottomMargin"><number>15</number></property>
+   <item>
+    <widget class="QFrame" name="headerFrame">
+     <property name="minimumSize"><size><width>0</width><height>70</height></size></property>
+     <layout class="QHBoxLayout" name="horizontalLayout_header">
+      <property name="leftMargin"><number>30</number></property>
+      <item><widget class="QLabel" name="headerTitle"><property name="text"><string>ARQUEO DE CAJA</string></property></widget></item>
+      <item><spacer name="horizontalSpacer_h"><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+      <item>
+       <layout class="QVBoxLayout" name="vbox_hu">
+        <item><widget class="QLabel" name="label_u"><property name="text"><string>Último arqueo:</string></property><property name="styleSheet"><string>color: #e8f5e9;</string></property></widget></item>
+        <item><widget class="QLabel" name="labelFUArqueo"><property name="text"><string>-</string></property><property name="styleSheet"><string>color: white; font-weight: bold;</string></property></widget></item>
+       </layout>
       </item>
      </layout>
     </widget>
    </item>
-   <item row="2" column="1">
-    <layout class="QHBoxLayout" name="horizontalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="mainContent">
+     <property name="leftMargin"><number>15</number></property>
+     <property name="rightMargin"><number>15</number></property>
      <item>
-      <widget class="QPushButton" name="pushButtonCerrar">
-       <property name="font">
-        <font>
-         <family>Fira Sans</family>
-        </font>
-       </property>
-       <property name="text">
-        <string>Cerrar</string>
-       </property>
-      </widget>
+      <layout class="QVBoxLayout" name="leftPanel">
+       <item>
+        <widget class="QGroupBox" name="groupBox_efectivo">
+         <property name="title"><string>CONTEO DE EFECTIVO</string></property>
+         <layout class="QGridLayout" name="gridLayout_conteo">
+          <item row="0" column="0"><widget class="QLabel" name="label_500"><property name="text"><string>500 €</string></property></widget></item>
+          <item row="0" column="1"><widget class="QSpinBox" name="spinBox500"/></item>
+          <item row="0" column="2"><widget class="QLabel" name="label500"><property name="text"><string>0.00</string></property></widget></item>
+          
+          <item row="1" column="0"><widget class="QLabel" name="label_200_2"><property name="text"><string>200 €</string></property></widget></item>
+          <item row="1" column="1"><widget class="QSpinBox" name="spinBox200"/></item>
+          <item row="1" column="2"><widget class="QLabel" name="label200"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="2" column="0"><widget class="QLabel" name="label_100_2"><property name="text"><string>100 €</string></property></widget></item>
+          <item row="2" column="1"><widget class="QSpinBox" name="spinBox100"/></item>
+          <item row="2" column="2"><widget class="QLabel" name="label100"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="3" column="0"><widget class="QLabel" name="label_50_2"><property name="text"><string>50 €</string></property></widget></item>
+          <item row="3" column="1"><widget class="QSpinBox" name="spinBox50"/></item>
+          <item row="3" column="2"><widget class="QLabel" name="label50"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="4" column="0"><widget class="QLabel" name="label_20_2"><property name="text"><string>20 €</string></property></widget></item>
+          <item row="4" column="1"><widget class="QSpinBox" name="spinBox20"/></item>
+          <item row="4" column="2"><widget class="QLabel" name="label20"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="5" column="0"><widget class="QLabel" name="label_10_2"><property name="text"><string>10 €</string></property></widget></item>
+          <item row="5" column="1"><widget class="QSpinBox" name="spinBox10"/></item>
+          <item row="5" column="2"><widget class="QLabel" name="label10"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="6" column="0"><widget class="QLabel" name="label_5_2"><property name="text"><string>5 €</string></property></widget></item>
+          <item row="6" column="1"><widget class="QSpinBox" name="spinBox5"/></item>
+          <item row="6" column="2"><widget class="QLabel" name="label5"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="7" column="0"><widget class="QLabel" name="label_2_2"><property name="text"><string>2 €</string></property></widget></item>
+          <item row="7" column="1"><widget class="QSpinBox" name="spinBox2"/></item>
+          <item row="7" column="2"><widget class="QLabel" name="label2"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="8" column="0"><widget class="QLabel" name="label_1_2"><property name="text"><string>1 €</string></property></widget></item>
+          <item row="8" column="1"><widget class="QSpinBox" name="spinBox1"/></item>
+          <item row="8" column="2"><widget class="QLabel" name="label1"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="9" column="0"><widget class="QLabel" name="label_50c_2"><property name="text"><string>0.50 €</string></property></widget></item>
+          <item row="9" column="1"><widget class="QSpinBox" name="spinBox50c"/></item>
+          <item row="9" column="2"><widget class="QLabel" name="label50c"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="10" column="0"><widget class="QLabel" name="label_20c_2"><property name="text"><string>0.20 €</string></property></widget></item>
+          <item row="10" column="1"><widget class="QSpinBox" name="spinBox20c"/></item>
+          <item row="10" column="2"><widget class="QLabel" name="label20c"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="11" column="0"><widget class="QLabel" name="label_10c_2"><property name="text"><string>0.10 €</string></property></widget></item>
+          <item row="11" column="1"><widget class="QSpinBox" name="spinBox10c"/></item>
+          <item row="11" column="2"><widget class="QLabel" name="label10c"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="12" column="0"><widget class="QLabel" name="label_5c_2"><property name="text"><string>0.05 €</string></property></widget></item>
+          <item row="12" column="1"><widget class="QSpinBox" name="spinBox5c"/></item>
+          <item row="12" column="2"><widget class="QLabel" name="label5c"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="13" column="0"><widget class="QLabel" name="label_2c_2"><property name="text"><string>0.02 €</string></property></widget></item>
+          <item row="13" column="1"><widget class="QSpinBox" name="spinBox2c"/></item>
+          <item row="13" column="2"><widget class="QLabel" name="label2c"><property name="text"><string>0.00</string></property></widget></item>
+
+          <item row="14" column="0"><widget class="QLabel" name="label_1c_2"><property name="text"><string>0.01 €</string></property></widget></item>
+          <item row="14" column="1"><widget class="QSpinBox" name="spinBox1c"/></item>
+          <item row="14" column="2"><widget class="QLabel" name="label1c"><property name="text"><string>0.00</string></property></widget></item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButtonRetirarDinero">
-       <property name="font">
-        <font>
-         <family>Fira Sans</family>
-        </font>
-       </property>
-       <property name="text">
-        <string>Retirar dinero</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonAceptar">
-       <property name="font">
-        <font>
-         <family>Fira Sans</family>
-        </font>
-       </property>
-       <property name="text">
-        <string>Aceptar</string>
-       </property>
-      </widget>
+      <layout class="QVBoxLayout" name="rightPanel">
+       <item>
+        <widget class="QGroupBox" name="groupBox_sistema">
+         <property name="title"><string>DATOS DEL SISTEMA</string></property>
+         <layout class="QGridLayout" name="gridLayout_sys">
+          <item row="0" column="0"><widget class="QLabel" name="label_ve"><property name="text"><string>Ventas Efectivo:</string></property></widget></item>
+          <item row="0" column="1"><widget class="QLabel" name="label_ventasEfectivo"><property name="alignment"><set>Qt::AlignRight</set></property><property name="styleSheet"><string>font-weight: bold;</string></property></widget></item>
+          
+          <item row="1" column="0"><widget class="QLabel" name="label_1_t"><property name="text"><string>Ventas B:</string></property></widget></item>
+          <item row="1" column="1"><widget class="QLabel" name="label_ventasB"><property name="alignment"><set>Qt::AlignRight</set></property><property name="styleSheet"><string>font-weight: bold;</string></property></widget></item>
+
+          <item row="2" column="0"><widget class="QLabel" name="label_vt_t"><property name="text"><string>Tarjeta (Sistema):</string></property></widget></item>
+          <item row="2" column="1"><widget class="QLabel" name="labelVentasTarjeta"><property name="alignment"><set>Qt::AlignRight</set></property><property name="styleSheet"><string>font-weight: bold;</string></property></widget></item>
+
+          <item row="3" column="0"><widget class="QLabel" name="label_nt_t"><property name="text"><string>Nº Op. Tarjeta:</string></property></widget></item>
+          <item row="3" column="1"><widget class="QLabel" name="labelNumeroTarjetas"><property name="alignment"><set>Qt::AlignRight</set></property><property name="styleSheet"><string>font-weight: bold;</string></property></widget></item>
+
+          <item row="4" column="0"><widget class="QLabel" name="label_sal_t"><property name="text"><string>Salidas / Gastos:</string></property></widget></item>
+          <item row="4" column="1"><widget class="QLabel" name="labelEntradas"><property name="alignment"><set>Qt::AlignRight</set></property><property name="styleSheet"><string>font-weight: bold;</string></property></widget></item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_manual">
+         <property name="title"><string>ENTRADA MANUAL</string></property>
+         <layout class="QGridLayout" name="gridLayout_man">
+          <item row="0" column="0"><widget class="QLabel" name="label_ma_t"><property name="text"><string>Ventas Tarjeta (Físico):</string></property></widget></item>
+          <item row="0" column="1"><widget class="QLineEdit" name="lineEditVentasTarjeta"><property name="alignment"><set>Qt::AlignRight</set></property></widget></item>
+
+          <item row="1" column="0"><widget class="QLabel" name="label_ci_t"><property name="text"><string>Cambio Inicial:</string></property></widget></item>
+          <item row="1" column="1"><widget class="QDoubleSpinBox" name="doubleSpinBoxCambios"><property name="alignment"><set>Qt::AlignRight</set></property><property name="maximum"><double>9999.99</double></property></widget></item>
+
+          <item row="2" column="0"><widget class="QLabel" name="label_cf_t"><property name="text"><string>Caja Fuerte:</string></property></widget></item>
+          <item row="2" column="1"><widget class="QDoubleSpinBox" name="doubleSpinBoxCajaF"><property name="alignment"><set>Qt::AlignRight</set></property><property name="maximum"><double>9999.99</double></property></widget></item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_resumen">
+         <property name="title"><string>RESUMEN ARQUEO</string></property>
+         <layout class="QGridLayout" name="gridLayout_res">
+          <item row="0" column="0"><widget class="QLabel" name="label_tv_t"><property name="text"><string>TOTAL VENTAS:</string></property></widget></item>
+          <item row="0" column="1"><widget class="QLabel" name="label_ventasTotales"><property name="alignment"><set>Qt::AlignRight</set></property><property name="styleSheet"><string>font-size: 12pt; font-weight: bold;</string></property></widget></item>
+
+          <item row="1" column="0"><widget class="QLabel" name="label_te_t"><property name="text"><string>SALDO TEÓRICO CAJA:</string></property></widget></item>
+          <item row="1" column="1"><widget class="QLabel" name="labelEfectivoTotal"><property name="alignment"><set>Qt::AlignRight</set></property><property name="styleSheet"><string>font-size: 12pt; font-weight: bold;</string></property></widget></item>
+
+          <item row="2" column="0"><widget class="QLabel" name="label_er_t"><property name="text"><string>EFECTIVO REAL:</string></property></widget></item>
+          <item row="2" column="1"><widget class="QLabel" name="labelEfectivoR"><property name="alignment"><set>Qt::AlignRight</set></property><property name="styleSheet"><string>font-size: 14pt; font-weight: bold; color: #2e7d32;</string></property></widget></item>
+
+          <item row="3" column="0"><widget class="QLabel" name="label_1_1"><property name="text"><string>DESCUADRE:</string></property></widget></item>
+          <item row="3" column="1"><widget class="QLabel" name="labelDescuadre"><property name="alignment"><set>Qt::AlignRight</set></property><property name="styleSheet"><string>font-size: 14pt; font-weight: bold;</string></property></widget></item>
+          
+          <item row="4" column="0"><widget class="QLabel" name="label_21"><property name="text"><string>Indicador B:</string></property><property name="visible"><bool>false</bool></property></widget></item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="h_info">
+         <item><widget class="QLabel" name="label_sa_t"><property name="text"><string>Saldo Inicial:</string></property></widget></item>
+         <item><widget class="QLabel" name="labelSaldoAnterior"><property name="styleSheet"><string>font-weight: bold;</string></property></widget></item>
+         <item><spacer name="h_s"><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="h_buttons">
+         <item><widget class="QPushButton" name="pushButtonRetirarDinero"><property name="text"><string>Retirar Dinero</string></property></widget></item>
+         <item><spacer name="h_s2"><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+         <item><widget class="QPushButton" name="pushButtonCerrar"><property name="text"><string>Cerrar</string></property></widget></item>
+         <item><widget class="QPushButton" name="pushButtonAceptar"><property name="text"><string>ACEPTAR</string></property></widget></item>
+        </layout>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>
   </layout>
  </widget>
- <tabstops>
-  <tabstop>doubleSpinBoxCambios</tabstop>
-  <tabstop>doubleSpinBoxTarjetas</tabstop>
-  <tabstop>doubleSpinBoxCajaF</tabstop>
-  <tabstop>spinBox500</tabstop>
-  <tabstop>spinBox200</tabstop>
-  <tabstop>spinBox100</tabstop>
-  <tabstop>spinBox50</tabstop>
-  <tabstop>spinBox20</tabstop>
-  <tabstop>spinBox10</tabstop>
-  <tabstop>spinBox5</tabstop>
-  <tabstop>spinBox2</tabstop>
-  <tabstop>spinBox1</tabstop>
-  <tabstop>spinBox50c</tabstop>
-  <tabstop>spinBox20c</tabstop>
-  <tabstop>spinBox10c</tabstop>
-  <tabstop>spinBox5c</tabstop>
-  <tabstop>spinBox2c</tabstop>
-  <tabstop>spinBox1c</tabstop>
-  <tabstop>pushButtonCerrar</tabstop>
-  <tabstop>pushButtonRetirarDinero</tabstop>
-  <tabstop>pushButtonAceptar</tabstop>
- </tabstops>
- <resources/>
- <connections>
-  <connection>
-   <sender>pushButtonCerrar</sender>
-   <signal>clicked()</signal>
-   <receiver>Cajas</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>580</x>
-     <y>406</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>542</x>
-     <y>413</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
 </ui>

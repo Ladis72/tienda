@@ -60,8 +60,8 @@ public:
                                QString fechaI,
                                QString fechaF,
                                QString idCliente);
-    QSqlQuery productosPorClienteCantidad(QString nombreConexion, QString idCliente, QDate fechaI, QDate fechaF);
-    QSqlQuery productosPorClienteFecha(QString nombreConexion, QString idCliente, QDate fechaI, QDate fechaF);
+    QSqlQuery productosPorClienteCantidad(QString nombreConexion, QString idCliente, QDate fechaI, QDate fechaF, bool consolidado = false);
+    QSqlQuery productosPorClienteFecha(QString nombreConexion, QString idCliente, QDate fechaI, QDate fechaF, bool consolidado = false);
 
     //FUNCIONES USUARIOS
 
@@ -174,7 +174,7 @@ public:
                                          QString nPrimerTicketB,
                                          QString nUltimoTicketB);
     QSqlQuery listadoVentaArticulos(QString inicio, QString final, QString nombreDB);
-    QSqlQuery listadoMovimientosEfectivo(QString db, QString inicio, QString final);
+    QSqlQuery listadoMovimientosEfectivo(QString db, QString inicio, QString final, int idTipo = -1);
     QSqlQuery listadoCaducados(QString base, QString desde, QString hasta);
 
     // Funciones ESTADÍSTICAS.

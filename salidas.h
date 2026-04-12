@@ -38,6 +38,7 @@ private slots:
     void actualizarTotales();
 
     void on_comboBoxDestino_currentIndexChanged(int index);
+    void on_pushButtonCerrar_clicked();
 
 private:
     Ui::Salidas *ui;

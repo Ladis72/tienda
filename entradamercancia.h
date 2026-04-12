@@ -44,6 +44,7 @@ private slots:
     void limpiarTabla(int idTienda);
 
     void on_comboBoxProcedencia_currentIndexChanged(int index);
+    void on_pushButtonSalir_clicked();
 
 private:
     Ui::EntradaMercancia *ui;

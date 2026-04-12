@@ -104,9 +104,12 @@ private:
   void recargarTabla();
   void borrarFormulario();
   bool eventFilter(QObject *obj, QEvent *event);
+  void keyPressEvent(QKeyEvent *e) override;
   void refrescarBotones(int i);
   void cargarCompras();
   QStringList recogerDatosFormulario();
+
+  bool mostrarVentasB = false;
 };
 
 #endif // CLIENTES_H
