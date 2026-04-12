@@ -26,6 +26,13 @@ public:
   void setConexionMaster(QString conn);
   QString getConexionLocal();
   void setConexionLocal(QString conn);
+  
+  /// @brief Devuelve la conexión a usar para tablas comunes (Artículos, Clientes, etc.)
+  /// Según la configuración, puede ser la local o la nube.
+  QString getConexionCommon();
+  bool getUsarPreciosLocales();
+  void setUsarPreciosLocales(bool value);
+
   QString getUsuario();
   void setUsuario(QString user);
   int getRol();
@@ -41,6 +48,7 @@ private:
   QStringList nombreconexionesActivas;
   QString conexionMaster;
   QString conexionLocal;
+  bool usarPreciosLocales;
   int rol;
 
   /// Gestor de permisos granulares embebido (no es un puntero para

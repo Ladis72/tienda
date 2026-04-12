@@ -186,10 +186,11 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         }
 
         //Comprobar cambio de nombre o PVP y actualizar artículos
-        consulta = base.consulta_producto(conf->getConexionLocal(), ean);
-        consulta.first();
-        QString descripcionAnterior = consulta.value("descripcion").toString();
-        QString precioAnterior = consulta.value("pvp").toString();
+        QSqlRecord registroProd = base.consulta_producto(conf->getConexionLocal(), ean);
+        if (registroProd.isEmpty()) continue;
+
+        QString descripcionAnterior = registroProd.value("descripcion").toString();
+        QString precioAnterior = registroProd.value("pvp").toString();
         switch (tipoActualizacion) {
         case 2:
             descripcion = descripcionAnterior;

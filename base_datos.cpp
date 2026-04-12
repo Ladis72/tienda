@@ -152,14 +152,30 @@ QSqlDatabase baseDatos::conexion() {
   return QSqlDatabase();
 }
 
-QSqlQuery baseDatos::consulta_producto(QString nombreConnexion, QString cod) {
-  qDebug() << "Nombre conexion" << nombreConnexion;
-  if (QSqlDatabase::database(nombreConnexion).isOpen()) {
-    QSqlQuery consulta(QSqlDatabase::database(nombreConnexion));
-    consulta.exec("SELECT * FROM articulos WHERE cod LIKE '" + cod + "'");
-    return consulta;
+QSqlRecord baseDatos::consulta_producto(QString nombreConnexion, QString cod) {
+  QSqlRecord registro;
+  QSqlDatabase dbQuery = QSqlDatabase::database(nombreConnexion);
+  
+  if (dbQuery.isOpen()) {
+    QSqlQuery consulta(dbQuery);
+    consulta.prepare("SELECT * FROM articulos WHERE cod = ?");
+    consulta.bindValue(0, cod);
+    if (consulta.exec() && consulta.first()) {
+      registro = consulta.record();
+      
+      // Si se usan precios locales, buscar excepción en la conexión "DB" (precios_tienda no se sincroniza)
+      if (conf->getUsarPreciosLocales()) {
+          QSqlQuery qLocal(QSqlDatabase::database("DB"));
+          qLocal.prepare("SELECT pvp, precio_venta FROM precios_tienda WHERE cod_articulo = ?");
+          qLocal.bindValue(0, cod);
+          if (qLocal.exec() && qLocal.next()) {
+            registro.setValue("pvp", qLocal.value("pvp"));
+            registro.setValue("precio_venta", qLocal.value("precio_venta"));
+          }
+      }
+    }
   }
-  return QSqlQuery();
+  return registro;
 }
 
 QSqlQuery baseDatos::buscarProducto(QSqlDatabase db, QString tabla,
@@ -168,11 +184,24 @@ QSqlQuery baseDatos::buscarProducto(QSqlDatabase db, QString tabla,
     QSqlQuery consulta(db);
     // consulta.exec("SELECT * FROM "+tabla+" WHERE descripcion LIKE
     // '%"+nombre+"%' ORDER BY descripcion");
-    consulta.exec(
-        "SELECT articulos.*, SUM(lotes.cantidad) as stock_total, "
-        "MIN(lotes.fecha) as fecha_caducidad FROM articulos LEFT JOIN lotes ON "
-        "articulos.cod=lotes.ean WHERE articulos.descripcion LIKE '%" +
-        nombre + "%' GROUP BY articulos.cod");
+    QString pvpQuery = conf->getUsarPreciosLocales() 
+        ? "IF(pt.pvp IS NOT NULL, pt.pvp, articulos.pvp)" 
+        : "articulos.pvp";
+
+    QString sql = QString(
+        "SELECT articulos.cod, articulos.descripcion, %1 as pvp, articulos.iva, "
+        "articulos.stock, articulos.min, articulos.max, articulos.pendientes_pedido, "
+        "articulos.encargados, articulos.ultima_venta, articulos.ultimo_pedido, "
+        "articulos.familia, articulos.precio_compra, articulos.fabricante, articulos.foto, "
+        "articulos.notas, articulos.formato, articulos.cantformato, "
+        "SUM(lotes.cantidad) as stock_total, MIN(lotes.fecha) as fecha_caducidad "
+        "FROM articulos "
+        "LEFT JOIN lotes ON articulos.cod = lotes.ean "
+        "LEFT JOIN precios_tienda pt ON articulos.cod = pt.cod_articulo "
+        "WHERE articulos.descripcion LIKE '%%2%' "
+        "GROUP BY articulos.cod").arg(pvpQuery).arg(nombre);
+
+    consulta.exec(sql);
     return consulta;
   }
   return QSqlQuery();
@@ -1856,22 +1885,26 @@ QSqlQuery baseDatos::listadoCaducados(QString base, QString desde,
   return consulta;
 }
 
-QString baseDatos::leerConfiguracion() {
+QMap<QString, QVariant> baseDatos::leerConfiguracion() {
+  QMap<QString, QVariant> config;
   QSqlQuery consulta(QSqlDatabase::database("DB"));
-  consulta.exec("SELECT * FROM configuracion");
-  consulta.first();
-  return consulta.value("recargoeq").toString();
+  if (consulta.exec("SELECT * FROM configuracion") && consulta.first()) {
+    config["recargoeq"] = consulta.value("recargoeq");
+    config["precios_locales"] = consulta.value("precios_locales");
+  }
+  return config;
 }
 
-bool baseDatos::GuardarConfiguracion(int datos) {
+bool baseDatos::GuardarConfiguracion(QMap<QString, QVariant> datos) {
   QSqlQuery consulta(QSqlDatabase::database("DB"));
-  consulta.prepare(
-      "UPDATE configuracion SET recargoeq = ? WHERE idconfiguracion = 0");
-  consulta.bindValue(0, datos);
-  qDebug() << consulta.lastError();
+  consulta.prepare("UPDATE configuracion SET recargoeq = ?, precios_locales = ? "
+                   "WHERE idconfiguracion = 0");
+  consulta.bindValue(0, datos.value("recargoeq", 0));
+  consulta.bindValue(1, datos.value("precios_locales", 0));
   if (consulta.exec()) {
     return true;
   }
+  qDebug() << consulta.lastError().text();
   return false;
 }
 

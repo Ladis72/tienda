@@ -87,6 +87,13 @@ void Articulos::refrescarBotones(int i) {
   QPixmap imagenAjustada = imagen.scaled(200, 200, Qt::KeepAspectRatio);
 
   ui->labelFoto->setPixmap(imagenAjustada);
+  
+  // Buscar excepción de precio local para mostrarla en el formulario
+  QSqlRecord registroConOverride = base.consulta_producto(conf->getConexionCommon(), ui->lineEditCod->text());
+  if (!registroConOverride.isEmpty()) {
+      ui->lineEditPvp->setText(registroConOverride.value("pvp").toString());
+  }
+
   ui->labelNombrePrecio->setText(ui->lineEditDesc->text() + "        " +
                                  ui->lineEditPvp->text());
   ui->lineEditStock->setText(base.sumarStockArticulo(ui->lineEditCod->text(),
@@ -246,9 +253,22 @@ QStringList Articulos::recogerDatosFormulario() {
 }
 
 void Articulos::recargarTabla() {
-  qDebug() << conf->getConexionLocal();
-  modeloTabla->setQuery("SELECT * FROM articulos",
-                        QSqlDatabase::database(conf->getConexionLocal()));
+  qDebug() << "Cargando artículos desde:" << conf->getConexionCommon();
+  
+  QString pvpQuery = conf->getUsarPreciosLocales() 
+      ? "IF(pt.pvp IS NOT NULL, pt.pvp, a.pvp)" 
+      : "a.pvp";
+
+  QString sql = QString(
+      "SELECT a.cod, a.descripcion, %1 as pvp, a.iva, a.stock, a.min, a.max, "
+      "a.pendientes_pedido, a.encargados, a.ultima_venta, a.ultimo_pedido, "
+      "a.familia, a.precio_compra, a.fabricante, a.foto, a.notas, a.formato, "
+      "a.cantformato "
+      "FROM articulos a "
+      "LEFT JOIN precios_tienda pt ON a.cod = pt.cod_articulo")
+      .arg(pvpQuery);
+
+  modeloTabla->setQuery(sql, QSqlDatabase::database(conf->getConexionCommon()));
   mapper.setModel(modeloTabla);
 }
 
@@ -325,7 +345,7 @@ void Articulos::cargarCodAux() {
 }
 
 void Articulos::llenarComboFormatos() {
-  consulta = base.devolverTablaCompleta(conf->getConexionLocal(), "formatos");
+  QSqlQuery consulta = base.devolverTablaCompleta(conf->getConexionLocal(), "formatos");
   consulta.first();
   do {
     ui->comboBoxFormato->addItem(consulta.value("formato").toString());
@@ -571,11 +591,13 @@ void Articulos::on_pushButtonSiguiente_clicked() {
 
 void Articulos::on_pushButtonModificar_clicked() {
   QStringList datos = recogerDatosFormulario();
-  int i = mapper.currentIndex();
+  QString cod = ui->lineEditCod->text();
+  int idx = mapper.currentIndex();
 
   QMessageBox msgBox(this);
   msgBox.setWindowTitle("Confirmar Cambios");
-  msgBox.setText("¿Desea guardar los cambios realizados en este artículo?");
+  msgBox.setText("¿Desea guardar los cambios realizados?");
+  
   msgBox.setIcon(QMessageBox::Question);
   msgBox.setStandardButtons(QMessageBox::Save | QMessageBox::Cancel);
   msgBox.setDefaultButton(QMessageBox::Save);
@@ -583,18 +605,47 @@ void Articulos::on_pushButtonModificar_clicked() {
   msgBox.setButtonText(QMessageBox::Cancel, "Cancelar");
 
   if (msgBox.exec() == QMessageBox::Save) {
-    if (base.modificarArticulo(QSqlDatabase::database(conf->getConexionLocal()),
-                               datos, ui->lineEditCod->text())) {
-      QMessageBox::information(this, "Éxito",
-                               "Los cambios se han guardado correctamente.");
-    } else {
-      QMessageBox::critical(
-          this, "Error",
-          "No se pudo guardar la modificación. Verifique los datos.");
-    }
-    recargarTabla();
-    mapper.setCurrentIndex(i);
-    refrescarBotones(mapper.currentIndex());
+      bool ok = false;
+      if (conf->getUsarPreciosLocales()) {
+          // 1. Guardar PVP localmente (No sincronizado)
+          QSqlQuery qLocal(QSqlDatabase::database("DB"));
+          qLocal.prepare("INSERT INTO precios_tienda (cod_articulo, pvp, precio_venta) "
+                         "VALUES (?,?,?) ON DUPLICATE KEY UPDATE pvp=?, precio_venta=?");
+          qLocal.bindValue(0, cod);
+          qLocal.bindValue(1, ui->lineEditPvp->text().toDouble());
+          qLocal.bindValue(2, ui->lineEditPvp->text().toDouble());
+          qLocal.bindValue(3, ui->lineEditPvp->text().toDouble());
+          qLocal.bindValue(4, ui->lineEditPvp->text().toDouble());
+          qLocal.exec();
+
+          // 2. Guardar el resto de campos globalmente (Sincronizado)
+          // Para no alterar el PVP global de otras tiendas, mantenemos el PVP original de 'articulos'
+          QSqlQuery queryOri(QSqlDatabase::database("DB"));
+          queryOri.prepare("SELECT pvp FROM articulos WHERE cod = ?");
+          queryOri.bindValue(0, cod);
+          if (queryOri.exec() && queryOri.next()) {
+              datos.replace(2, queryOri.value(0).toString());
+          }
+          ok = base.modificarArticulo(QSqlDatabase::database("DB"), datos, cod);
+      } else {
+          // Guardar todo de forma global
+          ok = base.modificarArticulo(QSqlDatabase::database("DB"), datos, cod);
+          
+          // Limpiar excepción local si existiera
+          QSqlQuery qDel(QSqlDatabase::database("DB"));
+          qDel.prepare("DELETE FROM precios_tienda WHERE cod_articulo = ?");
+          qDel.bindValue(0, cod);
+          qDel.exec();
+      }
+
+      if (ok) {
+          QMessageBox::information(this, "Éxito", "Cambios guardados correctamente.");
+      } else {
+          QMessageBox::critical(this, "Error", "No se pudieron guardar los cambios.");
+      }
+      recargarTabla();
+      mapper.setCurrentIndex(idx);
+      refrescarBotones(mapper.currentIndex());
   }
 }
 
@@ -662,7 +713,7 @@ void Articulos::on_lineEditCodFabricante_textChanged(const QString &arg1) {
 }
 
 void Articulos::on_lineEditDesc_returnPressed() {
-  consulta =
+  QSqlQuery consulta =
       base.buscarProducto(QSqlDatabase::database(conf->getConexionLocal()),
                           "articulos", ui->lineEditDesc->text());
   consulta.first();
@@ -692,10 +743,10 @@ void Articulos::on_lineEditCod_returnPressed() {
   qDebug() << "MAL";
   QString cod =
       base.codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
-  consulta = base.consulta_producto(conf->getConexionLocal(), cod);
-  consulta.first();
-  if (consulta.numRowsAffected() == 1) {
-    ui->lineEditCod->setText(consulta.value(0).toString());
+  QSqlRecord registroProd = base.consulta_producto(conf->getConexionLocal(), cod);
+  
+  if (!registroProd.isEmpty()) {
+    ui->lineEditCod->setText(registroProd.value("cod").toString());
     emit on_lineEditCod_returnPressed();
     return;
   }
@@ -711,19 +762,14 @@ void Articulos::on_lineEditCod_returnPressed() {
       qDebug() << "No hay conexiones remotas activas.";
     }
     for (int i = 0; i < listaConexionesRemotas.length(); i++) {
-      QSqlQuery consulta = base.consulta_producto(listaConexionesRemotas.at(i),
+      QSqlRecord registroRemoto = base.consulta_producto(listaConexionesRemotas.at(i),
                                                   ui->lineEditCod->text());
-      qDebug() << consulta.lastQuery();
-      qDebug() << listaConexionesRemotas.at(i);
-      qDebug() << ui->lineEditCod->text();
-      if (consulta.numRowsAffected() > 0) {
-        consulta.first();
-        QSqlRecord q = consulta.record();
+      if (!registroRemoto.isEmpty()) {
         QStringList datos;
         datos.clear();
-        for (int i = 0; i < q.count(); i++) {
-          datos.append(q.value(i).toString());
-          qDebug() << q.value(i).toString();
+        for (int i = 0; i < registroRemoto.count(); i++) {
+          datos.append(registroRemoto.value(i).toString());
+          qDebug() << registroRemoto.value(i).toString();
         }
         msgbox.setText("¿UTILIZAR ESTOS DATOS?");
         msgbox.setInformativeText(datos.join("\n"));
@@ -764,9 +810,9 @@ void Articulos::on_pushButtonBuscarFabricante_clicked() {
 }
 
 void Articulos::on_pushButtonNuevo_clicked() {
-  consulta =
+  QSqlRecord registroExistente =
       base.consulta_producto(conf->getConexionLocal(), ui->lineEditCod->text());
-  if (consulta.numRowsAffected() > 0) {
+  if (!registroExistente.isEmpty()) {
     QMessageBox::warning(this, "ATENCION", "El registro ya existe");
     return;
   }

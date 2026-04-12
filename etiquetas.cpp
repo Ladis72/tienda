@@ -91,15 +91,18 @@ void Etiquetas::llenarModelo()
     listaEtiquetas.first();
     for (int i = 0; i < listaEtiquetas.numRowsAffected(); ++i) {
         qDebug() << "COD: " << listaEtiquetas.record().value(0).toString();
-        QSqlQuery producto = base->consulta_producto("DB",
+        QSqlRecord registroProd = base->consulta_producto("DB",
                                                      listaEtiquetas.record().value(0).toString());
-        producto.first();
-        double pvp = producto.value(2).toDouble();
-        QStandardItem *cod = new QStandardItem(producto.value(0).toString());
-        QStandardItem *nombre = new QStandardItem(producto.value(1).toString());
+        if (registroProd.isEmpty()) {
+            listaEtiquetas.next();
+            continue;
+        }
+        double pvp = registroProd.value("pvp").toDouble();
+        QStandardItem *cod = new QStandardItem(registroProd.value("cod").toString());
+        QStandardItem *nombre = new QStandardItem(registroProd.value("descripcion").toString());
         QStandardItem *precio = new QStandardItem(QString::number(pvp, 'f', 2));
-        QStandardItem *formato = new QStandardItem(producto.value("formato").toString());
-        QStandardItem *cantidad = new QStandardItem(producto.value("cantformato").toString());
+        QStandardItem *formato = new QStandardItem(registroProd.value("formato").toString());
+        QStandardItem *cantidad = new QStandardItem(registroProd.value("cantformato").toString());
         modelo->setItem(i, 0, cod);
         modelo->setItem(i, 1, nombre);
         modelo->setItem(i, 2, precio);

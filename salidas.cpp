@@ -61,23 +61,22 @@ void Salidas::on_lineEditCod_returnPressed()
     if (codigo.isEmpty())
         return;
 
-    QSqlQuery consulta = base->consulta_producto(conf->getConexionLocal(), codigo);
+    QSqlRecord registro = base->consulta_producto(conf->getConexionLocal(), codigo);
 
     // 1. Buscar por código directo
-    if (!consulta.first()) {
+    if (registro.isEmpty()) {
         // 2. Buscar por código auxiliar
         QString codAux = base->codigoDesdeAux(conf->getConexionLocal(), codigo);
         if (!codAux.isEmpty()) {
-            consulta = base->consulta_producto(conf->getConexionLocal(), codAux);
-            consulta.first();
+            registro = base->consulta_producto(conf->getConexionLocal(), codAux);
         }
     }
 
     // 3. Si hay producto válido
-    if (consulta.isValid()) {
-        ui->lineEditCod->setText(consulta.value("cod").toString());
-        ui->lineEditDesc->setText(consulta.value("descripcion").toString());
-        ui->lineEditPrecio->setText(consulta.value("pvp").toString());
+    if (!registro.isEmpty()) {
+        ui->lineEditCod->setText(registro.value("cod").toString());
+        ui->lineEditDesc->setText(registro.value("descripcion").toString());
+        ui->lineEditPrecio->setText(registro.value("pvp").toString());
         ui->lineEditCantidad->setFocus();
         return;
     }

@@ -477,9 +477,45 @@ int SyncManager::bajarCambios()
             continue;
         }
 
+        QStringList cambiosPrecios;
+
         while (qNube.next()) {
             QSqlRecord rec = qNube.record();
             QStringList campos, valores, updates;
+
+            // Lógica especial para detectar cambios de precios en artículos
+            if (tabla == "articulos") {
+                QString cod = rec.value("cod").toString();
+                double pvpNube = rec.value("pvp").toDouble();
+                double precioVentaNube = rec.value("precio_venta").toDouble();
+                QString dsc = rec.value("descripcion").toString();
+
+                // 1. Comprobar si tiene precio local (excepción)
+                QSqlQuery qLoc(dbLocal);
+                qLoc.prepare("SELECT count(*) FROM precios_tienda WHERE cod_articulo = ?");
+                qLoc.addBindValue(cod);
+                qLoc.exec();
+                bool tienePrecioLocal = (qLoc.first() && qLoc.value(0).toInt() > 0);
+
+                if (!tienePrecioLocal) {
+                    // 2. Obtener el precio actual local para comparar
+                    QSqlQuery qArt(dbLocal);
+                    qArt.prepare("SELECT pvp FROM articulos WHERE cod = ?");
+                    qArt.addBindValue(cod);
+                    qArt.exec();
+
+                    if (qArt.first()) {
+                        double pvpLocal = qArt.value("pvp").toDouble();
+
+                        if (qAbs(pvpNube - pvpLocal) > 0.001) {
+                            QString msg = QString("- %1 (%2): PVP %3 -> %4")
+                                    .arg(dsc, cod)
+                                    .arg(pvpLocal, 0, 'f', 2).arg(pvpNube, 0, 'f', 2);
+                            cambiosPrecios << msg;
+                        }
+                    }
+                }
+            }
 
             for (int i = 0; i < rec.count(); ++i) {
                 QString campo = rec.fieldName(i);
@@ -502,6 +538,22 @@ int SyncManager::bajarCambios()
                 bajados++;
             else
                 qWarning() << "SyncManager: error aplicando en local:" << ins.lastError().text();
+        }
+
+        // Si hubo cambios de precio y estamos en la tabla articulos, creamos la nota
+        if (!cambiosPrecios.isEmpty()) {
+            QSqlQuery qNota(dbLocal);
+            qNota.prepare("INSERT INTO notas (titulo, descripcion, usuario, fecha_creacion, prioridad, estado) "
+                          "VALUES (?, ?, ?, ?, ?, ?)");
+            qNota.addBindValue(tr("Aviso: Cambio de precios en la nube"));
+            qNota.addBindValue(tr("Se han detectado cambios de precio en la nube para los siguientes artículos que no tienen excepción local:\n\n") + cambiosPrecios.join("\n"));
+            qNota.addBindValue("SISTEMA");
+            qNota.addBindValue(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
+            qNota.addBindValue("Alta");
+            qNota.addBindValue("Pendiente");
+            if (!qNota.exec()) {
+                qWarning() << "SyncManager: error creando nota de precios:" << qNota.lastError().text();
+            }
         }
 
         // Actualizar la última sync para esta tabla

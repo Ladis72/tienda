@@ -68,19 +68,18 @@ void EntradaMercancia::llenarComboTiendas()
 
 void EntradaMercancia::on_lineEditCod_returnPressed()
 {
-    consulta = base->consulta_producto(conf->getConexionLocal(), ui->lineEditCod->text());
-    consulta.first();
-    if (!consulta.isValid()) {
+    QSqlRecord registro = base->consulta_producto(conf->getConexionLocal(), ui->lineEditCod->text());
+    
+    if (registro.isEmpty()) {
         QString cod = base->codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
-        consulta = base->consulta_producto("DB", cod);
-        consulta.first();
+        registro = base->consulta_producto("DB", cod);
     }
-    if (consulta.numRowsAffected() == 1) {
-        ui->lineEditCod->setText(consulta.value(0).toString());
-        ui->lineEditDesc->setText(consulta.value(1).toString());
-        ui->lineEditPVP->setText(consulta.value(2).toString());
+    
+    if (!registro.isEmpty()) {
+        ui->lineEditCod->setText(registro.value("cod").toString());
+        ui->lineEditDesc->setText(registro.value("descripcion").toString());
+        ui->lineEditPVP->setText(registro.value("pvp").toString());
         ui->lineEditUds->setFocus();
-
     } else {
         QMessageBox msg(this);
         msg.setText("No se encuentra el producto");
@@ -230,10 +229,10 @@ void EntradaMercancia::actualizarArticulo(const QString &cod,
                                           const QString &descripcion,
                                           const QString &precio)
 {
-    QSqlQuery producto = base->consulta_producto(conf->getConexionLocal(), cod);
-    if (producto.first()) {
-        QString descAnt = producto.value("descripcion").toString();
-        QString pvpAnt = producto.value("pvp").toString();
+    QSqlRecord registro = base->consulta_producto(conf->getConexionLocal(), cod);
+    if (!registro.isEmpty()) {
+        QString descAnt = registro.value("descripcion").toString();
+        QString pvpAnt = registro.value("pvp").toString();
 
         if (descripcion != descAnt || precio != pvpAnt) {
             base->ejecutarSentencia(

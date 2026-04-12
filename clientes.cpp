@@ -115,7 +115,7 @@ Clientes::~Clientes() { delete ui; }
 
 void Clientes::recargarTabla() {
   modeloTabla->setQuery("SELECT * FROM clientes",
-                        QSqlDatabase::database(nombreConexionLocal));
+                        QSqlDatabase::database(conf->getConexionCommon()));
   mapper.setModel(modeloTabla);
 }
 
