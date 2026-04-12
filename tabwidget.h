@@ -1,7 +1,7 @@
 #ifndef TABWIDGET_H
 #define TABWIDGET_H
 
-#include <QTabWidget>
+#include <QDialog>
 #include "base_datos.h"
 #include "buscarproducto.h"
 #include "ventasusuariowidget.h"
@@ -10,7 +10,7 @@ namespace Ui {
 class Ususarios;
 }
 
-class Ususarios : public QTabWidget
+class Ususarios : public QDialog
 {
     Q_OBJECT
 
@@ -42,6 +42,7 @@ private slots:
     void on_pushButtonEditarPermisos_clicked();
     void on_pushButtonUnificar_clicked();
     void on_pushButtonSaneador_clicked();
+    void on_pushButtonCerrar_clicked();
 
 private:
     Ui::Ususarios *ui;

@@ -5,6 +5,8 @@
 #include <QPrinter>
 #include <QProcess>
 #include <QTextDocument>
+#include <QDate>
+#include <QSqlRecord>
 #include "ui_listadosalidas.h"
 
 ListadoSalidas::ListadoSalidas(QWidget *parent)
@@ -12,6 +14,13 @@ ListadoSalidas::ListadoSalidas(QWidget *parent)
     , ui(new Ui::ListadoSalidas)
 {
     ui->setupUi(this);
+
+    // Fechas por defecto: mes actual
+    QDate hoy = QDate::currentDate();
+    ui->dateEditDesde->setDate(QDate(hoy.year(), hoy.month(), 1));
+    ui->dateEditHasta->setDate(hoy);
+
+    cargarTipos();
 }
 
 ListadoSalidas::~ListadoSalidas()
@@ -22,16 +31,20 @@ ListadoSalidas::~ListadoSalidas()
 void ListadoSalidas::on_pushButtonVer_clicked()
 {
     QString fechaI, fechaF;
-    fechaI = ui->dateEditDesde->text();
-    fechaF = ui->dateEditHasta->text();
+    fechaI = ui->dateEditDesde->date().toString("yyyy-MM-dd");
+    fechaF = ui->dateEditHasta->date().toString("yyyy-MM-dd");
+
+    int idTipo = ui->comboBoxTipo->currentData().toInt();
+
     modeloTabla = new QSqlQueryModel(this);
     modeloTabla->setQuery(
-        base->listadoMovimientosEfectivo(conf->getConexionLocal(), fechaI, fechaF));
+        base->listadoMovimientosEfectivo(conf->getConexionLocal(), fechaI, fechaF, idTipo));
     modeloTabla->setHeaderData(0, Qt::Horizontal, "FECHA");
     modeloTabla->setHeaderData(1, Qt::Horizontal, "HORA");
     modeloTabla->setHeaderData(2, Qt::Horizontal, "CANTIDAD");
     modeloTabla->setHeaderData(3, Qt::Horizontal, "TIPO");
-    //modeloTabla->setHeaderData(4,Qt::Horizontal,"DETALLE");
+    modeloTabla->setHeaderData(4, Qt::Horizontal, "DESCRIPCIÓN");
+
     ui->tableView->setModel(modeloTabla);
     ui->labelTotal->setText(QString::number(sumar(modeloTabla)));
 }
@@ -64,7 +77,7 @@ void ListadoSalidas::on_pushButton_2_clicked()
 <body>
   <div class='header'>
     <h2>Informe de Movimientos de Efectivo</h2>
-    <div>Desde: %DESDE% | Hasta: %HASTA%</div>
+    <div>Desde: %DESDE% | Hasta: %HASTA% | Tipo: %TIPO%</div>
   </div>
 
   <table>
@@ -89,6 +102,7 @@ void ListadoSalidas::on_pushButton_2_clicked()
 
     html.replace("%DESDE%", ui->dateEditDesde->text());
     html.replace("%HASTA%", ui->dateEditHasta->text());
+    html.replace("%TIPO%", ui->comboBoxTipo->currentText());
     html.replace("%TOTAL%", ui->labelTotal->text());
 
     QString filas = "";
@@ -113,4 +127,15 @@ void ListadoSalidas::on_pushButton_2_clicked()
     QProcess::startDetached("xdg-open",
                             QStringList()
                                 << base->devolverDirectorio("documentos") + "/Movimientos.pdf");
+}
+
+void ListadoSalidas::cargarTipos()
+{
+    ui->comboBoxTipo->clear();
+    ui->comboBoxTipo->addItem("Todos los tipos", -1);
+
+    QSqlQuery q = base->ejecutarSentencia("SELECT idtiposEntrada, descripcion FROM motivosEntrada ORDER BY descripcion", conf->getConexionLocal());
+    while (q.next()) {
+        ui->comboBoxTipo->addItem(q.value("descripcion").toString(), q.value("idtiposEntrada").toInt());
+    }
 }

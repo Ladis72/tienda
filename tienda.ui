@@ -143,14 +143,14 @@
          </widget>
         </item>
         <item row="1" column="0">
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="pushButtonArticulos">
           <property name="text">
            <string>Artículos</string>
           </property>
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QPushButton" name="pushButton_3">
+         <widget class="QPushButton" name="pushButtonClientes">
           <property name="text">
            <string>Clientes</string>
           </property>
@@ -177,13 +177,7 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="3">
-         <widget class="QPushButton" name="pushButtonPrestamistas">
-          <property name="text">
-           <string>Prestamos</string>
-          </property>
-         </widget>
-        </item>
+
         <item row="0" column="1">
          <widget class="QPushButton" name="pushButtonProveedores">
           <property name="text">
@@ -219,14 +213,14 @@
        </attribute>
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
-         <widget class="QPushButton" name="pushButton_2">
+         <widget class="QPushButton" name="pushButtonVentaArticulos">
           <property name="text">
            <string>Venta artículos</string>
           </property>
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QPushButton" name="pushButton_5">
+         <widget class="QPushButton" name="pushButtonCaducidades">
           <property name="text">
            <string>Caducidades</string>
           </property>
@@ -294,13 +288,7 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="3">
-         <widget class="QPushButton" name="pushButtonPrestamos">
-          <property name="text">
-           <string>Prestamos</string>
-          </property>
-         </widget>
-        </item>
+
         <item row="0" column="4">
          <widget class="QPushButton" name="pushButtonFacturar">
           <property name="text">

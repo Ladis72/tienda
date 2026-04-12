@@ -11,12 +11,14 @@
 #include <QStyle>
 
 Ususarios::Ususarios(QWidget *parent)
-    : QTabWidget(parent)
+    : QDialog(parent)
     , ui(new Ui::Ususarios)
 {
     ui->setupUi(this);
+    setWindowFlags(windowFlags() | Qt::WindowMaximizeButtonHint);
+    
     ventasWidget = new ventasUsuarioWidget(this);
-    this->addTab(ventasWidget, "Ventas");
+    ui->tabWidget->addTab(ventasWidget, "Ventas");
     modeloTabla = new QSqlQueryModel;
     recargarTabla();
 
@@ -299,4 +301,9 @@ void Ususarios::on_pushButtonSaneador_clicked()
     if (saneador.exec() == QDialog::Accepted) {
         recargarTabla();
     }
+}
+
+void Ususarios::on_pushButtonCerrar_clicked()
+{
+    close();
 }

@@ -28,6 +28,7 @@ private:
     QSqlQueryModel *modeloTabla;
 
     double sumar(QSqlQueryModel *modelo);
+    void cargarTipos();
 };
 
 #endif // LISTADOSALIDAS_H

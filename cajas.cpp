@@ -171,7 +171,9 @@ void Cajas::ventas()
     }
 
     ventasTarjeta = resultado.value(0).toDouble();
-    ui->label_ventasTarjeta->setText(QString::number(ventasTarjeta));
+    ui->labelVentasTarjeta->setText(QString::number(ventasTarjeta, 'f', 2));
+    ui->lineEditVentasTarjeta->setText(QString::number(ventasTarjeta, 'f', 2));
+
     nTarjetas = base->nTarjetasDesdeUltimoArqueo(fechaUltimoArqueo,
                                                  horaUltimoArqueo,
                                                  conf->getConexionLocal());
@@ -183,9 +185,12 @@ void Cajas::ventas()
     resultado.first();
     ventasB = resultado.value(0).toDouble();
     ui->label_ventasB->setText(QString::number(ventasB));
+    ui->label_ventasB->setVisible(false); // Mantener oculto por defecto como en el original
+
     //ventasEfectivo += resultado.value(0).toDouble();
     ui->label_ventasEfectivo->setText(QString::number(ventasEfectivo));
-    ui->label_ventasTotales->setText(QString::number(ventasEfectivo + ventasTarjeta));
+    // El total de ventas usa el valor MANUAL/APUNTADO de tarjeta para detectar descuadres si se desea
+    ui->label_ventasTotales->setText(QString::number(ventasEfectivo + ui->lineEditVentasTarjeta->text().toDouble(), 'f', 2));
 }
 
 void Cajas::ES()
@@ -201,18 +206,18 @@ void Cajas::ES()
 
 void Cajas::keyPressEvent(QKeyEvent *e)
 {
-    switch (e->key()) {
-    case Qt::Key_F2:
-        ui->label_21->show();
-        ui->label_ventasB->show();
-        ui->label_ventasTotales->setText(QString::number(ventasEfectivo + ventasTarjeta + ventasB));
-        break;
-    default:
-        ui->label_21->hide();
-        ui->label_ventasB->hide();
-        ui->label_ventasTotales->setText(QString::number(ventasEfectivo + ventasTarjeta));
-
-        break;
+    if (e->key() == Qt::Key_F2) {
+        if (ui->label_21->isVisible()) {
+            ui->label_21->hide();
+            ui->label_ventasB->hide();
+            ui->label_ventasTotales->setText(QString::number(ventasEfectivo + ui->lineEditVentasTarjeta->text().toDouble(), 'f', 2));
+        } else {
+            ui->label_21->show();
+            ui->label_ventasB->show();
+            ui->label_ventasTotales->setText(QString::number(ventasEfectivo + ui->lineEditVentasTarjeta->text().toDouble() + ventasB, 'f', 2));
+        }
+    } else {
+        QDialog::keyPressEvent(e);
     }
 }
 
@@ -232,7 +237,7 @@ void Cajas::on_pushButtonAceptar_clicked()
     datos.append(QDate::currentDate().toString("yyyy-MM-dd"));
     datos.append(QTime::currentTime().toString("hh:mm:ss"));
     datos.append(QString::number(ventasEfectivo));
-    datos.append(QString::number(ventasTarjeta));
+    datos.append(QString::number(ui->lineEditVentasTarjeta->text().toDouble(), 'f', 2));
     datos.append(QString::number(salidas));
     datos.append(QString::number(totalEfectivo));
     datos.append(QString::number(descuadre));
@@ -274,4 +279,20 @@ void Cajas::on_pushButtonAceptar_clicked()
         break;
     }
     close();
+}
+
+void Cajas::on_pushButtonCerrar_clicked()
+{
+    reject();
+}
+
+void Cajas::on_lineEditVentasTarjeta_textChanged(const QString &arg1)
+{
+    Q_UNUSED(arg1);
+    double card = ui->lineEditVentasTarjeta->text().toDouble();
+    if (ui->label_21->isVisible()) {
+        ui->label_ventasTotales->setText(QString::number(ventasEfectivo + card + ventasB, 'f', 2));
+    } else {
+        ui->label_ventasTotales->setText(QString::number(ventasEfectivo + card, 'f', 2));
+    }
 }

@@ -263,11 +263,7 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
       {"formas_pago.modificar",     {0}},
       {"formas_pago.borrar",        {0}},
 
-      // ── Prestamistas ──
-      {"prestamistas",              {0, 1}},
-      {"prestamistas.crear",        {0, 1}},
-      {"prestamistas.modificar",    {0, 1}},
-      {"prestamistas.borrar",       {0}},
+
 
       // ── Usuarios ──
       {"usuarios",                  {0}},
@@ -326,8 +322,7 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
       // ── Cajas ──
       {"cajas",                     {0, 1, 3}},
 
-      // ── Préstamos ──
-      {"prestamos",                 {0, 1}},
+
 
       // ── Generar vales ──
       {"generar_vales",             {0}},

@@ -29,7 +29,7 @@
      <item>
       <widget class="QDateEdit" name="dateEditDesde">
        <property name="displayFormat">
-        <string>yyyy/MM/dd</string>
+        <string>yyyy-MM-dd</string>
        </property>
        <property name="calendarPopup">
         <bool>true</bool>
@@ -56,7 +56,30 @@
      <item>
       <widget class="QDateEdit" name="dateEditHasta">
        <property name="displayFormat">
-        <string>yyyy/MM/dd</string>
+        <string>yyyy-MM-dd</string>
+       </property>
+       <property name="calendarPopup">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_tipo">
+       <property name="text">
+        <string>Tipo</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignmentFlag::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBoxTipo">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
       </widget>
      </item>

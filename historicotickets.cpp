@@ -12,8 +12,8 @@ HistoricoTickets::HistoricoTickets(QWidget *parent)
     ui->dateTimeEditHasta->setDate(QDate::currentDate());
     ui->dateTimeEditHasta->setTime(QTime(23, 59, 59));
     ui->dateTimeEditDesde->setDateTime(QDateTime(QDate::currentDate(), QTime(00, 00, 01)));
-    listaTickets = new QSqlQueryModel;
-    ticket = new QSqlQueryModel;
+    listaTickets = new QSqlQueryModel(this);
+    ticket = new QSqlQueryModel(this);
     nTicket = "";
 }
 
@@ -37,7 +37,7 @@ void HistoricoTickets::mostrarTickets()
                                + fechaF + "/" + horaF + "'",
                            QSqlDatabase::database(conf->getConexionLocal()));
     QStandardItemModel *vistaTickets = new QStandardItemModel(listaTickets->rowCount(),
-                                                              listaTickets->columnCount() - 3);
+                                                              listaTickets->columnCount() - 3, this);
     for (int i = 0; i < listaTickets->rowCount(); ++i) {
         QStandardItem *itemTicket = new QStandardItem(listaTickets->record(i).value(0).toString());
         vistaTickets->setItem(i, 0, itemTicket);
@@ -91,19 +91,26 @@ void HistoricoTickets::on_pushButtonConsultar_clicked()
     mostrarTickets();
 }
 
+void HistoricoTickets::on_tableViewTickets_clicked(const QModelIndex &index)
+{
+    on_tableViewTickets_activated(index);
+}
+
 void HistoricoTickets::on_tableViewTickets_activated(const QModelIndex &index)
 {
-    QModelIndex indice = listaTickets->index(index.row(), 0);
-    nTicket = listaTickets->data(indice, Qt::EditRole).toString();
+    // Obtenemos el número de ticket directamente de la primera columna de la fila pinchada
+    nTicket = index.model()->data(index.siblingAtColumn(0)).toString();
+
+    if (nTicket.isEmpty()) return;
+
     ticket->setQuery("SELECT * FROM lineasticket WHERE nticket = " + nTicket,
                      QSqlDatabase::database(conf->getConexionLocal()));
 
     ui->tableViewLineasTicket->setModel(ticket);
-    ui->tableViewLineasTicket->hideColumn(0);
-    ui->tableViewLineasTicket->hideColumn(1);
-    ui->tableViewLineasTicket->hideColumn(2);
+    ui->tableViewLineasTicket->hideColumn(0); // id
+    ui->tableViewLineasTicket->hideColumn(1); // nticket
+    ui->tableViewLineasTicket->hideColumn(2); // id_articulo (si existe)
     ui->tableViewLineasTicket->resizeColumnsToContents();
-    //ui->label->setText("Vendedor"+listaTickets->data());
 }
 
 void HistoricoTickets::on_pushButtonImprimir_clicked()
@@ -142,4 +149,9 @@ void HistoricoTickets::on_pushButtonImprimirFactura_clicked()
         return;
     }
     ImprimirFactura fact(nTicket);
+}
+
+void HistoricoTickets::on_pushButtonCerrar_clicked()
+{
+    close();
 }

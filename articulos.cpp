@@ -94,8 +94,8 @@ void Articulos::refrescarBotones(int i) {
       ui->lineEditPvp->setText(registroConOverride.value("pvp").toString());
   }
 
-  ui->labelNombrePrecio->setText(ui->lineEditDesc->text() + "        " +
-                                 ui->lineEditPvp->text());
+  ui->labelNombreProducto->setText(ui->lineEditDesc->text());
+  ui->labelPrecioGrande->setText(ui->lineEditPvp->text() + " €");
   ui->lineEditStock->setText(base.sumarStockArticulo(ui->lineEditCod->text(),
                                                      conf->getConexionLocal()));
 
@@ -573,7 +573,8 @@ void Articulos::borrarFormulario() {
   ui->dateEditUltimaVenta->setDate(QDate::fromString("2000-01-01"));
   ui->dateEditUltimoPedido->setDate(QDate::fromString("2000-01-01"));
   ui->labelFoto->clear();
-  ui->labelNombrePrecio->clear();
+  ui->labelNombreProducto->clear();
+  ui->labelPrecioGrande->setText("0.00 €");
   ui->comboBoxFormato->setCurrentIndex(0);
 }
 

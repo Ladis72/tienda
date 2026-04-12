@@ -24,12 +24,14 @@ private slots:
     void on_pushButtonConsultar_clicked();
 
     void on_tableViewTickets_activated(const QModelIndex &index);
+    void on_tableViewTickets_clicked(const QModelIndex &index);
 
     void on_pushButtonImprimir_clicked();
 
     void on_pushButtonFormaPago_clicked();
 
     void on_pushButtonImprimirFactura_clicked();
+    void on_pushButtonCerrar_clicked();
 
 private:
     Ui::HistoricoTickets *ui;

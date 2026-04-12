@@ -42,9 +42,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   Etiq = nullptr;
   CTicket = nullptr;
   CBase = nullptr;
-  Prest = nullptr;
   ConfigOtros = nullptr;
-  Prestamis = nullptr;
   ListSalidas = nullptr;
   ListaArqueos = nullptr;
   ListaCaducados = nullptr;
@@ -343,13 +341,12 @@ void Tienda::permisos(int rol) {
   // Al añadir un nuevo botón/funcionalidad, solo hay que añadir aquí una línea
   QMap<QString, QWidget *> mapa = {
       {"ventas", ui->ventasButton},
-      {"articulos", ui->pushButton},
+      {"articulos", ui->pushButtonArticulos},
       {"familias", ui->pushButtonFamilias},
       {"fabricantes", ui->pushButtonFabricantes},
-      {"clientes", ui->pushButton_3},
+      {"clientes", ui->pushButtonClientes},
       {"proveedores", ui->pushButtonProveedores},
       {"formas_pago", ui->pushButtonFormasPago},
-      {"prestamistas", ui->pushButtonPrestamistas},
       {"usuarios", ui->pushButtonUsuarios},
       {"tiendas", ui->pushButtonTiendas},
       {"formatos", ui->pushButtonFormatos},
@@ -357,8 +354,8 @@ void Tienda::permisos(int rol) {
       {"etiquetas", ui->pushButtonEtiquetas},
       {"entradas", ui->pushButtonEntradas},
       {"salidas", ui->pushButtonSalidas},
-      {"venta_articulos", ui->pushButton_2},
-      {"caducidades", ui->pushButton_5},
+      {"venta_articulos", ui->pushButtonVentaArticulos},
+      {"caducidades", ui->pushButtonCaducidades},
 
       {"movimientos", ui->movimientosButton},
       {"tickets", ui->pushButtonTickets},
@@ -367,7 +364,6 @@ void Tienda::permisos(int rol) {
       {"facturar", ui->pushButtonFacturar},
       {"gestionar_pedidos", ui->pushButtonGestionar},
       {"cajas", ui->cajasButton},
-      {"prestamos", ui->pushButtonPrestamos},
       {"generar_vales", ui->pushButtonGenerarVales},
       {"actualizar_clientes", ui->pushButtonActualizarClientes},
       {"listado_ventas", ui->listadoVentasButton},
@@ -448,7 +444,7 @@ void Tienda::on_pushButtonUsuarios_clicked() {
   U->show();
 }
 
-void Tienda::on_pushButton_clicked() {
+void Tienda::on_pushButtonArticulos_clicked() {
   A = new Articulos(this);
   A->show();
 }
@@ -468,7 +464,7 @@ void Tienda::on_pushButtonFormasPago_clicked() {
   FPago->show();
 }
 
-void Tienda::on_pushButton_3_clicked() {
+void Tienda::on_pushButtonClientes_clicked() {
   Cli = new Clientes(this);
   Cli->show();
 }
@@ -518,7 +514,7 @@ void Tienda::on_pushButtonEntradas_clicked() {
   Entradas->exec();
 }
 
-void Tienda::on_pushButton_5_clicked() {
+void Tienda::on_pushButtonCaducidades_clicked() {
   Cad = new Caducidades(this);
   Cad->exec();
 }
@@ -544,10 +540,6 @@ void Tienda::on_pushButtonConfigDB_clicked() {
   CBase->exec();
 }
 
-void Tienda::on_pushButtonPrestamos_clicked() {
-  Prest = new Prestamos(this);
-  Prest->exec();
-}
 
 void Tienda::on_pushButtonConfiguracion_clicked() {
   ConfigOtros = new ConfiguracionOtros(this);
@@ -565,10 +557,6 @@ void Tienda::on_pushButtonFacturar_clicked() {
   delete fa;
 }
 
-void Tienda::on_pushButtonPrestamistas_clicked() {
-  Prestamis = new Prestamistas(this);
-  Prestamis->exec();
-}
 
 void Tienda::on_pushButtonListadoMovimientos_clicked() {
   ListSalidas = new ListadoSalidas(this);
@@ -810,7 +798,7 @@ void Tienda::on_pushButtonEstadisticas_clicked() {
   estadisticasDialog->exec();
 }
 
-void Tienda::on_pushButton_2_clicked() {
+void Tienda::on_pushButtonVentaArticulos_clicked() {
   ListadoVentaArticulos *listVentArticulos = new ListadoVentaArticulos(this);
   listVentArticulos->exec();
 }

@@ -30,9 +30,7 @@ EditorPermisos::EditorPermisos(int rolInicial, const QString &conexion,
   // Crear los checkboxes con todas las claves de permiso
   construirCheckboxes();
 
-  // Conectar botón guardar del QDialogButtonBox
-  connect(ui->buttonBox, &QDialogButtonBox::accepted, this,
-          &EditorPermisos::guardar);
+
 
   // Seleccionar el rol inicial (dispara on_comboRol_currentIndexChanged)
   int indice = (rolInicial >= 0 && rolInicial < roles.size()) ? rolInicial : 0;
@@ -288,4 +286,11 @@ void EditorPermisos::on_btnDesmarcarTodo_clicked() {
   for (auto it = m_checks.constBegin(); it != m_checks.constEnd(); ++it) {
     it.value()->setChecked(false);
   }
+}
+void EditorPermisos::on_pushButtonGuardar_clicked() {
+  guardar();
+}
+
+void EditorPermisos::on_pushButtonCerrar_clicked() {
+  reject();
 }

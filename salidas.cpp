@@ -289,3 +289,8 @@ void Salidas::on_comboBoxDestino_currentIndexChanged(int index)
     actualizarTabla();
     qDebug() << "Current index changed";
 }
+
+void Salidas::on_pushButtonCerrar_clicked()
+{
+    close();
+}

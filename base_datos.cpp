@@ -8,7 +8,12 @@ baseDatos::baseDatos() {}
 
 bool baseDatos::conectar(QString host, QString puerto, QString baseDatos,
                          QString usuario, QString clave) {
-  QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", "DB");
+  QSqlDatabase db;
+  if (QSqlDatabase::contains("DB")) {
+    db = QSqlDatabase::database("DB");
+  } else {
+    db = QSqlDatabase::addDatabase("QMYSQL", "DB");
+  }
   db.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=3");
   db.setHostName(host);
   db.setDatabaseName(baseDatos);
@@ -627,49 +632,73 @@ QSqlQuery baseDatos::tickesPorCLiente(QString nombreConexion, QString fechaI,
 
 QSqlQuery baseDatos::productosPorClienteCantidad(QString nombreConexion,
                                                  QString idCliente,
-                                                 QDate fechaI, QDate fechaF) {
-  QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-  QString queryStr = "SELECT cod , descripcion , SUM(cantidad) FROM "
-                     "lineasticket JOIN tickets ON "
-                     "lineasticket.nticket = tickets.ticket "
-                     "AND tickets.cliente = '" +
-                     idCliente +
-                     "' "
-                     "AND tickets.fecha BETWEEN '" +
-                     fechaI.toString("yyyy-MM-dd") + "' AND '" +
-                     fechaF.toString("yyyy-MM-dd") +
-                     "' "
-                     "GROUP BY cod ORDER BY SUM(cantidad) DESC ";
+                                                 QDate fechaI, QDate fechaF, bool consolidado) {
+  QSqlDatabase db = QSqlDatabase::database(nombreConexion);
+  QSqlQuery consulta(db);
+  
+  QString queryStr;
+  if (consolidado && db.tables().contains("lineasticketss")) {
+      QString subQuery = "SELECT l.cod, l.descripcion, l.cantidad FROM lineasticket l "
+                         "JOIN tickets t ON l.nticket = t.ticket "
+                         "WHERE t.cliente = '" + idCliente + "' "
+                         "AND t.fecha BETWEEN '" + fechaI.toString("yyyy-MM-dd") + "' AND '" + fechaF.toString("yyyy-MM-dd") + "'";
+      
+      subQuery += " UNION ALL SELECT l.cod, l.descripcion, l.cantidad FROM lineasticketss l "
+                  "JOIN ticketss t ON l.nticket = t.ticket "
+                  "WHERE t.cliente = '" + idCliente + "' "
+                  "AND t.fecha BETWEEN '" + fechaI.toString("yyyy-MM-dd") + "' AND '" + fechaF.toString("yyyy-MM-dd") + "'";
+
+      queryStr = "SELECT cod, descripcion, SUM(cantidad) as total FROM (" + subQuery + ") as sub "
+                 "GROUP BY cod, descripcion ORDER BY total DESC";
+  } else {
+      queryStr = "SELECT cod, descripcion, SUM(cantidad) as total FROM lineasticket l "
+                 "JOIN tickets t ON l.nticket = t.ticket "
+                 "WHERE t.cliente = '" + idCliente + "' "
+                 "AND t.fecha BETWEEN '" + fechaI.toString("yyyy-MM-dd") + "' AND '" + fechaF.toString("yyyy-MM-dd") + "' "
+                 "GROUP BY cod, descripcion ORDER BY total DESC";
+  }
 
   if (!consulta.exec(queryStr)) {
-    qDebug() << consulta.lastError();
+    qDebug() << consulta.lastError() << "en productosPorClienteCantidad";
+    qDebug() << "Query:" << queryStr;
   }
   consulta.first();
-  qDebug() << consulta.numRowsAffected();
   return consulta;
 }
 
 QSqlQuery baseDatos::productosPorClienteFecha(QString nombreConexion,
                                               QString idCliente, QDate fechaI,
-                                              QDate fechaF) {
-  QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-  QString queryStr = "SELECT cod , descripcion , cantidad , lineasticket.fecha "
-                     "FROM lineasticket "
-                     "JOIN tickets ON lineasticket.nticket = tickets.ticket"
-                     " AND tickets.cliente = '" +
-                     idCliente +
-                     "' "
-                     " AND tickets.fecha BETWEEN '" +
-                     fechaI.toString("yyyy-MM-dd") + "' AND '" +
-                     fechaF.toString("yyyy-MM-dd") +
-                     "' "
-                     " ORDER BY tickets.fecha DESC  ";
+                                              QDate fechaF, bool consolidado) {
+  QSqlDatabase db = QSqlDatabase::database(nombreConexion);
+  QSqlQuery consulta(db);
+  
+  QString queryStr;
+  if (consolidado && db.tables().contains("lineasticketss")) {
+      QString subQuery = "SELECT l.cod, l.descripcion, l.cantidad, t.fecha FROM lineasticket l "
+                         "JOIN tickets t ON l.nticket = t.ticket "
+                         "WHERE t.cliente = '" + idCliente + "' "
+                         "AND t.fecha BETWEEN '" + fechaI.toString("yyyy-MM-dd") + "' AND '" + fechaF.toString("yyyy-MM-dd") + "'";
+      
+      subQuery += " UNION ALL SELECT l.cod, l.descripcion, l.cantidad, t.fecha FROM lineasticketss l "
+                  "JOIN ticketss t ON l.nticket = t.ticket "
+                  "WHERE t.cliente = '" + idCliente + "' "
+                  "AND t.fecha BETWEEN '" + fechaI.toString("yyyy-MM-dd") + "' AND '" + fechaF.toString("yyyy-MM-dd") + "'";
+
+      queryStr = "SELECT cod, descripcion, cantidad, fecha FROM (" + subQuery + ") as sub "
+                 "ORDER BY fecha DESC";
+  } else {
+      queryStr = "SELECT l.cod, l.descripcion, l.cantidad, t.fecha FROM lineasticket l "
+                 "JOIN tickets t ON l.nticket = t.ticket "
+                 "WHERE t.cliente = '" + idCliente + "' "
+                 "AND t.fecha BETWEEN '" + fechaI.toString("yyyy-MM-dd") + "' AND '" + fechaF.toString("yyyy-MM-dd") + "' "
+                 "ORDER BY t.fecha DESC";
+  }
 
   if (!consulta.exec(queryStr)) {
-    qDebug() << consulta.lastError();
+    qDebug() << consulta.lastError() << "en productosPorClienteFecha";
+    qDebug() << "Query:" << queryStr;
   }
   consulta.first();
-  qDebug() << consulta.numRowsAffected();
   return consulta;
 }
 
@@ -1624,9 +1653,12 @@ QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF,
 int baseDatos::nTarjetasDesdeUltimoArqueo(QString fechaI, QString horaI,
                                           QString base) {
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.exec("SELECT count(total) FROM tickets WHERE concat_ws('/',fecha , "
-                "hora) >= '" +
-                fechaI + "/" + horaI + "' group by fpago");
+  consulta.prepare("SELECT count(*) FROM tickets WHERE ((fecha > ?) OR (fecha "
+                   "= ? AND hora >= ?)) AND fpago = 2");
+  consulta.bindValue(0, fechaI);
+  consulta.bindValue(1, fechaI);
+  consulta.bindValue(2, horaI);
+  consulta.exec();
   consulta.first();
   return consulta.value(0).toInt();
 }
@@ -1850,16 +1882,25 @@ QSqlQuery baseDatos::listadoVentaArticulos(QString inicio, QString final,
 }
 
 QSqlQuery baseDatos::listadoMovimientosEfectivo(QString db, QString inicio,
-                                                QString final) {
+                                                QString final, int idTipo) {
   QSqlQuery consulta(QSqlDatabase::database(db));
-  consulta.prepare(
+  QString sql =
       "SELECT fecha , hora , cantidad , motivosEntrada.descripcion , "
       "entradasSalidas.descripcion "
       "FROM entradasSalidas left join motivosEntrada on "
       "entradasSalidas.idTiposRentrada = "
-      "motivosEntrada.idtiposEntrada WHERE fecha >= ? AND fecha <= ?");
-  consulta.bindValue(0, inicio);
-  consulta.bindValue(1, final);
+      "motivosEntrada.idtiposEntrada WHERE fecha >= :inicio AND fecha <= :final";
+
+  if (idTipo != -1) {
+    sql += " AND idTiposRentrada = :idTipo";
+  }
+
+  consulta.prepare(sql);
+  consulta.bindValue(":inicio", inicio);
+  consulta.bindValue(":final", final);
+  if (idTipo != -1) {
+    consulta.bindValue(":idTipo", idTipo);
+  }
   consulta.exec();
   // consulta.first();
   qDebug() << consulta.lastError();

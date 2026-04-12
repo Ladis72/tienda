@@ -266,3 +266,8 @@ void EntradaMercancia::on_comboBoxProcedencia_currentIndexChanged(int index)
     actualizarTabla();
     qDebug() << "Current index changed";
 }
+
+void EntradaMercancia::on_pushButtonSalir_clicked()
+{
+    close();
+}

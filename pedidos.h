@@ -55,6 +55,7 @@ private slots:
     void on_lePvp_textChanged(const QString &arg1);
 
     void on_pushButtonImprimir_clicked();
+    void on_pushButtonCerrar_clicked();
 
 private:
     Ui::pedidos *ui;

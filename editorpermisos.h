@@ -43,6 +43,9 @@ private slots:
   /// @brief Desmarca todos los checkboxes.
   void on_btnDesmarcarTodo_clicked();
 
+  void on_pushButtonGuardar_clicked();
+  void on_pushButtonCerrar_clicked();
+
 private:
   Ui::EditorPermisos *ui;
 

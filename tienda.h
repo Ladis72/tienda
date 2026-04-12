@@ -37,8 +37,6 @@
 #include "listadosalidas.h"
 #include "listadoventaarticulos.h"
 #include "listadoventas.h"
-#include "prestamistas.h"
-#include "prestamos.h"
 #include "proveedores.h"
 #include "estadisticas.h"
 #include "salidas.h"
@@ -73,11 +71,11 @@ private slots:
     void activar_btn_tpv();
 
     void on_pushButtonUsuarios_clicked();
-    void on_pushButton_clicked();
+    void on_pushButtonArticulos_clicked();
     void on_pushButtonFamilias_clicked();
     void on_pushButtonFabricantes_clicked();
     void on_pushButtonFormasPago_clicked();
-    void on_pushButton_3_clicked();
+    void on_pushButtonClientes_clicked();
     void on_pushButtonProveedores_clicked();
     void on_pushButtonGestionar_clicked();
     void on_cajasButton_clicked();
@@ -88,17 +86,15 @@ private slots:
     void on_pushButtonFacturas_clicked();
     void on_listadoVentasButton_clicked();
     void on_pushButtonEntradas_clicked();
-    void on_pushButton_5_clicked();
+    void on_pushButtonCaducidades_clicked();
     void on_pushButtonSalidas_clicked();
     void on_pushButtonEtiquetas_clicked();
 
     void on_pushButtonTicket_clicked();
     void on_pushButtonConfigDB_clicked();
-    void on_pushButtonPrestamos_clicked();
     void on_pushButtonConfiguracion_clicked();
     void on_pushButtonAlbaranes_clicked();
     void on_pushButtonFacturar_clicked();
-    void on_pushButtonPrestamistas_clicked();
     void on_pushButtonListadoMovimientos_clicked();
     void on_pushButtonListadoArqueos_clicked();
     void on_pushButtonCaducados_2_clicked();
@@ -129,7 +125,7 @@ private slots:
 
     void on_pushButtonImpuestos_clicked();
 
-    void on_pushButton_2_clicked();
+    void on_pushButtonVentaArticulos_clicked();
     void on_pushButtonUnificarGlobal_clicked();
 
 private:
@@ -162,9 +158,7 @@ private:
 
     ConfigTicket *CTicket;
     ConfigBase *CBase;
-    Prestamos *Prest;
     ConfiguracionOtros *ConfigOtros;
-    Prestamistas *Prestamis;
     ListadoSalidas *ListSalidas;
     ListadoArqueos *ListaArqueos;
     ListadoCaducados *ListaCaducados;

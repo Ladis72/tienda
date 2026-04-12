@@ -518,3 +518,7 @@ void pedidos::on_pushButtonImprimir_clicked() {
   cabecera << ui->lineEditTotal->text();
   imprimirPedido pedido(tienda, cabecera, modeloPedido);
 }
+
+void pedidos::on_pushButtonCerrar_clicked() {
+  accept();
+}

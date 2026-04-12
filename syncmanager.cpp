@@ -405,9 +405,19 @@ int SyncManager::subirCambios()
 
                 for (int i = 0; i < record.count(); ++i) {
                     QString campo = record.fieldName(i);
-                    QString valor = record.value(i).toString().replace("'", "''");
-                    campos  << "`" + campo + "`";
-                    valores << "'" + valor + "'";
+                    QVariant val = record.value(i);
+                    
+                    campos << "`" + campo + "`";
+                    
+                    // Si el valor es nulo o es un string vacío en un campo que suele ser fecha/datetime, usar NULL
+                    if (val.isNull() || (val.toString().isEmpty() && 
+                        (campo.contains("fecha") || campo.contains("ultimo") || campo.contains("ultima")))) {
+                        valores << "NULL";
+                    } else {
+                        QString valorStr = val.toString().replace("'", "''");
+                        valores << "'" + valorStr + "'";
+                    }
+                    
                     updates << QString("`%1` = VALUES(`%1`)").arg(campo);
                 }
 
