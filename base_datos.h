@@ -35,7 +35,7 @@ public:
     QStringList datosTiendaLocal(QString db);
 
     //FUNCIONES ARTÍCULOS
-    QSqlQuery consulta_producto(QString nombreConnexion, QString cod);
+    QSqlRecord consulta_producto(QString nombreConnexion, QString cod);
     QSqlQuery buscarProducto(QSqlDatabase db, QString tabla, QString nombre);
     bool insertarUsuario(QSqlDatabase db, QStringList datos);
     bool modificarUsuaruio(QSqlDatabase db, QStringList datos, QString dato);
@@ -196,8 +196,8 @@ public:
     int estadisticasNumeroPedidos(const QString &db, const QDate &desde, const QDate &hasta);
 
     //Funciones de configuración
-    QString leerConfiguracion();
-    bool GuardarConfiguracion(int datos);
+    QMap<QString, QVariant> leerConfiguracion();
+    bool GuardarConfiguracion(QMap<QString, QVariant> datos);
     bool guardarDirectorios(QString base, QMap<QString, QString> directorios);
     QMap<QString, QString> cargarDirectorios(QString base);
     QString devolverDirectorio(QString tipo);

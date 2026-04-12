@@ -357,21 +357,21 @@ void pedidos::on_pushButtonAnadir_clicked() {
 }
 
 void pedidos::on_leCod_returnPressed() {
-  consulta =
+  QSqlRecord registro =
       base.consulta_producto(conf->getConexionLocal(), ui->leCod->text());
-  consulta.first();
-  if (!consulta.isValid()) {
+  
+  if (registro.isEmpty()) {
     QString cod =
         base.codigoDesdeAux(conf->getConexionLocal(), ui->leCod->text());
-    consulta = base.consulta_producto(conf->getConexionLocal(), cod);
-    consulta.first();
+    registro = base.consulta_producto(conf->getConexionLocal(), cod);
   }
-  if (consulta.numRowsAffected() == 1) {
-    ui->leCod->setText(consulta.value(0).toString());
-    ui->leDescripcion->setText(consulta.value(1).toString());
-    ui->lePvt->setText(consulta.value(12).toString());
-    ui->leIva->setText(consulta.value(3).toString());
-    ui->lePvp->setText(consulta.value(2).toString());
+  
+  if (!registro.isEmpty()) {
+    ui->leCod->setText(registro.value("cod").toString());
+    ui->leDescripcion->setText(registro.value("descripcion").toString());
+    ui->lePvt->setText(registro.value("precio_venta").toString());
+    ui->leIva->setText(registro.value("impuesto").toString());
+    ui->lePvp->setText(registro.value("pvp").toString());
     ui->leDescuento->setText(
         base.descuentoProveedor(ui->labelProveedor->text()));
     ui->leUds->setText("1");

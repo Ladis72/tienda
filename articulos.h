@@ -114,7 +114,7 @@ private:
     QSqlQueryModel modeloCompras;
     QSqlTableModel *modeloAux;
     QDataWidgetMapper mapper;
-    QSqlQuery consulta, consultaRemota;
+    QSqlQuery consultaRemota;
     Stock *stock;
     VisorImagenes *visor;
     VisorFacturas *factura;

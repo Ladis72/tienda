@@ -43,16 +43,16 @@ void Prestamos::on_lineEditCod_textChanged(const QString &arg1)
 
 void Prestamos::on_lineEditEan_returnPressed()
 {
-    consulta = base->consulta_producto(conf->getConexionLocal(), ui->lineEditEan->text());
-    consulta.first();
-    if (!consulta.isValid()) {
+    QSqlRecord registro = base->consulta_producto(conf->getConexionLocal(), ui->lineEditEan->text());
+    
+    if (registro.isEmpty()) {
         QString cod = base->codigoDesdeAux(conf->getConexionLocal(), ui->lineEditEan->text());
-        consulta = base->consulta_producto("DB", cod);
-        consulta.first();
+        registro = base->consulta_producto("DB", cod);
     }
-    if (consulta.numRowsAffected() == 1) {
-        ui->lineEditEan->setText(consulta.value(0).toString());
-        ui->lineEditDescripcion->setText(consulta.value(1).toString());
+    
+    if (!registro.isEmpty()) {
+        ui->lineEditEan->setText(registro.value("cod").toString());
+        ui->lineEditDescripcion->setText(registro.value("descripcion").toString());
         ui->spinBox->setFocus();
     }
 }

@@ -16,7 +16,7 @@ Familias::Familias(QWidget *parent)
     ui->setupUi(this);
 
     // Configurar el modelo de datos vinculado a la tabla 'familias'
-    modelo = new QSqlTableModel(this, QSqlDatabase::database("DB"));
+    modelo = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionCommon()));
     modelo->setTable("familias");
     modelo->setEditStrategy(QSqlTableModel::OnManualSubmit);
     

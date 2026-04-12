@@ -1,6 +1,8 @@
 #include "configuracion.h"
 
-Configuracion::Configuracion() {}
+Configuracion::Configuracion() {
+  usarPreciosLocales = false;
+}
 
 Configuracion::~Configuracion() {}
 
@@ -25,6 +27,16 @@ void Configuracion::setConexionMaster(QString conn) { conexionMaster = conn; }
 QString Configuracion::getConexionLocal() { return conexionLocal; }
 
 void Configuracion::setConexionLocal(QString conn) { conexionLocal = conn; }
+
+QString Configuracion::getConexionCommon() {
+  // Las tablas comunes (Artículos, Clientes, Familias) ya se sincronizan 
+  // via SyncManager, por lo que siempre usamos la conexión local para evitar latencia.
+  return conexionLocal;
+}
+
+bool Configuracion::getUsarPreciosLocales() { return usarPreciosLocales; }
+
+void Configuracion::setUsarPreciosLocales(bool value) { usarPreciosLocales = value; }
 
 QString Configuracion::getUsuario() { return usuario; }
 

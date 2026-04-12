@@ -6,10 +6,11 @@ ConfiguracionOtros::ConfiguracionOtros(QWidget *parent)
     , ui(new Ui::ConfiguracionOtros)
 {
     ui->setupUi(this);
-    if (base->leerConfiguracion() == "1") {
-        ui->checkBoxRE->setChecked(true);
-    } else {
-        ui->checkBoxRE->setChecked(false);
+    QMap<QString, QVariant> config = base->leerConfiguracion();
+    ui->checkBoxRE->setChecked(config.value("recargoeq").toBool());
+    
+    if (ui->checkBoxNube) {
+        ui->checkBoxNube->setChecked(config.value("precios_locales").toBool());
     }
 }
 
@@ -20,10 +21,14 @@ ConfiguracionOtros::~ConfiguracionOtros()
 
 void ConfiguracionOtros::on_pushButtonAceptar_clicked()
 {
-    if (ui->checkBoxRE->isChecked()) {
-        base->GuardarConfiguracion(1);
-    } else {
-        base->GuardarConfiguracion(0);
+    QMap<QString, QVariant> config;
+    config["recargoeq"] = ui->checkBoxRE->isChecked() ? 1 : 0;
+    
+    if (ui->checkBoxNube) {
+        config["precios_locales"] = ui->checkBoxNube->isChecked() ? 1 : 0;
     }
+    
+    base->GuardarConfiguracion(config);
+    conf->setUsarPreciosLocales(ui->checkBoxNube->isChecked());
     emit accept();
 }

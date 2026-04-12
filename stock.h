@@ -35,8 +35,6 @@ private:
     QSqlTableModel *modeloLotes;
     int filaSeleccionada = -1;
     QString currentLoteId;
-    QSqlQuery producto;
-
     void refrescarLotes();
     void limpiarFormulario();
 };

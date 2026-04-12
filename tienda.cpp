@@ -73,6 +73,10 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   }
   conf->setConexionLocal("DB");
 
+  // Cargar configuración global (Modo Nube para comunes)
+  QMap<QString, QVariant> config = base.leerConfiguracion();
+  conf->setUsarPreciosLocales(config.value("precios_locales").toBool());
+
   GestorPermisos::inicializar(conf->getConexionLocal());
 
   base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `encargos` ("
@@ -121,6 +125,19 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          "  `formapago` INT DEFAULT '0',"
                          "  `notas` TEXT"
                          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+                         conf->getConexionLocal());
+
+  // Nueva tabla para precios locales por excepción
+  base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `precios_tienda` ("
+                         "  `cod_articulo` VARCHAR(15) PRIMARY KEY,"
+                         "  `pvp` DOUBLE(10,3) DEFAULT '0.000',"
+                         "  `precio_venta` DOUBLE(10,3) DEFAULT '0.000'"
+                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+                         conf->getConexionLocal());
+
+  // Asegurar que la tabla configuracion tiene el campo precios_locales
+  base.ejecutarSentencia("ALTER TABLE `configuracion` ADD COLUMN IF NOT EXISTS "
+                         "`precios_locales` TINYINT(1) DEFAULT '0';",
                          conf->getConexionLocal());
 
   QString conexionMaster = base.nombreConexionMaster();

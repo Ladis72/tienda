@@ -299,15 +299,15 @@ void Tpv::datosProducto(QString IdProducto)
                                            conf->getConexionLocal());
     tmp.first();
     ui->labelFecha->setText(tmp.value(0).toString());
-    consulta = base.consulta_producto(conf->getConexionLocal(), IdProducto);
-    consulta.first();
-    currentFotoPath = consulta.value("foto").toString();
+    QSqlRecord registro = base.consulta_producto(conf->getConexionLocal(), IdProducto);
+    
+    currentFotoPath = registro.value("foto").toString();
     QString fichero = QDir::currentPath() + "/" + currentFotoPath;
     QImage foto(fichero);
     QPixmap imagen = QPixmap::fromImage(foto);
     ui->labelFoto->setPixmap(imagen.scaled(200, 200));
 
-    ui->textInfo->setText(consulta.value("notas").toString());
+    ui->textInfo->setText(registro.value("notas").toString());
 }
 
 QString Tpv::generarDatosFactura(const QStringList datos, const QString ultimoHash)
@@ -396,22 +396,23 @@ void Tpv::mostrarFoto()
 
 void Tpv::on_lineEdit_cod_returnPressed()
 {
-    consulta = base.consulta_producto(conf->getConexionLocal(), ui->lineEdit_cod->text());
-    consulta.first();
-    if (!consulta.isValid()) {
-        QString cod = base.codigoDesdeAux(conf->getConexionLocal(), ui->lineEdit_cod->text());
-        consulta = base.consulta_producto(conf->getConexionLocal(), cod);
-        consulta.first();
+    QSqlRecord registro = base.consulta_producto(conf->getConexionCommon(), ui->lineEdit_cod->text());
+    
+    if (registro.isEmpty()) {
+        QString cod = base.codigoDesdeAux(conf->getConexionCommon(), ui->lineEdit_cod->text());
+        registro = base.consulta_producto(conf->getConexionCommon(), cod);
     }
-    if (consulta.numRowsAffected() == 1) {
+    
+    if (!registro.isEmpty()) {
         QList<QString> linea;
-        linea << consulta.value(0).toString();
-        datosProducto(consulta.value(0).toString());
-        linea << consulta.value(1).toString();
+        linea << registro.value("cod").toString();
+        datosProducto(registro.value("cod").toString());
+        linea << registro.value("descripcion").toString();
         linea << ui->lineEdit_Uds->text();
-        linea << consulta.value(3).toString();
+        linea << registro.value("impuesto").toString();
+        
         if (ui->lineEdit_precio->text().isEmpty()) {
-            linea << QString::number(consulta.value(2).toDouble());
+            linea << QString::number(registro.value("pvp").toDouble());
         } else {
             linea << ui->lineEdit_precio->text();
         }
@@ -441,8 +442,8 @@ void Tpv::on_lineEdit_cod_returnPressed()
 bool Tpv::cargarEncargo(QString codArticulo, double anticipo, int cantidad)
 {
     // 1. Buscamos el producto para obtener sus datos (descripción, precio, etc)
-    consulta = base.consulta_producto(conf->getConexionLocal(), codArticulo);
-    if (!consulta.first()) {
+    QSqlRecord registro = base.consulta_producto(conf->getConexionLocal(), codArticulo);
+    if (registro.isEmpty()) {
         return false;
     }
 
@@ -454,12 +455,12 @@ bool Tpv::cargarEncargo(QString codArticulo, double anticipo, int cantidad)
     // 3. Añadimos el artículo principal
     QList<QString> lineaArt;
     lineaArt << codArticulo;
-    lineaArt << consulta.value("descripcion").toString();
+    lineaArt << registro.value("descripcion").toString();
     lineaArt << QString::number(cantidad);
-    lineaArt << consulta.value("iva").toString();
-    lineaArt << QString::number(consulta.value("pvp").toDouble(), 'f', 2);
+    lineaArt << registro.value("impuesto").toString();
+    lineaArt << QString::number(registro.value("pvp").toDouble(), 'f', 2);
     lineaArt << "0"; // Descuento
-    double totalLinea = consulta.value("pvp").toDouble() * cantidad;
+    double totalLinea = registro.value("pvp").toDouble() * cantidad;
     lineaArt << QString::number(totalLinea, 'f', 2);
 
     if (!actualizarLineaTicket(lineaArt)) return false;
