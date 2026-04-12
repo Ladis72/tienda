@@ -35,6 +35,9 @@ private slots:
 
     void on_lineEdit_textChanged(const QString &arg1);
 
+    void on_pushButtonUnificar_clicked();
+    void on_pushButtonSaneador_clicked();
+
 private:
     Ui::Familias *ui;
 

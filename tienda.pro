@@ -90,7 +90,9 @@ SOURCES += main.cpp\
     encargosdialog.cpp \
     gestorencargosdialog.cpp \
     syncmanager.cpp \
-    unificarproveedores.cpp
+    unificarproveedores.cpp \
+    saneadorglobal.cpp \
+    unificarmaestros.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -165,7 +167,9 @@ HEADERS  += tienda.h \
     encargosdialog.h \
     gestorencargosdialog.h \
     syncmanager.h \
-    unificarproveedores.h
+    unificarproveedores.h \
+    saneadorglobal.h \
+    unificarmaestros.h
 
 FORMS    += tienda.ui \
     actualizarclientes.ui \
@@ -222,7 +226,9 @@ FORMS    += tienda.ui \
     comprasventasremoto.ui \
     encargosdialog.ui \
     gestorencargosdialog.ui \
-    unificarproveedores.ui
+    unificarproveedores.ui \
+    saneadorglobal.ui \
+    unificarmaestros.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 

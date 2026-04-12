@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Formas de Pago</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
    <item row="0" column="0">
@@ -37,6 +37,20 @@
       <widget class="QPushButton" name="pushButtonModificar">
        <property name="text">
         <string>Modificar</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QPushButton" name="pushButtonUnificar">
+       <property name="text">
+        <string>Unificar y Limpiar</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0">
+      <widget class="QPushButton" name="pushButtonSaneador">
+       <property name="text">
+        <string>Saneador Global</string>
        </property>
       </widget>
      </item>

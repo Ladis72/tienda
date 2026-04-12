@@ -130,6 +130,20 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="pushButtonUnificar">
+       <property name="text">
+        <string> Unificar y Limpiar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonSaneador">
+       <property name="text">
+        <string> Saneador Global</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer name="spacerButtons">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -175,6 +189,7 @@
   <tabstop>tableView</tabstop>
   <tabstop>pushButtonAnadir</tabstop>
   <tabstop>pushButtonBorrar</tabstop>
+  <tabstop>pushButtonUnificar</tabstop>
   <tabstop>pushButtonDeshacer</tabstop>
   <tabstop>pushButtonGuardar</tabstop>
  </tabstops>
@@ -198,4 +213,3 @@
   </connection>
  </connections>
 </ui>
-

@@ -1,6 +1,7 @@
 #include "clientes.h"
 #include "buscarcliente.h"
 #include "ui_clientes.h"
+#include "saneadorglobal.h"
 #include <QMessageBox>
 #include <QToolTip>
 #include "gestorencargosdialog.h"
@@ -109,6 +110,18 @@ void Clientes::inicializarComponentes() {
   refrescarBotones(mapper.currentIndex());
 
   ui->lineEditCod->installEventFilter(this);
+
+  // Iconos para botones de acción
+  ui->pushButtonNuevo->setIcon(style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+  ui->pushButtonBorrar->setIcon(style()->standardIcon(QStyle::SP_TrashIcon));
+  ui->pushButtonModificar->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
+  ui->pushButtonAnterior->setIcon(style()->standardIcon(QStyle::SP_ArrowBack));
+  ui->pushButtonSiguiente->setIcon(style()->standardIcon(QStyle::SP_ArrowForward));
+  ui->pushButtonCerrar->setIcon(style()->standardIcon(QStyle::SP_DialogCloseButton));
+  ui->pushButtonUnificar->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
+  ui->pushButtonSaneador->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+  ui->btn_encargos_cliente->setIcon(style()->standardIcon(QStyle::SP_FileDialogContentsView));
+  ui->pushButtonRefrescar->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
 }
 
 Clientes::~Clientes() { delete ui; }
@@ -772,4 +785,18 @@ void Clientes::on_btn_encargos_cliente_clicked() {
     }
     GestorEncargosDialog dial(codigo, this);
     dial.exec();
+}
+
+void Clientes::on_pushButtonUnificar_clicked()
+{
+    UnificarMaestros unif(UnificarMaestrosConfig::paraClientes(), this);
+    unif.exec();
+    recargarTabla();
+}
+
+void Clientes::on_pushButtonSaneador_clicked()
+{
+    SaneadorGlobal saneador(UnificarMaestrosConfig::paraClientes(), this);
+    saneador.exec();
+    recargarTabla();
 }

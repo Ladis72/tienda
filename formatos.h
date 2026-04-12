@@ -25,6 +25,8 @@ private slots:
     void on_pushButtonnadir_clicked();
 
     void on_lineEditFiltro_textChanged(const QString &arg1);
+    void on_pushButtonUnificar_clicked();
+    void on_pushButtonSaneador_clicked();
 
 private:
     Ui::Formatos *ui;

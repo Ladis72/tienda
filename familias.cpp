@@ -1,5 +1,6 @@
 #include "familias.h"
 #include <QMessageBox>
+#include "saneadorglobal.h"
 #include <QSqlError>
 #include <QDebug>
 #include <QStyle>
@@ -43,6 +44,8 @@ Familias::Familias(QWidget *parent)
     ui->pushButtonDeshacer->setIcon(style()->standardIcon(QStyle::SP_ArrowBack));
     ui->pushButtonGuardar->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
     ui->pushButtonSeleccionar->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
+    ui->pushButtonUnificar->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
+    ui->pushButtonSaneador->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
 
     ui->lineEdit->setFocus();
 }
@@ -149,4 +152,24 @@ void Familias::on_lineEdit_textChanged(const QString &arg1)
 {
     // Filtro insensible a mayúsculas/minúsculas y más seguro
     modelo->setFilter(QString("descripcion LIKE '%%1%'").arg(arg1));
+}
+
+/**
+ * @brief Abre el diálogo de unificación interactiva de familias (Local).
+ */
+void Familias::on_pushButtonUnificar_clicked()
+{
+    UnificarMaestros unif(UnificarMaestrosConfig::paraFamilias(), this);
+    unif.exec();
+    modelo->select();
+}
+
+/**
+ * @brief Abre el diálogo de alineación multi-tienda de familias (Global).
+ */
+void Familias::on_pushButtonSaneador_clicked()
+{
+    SaneadorGlobal saneador(UnificarMaestrosConfig::paraFamilias(), this);
+    saneador.exec();
+    modelo->select();
 }

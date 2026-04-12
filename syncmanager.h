@@ -95,6 +95,9 @@ private:
 
     /// Obtiene la última sync de una tabla
     QDateTime ultimaSync(const QString &tabla);
+
+    /// Devuelve el nombre de la clave primaria para una tabla maestra
+    QString getPkTabla(const QString &tabla) const;
 };
 
 #endif // SYNCMANAGER_H

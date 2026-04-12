@@ -1,5 +1,6 @@
 #include "formatos.h"
 #include "ui_formatos.h"
+#include "saneadorglobal.h"
 
 Formatos::Formatos(QWidget *parent)
     : QDialog(parent)
@@ -13,6 +14,12 @@ Formatos::Formatos(QWidget *parent)
     ui->tableView->setModel(modelo);
     ui->tableView->resizeColumnsToContents();
     ui->tableView->hideColumn(0);
+
+    ui->pushButtonnadir->setIcon(style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+    ui->pushButtonModificar->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
+    ui->pushButtonCerrar->setIcon(style()->standardIcon(QStyle::SP_DialogCloseButton));
+    ui->pushButtonUnificar->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
+    ui->pushButtonSaneador->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
 }
 
 Formatos::~Formatos()
@@ -37,6 +44,20 @@ void Formatos::on_pushButtonnadir_clicked()
 void Formatos::on_lineEditFiltro_textChanged(const QString &arg1)
 {
     modelo->setFilter("formato LIKE '%" + arg1 + "%'");
+}
+
+void Formatos::on_pushButtonUnificar_clicked()
+{
+    UnificarMaestros unif(UnificarMaestrosConfig::paraFormatos(), this);
+    unif.exec();
+    modelo->select();
+}
+
+void Formatos::on_pushButtonSaneador_clicked()
+{
+    SaneadorGlobal saneador(UnificarMaestrosConfig::paraFormatos(), this);
+    saneador.exec();
+    modelo->select();
 }
 
 void Formatos::keyPressEvent(QKeyEvent *e)

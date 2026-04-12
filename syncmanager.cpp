@@ -8,6 +8,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QSqlRecord>
+#include "unificarmaestros.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constantes
@@ -130,6 +131,21 @@ void SyncManager::crearTablasSyncLocal()
         q.addBindValue(tabla);
         q.exec();
     }
+    
+    // Control para la descarga de unificaciones globales
+    q.prepare("INSERT IGNORE INTO sync_control (tabla) VALUES ('sync_unificaciones')");
+    q.exec();
+
+    // Historial de unificaciones para propagar a otras tiendas
+    q.exec("CREATE TABLE IF NOT EXISTS sync_unificaciones ("
+           "  id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+           "  tabla       VARCHAR(64)  NOT NULL,"
+           "  id_perdedor VARCHAR(64)  NOT NULL,"
+           "  id_ganador  VARCHAR(64)  NOT NULL,"
+           "  subido      TINYINT(1)   NOT NULL DEFAULT 0,"
+           "  fecha       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP"
+           ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+           "  COMMENT='Registro de fusiones de maestros para propagar'");
 }
 
 /**
@@ -141,30 +157,15 @@ void SyncManager::crearTablasSyncLocal()
  */
 void SyncManager::crearTriggers()
 {
-    // Mapa tabla → nombre de su clave primaria real en la base de datos
-    QMap<QString, QString> claves = {
-        {"articulos",      "cod"},
-        {"clientes",       "idCliente"},
-        {"familias",       "id"},
-        {"fabricantes",    "id"},
-        {"proveedores",    "idProveedor"},
-        {"codaux",         "id"},
-        {"fpago",          "id"},
-        {"impuestos",      "tipoIva"},
-        {"formatos",       "idformato"},
-        {"motivosEntrada", "idtiposEntrada"},
-        {"usuarios",       "id"},
-        {"permisos",       "id"},
-        {"vales",          "idvales"}  // clave primaria de la tabla vales
-    };
-
     for (const QString &tabla : TABLAS_MAESTRAS) {
-        if (!claves.contains(tabla)) {
+        QString pk = getPkTabla(tabla);
+        if (pk.isEmpty()) {
             qWarning() << "SyncManager: clave primaria desconocida para tabla" << tabla;
             continue;
         }
-        crearTrigger(tabla, claves[tabla], "INSERT");
-        crearTrigger(tabla, claves[tabla], "UPDATE");
+        crearTrigger(tabla, pk, "INSERT");
+        crearTrigger(tabla, pk, "UPDATE");
+        crearTrigger(tabla, pk, "DELETE");
     }
 }
 
@@ -191,15 +192,16 @@ void SyncManager::crearTrigger(const QString &nombreTabla,
     q.exec(QString("DROP TRIGGER IF EXISTS %1").arg(nombreTrigger));
 
     // Crear el trigger
+    QString prefijo = (evento == "DELETE") ? "OLD" : "NEW";
     QString sql = QString(
         "CREATE TRIGGER %1 "
         "AFTER %2 ON %3 "
         "FOR EACH ROW "
         "BEGIN "
         "  INSERT INTO sync_cola (tabla, id_registro, accion) "
-        "  VALUES ('%3', NEW.%4, '%2'); "
+        "  VALUES ('%3', %4.%5, '%2'); "
         "END"
-    ).arg(nombreTrigger, evento, nombreTabla, clavePrimaria);
+    ).arg(nombreTrigger, evento, nombreTabla, prefijo, clavePrimaria);
 
     if (!q.exec(sql)) {
         qWarning() << "SyncManager: error creando trigger" << nombreTrigger
@@ -371,25 +373,26 @@ int SyncManager::subirCambios()
         bool exito = false;
 
         if (accion == "DELETE") {
-            // Los DELETEs en tablas maestras son raros; los ignoramos por ahora
-            // (política: no borrar en la nube automáticamente)
-            exito = true;
+            // Obtener el nombre de la clave primaria para esta tabla
+            QString pk = getPkTabla(tabla);
+
+            // Ejecutar el DELETE en la nube
+            QString where = QString("`%1` = '%2'").arg(pk, idRegistro);
+            if (pk != "cod") where = QString("`%1` = %2").arg(pk, idRegistro);
+
+            QSqlQuery del(dbNube);
+            exito = del.exec(QString("DELETE FROM `%1` WHERE %2").arg(tabla, where));
+            if (!exito)
+                qWarning() << "SyncManager: error borrando en nube:" << del.lastError().text();
         } else {
             // Obtener el nombre de la clave primaria para esta tabla
-            QString pk = "id";
-            if (tabla == "articulos")      pk = "cod";
-            else if (tabla == "clientes")       pk = "idCliente";
-            else if (tabla == "proveedores")    pk = "idProveedor";
-            else if (tabla == "impuestos")      pk = "tipoIva";
-            else if (tabla == "formatos")       pk = "idformato";
-            else if (tabla == "motivosEntrada") pk = "idtiposEntrada";
-            else if (tabla == "vales")          pk = "idvales";
+            QString pk = getPkTabla(tabla);
 
             // Leer el registro completo de la BD local
             QSqlQuery reg(dbLocal);
             QString where = QString("`%1` = '%2'").arg(pk, idRegistro);
             // Si es numérico, quitar comillas (opcional en MariaDB pero más limpio)
-            if (pk != "cod") where = QString("`%1` = %2").arg(pk, idRegistro);
+            if (pk != "cod" && pk != "idCliente") where = QString("`%1` = %2").arg(pk, idRegistro);
 
             reg.exec(QString("SELECT * FROM `%1` WHERE %2 LIMIT 1").arg(tabla, where));
 
@@ -440,6 +443,30 @@ int SyncManager::subirCambios()
 
         QSqlQuery upd(dbLocal);
         upd.exec("UPDATE sync_cola SET subido = 1 WHERE id IN (" + ids.join(",") + ")");
+    }
+
+    // --- PARTE 2: Subir Unificaciones Pendientes ---
+    QSqlQuery qUnif(dbLocal);
+    qUnif.exec("SELECT id, tabla, id_perdedor, id_ganador FROM sync_unificaciones WHERE subido = 0");
+    
+    while (qUnif.next()) {
+        int idLoc = qUnif.value(0).toInt();
+        QString tabla = qUnif.value(1).toString();
+        QString perdedor = qUnif.value(2).toString();
+        QString ganador = qUnif.value(3).toString();
+
+        QSqlQuery qNube(dbNube);
+        qNube.prepare("INSERT INTO sync_unificaciones (tabla, id_perdedor, id_ganador, fecha) VALUES (?, ?, ?, NOW()) "
+                      "ON DUPLICATE KEY UPDATE tabla=tabla"); // No falla si ya existe
+        qNube.addBindValue(tabla);
+        qNube.addBindValue(perdedor);
+        qNube.addBindValue(ganador);
+        
+        if (qNube.exec()) {
+            QSqlQuery qMark(dbLocal);
+            qMark.exec(QString("UPDATE sync_unificaciones SET subido = 1 WHERE id = %1").arg(idLoc));
+            subidos++;
+        }
     }
 
     return subidos;
@@ -560,6 +587,89 @@ int SyncManager::bajarCambios()
         actualizarUltimaSync(tabla, ahora);
     }
 
+    // --- PARTE 3: Bajar Unificaciones de otras tiendas ---
+    QDateTime ultimaUnif = ultimaSync("sync_unificaciones");
+    QSqlQuery qNubeUnif(dbNube);
+    qNubeUnif.prepare("SELECT tabla, id_perdedor, id_ganador, fecha FROM sync_unificaciones "
+                      "WHERE fecha > ? ORDER BY fecha ASC");
+    qNubeUnif.addBindValue(ultimaUnif.toString("yyyy-MM-dd HH:mm:ss"));
+    
+    if (qNubeUnif.exec()) {
+        while (qNubeUnif.next()) {
+            QString tabla = qNubeUnif.value(0).toString();
+            QString perdedor = qNubeUnif.value(1).toString();
+            QString ganador = qNubeUnif.value(2).toString();
+            
+            UnificarMaestrosConfig cfg = UnificarMaestrosConfig::configParaTabla(tabla);
+            if (cfg.tablaMaestra.isEmpty()) continue; // Config no encontrada
+
+            dbLocal.transaction();
+            QSqlQuery qLoc(dbLocal);
+            bool ok = true;
+
+            // Reasignar dependencias
+            for (const auto &dep : cfg.dependencias) {
+                QString valG = ganador;
+                QString valP = perdedor;
+                // Si la dependencia usa un campo campoMaestroOrigen (como 'usuario' login), 
+                // ya tenemos los valores (login_ganador, login_perdedor) en id_perdedor/id_ganador 
+                // si la unificación fue de ese tipo. Pero el unificador guarda IDs en id_perdedor/id_ganador.
+                
+                // IMPORTANTE: En la tabla sync_unificaciones, guardamos los valores que se usaron.
+                // Si la tabla es 'usuarios' y el campo Id es numérico, id_perdedor es el ID.
+                
+                // Sin embargo, para dependencias basadas en strings (login), necesitamos los logins.
+                // Resolvemos esto igual que en el framework:
+                QString sqlUpd;
+                if (dep.campoMaestroOrigen.isEmpty()) {
+                    sqlUpd = QString("UPDATE %1 SET %2 = '%3' WHERE %2 = '%4'")
+                             .arg(dep.tabla, dep.campo, ganador, perdedor);
+                } else {
+                    // Si la dependencia es por string (ej login), necesitamos obtener el string 
+                    // correspondiente al ID ganador y perdedor... pero el SyncManager local 
+                    // ya perdió el registro perdedor si ya se borró.
+                    // SOLUCIÓN: En la tabla sync_unificaciones DEBEMOS guardar siempre el ID 
+                    // y el SyncManager debe saber recuperar los campos adicionales antes de borrar.
+                    
+                    // Pero wait, si Store A unificó, en la nube está el ID.
+                    // Para dependencias de string, buscamos el valor del campo en el maestro local.
+                    QSqlQuery qVal(dbLocal);
+                    qVal.exec(QString("SELECT %1 FROM %2 WHERE %3 = %4")
+                              .arg(dep.campoMaestroOrigen, cfg.tablaMaestra, cfg.campoId, ganador));
+                    QString valGanadorStr = (qVal.first()) ? qVal.value(0).toString() : "";
+                    
+                    qVal.exec(QString("SELECT %1 FROM %2 WHERE %3 = %4")
+                              .arg(dep.campoMaestroOrigen, cfg.tablaMaestra, cfg.campoId, perdedor));
+                    QString valPerdedorStr = (qVal.first()) ? qVal.value(0).toString() : "";
+
+                    if (valGanadorStr.isEmpty() || valPerdedorStr.isEmpty()) {
+                        // Si el perdedor ya no existe, quizás ya se unificó o borró.
+                        continue;
+                    }
+                    sqlUpd = QString("UPDATE %1 SET %2 = '%3' WHERE %2 = '%4'")
+                             .arg(dep.tabla, dep.campo, valGanadorStr, valPerdedorStr);
+                }
+                
+                if (!qLoc.exec(sqlUpd)) { ok = false; break; }
+            }
+
+            // Borrar perdedor
+            if (ok) {
+                ok = qLoc.exec(QString("DELETE FROM %1 WHERE %2 = '%3'")
+                               .arg(cfg.tablaMaestra, cfg.campoId, perdedor));
+            }
+
+            if (ok) {
+                dbLocal.commit();
+                bajados++;
+            } else {
+                dbLocal.rollback();
+                qWarning() << "SyncManager: fallo aplicando unificación remota en" << tabla << qLoc.lastError().text();
+            }
+        }
+        actualizarUltimaSync("sync_unificaciones", ahora);
+    }
+
     return bajados;
 }
 
@@ -592,4 +702,27 @@ QDateTime SyncManager::ultimaSync(const QString &tabla)
     if (q.first())
         return QDateTime::fromString(q.value(0).toString(), "yyyy-MM-dd HH:mm:ss");
     return QDateTime::fromString("2000-01-01 00:00:00", "yyyy-MM-dd HH:mm:ss");
+}
+
+/**
+ * @brief Devuelve el nombre de la clave primaria para una tabla maestra.
+ */
+QString SyncManager::getPkTabla(const QString &tabla) const
+{
+    static const QMap<QString, QString> m = {
+        {"articulos",      "cod"},
+        {"clientes",       "idCliente"},
+        {"familias",       "id"},
+        {"fabricantes",    "id"},
+        {"proveedores",    "idProveedor"},
+        {"codaux",         "id"},
+        {"fpago",          "id"},
+        {"impuestos",      "tipoIva"},
+        {"formatos",       "idformato"},
+        {"motivosEntrada", "idtiposEntrada"},
+        {"usuarios",       "id"},
+        {"permisos",       "id"},
+        {"vales",          "idvales"}
+    };
+    return m.value(tabla, "");
 }

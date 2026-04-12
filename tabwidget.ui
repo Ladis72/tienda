@@ -355,6 +355,20 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="pushButtonUnificar">
+        <property name="text">
+         <string>Unificar y Limpiar</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonSaneador">
+        <property name="text">
+         <string>Saneador Global</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="pushButtonRefrescar">
         <property name="text">
          <string>Refrescar</string>
