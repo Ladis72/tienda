@@ -562,6 +562,18 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="pushButtonUnificar">
+       <property name="text"><string>Unificar y Limpiar</string></property>
+       <property name="autoDefault"><bool>false</bool></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonSaneador">
+       <property name="text"><string>Saneador Global</string></property>
+       <property name="autoDefault"><bool>false</bool></property>
+      </widget>
+     </item>
+     <item>
       <spacer name="horizontalSpacerButtons">
        <property name="orientation"><enum>Qt::Orientation::Horizontal</enum></property>
        <property name="sizeHint" stdset="0"><size><width>40</width><height>20</height></size></property>

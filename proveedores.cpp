@@ -1,5 +1,6 @@
 #include "proveedores.h"
 #include "ui_proveedores.h"
+#include "saneadorglobal.h"
 #include <QMessageBox>
 
 Proveedores::Proveedores(QWidget *parent)
@@ -117,9 +118,29 @@ void Proveedores::setupIcons() {
   if (ui->pushButtonRefrescar)
     ui->pushButtonRefrescar->setIcon(
         style()->standardIcon(QStyle::SP_BrowserReload));
+  if (ui->pushButtonUnificar)
+    ui->pushButtonUnificar->setIcon(
+        style()->standardIcon(QStyle::SP_DialogApplyButton));
+  if (ui->pushButtonSaneador)
+    ui->pushButtonSaneador->setIcon(
+        style()->standardIcon(QStyle::SP_BrowserReload));
 
   ui->labelTotalVentasB->hide();
   ui->labelTotalVentasSum->hide();
+}
+
+void Proveedores::on_pushButtonUnificar_clicked()
+{
+    UnificarMaestros unif(UnificarMaestrosConfig::paraProveedores(), this);
+    unif.exec();
+    recargarTabla();
+}
+
+void Proveedores::on_pushButtonSaneador_clicked()
+{
+    SaneadorGlobal saneador(UnificarMaestrosConfig::paraProveedores(), this);
+    saneador.exec();
+    recargarTabla();
 }
 
 Proveedores::~Proveedores() { delete ui; }

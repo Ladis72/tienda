@@ -25,6 +25,8 @@ private slots:
     void on_pushButtonBorrar_clicked();
 
     void on_tableView_clicked(const QModelIndex &index);
+    void on_pushButtonUnificar_clicked();
+    void on_pushButtonSaneador_clicked();
 
 private:
     Ui::FormasPago *ui;

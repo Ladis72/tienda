@@ -6,6 +6,9 @@
 #include "editorpermisos.h"
 #include "ui_tabwidget.h"
 #include "ventasusuariowidget.h"
+#include "unificarmaestros.h"
+#include "saneadorglobal.h"
+#include <QStyle>
 
 Ususarios::Ususarios(QWidget *parent)
     : QTabWidget(parent)
@@ -18,6 +21,16 @@ Ususarios::Ususarios(QWidget *parent)
     recargarTabla();
 
     ui->lineEditCod->installEventFilter(this);
+
+    ui->pushButtonUnificar->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
+    ui->pushButtonSaneador->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+    ui->pushButtonNuevo->setIcon(style()->standardIcon(QStyle::SP_FileDialogNewFolder));
+    ui->pushButtonModificar->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
+    ui->pushButtonBorrar->setIcon(style()->standardIcon(QStyle::SP_DialogDiscardButton));
+    ui->pushButtonRefrescar->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+    ui->pushButtonAnterior->setIcon(style()->standardIcon(QStyle::SP_ArrowLeft));
+    ui->pushButtonSiguiente->setIcon(style()->standardIcon(QStyle::SP_ArrowRight));
+    ui->pushButtonCerrar->setIcon(style()->standardIcon(QStyle::SP_DialogCloseButton));
 }
 
 Ususarios::~Ususarios()
@@ -270,4 +283,20 @@ void Ususarios::on_pushButtonEditarPermisos_clicked()
         rol, conf->getConexionLocal(), this);
     editor->setAttribute(Qt::WA_DeleteOnClose);
     editor->exec();
+}
+
+void Ususarios::on_pushButtonUnificar_clicked()
+{
+    UnificarMaestros unificador(UnificarMaestrosConfig::paraUsuarios(), this);
+    if (unificador.exec() == QDialog::Accepted) {
+        recargarTabla();
+    }
+}
+
+void Ususarios::on_pushButtonSaneador_clicked()
+{
+    SaneadorGlobal saneador(UnificarMaestrosConfig::paraUsuarios(), this);
+    if (saneador.exec() == QDialog::Accepted) {
+        recargarTabla();
+    }
 }

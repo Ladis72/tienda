@@ -1,5 +1,6 @@
 #include "fabricantes.h"
 #include <QMessageBox>
+#include "saneadorglobal.h"
 #include <QSqlError>
 #include <QDebug>
 #include <QStyle>
@@ -40,6 +41,8 @@ Fabricantes::Fabricantes(QWidget *parent)
     ui->pushButtonBorrar->setIcon(style()->standardIcon(QStyle::SP_TrashIcon));
     ui->pushButtonDeshacer->setIcon(style()->standardIcon(QStyle::SP_ArrowBack));
     ui->pushButtonModificar->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
+    ui->pushButtonUnificar->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
+    ui->pushButtonSaneador->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
 
     ui->lineEdit->setFocus();
 }
@@ -145,4 +148,18 @@ void Fabricantes::on_tableView_clicked(const QModelIndex &index)
 void Fabricantes::on_lineEdit_textChanged(const QString &arg1)
 {
     modelo->setFilter(QString("nombre LIKE '%%1%'").arg(arg1));
+}
+
+void Fabricantes::on_pushButtonUnificar_clicked()
+{
+    UnificarMaestros unif(UnificarMaestrosConfig::paraFabricantes(), this);
+    unif.exec();
+    modelo->select();
+}
+
+void Fabricantes::on_pushButtonSaneador_clicked()
+{
+    SaneadorGlobal saneador(UnificarMaestrosConfig::paraFabricantes(), this);
+    saneador.exec();
+    modelo->select();
 }

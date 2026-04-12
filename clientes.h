@@ -65,6 +65,8 @@ private slots:
   void on_dateEditHasta_dateChanged(const QDate &date);
   void on_dateEditDesde_2_dateChanged(const QDate &date);
   void on_dateEditHasta_2_dateChanged(const QDate &date);
+  void on_pushButtonUnificar_clicked();
+  void on_pushButtonSaneador_clicked();
 
   void onBarClicked(int index, QBarSet *barset);
 

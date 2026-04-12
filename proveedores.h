@@ -41,6 +41,8 @@ private slots:
     void on_dateEditDesde_dateChanged(const QDate &date);
     void on_dateEditHasta_dateChanged(const QDate &date);
     void on_pushButtonCerrar_clicked();
+    void on_pushButtonUnificar_clicked();
+    void on_pushButtonSaneador_clicked();
 
 private:
     Ui::Proveedores *ui;

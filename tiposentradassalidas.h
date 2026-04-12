@@ -24,6 +24,12 @@ private slots:
 
     void on_lineEdit_textChanged(const QString &arg1);
 
+    /**
+     * @brief Abre el diálogo de unificación genérico para motivos de entrada.
+     */
+    void on_pushButtonUnificar_clicked();
+    void on_pushButtonSaneador_clicked();
+
 private:
     Ui::TiposEntradasSalidas *ui;
     QSqlTableModel *modelo;

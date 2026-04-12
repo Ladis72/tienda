@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Configuración de Motivos</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="2" column="0">
@@ -27,6 +27,16 @@
      <widget class="QPushButton" name="pushButton_2">
       <property name="text">
        <string>Modificar</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButtonUnificar">
+      <property name="text">
+       <string>Unificar y Limpiar</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButtonSaneador">
+      <property name="text">
+       <string>Saneador Global</string>
       </property>
      </widget>
     </widget>
@@ -57,6 +67,7 @@
   <tabstop>lineEdit</tabstop>
   <tabstop>pushButton</tabstop>
   <tabstop>pushButton_2</tabstop>
+  <tabstop>pushButtonUnificar</tabstop>
   <tabstop>pushButton_3</tabstop>
   <tabstop>tableView</tabstop>
  </tabstops>

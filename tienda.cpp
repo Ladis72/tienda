@@ -284,7 +284,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
   conf->setNombreconexiones(conexiones->lista());
-  // login();
+  login();
 }
 
 Tienda::~Tienda() {
@@ -604,50 +604,57 @@ void Tienda::on_pushButtonTiendas_clicked() {
 }
 
 void Tienda::refrescarConexiones() {
-    // 1. Limpiar etiquetas de conexión previas de forma precisa usando su objectName
-    QList<QLabel*> existingLabels = ui->statusBar->findChildren<QLabel*>("connLabel");
-    for (QLabel* oldLab : existingLabels) {
-        ui->statusBar->removeWidget(oldLab);
-        oldLab->deleteLater();
+  // 1. Limpiar etiquetas de conexión previas de forma precisa usando su
+  // objectName
+  QList<QLabel *> existingLabels =
+      ui->statusBar->findChildren<QLabel *>("connLabel");
+  for (QLabel *oldLab : existingLabels) {
+    ui->statusBar->removeWidget(oldLab);
+    oldLab->deleteLater();
+  }
+
+  // 2. Obtener la lista de tiendas y sus estados de conexión (una sola vez)
+  QStringList nombresTiendas = conexiones->lista();
+  QStringList estadosConexiones =
+      conexiones->crear(); // Devuelve pares [nombre, "1" o "0"]
+
+  QStringList conexionesActivas;
+
+  // 3. Crear y configurar las nuevas etiquetas en la barra de estado
+  // Usamos el índice de nombresTiendas para mantener el orden
+  for (int i = 0; i < nombresTiendas.length(); i++) {
+    QString nombre = nombresTiendas.at(i);
+    QLabel *lab = new QLabel(nombre, this);
+    lab->setObjectName("connLabel");
+
+    // Buscar el estado correspondiente en la lista devuelta por crear()
+    bool isOnline = false;
+    int idx = estadosConexiones.indexOf(nombre);
+    if (idx != -1 && idx + 1 < estadosConexiones.length()) {
+      isOnline = (estadosConexiones.at(idx + 1) == "1");
     }
 
-    // 2. Obtener la lista de tiendas y sus estados de conexión (una sola vez)
-    QStringList nombresTiendas = conexiones->lista();
-    QStringList estadosConexiones = conexiones->crear(); // Devuelve pares [nombre, "1" o "0"]
-    
-    QStringList conexionesActivas;
-
-    // 3. Crear y configurar las nuevas etiquetas en la barra de estado
-    // Usamos el índice de nombresTiendas para mantener el orden
-    for (int i = 0; i < nombresTiendas.length(); i++) {
-        QString nombre = nombresTiendas.at(i);
-        QLabel *lab = new QLabel(nombre, this);
-        lab->setObjectName("connLabel");
-        
-        // Buscar el estado correspondiente en la lista devuelta por crear()
-        bool isOnline = false;
-        int idx = estadosConexiones.indexOf(nombre);
-        if (idx != -1 && idx + 1 < estadosConexiones.length()) {
-            isOnline = (estadosConexiones.at(idx + 1) == "1");
-        }
-
-        if (isOnline) {
-            lab->setStyleSheet("QLabel { background-color: #2e7d32; color: white; border-radius: 4px; "
-                               "padding: 2px 6px; font-weight: bold; margin-right: 4px; }");
-            conexionesActivas << nombre;
-        } else {
-            lab->setStyleSheet("QLabel { background-color: #c62828; color: white; border-radius: 4px; "
-                               "padding: 2px 6px; font-weight: bold; margin-right: 4px; }");
-        }
-
-        // Insertar al principio de la barra de estado (lado izquierdo)
-        ui->statusBar->insertWidget(i, lab);
-        lab->show();
+    if (isOnline) {
+      lab->setStyleSheet(
+          "QLabel { background-color: #2e7d32; color: white; border-radius: "
+          "4px; "
+          "padding: 2px 6px; font-weight: bold; margin-right: 4px; }");
+      conexionesActivas << nombre;
+    } else {
+      lab->setStyleSheet(
+          "QLabel { background-color: #c62828; color: white; border-radius: "
+          "4px; "
+          "padding: 2px 6px; font-weight: bold; margin-right: 4px; }");
     }
 
-    // 4. Actualizar configuración global
-    conf->setNombreConexionesActivas(conexionesActivas);
-    conf->setConexionMaster(conexiones->conexionMaster());
+    // Insertar al principio de la barra de estado (lado izquierdo)
+    ui->statusBar->insertWidget(i, lab);
+    lab->show();
+  }
+
+  // 4. Actualizar configuración global
+  conf->setNombreConexionesActivas(conexionesActivas);
+  conf->setConexionMaster(conexiones->conexionMaster());
 }
 
 void Tienda::on_pushButtonConectar_clicked() { refrescarConexiones(); }
