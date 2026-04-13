@@ -21,6 +21,18 @@ EntradaMercancia::EntradaMercancia(QWidget *parent)
     llenarComboTiendas();
     actualizarTabla();
     codSeleccionado = "";
+
+    // Desactivar autoDefault para evitar inserciones accidentales al pulsar ENTER
+    ui->pushButtonAgregarLinea->setAutoDefault(false);
+    ui->pushButtonAgregarLinea->setDefault(false);
+    ui->pushButtonAceptar->setAutoDefault(false);
+    ui->pushButtonAceptar->setDefault(false);
+
+    // Cadena de enfoque mediante ENTER
+    connect(ui->lineEditUds, &QLineEdit::returnPressed, [this](){
+        ui->dateEditCaducidad->setFocus();
+    });
+    connect(ui->lineEditPVP, &QLineEdit::returnPressed, this, &EntradaMercancia::on_pushButtonAgregarLinea_clicked);
 }
 
 EntradaMercancia::~EntradaMercancia()
@@ -102,6 +114,16 @@ void EntradaMercancia::on_lineEditCod_returnPressed()
 
 void EntradaMercancia::on_pushButtonAgregarLinea_clicked()
 {
+    if (ui->lineEditUds->text().trimmed().isEmpty()) {
+        QMessageBox::warning(this, "Error", "La cantidad no puede estar vacía.");
+        ui->lineEditUds->setFocus();
+        return;
+    }
+    
+    if (ui->lineEditPVP->text().trimmed().isEmpty()) {
+        ui->lineEditPVP->setText("0");
+    }
+    
     QStringList datos;
     datos.clear();
     datos.append(ui->lineEditCod->text());
@@ -235,9 +257,10 @@ void EntradaMercancia::actualizarArticulo(const QString &cod,
         QString pvpAnt = registro.value("pvp").toString();
 
         if (descripcion != descAnt || precio != pvpAnt) {
+            QString precioValidado = precio.isEmpty() ? "0" : precio;
             base->ejecutarSentencia(
                 QString("UPDATE articulos SET descripcion = '%1', pvp = %2 WHERE cod = '%3'")
-                    .arg(descripcion, precio, cod),
+                    .arg(descripcion, precioValidado, cod),
                 conf->getConexionLocal());
         }
     }
@@ -261,7 +284,7 @@ void EntradaMercancia::limpiarTabla(int idTienda)
                             conf->getConexionLocal());
 }
 
-void EntradaMercancia::on_comboBoxProcedencia_currentIndexChanged(int index)
+void EntradaMercancia::on_comboBoxProcedencia_currentIndexChanged(int)
 {
     actualizarTabla();
     qDebug() << "Current index changed";

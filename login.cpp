@@ -33,7 +33,4 @@ void Login::on_pushButton_clicked()
     }
 }
 
-void Login::on_pushButton_2_clicked()
-{
-    reject();
-}
+// void Login::on_pushButton_2_clicked() { reject(); } // Orphan removed

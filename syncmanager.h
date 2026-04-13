@@ -60,6 +60,13 @@ private:
 
     // --- Tablas maestras que se sincronizan (sin las de solo local) ---
     static const QStringList TABLAS_MAESTRAS;
+    
+    // --- Campos operativos que no deben sincronizarse para evitar corrupción entre tiendas ---
+    static const QMap<QString, QStringList> CAMPOS_EXCLUIDOS;
+
+    // --- ID de la tienda local para trazabilidad ---
+    int m_idTiendaLocal;
+    void cargarIdTiendaLocal();
 
     // --- Inicialización de infraestructura SQL ---
 

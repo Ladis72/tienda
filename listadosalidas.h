@@ -20,7 +20,7 @@ public:
 private slots:
     void on_pushButtonVer_clicked();
 
-    void on_pushButton_2_clicked();
+    void imprimirInforme();
 
 private:
     Ui::ListadoSalidas *ui;

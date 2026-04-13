@@ -35,15 +35,17 @@ const QStringList SyncManager::TABLAS_MAESTRAS = {
     "vales"         // vales de fidelidad (estado se propaga via nube)
 };
 
+const QMap<QString, QStringList> SyncManager::CAMPOS_EXCLUIDOS = {
+    {"articulos", {"stock", "min", "max", "minimo_pedido", "pendientes_pedido", "ultima_venta", "ultimo_pedido", "encargados"}}
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Constructor / Destructor
 // ─────────────────────────────────────────────────────────────────────────────
 
 SyncManager::SyncManager(QObject *parent)
-    : QObject(parent)
-    , m_timerPing(new QTimer(this))
-    , m_timerSync(new QTimer(this))
-    , m_hayConexion(false)
+    : QObject(parent), m_timerPing(new QTimer(this)), m_timerSync(new QTimer(this)), 
+      m_hayConexion(false), m_idTiendaLocal(0)
 {
     // Comprobación de conexión cada 30 segundos
     m_timerPing->setInterval(30 * 1000);
@@ -52,6 +54,9 @@ SyncManager::SyncManager(QObject *parent)
     // Sincronización cada 5 minutos
     m_timerSync->setInterval(5 * 60 * 1000);
     connect(m_timerSync, &QTimer::timeout, this, &SyncManager::sincronizar);
+
+    // Intentar cargar el ID de la tienda local al inicio
+    cargarIdTiendaLocal();
 }
 
 SyncManager::~SyncManager()
@@ -124,6 +129,26 @@ void SyncManager::crearTablasSyncLocal()
 
     if (q.lastError().isValid())
         qWarning() << "SyncManager: error creando sync_control:" << q.lastError().text();
+
+    // Migraciones rápidas de tablas maestras LOCALES para que todas soporten sync
+    for (const QString &tabla : TABLAS_MAESTRAS) {
+        q.exec(QString("ALTER TABLE `%1` ADD COLUMN id_tienda_origen INT DEFAULT NULL").arg(tabla));
+        q.exec(QString("ALTER TABLE `%1` ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP "
+                       "ON UPDATE CURRENT_TIMESTAMP").arg(tabla));
+        q.exec(QString("ALTER TABLE `%1` ADD INDEX (updated_at)").arg(tabla));
+    }
+
+    // Migraciones en la NUBE (si tenemos conexión) para que soporte el sistema de sync
+    if (m_hayConexion) {
+        QSqlQuery qN(QSqlDatabase::database(CONEXION_NUBE));
+        for (const QString &tabla : TABLAS_MAESTRAS) {
+            // Asegurar que todas las tablas maestras en la nube tengan seguimiento de cambios
+            qN.exec(QString("ALTER TABLE `%1` ADD COLUMN id_tienda_origen INT DEFAULT NULL").arg(tabla));
+            qN.exec(QString("ALTER TABLE `%1` ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP "
+                            "ON UPDATE CURRENT_TIMESTAMP").arg(tabla));
+            qN.exec(QString("ALTER TABLE `%1` ADD INDEX (updated_at)").arg(tabla));
+        }
+    }
 
     // Insertar filas por defecto en sync_control (una por tabla maestra)
     for (const QString &tabla : TABLAS_MAESTRAS) {
@@ -198,8 +223,10 @@ void SyncManager::crearTrigger(const QString &nombreTabla,
         "AFTER %2 ON %3 "
         "FOR EACH ROW "
         "BEGIN "
-        "  INSERT INTO sync_cola (tabla, id_registro, accion) "
-        "  VALUES ('%3', %4.%5, '%2'); "
+        "  IF @skip_sync IS NULL OR @skip_sync = 0 THEN "
+        "    INSERT INTO sync_cola (tabla, id_registro, accion) "
+        "    VALUES ('%3', %4.%5, '%2'); "
+        "  END IF; "
         "END"
     ).arg(nombreTrigger, evento, nombreTabla, prefijo, clavePrimaria);
 
@@ -403,22 +430,60 @@ int SyncManager::subirCambios()
                 QStringList valores;
                 QStringList updates;
 
+                bool tieneUpdatedAt = false;
+                bool tieneOrigen = false;
+                QStringList excluidos = CAMPOS_EXCLUIDOS.value(tabla);
+
                 for (int i = 0; i < record.count(); ++i) {
                     QString campo = record.fieldName(i);
+                    
+                    // Saltar campos excluidos para evitar sobreescribir datos operativos locales en la nube
+                    if (excluidos.contains(campo.toLower()))
+                        continue;
+
+                    if (campo.toLower() == "updated_at") tieneUpdatedAt = true;
+                    if (campo.toLower() == "id_tienda_origen") {
+                        tieneOrigen = true;
+                        // Si el origen está vacío en local, le ponemos el de esta tienda
+                        if (record.value(i).isNull() || record.value(i).toInt() == 0) {
+                            campos << "`id_tienda_origen`";
+                            valores << QString::number(m_idTiendaLocal);
+                            updates << "`id_tienda_origen` = VALUES(`id_tienda_origen`)";
+                            continue;
+                        }
+                    }
+
                     QVariant val = record.value(i);
-                    
-                    campos << "`" + campo + "`";
-                    
-                    // Si el valor es nulo o es un string vacío en un campo que suele ser fecha/datetime, usar NULL
+                    QString valorStr;
+
                     if (val.isNull() || (val.toString().isEmpty() && 
-                        (campo.contains("fecha") || campo.contains("ultimo") || campo.contains("ultima")))) {
-                        valores << "NULL";
+                        (campo.contains("fecha") || campo.contains("ultimo") || campo.contains("ultima") || campo.contains("_at")))) {
+                        valorStr = "NULL";
+                    } else if (val.type() == QMetaType::QDateTime || val.type() == QMetaType::QDate) {
+                        valorStr = "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
                     } else {
-                        QString valorStr = val.toString().replace("'", "''");
-                        valores << "'" + valorStr + "'";
+                        valorStr = "'" + val.toString().replace("'", "''") + "'";
                     }
                     
+                    campos << "`" + campo + "`";
+                    valores << valorStr;
                     updates << QString("`%1` = VALUES(`%1`)").arg(campo);
+                }
+
+                // Si la tabla en la nube espera updated_at pero en local no existe (o no se ha pasado),
+                // lo añadimos manualmente con NOW() para que la sync funcione y se propague.
+                if (!tieneUpdatedAt) {
+                    campos << "`updated_at`";
+                    valores << "NOW()";
+                    updates << "`updated_at` = NOW()";
+                }
+
+                // Si es la tabla articulos y no tenía el campo id_tienda_origen localmente,
+                // lo añadimos al INSERT de la nube para que quede registrado el origen.
+                if (tabla == "articulos" && !tieneOrigen && m_idTiendaLocal > 0) {
+                    campos << "`id_tienda_origen`";
+                    valores << QString::number(m_idTiendaLocal);
+                    updates << "`id_tienda_origen` = VALUES(`id_tienda_origen`)";
                 }
 
                 QString sql = QString(
@@ -432,7 +497,7 @@ int SyncManager::subirCambios()
                 QSqlQuery ins(dbNube);
                 exito = ins.exec(sql);
                 if (!exito)
-                    qWarning() << "SyncManager: error subiendo a nube:" << ins.lastError().text();
+                    qWarning() << "SyncManager: error subiendo a nube (tabla:" << tabla << "):" << ins.lastError().text();
             } else {
                 // Registro ya no existe en local → marcar como procesado igualmente
                 exito = true;
@@ -500,13 +565,30 @@ int SyncManager::bajarCambios()
 
     for (const QString &tabla : TABLAS_MAESTRAS) {
         QDateTime ultima = ultimaSync(tabla);
+        // Margen de seguridad de 1 minuto para diferencias de reloj entre servidores
+        QDateTime consultaDesde = ultima.addSecs(-60);
 
-        // Pedir a la nube los registros más nuevos
+        // Pedir a la nube los registros más nuevos que no hayamos creado nosotros
         QSqlQuery qNube(dbNube);
-        qNube.prepare(QString("SELECT * FROM `%1` "
-                              "WHERE updated_at > ? "
-                              "ORDER BY updated_at ASC").arg(tabla));
-        qNube.addBindValue(ultima.toString("yyyy-MM-dd HH:mm:ss"));
+        
+        // Comprobar si las columnas existen en la nube para filtrar
+        QSqlRecord recNube = dbNube.record(tabla);
+        bool nubeTieneOrigen = recNube.contains("id_tienda_origen");
+        bool nubeTieneUpdatedAt = recNube.contains("updated_at");
+
+        if (!nubeTieneUpdatedAt) {
+            qWarning() << "SyncManager: tabla nube" << tabla << "no tiene columna updated_at, saltando";
+            continue;
+        }
+
+        QString sqlNube = QString("SELECT * FROM `%1` WHERE updated_at > ? ").arg(tabla);
+        if (m_idTiendaLocal > 0 && nubeTieneOrigen) {
+            sqlNube += QString(" AND (id_tienda_origen != %1 OR id_tienda_origen IS NULL) ").arg(m_idTiendaLocal);
+        }
+        sqlNube += " ORDER BY updated_at ASC";
+
+        qNube.prepare(sqlNube);
+        qNube.addBindValue(consultaDesde.toString("yyyy-MM-dd HH:mm:ss"));
 
         if (!qNube.exec()) {
             qWarning() << "SyncManager: error consultando nube tabla" << tabla
@@ -514,7 +596,26 @@ int SyncManager::bajarCambios()
             continue;
         }
 
+        int encontradosEnNube = 0;
+        if (qNube.last()) {
+            encontradosEnNube = qNube.at() + 1;
+            qNube.first();
+            qNube.previous(); // Volver al inicio para el while(next)
+        }
+
+        if (encontradosEnNube > 0) {
+            qDebug() << "SyncManager: bajando" << encontradosEnNube << "cambios de tabla" << tabla 
+                     << "desde" << consultaDesde.toString("yyyy-MM-dd HH:mm:ss");
+        }
+
+        // Obtener el esquema de la tabla local para filtrar campos que puedan venir
+        // de la nube pero no existan aquí (como 'updated_at')
+        QSqlRecord recordLocal = dbLocal.record(tabla);
         QStringList cambiosPrecios;
+
+        // Desactivar triggers de sync localmente mientras aplicamos cambios de la nube
+        QSqlQuery qSkip(dbLocal);
+        qSkip.exec("SET @skip_sync = 1");
 
         while (qNube.next()) {
             QSqlRecord rec = qNube.record();
@@ -524,7 +625,6 @@ int SyncManager::bajarCambios()
             if (tabla == "articulos") {
                 QString cod = rec.value("cod").toString();
                 double pvpNube = rec.value("pvp").toDouble();
-                double precioVentaNube = rec.value("precio_venta").toDouble();
                 QString dsc = rec.value("descripcion").toString();
 
                 // 1. Comprobar si tiene precio local (excepción)
@@ -554,8 +654,19 @@ int SyncManager::bajarCambios()
                 }
             }
 
+            QStringList excluidos = CAMPOS_EXCLUIDOS.value(tabla);
+
             for (int i = 0; i < rec.count(); ++i) {
                 QString campo = rec.fieldName(i);
+                
+                // Si el campo no existe en la tabla local, lo saltamos
+                if (recordLocal.indexOf(campo) == -1)
+                    continue;
+
+                // Si el campo es operativo local (stock, etc.), NO lo bajamos de la nube
+                if (excluidos.contains(campo.toLower()))
+                    continue;
+
                 QString valor = rec.value(i).toString().replace("'", "''");
                 campos  << "`" + campo + "`";
                 valores << "'" + valor + "'";
@@ -592,6 +703,8 @@ int SyncManager::bajarCambios()
                 qWarning() << "SyncManager: error creando nota de precios:" << qNota.lastError().text();
             }
         }
+
+        qSkip.exec("SET @skip_sync = 0");
 
         // Actualizar la última sync para esta tabla
         actualizarUltimaSync(tabla, ahora);
@@ -697,6 +810,17 @@ void SyncManager::actualizarUltimaSync(const QString &tabla, const QDateTime &mo
     q.addBindValue(momento.toString("yyyy-MM-dd HH:mm:ss"));
     q.addBindValue(tabla);
     q.exec();
+}
+
+void SyncManager::cargarIdTiendaLocal()
+{
+    QSqlQuery q(QSqlDatabase::database("DB"));
+    q.exec("SELECT id FROM tiendas WHERE local = '1' LIMIT 1");
+    if (q.first()) {
+        m_idTiendaLocal = q.value(0).toInt();
+    } else {
+        qWarning() << "SyncManager: no se encuentra registro de tienda local (local='1') en la tabla tiendas.";
+    }
 }
 
 /**

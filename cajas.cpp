@@ -112,12 +112,12 @@ void Cajas::on_spinBox1c_valueChanged(int arg1)
     actualizarEfectivo();
 }
 
-void Cajas::on_doubleSpinBoxCambios_valueChanged(double arg1)
+void Cajas::on_doubleSpinBoxCambios_valueChanged(double)
 {
     actualizarEfectivo();
 }
 
-void Cajas::on_doubleSpinBoxCajaF_valueChanged(const QString &arg1)
+void Cajas::on_doubleSpinBoxCajaF_textChanged(const QString &)
 {
     actualizarEfectivo();
 }

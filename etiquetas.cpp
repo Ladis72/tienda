@@ -14,6 +14,7 @@ Etiquetas::Etiquetas(QWidget *parent)
     , ui(new Ui::Etiquetas)
 {
     ui->setupUi(this);
+    connect(ui->pushButton_2, &QPushButton::clicked, this, &Etiquetas::borrarLinea);
     modelo = new QStandardItemModel;
     llenarModelo();
 }
@@ -139,7 +140,7 @@ void Etiquetas::on_tableView_clicked(const QModelIndex &index)
     articuloSeleccionado = dato.toString();
 }
 
-void Etiquetas::on_pushButton_2_clicked()
+void Etiquetas::borrarLinea()
 {
     if (articuloSeleccionado.isEmpty()) {
         QMessageBox *aviso = new QMessageBox(this);
