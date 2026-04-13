@@ -38,7 +38,7 @@ private slots:
     void on_spinBox2c_valueChanged(int arg1);
     void on_spinBox1c_valueChanged(int arg1);
     void on_doubleSpinBoxCambios_valueChanged(double arg1);
-    void on_doubleSpinBoxCajaF_valueChanged(const QString &arg1);
+    void on_doubleSpinBoxCajaF_textChanged(const QString &arg1);
 
     void actualizarEfectivo();
 

@@ -17,6 +17,18 @@ Salidas::Salidas(QWidget *parent)
 
     actualizarTabla();
     codSeleccionado = "";
+
+    // Desactivar autoDefault para evitar inserciones accidentales al pulsar ENTER
+    ui->pushButtonAgregar->setAutoDefault(false);
+    ui->pushButtonAgregar->setDefault(false);
+    ui->pushButtonEnviar->setAutoDefault(false);
+    ui->pushButtonEnviar->setDefault(false);
+
+    // Cadena de enfoque mediante ENTER
+    connect(ui->lineEditCantidad, &QLineEdit::returnPressed, [this](){
+        ui->dateEditFC->setFocus();
+    });
+    connect(ui->lineEditPrecio, &QLineEdit::returnPressed, this, &Salidas::on_pushButtonAgregar_clicked);
 }
 
 Salidas::~Salidas()
@@ -123,6 +135,12 @@ void Salidas::llenarComboTiendas()
 
 void Salidas::on_pushButtonAgregar_clicked()
 {
+    if (ui->lineEditCantidad->text().trimmed().isEmpty()) {
+        QMessageBox::warning(this, "Error", "La cantidad no puede estar vacía.");
+        ui->lineEditCantidad->setFocus();
+        return;
+    }
+
     QString idLote = base->idLote(conf->getConexionLocal(),
                                   ui->lineEditCod->text(),
                                   "",
@@ -164,6 +182,10 @@ void Salidas::on_pushButtonAgregar_clicked()
             break;
         }
     }
+    if (ui->lineEditPrecio->text().trimmed().isEmpty()) {
+        ui->lineEditPrecio->setText("0");
+    }
+
     QStringList datos;
     datos.clear();
     datos.append(ui->lineEditCod->text());
@@ -223,8 +245,9 @@ void Salidas::on_pushButtonEnviar_clicked()
         idTienda = mTablaSalidas->record(i).value(7).toString();
 
         base->disminuirLote(cod, fechaCaducidad, uds);
+        QString precioValidado = pvp.isEmpty() ? "0" : pvp;
         QSqlQuery tmp = base->ejecutarSentencia("UPDATE articulos SET descripcion = '" + descripcion
-                                                    + "' , pvp = " + pvp + " WHERE cod = '" + cod
+                                                    + "' , pvp = " + precioValidado + " WHERE cod = '" + cod
                                                     + "'",
                                                 conf->getConexionLocal());
     }
@@ -266,10 +289,6 @@ void Salidas::on_tableView_clicked(const QModelIndex &index)
     qDebug() << codSeleccionado;
 }
 
-void Salidas::on_pushButtonActualizar_clicked()
-{
-    actualizarTabla();
-}
 
 void Salidas::actualizarTotales()
 {
@@ -284,7 +303,7 @@ void Salidas::actualizarTotales()
                            + "  Productos=" + QString::number(productos));
 }
 
-void Salidas::on_comboBoxDestino_currentIndexChanged(int index)
+void Salidas::on_comboBoxDestino_currentIndexChanged(int)
 {
     actualizarTabla();
     qDebug() << "Current index changed";

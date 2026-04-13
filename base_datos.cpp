@@ -408,6 +408,9 @@ bool baseDatos::insertarArticulo(QSqlDatabase db, QStringList datos) {
 bool baseDatos::descontarArticulo(QString db, QString cod, int uds) {
   QSqlQuery consulta(QSqlDatabase::database(db));
 
+  // No sincronizar cambios realizados desde el proceso de venta (TPV)
+  consulta.exec("SET @skip_sync = 1");
+
   consulta.exec("SELECT id , cantidad FROM lotes WHERE ean = '" + cod +
                 "' ORDER BY fecha ASC");
   consulta.first();
@@ -442,12 +445,18 @@ bool baseDatos::descontarArticulo(QString db, QString cod, int uds) {
     crearLote(conf->getConexionLocal(), cod, "", "2000-01-01",
               QString::number(0 - uds));
   }
+  
+  consulta.exec("SET @skip_sync = 0");
   return true;
 }
 
 bool baseDatos::actualizarFechaVentaArticulo(QString nombreConexion,
                                              QString cod, QString fecha) {
   QSqlDatabase db = QSqlDatabase::database(nombreConexion);
+
+  // No sincronizar cambios realizados desde el proceso de venta (TPV)
+  QSqlQuery qSkip(db);
+  qSkip.exec("SET @skip_sync = 1");
 
   // 2. Iniciar la transacción
   if (!db.transaction()) {
@@ -463,6 +472,7 @@ bool baseDatos::actualizarFechaVentaArticulo(QString nombreConexion,
   if (consulta.exec()) {
     // 3. Si la consulta fue exitosa, confirmar los cambios
     if (db.commit()) {
+      qSkip.exec("SET @skip_sync = 0");
       return true;
     } else {
       // Error al confirmar (ej. problemas de red, disco lleno, etc.)
@@ -845,11 +855,16 @@ bool baseDatos::crearTienda(QStringList datos) {
                    "usuario, password, master, local, baseDatos, puerto, "
                    "ssl_ca) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-  // Ignoramos datos.at(0) porque es un ID vacío que falla en MySQL Strict Mode
-  // para auto increment
-  for (int i = 1; i < datos.length(); i++) {
-    consulta.bindValue(i - 1, datos.at(i));
+  // Comprobar duplicados por nombre o IP
+  QSqlQuery check(QSqlDatabase::database("DB"));
+  check.prepare("SELECT id FROM tiendas WHERE nombre = ? OR ip = ?");
+  check.bindValue(0, datos.at(1));
+  check.bindValue(1, datos.at(7));
+  if (check.exec() && check.next()) {
+      m_lastError = "Ya existe una tienda con ese nombre o IP.";
+      return false;
   }
+
   if (consulta.exec()) {
     return true;
   }
@@ -1729,7 +1744,7 @@ int baseDatos::unidadesLote(QString base, QString idLote) {
 
 bool baseDatos::borrarLotesArticulo(QString nombreConexion, QString codigo) {
   QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-  consulta.prepare("DELETE * FROM lotes WHERE ean = ?");
+  consulta.prepare("DELETE FROM lotes WHERE ean = ?");
   consulta.bindValue(0, codigo);
   if (consulta.exec()) {
     return true;
@@ -1740,6 +1755,10 @@ bool baseDatos::borrarLotesArticulo(QString nombreConexion, QString codigo) {
 
 void baseDatos::aumentarLote(QString base, QString idLote, int uds) {
   QSqlQuery consulta(QSqlDatabase::database(base));
+  
+  // No sincronizar cambios realizados desde el proceso de venta (TPV)
+  consulta.exec("SET @skip_sync = 1");
+
   consulta.exec("UPDATE lotes SET cantidad = cantidad + " +
                 QString::number(uds) + " WHERE id = '" + idLote + "'");
   if (consulta.numRowsAffected() == 1) {
@@ -1748,10 +1767,16 @@ void baseDatos::aumentarLote(QString base, QString idLote, int uds) {
   } else {
     qDebug() << consulta.lastError();
   }
+  
+  consulta.exec("SET @skip_sync = 0");
 }
 
 void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
   QSqlQuery consulta(QSqlDatabase::database("DB"));
+  
+  // No sincronizar cambios realizados desde el proceso de venta (TPV)
+  consulta.exec("SET @skip_sync = 1");
+
   consulta.exec("SELECT id , cantidad FROM lotes WHERE ean = '" + cod +
                 "' AND fecha = '" + fecha + "'");
   consulta.exec();
@@ -1762,6 +1787,7 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
     consulta.exec("INSERT INTO lotes (ean , lote ,fecha , cantidad) VALUES ('" +
                   cod + "','','" + fecha + "','-" + udsString + "')");
     qDebug() << consulta.lastError() << "Sin lotes";
+    consulta.exec("SET @skip_sync = 0");
     return;
   }
 
@@ -1775,6 +1801,7 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
                   "lotes WHERE ean = '" +
                   cod + "') where articulos.cod = '" + cod + "'");
     qDebug() << consulta.lastError() << "==";
+    consulta.exec("SET @skip_sync = 0");
     return;
   }
   if (consulta.record().value(1).toInt() < uds) {
@@ -1787,12 +1814,15 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
                   cod + "') where articulos.cod = '" + cod + "'");
     qDebug() << consulta.lastError() << "2<";
     disminuirLote(cod, fecha, resto);
+    consulta.exec("SET @skip_sync = 0");
     return;
   }
   int descontarUds = consulta.record().value(1).toInt();
   QString resto = QString::number(descontarUds - uds);
   consulta.exec("UPDATE lotes SET cantidad = " + resto + " WHERE id = '" + id +
                 "'");
+  
+  consulta.exec("SET @skip_sync = 0");
   return;
 }
 

@@ -14,6 +14,7 @@ ListadoSalidas::ListadoSalidas(QWidget *parent)
     , ui(new Ui::ListadoSalidas)
 {
     ui->setupUi(this);
+    connect(ui->pushButton_2, &QPushButton::clicked, this, &ListadoSalidas::imprimirInforme);
 
     // Fechas por defecto: mes actual
     QDate hoy = QDate::currentDate();
@@ -58,7 +59,7 @@ double ListadoSalidas::sumar(QSqlQueryModel *modelo)
     return A;
 }
 
-void ListadoSalidas::on_pushButton_2_clicked()
+void ListadoSalidas::imprimirInforme()
 {
     QString html = R"(
 <html>
