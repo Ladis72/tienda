@@ -10,15 +10,24 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QVariant>
+#include <QSqlRecord>
 #include <QtMath>
 
 extern Configuracion *conf;
 
+/**
+ * @brief Constructor de la clase pedidos.
+ * @param idPed Identificador del pedido.
+ * @param proveedor Nombre del proveedor.
+ * @param ndoc Número de documento (albarán/pedido).
+ * @param parent Widget padre.
+ */
 pedidos::pedidos(QString idPed, QString proveedor, QString ndoc,
                  QWidget *parent)
     : QDialog(parent), ui(new Ui::pedidos) {
   ui->setupUi(this);
 
+  // Inicialización de datos
   proveedorNombre = proveedor;
   ui->labelProveedor->setText(proveedor);
   ui->labelDocumento->setText(ndoc);
@@ -28,19 +37,52 @@ pedidos::pedidos(QString idPed, QString proveedor, QString ndoc,
   nDoc = ndoc;
   idPedido = idPed;
   idProveedor = base.idProveedor(proveedor, conf->getConexionLocal());
+  
+  // Desactivar autoDefault para evitar inserciones accidentales al pulsar ENTER
+  ui->pushButtonAnadir->setAutoDefault(false);
+  ui->pushButtonModificar->setAutoDefault(false);
+  ui->pushButtonBorrar->setAutoDefault(false);
+  ui->pushButtonImprimir->setAutoDefault(false);
+  ui->pushButtonCerrar->setAutoDefault(false);
+
+  // Cadena de navegación mediante la tecla ENTER (flujo rápido de datos)
+  connect(ui->leUds, &QLineEdit::returnPressed, [this](){ ui->leBon->setFocus(); ui->leBon->selectAll(); });
+  connect(ui->leBon, &QLineEdit::returnPressed, [this](){ ui->leLote->setFocus(); ui->leLote->selectAll(); });
+  connect(ui->leLote, &QLineEdit::returnPressed, [this](){ ui->lePvt->setFocus(); ui->lePvt->selectAll(); });
+  connect(ui->lePvt, &QLineEdit::returnPressed, [this](){ ui->leDescuento->setFocus(); ui->leDescuento->selectAll(); });
+  connect(ui->leDescuento, &QLineEdit::returnPressed, [this](){ ui->leIva->setFocus(); ui->leIva->selectAll(); });
+  connect(ui->leIva, &QLineEdit::returnPressed, this, &pedidos::on_pushButtonAnadir_clicked);
+  
+  // Llenar datos iniciales
   llenarTablaPedido(idPed);
   editando = false;
+  
+  // Establecer fecha actual por defecto
+  ui->dateEdit->setDate(QDate::currentDate());
 }
 
-pedidos::~pedidos() { delete ui; }
+pedidos::~pedidos() {
+  delete ui;
+}
 
-void pedidos::on_leCod_editingFinished() {}
+void pedidos::on_leCod_editingFinished() {
+    // Slot vacío reservado para futuras implementaciones
+}
 
+/**
+ * @brief Calcula el total de la línea actual basándose en PvT, Unidades e IVA.
+ * @return String con el total calculado.
+ */
 QString pedidos::calcularTotalLinea()
 {
-    double total = ui->lePvt->text().toDouble() * ui->leUds->text().toDouble()
-                   * ((100 - ui->leDescuento->text().toDouble()) / 100);
+    double pvt = ui->lePvt->text().toDouble();
+    double uds = ui->leUds->text().toDouble();
+    double desc = ui->leDescuento->text().toDouble();
+    
+    // Cálculo de la base imponible de la línea
+    double total = pvt * uds * ((100.0 - desc) / 100.0);
 
+    // Consulta de impuestos para el margen
     QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
     q.prepare("SELECT porcentaje, recargo FROM impuestos WHERE porcentaje = :porcentaje");
     q.bindValue(":porcentaje", ui->leIva->text());
@@ -49,46 +91,59 @@ QString pedidos::calcularTotalLinea()
     if (q.exec() && q.first()) {
         pi = q.value(0).toDouble();
         pr = q.value(1).toDouble();
+    } else {
+        // Si no se encuentra el IVA, usamos el valor del campo como porcentaje por defecto
+        pi = ui->leIva->text().toDouble();
+        pr = 0;
     }
 
+    // El recargo de equivalencia solo se aplica si la tienda lo tiene configurado
     bool esRE = (base.leerConfiguracion() == "1");
-    if (!esRE)
-        pr = 0;
+    if (!esRE) pr = 0;
 
-    double ventaTotal = (ui->leUds->text().toDouble() + ui->leBon->text().toDouble())
-                        * ui->lePvp->text().toDouble();
+    // Venta bruta estimada (Unidades + Bonificadas) * PVP
+    double ventaTotal = (uds + ui->leBon->text().toDouble()) * ui->lePvp->text().toDouble();
 
     double margen = 0;
     if (esRE) {
-        // En RE, los impuestos de compra son coste; el PVP es el ingreso final.
-        double totalConImpuestos = total * (1 + (pi + pr) / 100.0);
+        // En Régimen de Recargo de Equivalencia, los impuestos de compra se consideran coste
+        double totalConImpuestos = total * (1.0 + (pi + pr) / 100.0);
         if (ventaTotal > 0)
-            margen = (ventaTotal - totalConImpuestos) / ventaTotal * 100;
+            margen = (ventaTotal - totalConImpuestos) / ventaTotal * 100.0;
     } else {
-        // En Régimen General, comparamos Base Imponible de Venta vs Base Imponible de Compra.
-        double ventaNeta = ventaTotal / (1 + pi / 100.0);
+        // En Régimen General, comparamos Base Imponible de Venta vs Base Imponible de Compra
+        double ventaNeta = ventaTotal / (1.0 + pi / 100.0);
         if (ventaNeta > 0)
-            margen = (ventaNeta - total) / ventaNeta * 100;
+            margen = (ventaNeta - total) / ventaNeta * 100.0;
     }
 
     ui->leMargen->setText(QString::number(margen, 'f', 2));
-    return QString::number(total);
+    ui->leTotalLinea->setText(QString::number(total, 'f', 2));
+    
+    return QString::number(total, 'f', 2);
 }
 
+/**
+ * @brief Llena la tabla de líneas del pedido y calcula los totales agrupados por IVA.
+ * @param idPedido ID del pedido a mostrar.
+ */
 void pedidos::llenarTablaPedido(QString idPedido) {
+  // Configuración del modelo principal
   modeloPedido->setQuery(
       QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = '%1'")
           .arg(idPedido),
       QSqlDatabase::database(conf->getConexionLocal()));
   ui->tableView->setModel(modeloPedido);
-  ui->tableView->hideColumn(0);
-  ui->tableView->hideColumn(1);
-  ui->tableView->hideColumn(10);
-  ui->tableView->hideColumn(13);
-  ui->tableView->hideColumn(14);
+  
+  // Ocultar columnas internas
+  ui->tableView->hideColumn(0);  // ID
+  ui->tableView->hideColumn(1);  // idPedido
+  ui->tableView->hideColumn(10); // Base unitaria
+  ui->tableView->hideColumn(13); // IVA total
+  ui->tableView->hideColumn(14); // RE total
   ui->tableView->resizeColumnsToContents();
 
-  // Consulta para agrupar por tipo de IVA
+  // Consulta para agrupar por tipo de IVA y mostrar el resumen inferior
   QString queryStr =
       QString("SELECT tipoIva, "
               "SUM(totalbase) AS totalBase, "
@@ -102,15 +157,12 @@ void pedidos::llenarTablaPedido(QString idPedido) {
 
   QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
   if (!query.exec(queryStr)) {
-    QMessageBox::critical(this, "Error",
-                          "Error al consultar los datos agrupados por IVA");
+    QMessageBox::critical(this, "Error", "Error al consultar los totales por IVA");
     return;
   }
 
-  // Crear un modelo de tabla para mostrar los datos agrupados
+  // Modelo para la tabla de totales (desglose por IVA)
   QStandardItemModel *modelo = new QStandardItemModel(this);
-
-  // Definir encabezados
   modelo->setHorizontalHeaderLabels(QStringList()
                                     << "Tipo IVA" << "Base Imponible"
                                     << "Total IVA" << "Total RE"
@@ -118,407 +170,323 @@ void pedidos::llenarTablaPedido(QString idPedido) {
 
   double totalBase = 0, totalIva = 0, totalRe = 0, totalGeneral = 0;
 
-  // Procesar resultados de la consulta
   while (query.next()) {
     QList<QStandardItem *> fila;
 
-    // Obtener valores
     double tipoIva = query.value("tipoIva").toDouble();
-    double base = query.value("totalBase").toDouble();
-    double iva = query.value("totalIva").toDouble();
-    double re = query.value("totalRe").toDouble();
-    double total = query.value("totalGeneral").toDouble();
+    double baseVal = query.value("totalBase").toDouble();
+    double ivaVal = query.value("totalIva").toDouble();
+    double reVal = query.value("totalRe").toDouble();
+    double totalVal = query.value("totalGeneral").toDouble();
 
-    // Crear celdas de la fila
-    fila << new QStandardItem(QString::number(tipoIva))      // Tipo IVA
-         << new QStandardItem(QString::number(base, 'f', 2)) // Base Imponible
-         << new QStandardItem(QString::number(iva, 'f', 2))  // IVA
-         << new QStandardItem(
-                QString::number(re, 'f', 2)) // Recargo de Equivalencia
-         << new QStandardItem(QString::number(total, 'f', 2)); // Total General
+    fila << new QStandardItem(QString::number(tipoIva) + "%")
+         << new QStandardItem(QString::number(baseVal, 'f', 2))
+         << new QStandardItem(QString::number(ivaVal, 'f', 2))
+         << new QStandardItem(QString::number(reVal, 'f', 2))
+         << new QStandardItem(QString::number(totalVal, 'f', 2));
 
-    // Agregar fila al modelo
     modelo->appendRow(fila);
 
-    // Sumar totales generales
-    totalBase += base;
-    totalIva += iva;
-    totalRe += re;
-    totalGeneral += total;
+    // Acumular para los campos de texto
+    totalBase += baseVal;
+    totalIva += ivaVal;
+    totalRe += reVal;
+    totalGeneral += totalVal;
   }
-  // Lenar los totales
+
+  // Actualizar widgets de totales
   ui->lineEditBase->setText(QString::number(totalBase, 'f', 2));
   ui->lineEditIVA->setText(QString::number(totalIva, 'f', 2));
   ui->lineEditRecargo->setText(QString::number(totalRe, 'f', 2));
   ui->lineEditTotal->setText(QString::number(totalGeneral, 'f', 2));
+  
   contarArticulos();
   contarLineas();
-  // Establecer el modelo en la vista de tabla
+  
   ui->tableViewTotales->setModel(modelo);
   ui->tableViewTotales->resizeColumnsToContents();
-
-  // Mostrar los totales generales en los campos correspondientes
-  // ui->leTotalBase->setText(QString::number(totalBase, 'f', 2));
-  // ui->leTotalIva->setText(QString::number(totalIva, 'f', 2));
-  // ui->leTotalRe->setText(QString::number(totalRe, 'f', 2));
-  // ui->leTotal->setText(QString::number(totalGeneral, 'f', 2));
 }
 
+/**
+ * @brief Limpia los campos de entrada para agregar una nueva línea.
+ */
 void pedidos::borrarLineEdits() {
   ui->leCod->clear();
   ui->leDescripcion->clear();
-  ui->leUds->clear();
-  ui->leBon->clear();
+  ui->leUds->setText("1");
+  ui->leBon->setText("0");
   ui->lePvt->clear();
-  ui->leDescuento->clear();
+  ui->leDescuento->setText("0");
   ui->leIva->clear();
+  ui->leIva->setText("21");
   ui->lePvp->clear();
   ui->leTotalLinea->clear();
+  ui->leMargen->clear();
   ui->dateEdit->setDate(QDate::currentDate());
   ui->leLote->clear();
+  editando = false;
+  lineaSeleccionada = "";
 }
 
+/**
+ * @brief Actualiza el contador de líneas visibles.
+ */
 void pedidos::contarLineas() {
   int lineas = modeloPedido->rowCount();
   ui->lineEditLineas->setText(QString::number(lineas));
 }
 
+/**
+ * @brief Suma el total de unidades físicas (incluyendo bonificadas).
+ */
 void pedidos::contarArticulos() {
-  float articulos =
-      base.sumarColumna(conf->getConexionLocal(), "lineaspedido_tmp",
-                        "cantidad", "idPedido", idPedido);
-  float bonificacion =
-      base.sumarColumna(conf->getConexionLocal(), "lineaspedido_tmp",
-                        "bonificacion", "idPedido", idPedido);
+  float articulos = base.sumarColumna(conf->getConexionLocal(), "lineaspedido_tmp",
+                         "cantidad", "idPedido", idPedido);
+  float bonificacion = base.sumarColumna(conf->getConexionLocal(), "lineaspedido_tmp",
+                         "bonificacion", "idPedido", idPedido);
   ui->lineEditUnidades->setText(QString::number(articulos + bonificacion));
 }
 
-void pedidos::on_leUds_textChanged(const QString &arg1) {
-  ui->leTotalLinea->setText(calcularTotalLinea());
-}
+// Slots de actualización reactiva
+void pedidos::on_leUds_textChanged(const QString &) { calcularTotalLinea(); }
+void pedidos::on_lePvt_textChanged(const QString &) { calcularTotalLinea(); }
+void pedidos::on_leIva_textChanged(const QString &) { calcularTotalLinea(); }
+void pedidos::on_leDescuento_textChanged(const QString &) { calcularTotalLinea(); }
+void pedidos::on_leBon_textChanged(const QString &) { calcularTotalLinea(); }
+void pedidos::on_lePvp_textChanged(const QString &) { calcularTotalLinea(); }
 
-void pedidos::on_lePvt_textChanged(const QString &arg1) {
-  ui->leTotalLinea->setText(calcularTotalLinea());
-}
-
-void pedidos::on_leIva_textChanged(const QString &arg1) {
-  ui->leTotalLinea->setText(calcularTotalLinea());
-}
-
-void pedidos::on_leDescuento_textChanged(const QString &arg1) {
-  ui->leTotalLinea->setText(calcularTotalLinea());
-}
-
+/**
+ * @brief Guarda o modifica la línea actual en la base de datos temporal.
+ */
 void pedidos::on_pushButtonAnadir_clicked() {
-  // QStringList datos;
-  // datos.clear();
-  // //Comprobar de nuevo que hay un artículo con ese código
-  // bool existe =
-  // base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
-  //                                      "articulos",
-  //                                      "cod",
-  //                                      ui->leCod->text());
-  // if (existe == true) {
-  //     float baseTotal = ui->leTotalLinea->text().toFloat();
-  //     int tipoIva = ui->leIva->text().toInt();
-  //     float iva = baseTotal * tipoIva / 100;
-  //     float re;
-
-  //     if (base.leerConfiguracion() == "1") {
-  //         switch (tipoIva) {
-  //         case 21:
-  //             re = baseTotal * 5.2 / 100;
-  //             break;
-  //         case 10:
-  //             re = baseTotal * 1.4 / 100;
-  //             break;
-  //         case 4:
-  //             re = baseTotal * 0.5 / 100;
-  //             break;
-  //         case 5:
-  //             re = baseTotal * 0.625 / 100;
-  //             break;
-  //         case 0:
-  //             re = 0;
-  //             break;
-  //         default:
-  //             re = 0;
-  //             break;
-  //         };
-  //     } else {
-  //         re = 0;
-  //     }
-  //     float baseProducto = ui->leTotalLinea->text().toFloat() /
-  //     ui->leUds->text().toFloat();
-
-  //     datos.append(idPedido);
-  //     datos.append(ui->leCod->text());
-  //     datos.append(ui->leDescripcion->text());
-  //     datos.append(ui->leUds->text());
-  //     if (ui->leBon->text().isEmpty()) {
-  //         datos.append("0");
-  //     } else {
-  //         datos.append(ui->leBon->text());
-  //     }
-  //     datos.append(ui->leLote->text());
-  //     datos.append(ui->dateEdit->date().toString("yyyy-MM-dd"));
-  //     datos.append(ui->lePvt->text());
-  //     datos.append(ui->leDescuento->text());
-  //     datos.append(QString::number(baseProducto));
-  //     datos.append(ui->leIva->text());
-  //     datos.append(ui->leTotalLinea->text());
-  //     datos.append(QString::number(iva));
-  //     datos.append(QString::number(re));
-  //     datos.append(ui->lePvp->text());
-  //     if (editando == true) {
-  //         datos.append(lineaSeleccionada);
-  //         base.modificarLineaPedido(conf->getConexionLocal(), datos);
-  //     } else {
-  //         base.grabarLineaPedido(conf->getConexionLocal(), datos);
-  //     }
-  //     llenarTablaPedido(idPedido);
-  // } else {
-  //     QMessageBox *msg = new QMessageBox(this);
-  //     msg->setText("ERROR");
-  //     msg->setInformativeText("No hay un producto con ese código");
-  //     msg->exec();
-  // }
-  // editando = false;
-
-  // borrarLineEdits();
-  // ui->leCod->setFocus();
+  if (ui->leCod->text().isEmpty()) {
+      QMessageBox::warning(this, "Atención", "Debe introducir un código de producto.");
+      ui->leCod->setFocus();
+      return;
+  }
 
   QStringList datos;
-  datos.clear();
-
-  // Verificar que el producto existe
-  bool existe =
-      base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
+  
+  // Verificar existencia del producto
+  bool existe = base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
                              "articulos", "cod", ui->leCod->text());
-  if (existe == true) {
-    // Obtener tipo de IVA desde la entrada del usuario
-    QVariant tipoIva = ui->leIva->text();
+  if (existe) {
     double baseTotal = ui->leTotalLinea->text().toDouble();
     double iva = 0.0;
     double re = 0.0;
+    QString tipoIvaStr = ui->leIva->text();
 
-    // Calcular IVA y RE desde la tabla impuestos
-    qDebug() << "Tipo IVA: " << tipoIva << tipoIva.typeName();
+    // Obtener los porcentajes reales de impuestos de la tabla maestra
     QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
-    query.prepare("SELECT tipoIva, porcentaje, recargo FROM impuestos WHERE "
-                  "porcentaje = :porcentaje");
-    query.bindValue(":porcentaje", tipoIva);
-    query.exec();
-    query.first();
-    qDebug() << query.lastQuery();
-    qDebug() << query.lastError();
+    query.prepare("SELECT porcentaje, recargo FROM impuestos WHERE porcentaje = :porcentaje");
+    query.bindValue(":porcentaje", tipoIvaStr);
+    
+    if (query.exec() && query.first()) {
+        iva = baseTotal * query.value(0).toDouble() / 100.0;
+        re = baseTotal * query.value(1).toDouble() / 100.0;
+    } else {
+        QMessageBox::warning(this, "IVA no válido", "Debe introducir un porcentaje de IVA válido de la configuración.");
+        ui->leIva->setFocus();
+        ui->leIva->selectAll();
+        return;
+    }
 
-    qDebug() << "Base: " << baseTotal << " IVA: " << query.value(1).toDouble();
-    iva = baseTotal * query.value(1).toDouble() / 100;
-    qDebug() << "Base: " << baseTotal << " IVA: " << query.value(2).toDouble();
-    re = baseTotal * query.value(2).toDouble() / 100;
+    double uds = ui->leUds->text().toDouble();
+    if (uds == 0) uds = 1.0; 
+    
+    double baseProducto = baseTotal / uds;
 
-    // Continuar con la creación de la línea del pedido
-    double baseProducto = baseTotal / ui->leUds->text().toDouble();
-    datos.append(idPedido);
-    datos.append(ui->leCod->text());
-    datos.append(ui->leDescripcion->text());
-    datos.append(ui->leUds->text());
-    datos.append(ui->leBon->text().isEmpty() ? "0" : ui->leBon->text());
-    datos.append(ui->leLote->text());
-    datos.append(ui->dateEdit->date().toString("yyyy-MM-dd"));
-    datos.append(ui->lePvt->text());
-    datos.append(ui->leDescuento->text());
-    datos.append(QString::number(baseProducto));
-    datos.append(tipoIva.toString());
-    datos.append(ui->leTotalLinea->text());
-    datos.append(QString::number(iva));
-    datos.append(QString::number(re));
-    datos.append(ui->lePvp->text());
+    // Sanitizar valores numéricos para evitar errores SQL (cadena vacía -> "0")
+    auto sanitizeNum = [](QString val) { 
+        return (val.trimmed().isEmpty() ? "0" : val); 
+    };
 
-    qDebug() << datos;
+    // Preparar lista de datos para baseDatos (debe contener 15 elementos)
+    datos.append(idPedido);                                // 1. idPedido
+    datos.append(ui->leCod->text());                        // 2. cod
+    datos.append(ui->leDescripcion->text());                // 3. descripcion
+    datos.append(QString::number(uds));                     // 4. cantidad
+    datos.append(sanitizeNum(ui->leBon->text()));           // 5. bonificacion
+    datos.append(ui->leLote->text());                       // 6. lote
+    datos.append(ui->dateEdit->date().toString("yyyy-MM-dd")); // 7. fc
+    datos.append(sanitizeNum(ui->lePvt->text()));           // 8. costo
+    datos.append(sanitizeNum(ui->leDescuento->text()));     // 9. descuento1
+    datos.append(QString::number(baseProducto, 'f', 4));    // 10. base (base unitaria)
+    datos.append(sanitizeNum(tipoIvaStr));                 // 11. tipoIva
+    datos.append(QString::number(baseTotal, 'f', 2));       // 12. totalbase
+    datos.append(QString::number(iva, 'f', 2));            // 13. iva
+    datos.append(QString::number(re, 'f', 2));             // 14. re
+    datos.append(sanitizeNum(ui->lePvp->text()));           // 15. pvp
 
     if (editando) {
-      datos.append(lineaSeleccionada);
-      base.modificarLineaPedido(conf->getConexionLocal(), datos);
+      if (!lineaSeleccionada.isEmpty()) {
+        datos.append(lineaSeleccionada);
+        base.modificarLineaPedido(conf->getConexionLocal(), datos);
+      }
     } else {
       base.grabarLineaPedido(conf->getConexionLocal(), datos);
     }
 
     llenarTablaPedido(idPedido);
+    borrarLineEdits();
+    ui->leCod->setFocus();
   } else {
-    QMessageBox::information(this, "ERROR",
-                             "No hay un producto con ese código.");
+    QMessageBox::information(this, "ERROR", "No hay un producto con ese código.");
   }
-
-  editando = false;
-  borrarLineEdits();
-  ui->leCod->setFocus();
 }
 
+/**
+ * @brief Busca el producto por código o código auxiliar al pulsar ENTER.
+ */
 void pedidos::on_leCod_returnPressed() {
-  QSqlRecord registro =
-      base.consulta_producto(conf->getConexionLocal(), ui->leCod->text());
+  QString cod = ui->leCod->text();
+  if (cod.isEmpty()) return;
+
+  QSqlRecord registro = base.consulta_producto(conf->getConexionLocal(), cod);
   
   if (registro.isEmpty()) {
-    QString cod =
-        base.codigoDesdeAux(conf->getConexionLocal(), ui->leCod->text());
-    registro = base.consulta_producto(conf->getConexionLocal(), cod);
+    // Intentar buscar por código auxiliar
+    QString codReal = base.codigoDesdeAux(conf->getConexionLocal(), cod);
+    if (!codReal.isEmpty()) {
+        registro = base.consulta_producto(conf->getConexionLocal(), codReal);
+    }
   }
   
   if (!registro.isEmpty()) {
     ui->leCod->setText(registro.value("cod").toString());
     ui->leDescripcion->setText(registro.value("descripcion").toString());
-    ui->lePvt->setText(registro.value("precio_venta").toString());
-    ui->leIva->setText(registro.value("impuesto").toString());
+    ui->lePvt->setText(registro.value("precio_compra").toString().isEmpty() ? 
+                      registro.value("precio_venta").toString() : registro.value("precio_compra").toString());
+    QString ivaArt = registro.value("iva").toString();
+    ui->leIva->setText(ivaArt.isEmpty() ? "21" : ivaArt);
     ui->lePvp->setText(registro.value("pvp").toString());
-    ui->leDescuento->setText(
-        base.descuentoProveedor(ui->labelProveedor->text()));
+    ui->leDescuento->setText(base.descuentoProveedor(proveedorNombre));
     ui->leUds->setText("1");
-    ui->leTotalLinea->setText(calcularTotalLinea());
     ui->leUds->setFocus();
     ui->leUds->selectAll();
   } else {
-    QMessageBox *msg = new QMessageBox(this);
-    msg->setText("No se encuentra el producto");
-    msg->setInformativeText("Desea crearlo?");
-    msg->setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-    msg->setDefaultButton(QMessageBox::Ok);
-    int resp = msg->exec();
-    if (resp == QMessageBox::Ok) {
-      Articulos *articulo = new Articulos;
-      articulo->exec();
-      articulo->borrarFormulario();
-
-      qDebug() << "Crear producto";
+    if (QMessageBox::question(this, "Producto no encontrado", 
+                             "No se encuentra el producto. ¿Desea crearlo ahora?",
+                             QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+      Articulos *articuloDialog = new Articulos(this);
+      articuloDialog->exec();
+      delete articuloDialog;
     } else {
-      borrarLineEdits();
+      ui->leCod->selectAll();
       ui->leCod->setFocus();
     }
   }
 }
 
+/**
+ * @brief Borra la línea seleccionada en la tabla.
+ */
 void pedidos::on_pushButtonBorrar_clicked() {
   if (lineaSeleccionada.isEmpty()) {
-    QMessageBox::information(
-        this, "ATENCIÓN",
-        "Primero debe seleccionar una linea para poder borrarla");
+    QMessageBox::information(this, "ATENCIÓN", "Seleccione una línea para borrar.");
     return;
   }
-  base.borrarLineaPedido(conf->getConexionLocal(), lineaSeleccionada);
-  llenarTablaPedido(idPedido);
+  
+  if (QMessageBox::question(this, "Confirmar borrado", 
+                           "¿Está seguro de que desea eliminar la línea seleccionada?",
+                           QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+      base.borrarLineaPedido(conf->getConexionLocal(), lineaSeleccionada);
+      llenarTablaPedido(idPedido);
+      borrarLineEdits();
+  }
 }
 
+/**
+ * @brief Carga los datos de una línea de la tabla al formulario para editarla.
+ */
 void pedidos::on_tableView_doubleClicked(const QModelIndex &index) {
-  QModelIndex indice = modeloPedido->index(index.row(), 0);
-  int fila = indice.row(); // Devuelve el número de fila del modelo
-  ui->leCod->setText(
-      modeloPedido->data(modeloPedido->index(fila, 2)).toString());
-  ui->leDescripcion->setText(
-      modeloPedido->data(modeloPedido->index(fila, 3)).toString());
-  ui->leUds->setText(
-      modeloPedido->data(modeloPedido->index(fila, 4)).toString());
-  ui->leBon->setText(
-      modeloPedido->data(modeloPedido->index(fila, 5)).toString());
-  ui->leLote->setText(
-      modeloPedido->data(modeloPedido->index(fila, 6)).toString());
-  ui->dateEdit->setDate(QDate::fromString(
-      modeloPedido->data(modeloPedido->index(fila, 7)).toString(),
-      "yyyy-MM-dd"));
-  ui->lePvt->setText(
-      modeloPedido->data(modeloPedido->index(fila, 8)).toString());
-  ui->leIva->setText(
-      modeloPedido->data(modeloPedido->index(fila, 11)).toString());
-  ui->lePvp->setText(
-      modeloPedido->data(modeloPedido->index(fila, 15)).toString());
-  ui->leDescuento->setText(
-      modeloPedido->data(modeloPedido->index(fila, 9)).toString());
-  ui->leTotalLinea->setText(
-      modeloPedido->data(modeloPedido->index(fila, 12)).toString());
-  lineaSeleccionada = modeloPedido->data(indice, Qt::EditRole).toString();
+  int fila = index.row();
+  QModelIndex indexId = modeloPedido->index(fila, 0);
+  lineaSeleccionada = modeloPedido->data(indexId, Qt::EditRole).toString();
+  
+  ui->leCod->setText(modeloPedido->data(modeloPedido->index(fila, 2)).toString());
+  ui->leDescripcion->setText(modeloPedido->data(modeloPedido->index(fila, 3)).toString());
+  ui->leUds->setText(modeloPedido->data(modeloPedido->index(fila, 4)).toString());
+  ui->leBon->setText(modeloPedido->data(modeloPedido->index(fila, 5)).toString());
+  ui->leLote->setText(modeloPedido->data(modeloPedido->index(fila, 6)).toString());
+  ui->dateEdit->setDate(QDate::fromString(modeloPedido->data(modeloPedido->index(fila, 7)).toString(), "yyyy-MM-dd"));
+  ui->lePvt->setText(modeloPedido->data(modeloPedido->index(fila, 8)).toString());
+  ui->leDescuento->setText(modeloPedido->data(modeloPedido->index(fila, 9)).toString());
+  ui->leIva->setText(modeloPedido->data(modeloPedido->index(fila, 11)).toString());
+  ui->lePvp->setText(modeloPedido->data(modeloPedido->index(fila, 15)).toString());
+  
+  calcularTotalLinea();
   editando = true;
-
-  qDebug() << lineaSeleccionada;
+  ui->leUds->setFocus();
+  ui->leUds->selectAll();
 }
 
 void pedidos::on_tableView_clicked(const QModelIndex &index) {
   QModelIndex indice = modeloPedido->index(index.row(), 0);
   lineaSeleccionada = modeloPedido->data(indice, Qt::EditRole).toString();
-  qDebug() << lineaSeleccionada;
 }
 
+/**
+ * @brief Busca productos por descripción al pulsar ENTER en el campo de descripción.
+ */
 void pedidos::on_leDescripcion_returnPressed() {
-  consulta =
-      base.buscarProducto(QSqlDatabase::database(conf->getConexionLocal()),
-                          "articulos", ui->leDescripcion->text());
-  consulta.first();
-  BuscarProducto *buscar = new BuscarProducto(this, consulta);
-  buscar->exec();
-  ui->leCod->setText(buscar->resultado);
-  emit on_leCod_returnPressed();
+  QString busca = ui->leDescripcion->text();
+  if (busca.isEmpty()) return;
+  
+  consulta = base.buscarProducto(QSqlDatabase::database(conf->getConexionLocal()),
+                          "articulos", busca);
+  
+  BuscarProducto *buscarDialog = new BuscarProducto(this, consulta);
+  if (buscarDialog->exec() == QDialog::Accepted) {
+      ui->leCod->setText(buscarDialog->resultado);
+      on_leCod_returnPressed();
+  }
+  delete buscarDialog;
 }
 
 void pedidos::on_pushButtonModificar_clicked() {
-  editando = true;
-  emit on_pushButtonAnadir_clicked();
+  on_pushButtonAnadir_clicked();
 }
 
+/**
+ * @brief Valida que el IVA introducido exista en la tabla de impuestos.
+ */
 void pedidos::on_leIva_editingFinished() {
-  // Obtener los tipos de IVA permitidos desde la tabla impuestos
+  if (ui->leIva->text().isEmpty()) return;
+  
   QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
-  query.prepare("SELECT porcentaje FROM impuestos");
+  query.prepare("SELECT porcentaje FROM impuestos WHERE porcentaje = :por");
+  query.bindValue(":por", ui->leIva->text());
   query.exec();
 
-  bool valido = false;
-  while (query.next()) {
-    qDebug() << query.value(0).toString() << "  " << ui->leIva->text();
-    if (ui->leIva->text() == query.value(0).toString()) {
-      valido = true;
-      break;
-    }
-  }
-
-  if (!valido) {
-    QMessageBox::information(this, "Error en el IVA",
-                             "El IVA ingresado no es válido.");
-    ui->leIva->clear();
+  if (!query.first()) {
+    QMessageBox::warning(this, "IVA no válido", "El porcentaje de IVA ingresado no existe en la configuración del sistema.\nPor favor, introduzca un valor correcto (ej: 0, 4, 10, 21).");
     ui->leIva->setFocus();
-  } else {
-    ui->leTotalLinea->setText(
-        calcularTotalLinea()); // Actualiza el total con el nuevo IVA
+    ui->leIva->selectAll();
   }
+  calcularTotalLinea();
 }
 
 void pedidos::on_dateEdit_editingFinished() {
-  if (ui->dateEdit->date() <= QDate::currentDate()) {
-    QMessageBox::information(this, "Error en fecha de caducidad",
-                             "La fecha no puede ser anterior al día de hoy");
-    ui->dateEdit->setFocus();
-    ui->dateEdit->setDate(QDate::currentDate());
-  }
+  // Validación opcional de fecha de caducidad
 }
 
-void pedidos::on_leBon_textChanged(const QString &arg1) {
-  ui->leTotalLinea->setText(calcularTotalLinea());
-}
-
-void pedidos::on_lePvp_textChanged(const QString &arg1) {
-  ui->leTotalLinea->setText(calcularTotalLinea());
-}
-
+/**
+ * @brief Imprime el pedido actual.
+ */
 void pedidos::on_pushButtonImprimir_clicked() {
   QString tienda = conf->getConexionLocal();
   QStringList cabecera;
-  cabecera.clear();
-  cabecera << nDoc;
-  cabecera << proveedorNombre;
-  cabecera << ui->lineEditBase->text();
-  cabecera << ui->lineEditIVA->text();
-  cabecera << ui->lineEditRecargo->text();
-  cabecera << ui->lineEditTotal->text();
+  cabecera << nDoc
+           << proveedorNombre
+           << ui->lineEditBase->text()
+           << ui->lineEditIVA->text()
+           << ui->lineEditRecargo->text()
+           << ui->lineEditTotal->text();
+           
   imprimirPedido pedido(tienda, cabecera, modeloPedido);
 }
 
 void pedidos::on_pushButtonCerrar_clicked() {
-  accept();
+  this->accept();
 }

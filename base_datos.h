@@ -46,6 +46,10 @@ public:
     bool actualizarFechaVentaArticulo(QString db, QString cod, QString fecha);
     bool actualizarArticulosDesdeCompras(QString base,QStringList datos);
     bool modificarFotoArticulo(QString foto, QString dato);
+    bool propagarCambioCodigoArticulo(QString oldCod, QString newCod);
+  bool existeArticuloEnNube(QString cod);
+  QSqlRecord getArticuloNube(QString cod);
+  bool actualizarArticuloDesdeRecord(QString cod, const QSqlRecord &record);
 
     //FUNCIONES CLIENTES
 
