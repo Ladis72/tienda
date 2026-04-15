@@ -9,7 +9,9 @@
 #include <QFileDialog>
 #include <QList>
 #include <QMessageBox>
+#include <QInputDialog>
 #include <QtConcurrent/QtConcurrent>
+#include "dialogcomparararticulos.h"
 
 Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   listaConexionesRemotas = conf->getNombreConexionesActivas();
@@ -27,6 +29,8 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   ui->pushButtonAnterior->setIcon(style()->standardIcon(QStyle::SP_ArrowLeft));
   ui->pushButtonSiguiente->setIcon(
       style()->standardIcon(QStyle::SP_ArrowRight));
+  ui->pushButtonCambiarCodigo->setIcon(
+      style()->standardIcon(QStyle::SP_BrowserReload));
 
   ui->pushButtonCerrar->setIcon(
       style()->standardIcon(QStyle::SP_DialogCloseButton));
@@ -81,6 +85,7 @@ Articulos::~Articulos() { delete ui; }
 void Articulos::refrescarBotones(int i) {
   ui->pushButtonAnterior->setEnabled(i > 0);
   ui->pushButtonSiguiente->setEnabled(i < modeloTabla->rowCount() - 1);
+  ui->pushButtonCambiarCodigo->setEnabled(false);
   QString fichero = QDir::currentPath() + "/" + ui->lineEditFoto->text();
   QImage foto(fichero);
   QPixmap imagen = QPixmap::fromImage(foto);
@@ -563,6 +568,7 @@ bool Articulos::eventFilter(QObject *obj, QEvent *event) {
 void Articulos::keyPressEvent(QKeyEvent *e) {
   if (e->key() == Qt::Key_F11) {
     ui->pushButtonBorrar->setEnabled(true);
+    ui->pushButtonCambiarCodigo->setEnabled(true);
   }
 }
 
@@ -576,6 +582,7 @@ void Articulos::borrarFormulario() {
   ui->labelNombreProducto->clear();
   ui->labelPrecioGrande->setText("0.00 €");
   ui->comboBoxFormato->setCurrentIndex(0);
+  ui->pushButtonCambiarCodigo->setEnabled(false);
 }
 
 void Articulos::on_pushButtonAnterior_clicked() {
@@ -810,6 +817,113 @@ void Articulos::on_pushButtonBuscarFabricante_clicked() {
   }
 }
 
+void Articulos::on_pushButtonEtiqueta_clicked() {
+  QString cod = ui->lineEditCod->text();
+  if (!cod.isEmpty()) {
+    base.insertarEtiqueta(conf->getConexionLocal(), cod);
+    QMessageBox::information(this, "Etiqueta", "Etiqueta creada");
+  }
+}
+
+void Articulos::on_pushButtonCambiarCodigo_clicked() {
+  QString oldCod = ui->lineEditCod->text();
+  if (oldCod.isEmpty()) {
+    return;
+  }
+
+  bool ok;
+  QString newCod = QInputDialog::getText(
+      this, tr("Cambiar Código"),
+      tr("Introduzca el nuevo código para el artículo:"), QLineEdit::Normal, "",
+      &ok);
+  if (!ok || newCod.isEmpty()) {
+    return;
+  }
+
+  if (newCod == oldCod) {
+    QMessageBox::warning(this, tr("Atención"),
+                         tr("El nuevo código es idéntico al actual."));
+    return;
+  }
+
+  // Validar que el nuevo código no existe localmente
+  if (base.existeDatoEnTabla(QSqlDatabase::database("DB"), "articulos", "cod",
+                             newCod)) {
+    QMessageBox::warning(
+        this, tr("Error"),
+        tr("El código introducido ya existe en la base de datos."));
+    return;
+  }
+
+  // --- Validar existencia en la Nube ---
+  bool existeNube = base.existeArticuloEnNube(newCod);
+  DialogCompararArticulos::Resultado eleccion = DialogCompararArticulos::Cancelar;
+
+  if (existeNube) {
+    QSqlRecord recordNube = base.getArticuloNube(newCod);
+    QSqlRecord recordLocal;
+    QSqlQuery qLocal(QSqlDatabase::database("DB"));
+    qLocal.prepare("SELECT * FROM articulos WHERE cod = ?");
+    qLocal.addBindValue(oldCod);
+    if (qLocal.exec() && qLocal.next()) recordLocal = qLocal.record();
+
+    DialogCompararArticulos dialog(recordLocal, recordNube, this);
+    if (dialog.exec() == QDialog::Accepted) {
+      eleccion = dialog.getResultado();
+    } else {
+      return; // Cancelar
+    }
+  }
+
+  // Si no existe en nube o el usuario decidió continuar tras ver el conflicto
+  if (!existeNube) {
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(
+        this, tr("Confirmar"),
+        tr("¿Está seguro de que desea cambiar el código de '%1' a '%2'?\n\n"
+           "Este cambio realizará las siguientes acciones:\n"
+           "1. Migrará TODO el historial local (ventas, stock, pedidos) al nuevo "
+           "código.\n"
+           "2. El código anterior seguiría activo en la nube y otras tiendas.\n"
+           "3. El nuevo código aparecerá en la nube tras la sincronización.")
+            .arg(oldCod, newCod),
+        QMessageBox::Yes | QMessageBox::No);
+
+    if (reply != QMessageBox::Yes) {
+      return;
+    }
+  }
+
+  // --- Ejecutar el cambio ---
+  if (base.propagarCambioCodigoArticulo(oldCod, newCod)) {
+    // Si hubo conflicto y se eligió usar datos de la nube, actualizar ahora el local
+    if (existeNube && eleccion == DialogCompararArticulos::UsarNube) {
+        QSqlRecord recordNube = base.getArticuloNube(newCod);
+        base.actualizarArticuloDesdeRecord(newCod, recordNube);
+    }
+
+    QMessageBox::information(
+        this, tr("Éxito"),
+        tr("El código ha sido cambiado correctamente localmente.\n"
+           "El proceso ha terminado exitosamente."));
+      recargarTabla();
+      // Buscar el nuevo registro para posicionar el cursor
+      for (int i = 0; i < modeloTabla->rowCount(); ++i) {
+        if (modeloTabla->record(i).value("cod").toString() == newCod) {
+          mapper.setCurrentIndex(i);
+          refrescarBotones(i);
+          break;
+        }
+      }
+    } else {
+      QMessageBox::critical(
+          this, tr("Error"),
+          tr("No se pudo completar el cambio de código. La operación ha sido "
+             "revertida para proteger la integridad de los datos."));
+    }
+  }
+}
+
 void Articulos::on_pushButtonNuevo_clicked() {
   QSqlRecord registroExistente =
       base.consulta_producto(conf->getConexionLocal(), ui->lineEditCod->text());
@@ -935,9 +1049,6 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index) {
   }
 }
 
-void Articulos::on_pushButtonEtiqueta_clicked() {
-  base.insertarEtiqueta(conf->getConexionLocal(), ui->lineEditCod->text());
-}
 
 void Articulos::on_pushButtonVer_2_clicked() {}
 

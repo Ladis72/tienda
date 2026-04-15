@@ -1,0 +1,44 @@
+-- ---------------------------------------------------------
+-- MIGRACIÓN 03: PREPARACIÓN PARA MULTI-TIENDA (SyncManager)
+-- Fecha: 2026-04-14
+-- Descripción: Añade campos de auditoría para sincronización.
+-- ---------------------------------------------------------
+
+-- Procedimiento para añadir columnas de sync si no existen
+-- (Nota: En MySQL, esto es más seguro que un ALTER directo si el script se corre varias veces)
+
+ALTER TABLE `articulos` 
+    ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS `id_tienda_origen` INT DEFAULT 0;
+
+ALTER TABLE `clientes` 
+    ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS `id_tienda_origen` INT DEFAULT 0;
+
+ALTER TABLE `proveedores` 
+    ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS `id_tienda_origen` INT DEFAULT 0;
+
+ALTER TABLE `familias` 
+    ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS `id_tienda_origen` INT DEFAULT 0;
+
+ALTER TABLE `fabricantes` 
+    ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS `id_tienda_origen` INT DEFAULT 0;
+
+ALTER TABLE `lotes` 
+    ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS `id_tienda_origen` INT DEFAULT 0;
+
+ALTER TABLE `vales` 
+    ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS `id_tienda_origen` INT DEFAULT 0;
+
+ALTER TABLE `albaranes`
+    ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS `id_tienda_origen` INT DEFAULT 0;
+
+ALTER TABLE `impuestos`
+    ADD COLUMN IF NOT EXISTS `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS `id_tienda_origen` INT DEFAULT 0;

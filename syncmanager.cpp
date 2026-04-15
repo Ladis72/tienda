@@ -8,6 +8,8 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QSqlRecord>
+#include <QTimer>
+#include <QDateTime>
 #include "unificarmaestros.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -18,7 +20,6 @@
 const QString SyncManager::CONEXION_NUBE = "NUBE";
 
 /// Tablas maestras cuyo contenido se comparte entre todas las tiendas.
-/// El orden importa: las tablas con FK deben ir después de su tabla padre.
 const QStringList SyncManager::TABLAS_MAESTRAS = {
     "familias",
     "fabricantes",
@@ -64,104 +65,56 @@ SyncManager::~SyncManager()
     desconectarNube();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Inicialización
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * @brief Inicia el SyncManager: crea infraestructura SQL y arranca los timers.
- *
- * Debe llamarse una vez después de que la BD local esté abierta.
- */
 void SyncManager::iniciar()
 {
-    // 1. Crear tablas auxiliares de sync en la BD local
     crearTablasSyncLocal();
-
-    // 2. Crear triggers para detectar cambios automáticamente
     crearTriggers();
-
-    // 3. Arrancar timers
     m_timerPing->start();
     m_timerSync->start();
-
-    // 4. Comprobar conexión inmediatamente al arrancar
     comprobarConexion();
-
     qDebug() << "SyncManager: iniciado correctamente";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Infraestructura SQL local
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * @brief Crea las tablas auxiliares de sync en la BD local si no existen.
- *
- *  sync_cola    → cola de cambios pendientes de subir a la nube
- *  sync_control → controla la fecha de última sync por tabla (para la bajada)
- */
 void SyncManager::crearTablasSyncLocal()
 {
     QSqlDatabase db = QSqlDatabase::database("DB");
     QSqlQuery q(db);
 
-    // Cola de cambios pendientes de subir
     q.exec("CREATE TABLE IF NOT EXISTS sync_cola ("
            "  id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-           "  tabla       VARCHAR(64)  NOT NULL COMMENT 'Nombre de la tabla modificada',"
-           "  id_registro VARCHAR(64)  NOT NULL COMMENT 'PK del registro modificado',"
+           "  tabla       VARCHAR(64)  NOT NULL,"
+           "  id_registro VARCHAR(64)  NOT NULL,"
            "  accion      ENUM('INSERT','UPDATE','DELETE') NOT NULL,"
            "  fecha       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-           "  subido      TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '1=subido a la nube'"
-           ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-           "  COMMENT='Cola de cambios en tablas maestras pendientes de sincronizar'");
+           "  subido      TINYINT(1)   NOT NULL DEFAULT 0"
+           ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-    if (q.lastError().isValid())
-        qWarning() << "SyncManager: error creando sync_cola:" << q.lastError().text();
-
-    // Control de última sincronización por tabla (para la bajada)
     q.exec("CREATE TABLE IF NOT EXISTS sync_control ("
            "  tabla       VARCHAR(64) PRIMARY KEY,"
            "  ultima_sync DATETIME    NOT NULL DEFAULT '2000-01-01 00:00:00'"
-           ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-           "  COMMENT='Fecha de última sincronización recibida desde la nube por tabla'");
+           ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-    if (q.lastError().isValid())
-        qWarning() << "SyncManager: error creando sync_control:" << q.lastError().text();
-
-    // Migraciones rápidas de tablas maestras LOCALES para que todas soporten sync
     for (const QString &tabla : TABLAS_MAESTRAS) {
-        q.exec(QString("ALTER TABLE `%1` ADD COLUMN id_tienda_origen INT DEFAULT NULL").arg(tabla));
-        q.exec(QString("ALTER TABLE `%1` ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP "
+        q.exec(QString("ALTER TABLE `%1` ADD COLUMN IF NOT EXISTS id_tienda_origen INT DEFAULT NULL").arg(tabla));
+        q.exec(QString("ALTER TABLE `%1` ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP "
                        "ON UPDATE CURRENT_TIMESTAMP").arg(tabla));
-        q.exec(QString("ALTER TABLE `%1` ADD INDEX (updated_at)").arg(tabla));
-    }
-
-    // Migraciones en la NUBE (si tenemos conexión) para que soporte el sistema de sync
-    if (m_hayConexion) {
-        QSqlQuery qN(QSqlDatabase::database(CONEXION_NUBE));
-        for (const QString &tabla : TABLAS_MAESTRAS) {
-            // Asegurar que todas las tablas maestras en la nube tengan seguimiento de cambios
-            qN.exec(QString("ALTER TABLE `%1` ADD COLUMN id_tienda_origen INT DEFAULT NULL").arg(tabla));
-            qN.exec(QString("ALTER TABLE `%1` ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP "
-                            "ON UPDATE CURRENT_TIMESTAMP").arg(tabla));
-            qN.exec(QString("ALTER TABLE `%1` ADD INDEX (updated_at)").arg(tabla));
+        
+        // Evitar duplicar índices: solo añadir si no existe
+        q.exec(QString("SELECT COUNT(*) FROM information_schema.statistics "
+                       "WHERE table_schema = DATABASE() AND table_name = '%1' "
+                       "AND column_name = 'updated_at'").arg(tabla));
+        if (q.next() && q.value(0).toInt() == 0) {
+            q.exec(QString("ALTER TABLE `%1` ADD INDEX (updated_at)").arg(tabla));
         }
-    }
-
-    // Insertar filas por defecto en sync_control (una por tabla maestra)
-    for (const QString &tabla : TABLAS_MAESTRAS) {
+        
         q.prepare("INSERT IGNORE INTO sync_control (tabla) VALUES (?)");
         q.addBindValue(tabla);
         q.exec();
     }
-    
-    // Control para la descarga de unificaciones globales
+
     q.prepare("INSERT IGNORE INTO sync_control (tabla) VALUES ('sync_unificaciones')");
     q.exec();
 
-    // Historial de unificaciones para propagar a otras tiendas
     q.exec("CREATE TABLE IF NOT EXISTS sync_unificaciones ("
            "  id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
            "  tabla       VARCHAR(64)  NOT NULL,"
@@ -169,694 +122,359 @@ void SyncManager::crearTablasSyncLocal()
            "  id_ganador  VARCHAR(64)  NOT NULL,"
            "  subido      TINYINT(1)   NOT NULL DEFAULT 0,"
            "  fecha       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP"
-           ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-           "  COMMENT='Registro de fusiones de maestros para propagar'");
+           ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
 
-/**
- * @brief Crea los triggers en la BD local para todas las tablas maestras.
- *
- * Cada tabla maestra tiene dos triggers: AFTER INSERT y AFTER UPDATE.
- * Los triggers insertan una fila en sync_cola para que el SyncManager
- * sepa qué registros hay que subir a la nube.
- */
 void SyncManager::crearTriggers()
 {
     for (const QString &tabla : TABLAS_MAESTRAS) {
         QString pk = getPkTabla(tabla);
-        if (pk.isEmpty()) {
-            qWarning() << "SyncManager: clave primaria desconocida para tabla" << tabla;
-            continue;
-        }
+        if (pk.isEmpty()) continue;
         crearTrigger(tabla, pk, "INSERT");
         crearTrigger(tabla, pk, "UPDATE");
         crearTrigger(tabla, pk, "DELETE");
     }
 }
 
-/**
- * @brief Crea un trigger AFTER INSERT o AFTER UPDATE en la BD local.
- *
- * Si el trigger ya existe, no hace nada (usa DROP IF EXISTS + CREATE).
- *
- * @param nombreTabla   Nombre de la tabla a vigilar
- * @param clavePrimaria Nombre del campo PK de esa tabla
- * @param evento        "INSERT" o "UPDATE"
- */
-void SyncManager::crearTrigger(const QString &nombreTabla,
-                                const QString &clavePrimaria,
-                                const QString &evento)
+void SyncManager::crearTrigger(const QString &nombreTabla, const QString &clavePrimaria, const QString &evento)
 {
     QSqlDatabase db = QSqlDatabase::database("DB");
     QSqlQuery q(db);
-
-    // Nombre único del trigger: sync_<tabla>_<evento>
     QString nombreTrigger = QString("sync_%1_%2").arg(nombreTabla).arg(evento.toLower());
-
-    // Borrar si ya existe (para poder recrearlo si cambia la estructura)
     q.exec(QString("DROP TRIGGER IF EXISTS %1").arg(nombreTrigger));
 
-    // Crear el trigger
     QString prefijo = (evento == "DELETE") ? "OLD" : "NEW";
     QString sql = QString(
-        "CREATE TRIGGER %1 "
-        "AFTER %2 ON %3 "
-        "FOR EACH ROW "
-        "BEGIN "
+        "CREATE TRIGGER %1 AFTER %2 ON %3 FOR EACH ROW BEGIN "
         "  IF @skip_sync IS NULL OR @skip_sync = 0 THEN "
-        "    INSERT INTO sync_cola (tabla, id_registro, accion) "
-        "    VALUES ('%3', %4.%5, '%2'); "
+        "    INSERT INTO sync_cola (tabla, id_registro, accion) VALUES ('%3', %4.%5, '%2'); "
         "  END IF; "
         "END"
     ).arg(nombreTrigger, evento, nombreTabla, prefijo, clavePrimaria);
-
-    if (!q.exec(sql)) {
-        qWarning() << "SyncManager: error creando trigger" << nombreTrigger
-                   << ":" << q.lastError().text();
-    }
+    q.exec(sql);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Conexión a la nube
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * @brief Abre la conexión a la BD en la nube usando los datos de config_nube.
- * @return true si la conexión se establece correctamente
- */
 bool SyncManager::conectarNube()
 {
-    // Si ya está abierta, reutilizarla
-    if (QSqlDatabase::database(CONEXION_NUBE).isOpen())
-        return true;
+    if (QSqlDatabase::database(CONEXION_NUBE).isOpen()) return true;
 
-    // Leer datos de config_nube desde la BD local
     QSqlQuery q(QSqlDatabase::database("DB"));
-    q.exec("SELECT servidor, puerto, baseDatos, usuario, clave, ssl_ca "
-           "FROM config_nube WHERE id = 1");
+    q.exec("SELECT servidor, puerto, baseDatos, usuario, clave, ssl_ca FROM config_nube WHERE id = 1");
+    if (!q.first()) return false;
 
-    if (!q.first()) {
-        qDebug() << "SyncManager: sin configuración de nube (config_nube vacía)";
-        return false;
-    }
-
-    QString host   = q.value(0).toString();
-    int     puerto = q.value(1).toInt();
-    QString bd     = q.value(2).toString();
-    QString user   = q.value(3).toString();
-    QString pass   = q.value(4).toString();
-    QString sslCa  = q.value(5).toString();
-
-    if (host.isEmpty() || bd.isEmpty()) {
-        qDebug() << "SyncManager: config_nube incompleta, sin sincronización";
-        return false;
-    }
-
-    // Resolver ruta relativa del certificado SSL
-    if (!sslCa.isEmpty() && QDir::isRelativePath(sslCa))
-        sslCa = QCoreApplication::applicationDirPath() + "/" + sslCa;
-
-    // Abrir conexión
     QSqlDatabase dbNube = QSqlDatabase::addDatabase("QMYSQL", CONEXION_NUBE);
-    dbNube.setHostName(host);
-    dbNube.setPort(puerto > 0 ? puerto : 3306);
-    dbNube.setDatabaseName(bd);
-    dbNube.setUserName(user);
-    dbNube.setPassword(pass);
+    dbNube.setHostName(q.value(0).toString());
+    dbNube.setPort(q.value(1).toInt() > 0 ? q.value(1).toInt() : 3306);
+    dbNube.setDatabaseName(q.value(2).toString());
+    dbNube.setUserName(q.value(3).toString());
+    dbNube.setPassword(q.value(4).toString());
 
-    QString opciones = "MYSQL_OPT_CONNECT_TIMEOUT=5";
-    if (!sslCa.isEmpty())
-        opciones += ";SSL_CA=" + sslCa;
-    dbNube.setConnectOptions(opciones);
+    QString sslCa = q.value(5).toString();
+    if (!sslCa.isEmpty()) {
+        if (QDir::isRelativePath(sslCa)) sslCa = QCoreApplication::applicationDirPath() + "/" + sslCa;
+        dbNube.setConnectOptions("SSL_CA=" + sslCa + ";MYSQL_OPT_CONNECT_TIMEOUT=5");
+    } else {
+        dbNube.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=5");
+    }
 
     if (!dbNube.open()) {
-        qDebug() << "SyncManager: no se pudo conectar a la nube:"
-                 << dbNube.lastError().text();
         QSqlDatabase::removeDatabase(CONEXION_NUBE);
         return false;
     }
-
+    m_hayConexion = true;
     return true;
 }
 
-/**
- * @brief Cierra y elimina la conexión a la nube.
- */
 void SyncManager::desconectarNube()
 {
     if (QSqlDatabase::contains(CONEXION_NUBE)) {
         QSqlDatabase::database(CONEXION_NUBE).close();
         QSqlDatabase::removeDatabase(CONEXION_NUBE);
     }
+    m_hayConexion = false;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Timers: ping y sync
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * @brief Comprueba si la nube está accesible.
- *
- * Intenta abrir la conexión. Si cambia el estado respecto al anterior,
- * emite la señal correspondiente y (si se recupera) lanza sync inmediato.
- */
 void SyncManager::comprobarConexion()
 {
-    bool anteriorEstado = m_hayConexion;
-
-    // Cerrar conexión previa para forzar un intento limpio
+    bool anterior = m_hayConexion;
     desconectarNube();
-    m_hayConexion = conectarNube();
-
-    if (m_hayConexion && !anteriorEstado) {
-        qDebug() << "SyncManager: conexión a la nube recuperada → sync inmediato";
-        emit conexionRecuperada();
-        sincronizar(); // Sync inmediato al recuperar conexión
-    } else if (!m_hayConexion && anteriorEstado) {
-        qDebug() << "SyncManager: conexión a la nube perdida";
-        emit conexionPerdida();
+    if (conectarNube()) {
+        if (!anterior) {
+            prepararTablasRemotas();
+            emit conexionRecuperada();
+            sincronizar();
+        }
+    } else {
+        if (anterior) emit conexionPerdida();
     }
 }
 
-/**
- * @brief Ejecuta la sincronización completa (subida + bajada).
- *
- * Se llama desde el timer de 5 minutos o inmediatamente al recuperar conexión.
- * Si no hay conexión, sale silenciosamente sin tocar nada.
- */
 void SyncManager::sincronizar()
 {
-    if (!m_hayConexion) {
-        // Sin conexión: intentar conectar una vez más antes de rendirse
-        desconectarNube();
-        m_hayConexion = conectarNube();
-        if (!m_hayConexion) return;
+    if (!m_hayConexion && !conectarNube()) {
+        qDebug() << "SyncManager: Sincronización cancelada (sin conexión a la nube)";
+        return;
     }
 
-    qDebug() << "SyncManager: iniciando sincronización" << QDateTime::currentDateTime();
-
+    qDebug() << "SyncManager: Iniciando ciclo de sincronización..." << QDateTime::currentDateTime().toString("HH:mm:ss");
+    
     int subidos = subirCambios();
     int bajados = bajarCambios();
-
-    qDebug() << "SyncManager: sync completado — subidos:" << subidos
-             << "bajados:" << bajados;
-
+    
+    qDebug() << "SyncManager: Ciclo completado — Registros subidos:" << subidos << "| Registros bajados:" << bajados;
     emit syncCompletado(subidos, bajados);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Operaciones de sincronización
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * @brief Sube a la nube los registros de sync_cola con subido=0.
- *
- * Para cada entrada pendiente, lee el registro completo de la BD local
- * y lo inserta o actualiza en la nube mediante INSERT ... ON DUPLICATE KEY UPDATE.
- *
- * @return Número de registros subidos con éxito
- */
 int SyncManager::subirCambios()
 {
     QSqlDatabase dbLocal = QSqlDatabase::database("DB");
     QSqlDatabase dbNube  = QSqlDatabase::database(CONEXION_NUBE);
-
-    // Leer la cola de pendientes (agrupada por tabla+registro para evitar duplicados)
     QSqlQuery cola(dbLocal);
-    cola.exec("SELECT id, tabla, id_registro, accion "
-              "FROM sync_cola "
-              "WHERE subido = 0 "
-              "ORDER BY fecha ASC");
+    cola.exec("SELECT id, tabla, id_registro, accion FROM sync_cola WHERE subido = 0 ORDER BY fecha ASC");
 
     int subidos = 0;
-    QList<qint64> idsProcessados;
-
+    QList<qint64> procesados;
     while (cola.next()) {
-        qint64  idCola    = cola.value(0).toLongLong();
-        QString tabla     = cola.value(1).toString();
-        QString idRegistro = cola.value(2).toString();
-        QString accion    = cola.value(3).toString();
-
-        bool exito = false;
+        qint64 idCola = cola.value(0).toLongLong();
+        QString tabla = cola.value(1).toString();
+        QString idReg = cola.value(2).toString();
+        QString accion = cola.value(3).toString();
+        bool ok = false;
 
         if (accion == "DELETE") {
-            // Obtener el nombre de la clave primaria para esta tabla
             QString pk = getPkTabla(tabla);
-
-            // Ejecutar el DELETE en la nube
-            QString where = QString("`%1` = '%2'").arg(pk, idRegistro);
-            if (pk != "cod") where = QString("`%1` = %2").arg(pk, idRegistro);
-
             QSqlQuery del(dbNube);
-            exito = del.exec(QString("DELETE FROM `%1` WHERE %2").arg(tabla, where));
-            if (!exito)
-                qWarning() << "SyncManager: error borrando en nube:" << del.lastError().text();
+            del.prepare(QString("DELETE FROM `%1` WHERE `%2` = ?").arg(tabla, pk));
+            del.addBindValue(idReg);
+            ok = del.exec();
         } else {
-            // Obtener el nombre de la clave primaria para esta tabla
             QString pk = getPkTabla(tabla);
-
-            // Leer el registro completo de la BD local
             QSqlQuery reg(dbLocal);
-            QString where = QString("`%1` = '%2'").arg(pk, idRegistro);
-            // Si es numérico, quitar comillas (opcional en MariaDB pero más limpio)
-            if (pk != "cod" && pk != "idCliente") where = QString("`%1` = %2").arg(pk, idRegistro);
-
-            reg.exec(QString("SELECT * FROM `%1` WHERE %2 LIMIT 1").arg(tabla, where));
-
-            if (reg.first()) {
-                // Construir INSERT ... ON DUPLICATE KEY UPDATE dinámicamente
-                QSqlRecord record = reg.record();
-                QStringList campos;
-                QStringList valores;
-                QStringList updates;
-
-                bool tieneUpdatedAt = false;
-                bool tieneOrigen = false;
+            reg.prepare(QString("SELECT * FROM `%1` WHERE `%2` = ?").arg(tabla, pk));
+            reg.addBindValue(idReg);
+            if (reg.exec() && reg.first()) {
+                QSqlRecord rec = reg.record();
+                QStringList campos, valores, updates;
                 QStringList excluidos = CAMPOS_EXCLUIDOS.value(tabla);
-
-                for (int i = 0; i < record.count(); ++i) {
-                    QString campo = record.fieldName(i);
-                    
-                    // Saltar campos excluidos para evitar sobreescribir datos operativos locales en la nube
-                    if (excluidos.contains(campo.toLower()))
-                        continue;
-
-                    if (campo.toLower() == "updated_at") tieneUpdatedAt = true;
-                    if (campo.toLower() == "id_tienda_origen") {
-                        tieneOrigen = true;
-                        // Si el origen está vacío en local, le ponemos el de esta tienda
-                        if (record.value(i).isNull() || record.value(i).toInt() == 0) {
-                            campos << "`id_tienda_origen`";
-                            valores << QString::number(m_idTiendaLocal);
-                            updates << "`id_tienda_origen` = VALUES(`id_tienda_origen`)";
-                            continue;
-                        }
+                for (int i = 0; i < rec.count(); ++i) {
+                    QString campo = rec.fieldName(i);
+                    if (excluidos.contains(campo.toLower())) continue;
+                    if (campo.toLower() == "id_tienda_origen" && (rec.value(i).isNull() || rec.value(i).toInt() == 0)) {
+                        campos << "`id_tienda_origen`"; valores << QString::number(m_idTiendaLocal);
+                        updates << "`id_tienda_origen` = VALUES(`id_tienda_origen`)"; continue;
                     }
-
-                    QVariant val = record.value(i);
-                    QString valorStr;
-
-                    if (val.isNull() || (val.toString().isEmpty() && 
-                        (campo.contains("fecha") || campo.contains("ultimo") || campo.contains("ultima") || campo.contains("_at")))) {
-                        valorStr = "NULL";
-                    } else if (val.type() == QMetaType::QDateTime || val.type() == QMetaType::QDate) {
-                        valorStr = "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
-                    } else {
-                        valorStr = "'" + val.toString().replace("'", "''") + "'";
+                    QVariant val = rec.value(i);
+                    QString vStr = "NULL";
+                    if (!val.isNull()) {
+                        if (val.userType() == QMetaType::QDateTime || val.userType() == QMetaType::QDate)
+                            vStr = "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
+                        else
+                            vStr = "'" + val.toString().replace("'", "''") + "'";
                     }
-                    
-                    campos << "`" + campo + "`";
-                    valores << valorStr;
+                    campos << "`" + campo + "`"; valores << vStr;
                     updates << QString("`%1` = VALUES(`%1`)").arg(campo);
                 }
-
-                // Si la tabla en la nube espera updated_at pero en local no existe (o no se ha pasado),
-                // lo añadimos manualmente con NOW() para que la sync funcione y se propague.
-                if (!tieneUpdatedAt) {
-                    campos << "`updated_at`";
-                    valores << "NOW()";
-                    updates << "`updated_at` = NOW()";
-                }
-
-                // Si es la tabla articulos y no tenía el campo id_tienda_origen localmente,
-                // lo añadimos al INSERT de la nube para que quede registrado el origen.
-                if (tabla == "articulos" && !tieneOrigen && m_idTiendaLocal > 0) {
-                    campos << "`id_tienda_origen`";
-                    valores << QString::number(m_idTiendaLocal);
-                    updates << "`id_tienda_origen` = VALUES(`id_tienda_origen`)";
-                }
-
-                QString sql = QString(
-                    "INSERT INTO `%1` (%2) VALUES (%3) "
-                    "ON DUPLICATE KEY UPDATE %4"
-                ).arg(tabla,
-                      campos.join(", "),
-                      valores.join(", "),
-                      updates.join(", "));
-
+                QString sql = QString("INSERT INTO `%1` (%2) VALUES (%3) ON DUPLICATE KEY UPDATE %4")
+                              .arg(tabla, campos.join(","), valores.join(","), updates.join(","));
                 QSqlQuery ins(dbNube);
-                exito = ins.exec(sql);
-                if (!exito)
-                    qWarning() << "SyncManager: error subiendo a nube (tabla:" << tabla << "):" << ins.lastError().text();
-            } else {
-                // Registro ya no existe en local → marcar como procesado igualmente
-                exito = true;
-            }
+                ok = ins.exec(sql);
+            } else ok = true;
         }
-
-        if (exito) {
-            idsProcessados << idCola;
-            subidos++;
-        }
+        if (ok) { procesados << idCola; subidos++; }
     }
-
-    // Marcar como subidos en la cola local
-    if (!idsProcessados.isEmpty()) {
-        QStringList ids;
-        for (qint64 id : idsProcessados)
-            ids << QString::number(id);
-
-        QSqlQuery upd(dbLocal);
-        upd.exec("UPDATE sync_cola SET subido = 1 WHERE id IN (" + ids.join(",") + ")");
+    if (!procesados.isEmpty()) {
+        QStringList sIds; for (qint64 id : procesados) sIds << QString::number(id);
+        QSqlQuery(dbLocal).exec("UPDATE sync_cola SET subido = 1 WHERE id IN (" + sIds.join(",") + ")");
     }
-
-    // --- PARTE 2: Subir Unificaciones Pendientes ---
-    QSqlQuery qUnif(dbLocal);
-    qUnif.exec("SELECT id, tabla, id_perdedor, id_ganador FROM sync_unificaciones WHERE subido = 0");
-    
-    while (qUnif.next()) {
-        int idLoc = qUnif.value(0).toInt();
-        QString tabla = qUnif.value(1).toString();
-        QString perdedor = qUnif.value(2).toString();
-        QString ganador = qUnif.value(3).toString();
-
-        QSqlQuery qNube(dbNube);
-        qNube.prepare("INSERT INTO sync_unificaciones (tabla, id_perdedor, id_ganador, fecha) VALUES (?, ?, ?, NOW()) "
-                      "ON DUPLICATE KEY UPDATE tabla=tabla"); // No falla si ya existe
-        qNube.addBindValue(tabla);
-        qNube.addBindValue(perdedor);
-        qNube.addBindValue(ganador);
-        
-        if (qNube.exec()) {
-            QSqlQuery qMark(dbLocal);
-            qMark.exec(QString("UPDATE sync_unificaciones SET subido = 1 WHERE id = %1").arg(idLoc));
-            subidos++;
-        }
-    }
-
     return subidos;
 }
 
-/**
- * @brief Baja desde la nube los registros más recientes que la última sync.
- *
- * Para cada tabla maestra, consulta la nube los registros con updated_at
- * posterior a la última sync local y los aplica en la BD local.
- *
- * @return Número de registros bajados con éxito
- */
 int SyncManager::bajarCambios()
 {
     QSqlDatabase dbLocal = QSqlDatabase::database("DB");
     QSqlDatabase dbNube  = QSqlDatabase::database(CONEXION_NUBE);
-
     int bajados = 0;
     QDateTime ahora = QDateTime::currentDateTime();
 
-    for (const QString &tabla : TABLAS_MAESTRAS) {
-        QDateTime ultima = ultimaSync(tabla);
-        // Margen de seguridad de 1 minuto para diferencias de reloj entre servidores
-        QDateTime consultaDesde = ultima.addSecs(-60);
+    QDateTime maxUpdate = ultimaSync("sync_unificaciones");
+    QSqlQuery qNU(dbNube);
+    qNU.prepare("SELECT tabla, id_perdedor, id_ganador, fecha FROM sync_unificaciones WHERE fecha > ? ORDER BY fecha ASC");
+    qNU.addBindValue(maxUpdate.toString("yyyy-MM-dd HH:mm:ss"));
+    
+    if (qNU.exec()) {
+        while (qNU.next()) {
+            QString t = qNU.value(0).toString();
+            QString p = qNU.value(1).toString();
+            QString g = qNU.value(2).toString();
+            QDateTime f = qNU.value(3).toDateTime();
 
-        // Pedir a la nube los registros más nuevos que no hayamos creado nosotros
-        QSqlQuery qNube(dbNube);
-        
-        // Comprobar si las columnas existen en la nube para filtrar
-        QSqlRecord recNube = dbNube.record(tabla);
-        bool nubeTieneOrigen = recNube.contains("id_tienda_origen");
-        bool nubeTieneUpdatedAt = recNube.contains("updated_at");
+            UnificarMaestrosConfig cfg = UnificarMaestrosConfig::configParaTabla(t);
+            if (cfg.tablaMaestra.isEmpty()) continue;
 
-        if (!nubeTieneUpdatedAt) {
-            qWarning() << "SyncManager: tabla nube" << tabla << "no tiene columna updated_at, saltando";
-            continue;
-        }
-
-        QString sqlNube = QString("SELECT * FROM `%1` WHERE updated_at > ? ").arg(tabla);
-        if (m_idTiendaLocal > 0 && nubeTieneOrigen) {
-            sqlNube += QString(" AND (id_tienda_origen != %1 OR id_tienda_origen IS NULL) ").arg(m_idTiendaLocal);
-        }
-        sqlNube += " ORDER BY updated_at ASC";
-
-        qNube.prepare(sqlNube);
-        qNube.addBindValue(consultaDesde.toString("yyyy-MM-dd HH:mm:ss"));
-
-        if (!qNube.exec()) {
-            qWarning() << "SyncManager: error consultando nube tabla" << tabla
-                       << ":" << qNube.lastError().text();
-            continue;
-        }
-
-        int encontradosEnNube = 0;
-        if (qNube.last()) {
-            encontradosEnNube = qNube.at() + 1;
-            qNube.first();
-            qNube.previous(); // Volver al inicio para el while(next)
-        }
-
-        if (encontradosEnNube > 0) {
-            qDebug() << "SyncManager: bajando" << encontradosEnNube << "cambios de tabla" << tabla 
-                     << "desde" << consultaDesde.toString("yyyy-MM-dd HH:mm:ss");
-        }
-
-        // Obtener el esquema de la tabla local para filtrar campos que puedan venir
-        // de la nube pero no existan aquí (como 'updated_at')
-        QSqlRecord recordLocal = dbLocal.record(tabla);
-        QStringList cambiosPrecios;
-
-        // Desactivar triggers de sync localmente mientras aplicamos cambios de la nube
-        QSqlQuery qSkip(dbLocal);
-        qSkip.exec("SET @skip_sync = 1");
-
-        while (qNube.next()) {
-            QSqlRecord rec = qNube.record();
-            QStringList campos, valores, updates;
-
-            // Lógica especial para detectar cambios de precios en artículos
-            if (tabla == "articulos") {
-                QString cod = rec.value("cod").toString();
-                double pvpNube = rec.value("pvp").toDouble();
-                QString dsc = rec.value("descripcion").toString();
-
-                // 1. Comprobar si tiene precio local (excepción)
-                QSqlQuery qLoc(dbLocal);
-                qLoc.prepare("SELECT count(*) FROM precios_tienda WHERE cod_articulo = ?");
-                qLoc.addBindValue(cod);
-                qLoc.exec();
-                bool tienePrecioLocal = (qLoc.first() && qLoc.value(0).toInt() > 0);
-
-                if (!tienePrecioLocal) {
-                    // 2. Obtener el precio actual local para comparar
-                    QSqlQuery qArt(dbLocal);
-                    qArt.prepare("SELECT pvp FROM articulos WHERE cod = ?");
-                    qArt.addBindValue(cod);
-                    qArt.exec();
-
-                    if (qArt.first()) {
-                        double pvpLocal = qArt.value("pvp").toDouble();
-
-                        if (qAbs(pvpNube - pvpLocal) > 0.001) {
-                            QString msg = QString("- %1 (%2): PVP %3 -> %4")
-                                    .arg(dsc, cod)
-                                    .arg(pvpLocal, 0, 'f', 2).arg(pvpNube, 0, 'f', 2);
-                            cambiosPrecios << msg;
-                        }
-                    }
-                }
+            dbLocal.transaction();
+            QSqlQuery qL(dbLocal);
+            bool ok = true;
+            for (const auto &dep : cfg.dependencias) {
+                QString sqlU = QString("UPDATE %1 SET %2 = '%3' WHERE %2 = '%4'").arg(dep.tabla, dep.campo, g, p);
+                if (!qL.exec(sqlU)) { ok = false; break; }
             }
+            if (ok) ok = qL.exec(QString("DELETE FROM %1 WHERE %2 = '%3'").arg(cfg.tablaMaestra, cfg.campoId, p));
 
-            QStringList excluidos = CAMPOS_EXCLUIDOS.value(tabla);
+            if (ok) dbLocal.commit();
+            else dbLocal.rollback();
+            
+            if (f > maxUpdate) maxUpdate = f;
+        }
+        actualizarUltimaSync("sync_unificaciones", maxUpdate);
+    }
 
+    for (const QString &tabla : TABLAS_MAESTRAS) {
+        QDateTime ultimaSyncActual = ultimaSync(tabla);
+        QDateTime desde = ultimaSyncActual.addSecs(-120); // 2 min overlap for safety
+        QSqlQuery qN(dbNube);
+        
+        qDebug() << "   -> Consultando tabla:" << tabla << "desde" << desde.toString("yyyy-MM-dd HH:mm:ss");
+
+        qN.prepare(QString("SELECT * FROM `%1` WHERE updated_at > ? ORDER BY updated_at ASC").arg(tabla));
+        qN.addBindValue(desde.toString("yyyy-MM-dd HH:mm:ss"));
+        if (!qN.exec()) continue;
+
+        QString pk = getPkTabla(tabla);
+        QStringList excluidos = CAMPOS_EXCLUIDOS.value(tabla);
+        QSqlRecord recLoc = dbLocal.record(tabla);
+        QStringList avisosPrecios;
+        QDateTime maxUpdate = desde;
+        int count = 0;
+
+        QSqlQuery(dbLocal).exec("SET @skip_sync = 1");
+        while (qN.next()) {
+            count++;
+            QSqlRecord rec = qN.record();
+            QString idReg = rec.value(pk).toString();
+            QDateTime recUpd = rec.value("updated_at").toDateTime();
+
+            QStringList campos, valores, updates;
             for (int i = 0; i < rec.count(); ++i) {
                 QString campo = rec.fieldName(i);
-                
-                // Si el campo no existe en la tabla local, lo saltamos
-                if (recordLocal.indexOf(campo) == -1)
-                    continue;
-
-                // Si el campo es operativo local (stock, etc.), NO lo bajamos de la nube
-                if (excluidos.contains(campo.toLower()))
-                    continue;
-
-                QString valor = rec.value(i).toString().replace("'", "''");
-                campos  << "`" + campo + "`";
-                valores << "'" + valor + "'";
+                if (recLoc.indexOf(campo) == -1 || excluidos.contains(campo.toLower())) continue;
+                QVariant val = rec.value(i);
+                QString vStr = "NULL";
+                if (!val.isNull()) {
+                    if (val.userType() == QMetaType::QDateTime || val.userType() == QMetaType::QDate)
+                        vStr = "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
+                    else
+                        vStr = "'" + val.toString().replace("'", "''") + "'";
+                }
+                campos << "`" + campo + "`"; valores << vStr;
                 updates << QString("`%1` = VALUES(`%1`)").arg(campo);
             }
 
-            QString sql = QString(
-                "INSERT INTO `%1` (%2) VALUES (%3) "
-                "ON DUPLICATE KEY UPDATE %4"
-            ).arg(tabla,
-                  campos.join(", "),
-                  valores.join(", "),
-                  updates.join(", "));
-
-            QSqlQuery ins(dbLocal);
-            if (ins.exec(sql))
-                bajados++;
-            else
-                qWarning() << "SyncManager: error aplicando en local:" << ins.lastError().text();
-        }
-
-        // Si hubo cambios de precio y estamos en la tabla articulos, creamos la nota
-        if (!cambiosPrecios.isEmpty()) {
-            QSqlQuery qNota(dbLocal);
-            qNota.prepare("INSERT INTO notas (titulo, descripcion, usuario, fecha_creacion, prioridad, estado) "
-                          "VALUES (?, ?, ?, ?, ?, ?)");
-            qNota.addBindValue(tr("Aviso: Cambio de precios en la nube"));
-            qNota.addBindValue(tr("Se han detectado cambios de precio en la nube para los siguientes artículos que no tienen excepción local:\n\n") + cambiosPrecios.join("\n"));
-            qNota.addBindValue("SISTEMA");
-            qNota.addBindValue(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
-            qNota.addBindValue("Alta");
-            qNota.addBindValue("Pendiente");
-            if (!qNota.exec()) {
-                qWarning() << "SyncManager: error creando nota de precios:" << qNota.lastError().text();
-            }
-        }
-
-        qSkip.exec("SET @skip_sync = 0");
-
-        // Actualizar la última sync para esta tabla
-        actualizarUltimaSync(tabla, ahora);
-    }
-
-    // --- PARTE 3: Bajar Unificaciones de otras tiendas ---
-    QDateTime ultimaUnif = ultimaSync("sync_unificaciones");
-    QSqlQuery qNubeUnif(dbNube);
-    qNubeUnif.prepare("SELECT tabla, id_perdedor, id_ganador, fecha FROM sync_unificaciones "
-                      "WHERE fecha > ? ORDER BY fecha ASC");
-    qNubeUnif.addBindValue(ultimaUnif.toString("yyyy-MM-dd HH:mm:ss"));
-    
-    if (qNubeUnif.exec()) {
-        while (qNubeUnif.next()) {
-            QString tabla = qNubeUnif.value(0).toString();
-            QString perdedor = qNubeUnif.value(1).toString();
-            QString ganador = qNubeUnif.value(2).toString();
-            
-            UnificarMaestrosConfig cfg = UnificarMaestrosConfig::configParaTabla(tabla);
-            if (cfg.tablaMaestra.isEmpty()) continue; // Config no encontrada
-
-            dbLocal.transaction();
-            QSqlQuery qLoc(dbLocal);
-            bool ok = true;
-
-            // Reasignar dependencias
-            for (const auto &dep : cfg.dependencias) {
-                QString valG = ganador;
-                QString valP = perdedor;
-                // Si la dependencia usa un campo campoMaestroOrigen (como 'usuario' login), 
-                // ya tenemos los valores (login_ganador, login_perdedor) en id_perdedor/id_ganador 
-                // si la unificación fue de ese tipo. Pero el unificador guarda IDs en id_perdedor/id_ganador.
-                
-                // IMPORTANTE: En la tabla sync_unificaciones, guardamos los valores que se usaron.
-                // Si la tabla es 'usuarios' y el campo Id es numérico, id_perdedor es el ID.
-                
-                // Sin embargo, para dependencias basadas en strings (login), necesitamos los logins.
-                // Resolvemos esto igual que en el framework:
-                QString sqlUpd;
-                if (dep.campoMaestroOrigen.isEmpty()) {
-                    sqlUpd = QString("UPDATE %1 SET %2 = '%3' WHERE %2 = '%4'")
-                             .arg(dep.tabla, dep.campo, ganador, perdedor);
-                } else {
-                    // Si la dependencia es por string (ej login), necesitamos obtener el string 
-                    // correspondiente al ID ganador y perdedor... pero el SyncManager local 
-                    // ya perdió el registro perdedor si ya se borró.
-                    // SOLUCIÓN: En la tabla sync_unificaciones DEBEMOS guardar siempre el ID 
-                    // y el SyncManager debe saber recuperar los campos adicionales antes de borrar.
-                    
-                    // Pero wait, si Store A unificó, en la nube está el ID.
-                    // Para dependencias de string, buscamos el valor del campo en el maestro local.
-                    QSqlQuery qVal(dbLocal);
-                    qVal.exec(QString("SELECT %1 FROM %2 WHERE %3 = %4")
-                              .arg(dep.campoMaestroOrigen, cfg.tablaMaestra, cfg.campoId, ganador));
-                    QString valGanadorStr = (qVal.first()) ? qVal.value(0).toString() : "";
-                    
-                    qVal.exec(QString("SELECT %1 FROM %2 WHERE %3 = %4")
-                              .arg(dep.campoMaestroOrigen, cfg.tablaMaestra, cfg.campoId, perdedor));
-                    QString valPerdedorStr = (qVal.first()) ? qVal.value(0).toString() : "";
-
-                    if (valGanadorStr.isEmpty() || valPerdedorStr.isEmpty()) {
-                        // Si el perdedor ya no existe, quizás ya se unificó o borró.
-                        continue;
-                    }
-                    sqlUpd = QString("UPDATE %1 SET %2 = '%3' WHERE %2 = '%4'")
-                             .arg(dep.tabla, dep.campo, valGanadorStr, valPerdedorStr);
+            // Detectar cambio de precio antes de aplicar
+            double pOld = 0;
+            bool existeLoc = false;
+            if (tabla == "articulos") {
+                QSqlQuery qP(dbLocal);
+                qP.prepare("SELECT pvp FROM articulos WHERE cod = ?");
+                qP.addBindValue(idReg);
+                if (qP.exec() && qP.first()) {
+                    pOld = qP.value(0).toDouble();
+                    existeLoc = true;
                 }
+            }
+
+            QString sql = QString("INSERT INTO `%1` (%2) VALUES (%3) ON DUPLICATE KEY UPDATE %4")
+                          .arg(tabla, campos.join(","), valores.join(","), updates.join(","));
+            
+            QSqlQuery qIns(dbLocal);
+            if (qIns.exec(sql)) {
+                QDateTime regUpdate = rec.value("updated_at").toDateTime();
+                if (regUpdate > maxUpdate) maxUpdate = regUpdate;
                 
-                if (!qLoc.exec(sqlUpd)) { ok = false; break; }
-            }
-
-            // Borrar perdedor
-            if (ok) {
-                ok = qLoc.exec(QString("DELETE FROM %1 WHERE %2 = '%3'")
-                               .arg(cfg.tablaMaestra, cfg.campoId, perdedor));
-            }
-
-            if (ok) {
-                dbLocal.commit();
-                bajados++;
-            } else {
-                dbLocal.rollback();
-                qWarning() << "SyncManager: fallo aplicando unificación remota en" << tabla << qLoc.lastError().text();
+                // Solo contamos como "bajado" si es realmente más nuevo que nuestra última marca
+                if (regUpdate > ultimaSyncActual) {
+                    bajados++;
+                }
+                if (tabla == "articulos" && existeLoc) {
+                    double pNew = rec.value("pvp").toDouble();
+                    if (qAbs(pOld - pNew) > 0.01) {
+                        qDebug() << "   [!] Cambio de precio detectado:" << rec.value("descripcion").toString() << pOld << "->" << pNew;
+                        QSqlQuery qE(dbLocal);
+                        qE.prepare("SELECT count(*) FROM precios_tienda WHERE cod_articulo = ?");
+                        qE.addBindValue(idReg);
+                        if (qE.exec() && qE.first() && qE.value(0).toInt() == 0)
+                            avisosPrecios << QString("- %1: %2 -> %3").arg(rec.value("descripcion").toString()).arg(pOld).arg(pNew);
+                    }
+                }
             }
         }
-        actualizarUltimaSync("sync_unificaciones", ahora);
+        if (!avisosPrecios.isEmpty()) {
+            qDebug() << "   [i] Creando nota de aviso para" << avisosPrecios.size() << "cambios de precio...";
+            QSqlQuery qNot(dbLocal);
+            // El esquema real usa enum('Alta','Normal','Baja') para prioridad
+            // y enum('Pendiente','Completada') para estado.
+            qNot.prepare("INSERT INTO notas (titulo, descripcion, usuario, fecha_limite, prioridad, estado) VALUES (?,?,?,?,?,?)");
+            qNot.addBindValue("Cambio de precios nube");
+            qNot.addBindValue("Nuevos precios:\n" + avisosPrecios.join("\n"));
+            qNot.addBindValue("SISTEMA"); 
+            qNot.addBindValue(ahora.toString("yyyy-MM-dd")); // fecha_limite es DATE
+            qNot.addBindValue("Alta"); 
+            qNot.addBindValue("Pendiente");
+            
+            if (!qNot.exec()) {
+                qWarning() << "   [!] Error al crear nota de precios:" << qNot.lastError().text();
+            } else {
+                qDebug() << "   [+] Nota de aviso creada correctamente.";
+                avisosPrecios.clear(); // Limpiar para que no se repita en la siguiente tabla si hubiera errores
+            }
+        }
+        if (bajados > 0) actualizarUltimaSync(tabla, maxUpdate);
+        QSqlQuery(dbLocal).exec("SET @skip_sync = 0");
     }
-
     return bajados;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers de sync_control
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * @brief Actualiza el campo ultima_sync en sync_control para una tabla.
- */
 void SyncManager::actualizarUltimaSync(const QString &tabla, const QDateTime &momento)
 {
     QSqlQuery q(QSqlDatabase::database("DB"));
     q.prepare("UPDATE sync_control SET ultima_sync = ? WHERE tabla = ?");
-    q.addBindValue(momento.toString("yyyy-MM-dd HH:mm:ss"));
-    q.addBindValue(tabla);
+    q.addBindValue(momento); q.addBindValue(tabla);
     q.exec();
 }
 
 void SyncManager::cargarIdTiendaLocal()
 {
     QSqlQuery q(QSqlDatabase::database("DB"));
-    q.exec("SELECT id FROM tiendas WHERE local = '1' LIMIT 1");
-    if (q.first()) {
+    if (q.exec("SELECT id FROM tiendas WHERE local = 1 LIMIT 1") && q.first())
         m_idTiendaLocal = q.value(0).toInt();
-    } else {
-        qWarning() << "SyncManager: no se encuentra registro de tienda local (local='1') en la tabla tiendas.";
-    }
 }
 
-/**
- * @brief Devuelve la fecha de última sincronización de una tabla.
- * @return QDateTime de la última sync, o epoch si nunca se ha sincronizado.
- */
 QDateTime SyncManager::ultimaSync(const QString &tabla)
 {
     QSqlQuery q(QSqlDatabase::database("DB"));
     q.prepare("SELECT ultima_sync FROM sync_control WHERE tabla = ?");
     q.addBindValue(tabla);
-    q.exec();
-    if (q.first())
-        return QDateTime::fromString(q.value(0).toString(), "yyyy-MM-dd HH:mm:ss");
+    if (q.exec() && q.first()) return q.value(0).toDateTime();
     return QDateTime::fromString("2000-01-01 00:00:00", "yyyy-MM-dd HH:mm:ss");
 }
 
-/**
- * @brief Devuelve el nombre de la clave primaria para una tabla maestra.
- */
 QString SyncManager::getPkTabla(const QString &tabla) const
 {
     static const QMap<QString, QString> m = {
-        {"articulos",      "cod"},
-        {"clientes",       "idCliente"},
-        {"familias",       "id"},
-        {"fabricantes",    "id"},
-        {"proveedores",    "idProveedor"},
-        {"codaux",         "id"},
-        {"fpago",          "id"},
-        {"impuestos",      "tipoIva"},
-        {"formatos",       "idformato"},
-        {"motivosEntrada", "idtiposEntrada"},
-        {"usuarios",       "id"},
-        {"permisos",       "id"},
-        {"vales",          "idvales"}
+        {"articulos","cod"},{"clientes","idCliente"},{"familias","id"},{"fabricantes","id"},
+        {"proveedores","idProveedor"},{"codaux","id"},{"fpago","id"},{"impuestos","tipoIva"},
+        {"formatos","idformato"},{"motivosEntrada","idtiposEntrada"},{"usuarios","id"},
+        {"permisos","id"},{"vales","idvales"}
     };
     return m.value(tabla, "");
+}
+
+void SyncManager::prepararTablasRemotas()
+{
+    if (!m_hayConexion) return;
+    QSqlQuery q(QSqlDatabase::database(CONEXION_NUBE));
+    for (const QString &tabla : TABLAS_MAESTRAS) {
+        q.exec(QString("ALTER TABLE `%1` ADD COLUMN id_tienda_origen INT DEFAULT NULL").arg(tabla));
+        q.exec(QString("ALTER TABLE `%1` ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP").arg(tabla));
+        q.exec(QString("ALTER TABLE `%1` ADD INDEX (updated_at)").arg(tabla));
+    }
 }

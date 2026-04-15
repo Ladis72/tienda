@@ -103,6 +103,9 @@ private:
     /// Obtiene la última sync de una tabla
     QDateTime ultimaSync(const QString &tabla);
 
+    /// Asegura que las tablas maestras en la nube tengan las columnas id_tienda_origen y updated_at
+    void prepararTablasRemotas();
+
     /// Devuelve el nombre de la clave primaria para una tabla maestra
     QString getPkTabla(const QString &tabla) const;
 };

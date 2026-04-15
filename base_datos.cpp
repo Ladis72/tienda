@@ -389,7 +389,10 @@ bool baseDatos::insertarArticulo(QSqlDatabase db, QStringList datos) {
   qDebug() << datos;
   QSqlQuery consulta(db);
   consulta.prepare(
-      "INSERT INTO articulos VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+      "INSERT INTO articulos (cod, descripcion, pvp, iva, stock, min, max, "
+      "pendientes_pedido, encargados, ultima_venta, ultimo_pedido, familia, "
+      "precio_compra, fabricante, foto, notas, formato, cantformato) "
+      "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 
   for (int i = 0; i < datos.length(); ++i) {
     consulta.bindValue(i, datos.at(i));
@@ -549,6 +552,138 @@ bool baseDatos::modificarFotoArticulo(QString foto, QString dato) {
     qDebug() << consulta.lastError().text();
     return false;
   }
+}
+
+bool baseDatos::propagarCambioCodigoArticulo(QString oldCod, QString newCod) {
+  QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
+  if (!dbLocal.transaction()) {
+    qDebug() << "Error al iniciar transaccion para propagar cambio de codigo";
+    return false;
+  }
+
+  QSqlQuery q(dbLocal);
+
+  // 1. Obtener la descripción actual del artículo antes de cambiarlo
+  QString descripcion;
+  q.prepare("SELECT descripcion FROM articulos WHERE cod = ?");
+  q.addBindValue(oldCod);
+  if (q.exec() && q.next()) {
+    descripcion = q.value(0).toString();
+  } else {
+    qDebug() << "Atención: No se pudo obtener la descripción original para " << oldCod;
+  }
+
+  // Desactivar temporalmente las restricciones de claves foráneas para poder modificar la PK
+  q.exec("SET FOREIGN_KEY_CHECKS = 0;");
+
+  // Estructura de tablas y sus columnas que necesitan actualización
+  struct Dependencia {
+    QString tabla;
+    QString colCod;
+    QString colDesc;
+  };
+
+  const QList<Dependencia> dependencias = {
+      {"articulos", "cod", ""}, // PK principal, se actualiza solo el código
+      {"lineasticket", "cod", "descripcion"},
+      {"lineaspedido", "cod", "descripcion"},
+      {"lineaspedido_tmp", "cod", "descripcion"},
+      {"encargos", "cod_articulo", ""},
+      {"precios_tienda", "cod_articulo", ""},
+      {"lotes", "ean", ""},
+      {"etiquetas", "cod", ""},
+      {"codaux", "cod", ""},
+      {"entradaGenero_tmp", "cod", "descripcion"},
+      {"salidaGenero_tmp", "cod", "descripcion"},
+      {"historico_stock", "ean", ""},
+      {"lineasticket_tmp", "cod", "descripcion"},
+      {"salidaGenero", "cod", "descripcion"}};
+
+  for (const auto &dep : dependencias) {
+    if (dep.colDesc.isEmpty()) {
+      // Solo actualizar código (PK o FK simple)
+      q.prepare(QString("UPDATE %1 SET %2 = ? WHERE %2 = ?").arg(dep.tabla, dep.colCod));
+      q.addBindValue(newCod);
+      q.addBindValue(oldCod);
+    } else {
+      // Actualizar código y descripción (historico desnormalizado)
+      q.prepare(QString("UPDATE %1 SET %2 = ?, %3 = ? WHERE %2 = ?").arg(dep.tabla, dep.colCod, dep.colDesc));
+      q.addBindValue(newCod);
+      q.addBindValue(descripcion);
+      q.addBindValue(oldCod);
+    }
+
+    if (!q.exec()) {
+      qDebug() << "Error actualizando" << dep.tabla << ":" << q.lastError().text();
+      q.exec("SET FOREIGN_KEY_CHECKS = 1;");
+      dbLocal.rollback();
+      return false;
+    }
+  }
+
+  q.exec("SET FOREIGN_KEY_CHECKS = 1;");
+
+  if (dbLocal.commit()) {
+    qDebug() << "Cambio de codigo y descripcion propagado de" << oldCod << "a" << newCod;
+    return true;
+  } else {
+    qDebug() << "Error al hacer commit del cambio de codigo";
+    dbLocal.rollback();
+    return false;
+  }
+}
+
+bool baseDatos::existeArticuloEnNube(QString cod) {
+  // Intentar usar la conexión existente "NUBE" creada por SyncManager
+  QSqlDatabase dbNube = QSqlDatabase::database("NUBE");
+  if (!dbNube.isOpen()) {
+    qDebug() << "Nube no conectada, no se puede verificar duplicidad remota.";
+    return false;
+  }
+
+  QSqlQuery q(dbNube);
+  q.prepare("SELECT cod FROM articulos WHERE cod = ?");
+  q.addBindValue(cod);
+  if (q.exec() && q.next()) {
+    return true;
+  }
+  return false;
+}
+
+QSqlRecord baseDatos::getArticuloNube(QString cod) {
+  QSqlDatabase dbNube = QSqlDatabase::database("NUBE");
+  if (!dbNube.isOpen()) return QSqlRecord();
+
+  QSqlQuery q(dbNube);
+  q.prepare("SELECT * FROM articulos WHERE cod = ?");
+  q.addBindValue(cod);
+  if (q.exec() && q.next()) {
+    return q.record();
+  }
+  return QSqlRecord();
+}
+
+bool baseDatos::actualizarArticuloDesdeRecord(QString cod, const QSqlRecord &record) {
+  QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
+  QSqlQuery q(dbLocal);
+
+  // Campos a sincronizar desde la nube al local (ignorando stock)
+  q.prepare("UPDATE articulos SET descripcion = ?, pvp = ?, iva = ?, familia = ?, "
+            "fabricante = ?, precio_venta = ? WHERE cod = ?");
+
+  q.addBindValue(record.value("descripcion"));
+  q.addBindValue(record.value("pvp"));
+  q.addBindValue(record.value("iva"));
+  q.addBindValue(record.value("familia"));
+  q.addBindValue(record.value("fabricante"));
+  q.addBindValue(record.value("precio_venta"));
+  q.addBindValue(cod);
+
+  if (!q.exec()) {
+    qDebug() << "Error actualizando articulo desde nube:" << q.lastError().text();
+    return false;
+  }
+  return true;
 }
 
 QSqlQuery baseDatos::ventasClientes(QString nombreConexion, QDate fechaI,
@@ -1172,7 +1307,10 @@ bool baseDatos::borrarCliente(QSqlDatabase db, int idCliente) {
 
 bool baseDatos::crearCliente(QSqlDatabase db, QStringList datos) {
   QSqlQuery consulta(db);
-  consulta.prepare("INSERT INTO clientes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+  consulta.prepare(
+      "INSERT INTO clientes (idCliente, nombre, apellidos, direccion, cp, "
+      "localidad, provincia, nif, tlfn1, tlfn2, mail, descuento, "
+      "fechaAniversario, notas) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
   consulta.bindValue(0, datos.at(0).toInt());
   consulta.bindValue(1, datos.at(1));
   consulta.bindValue(2, datos.at(2));
@@ -1250,7 +1388,10 @@ void baseDatos::vaciarTabla(QString tabla, QSqlDatabase db) {
 bool baseDatos::crearProveedor(QSqlDatabase db, QStringList datos) {
   QSqlQuery consulta(db);
   consulta.prepare(
-      "INSERT INTO proveedores VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+      "INSERT INTO proveedores (idProveedor, nombre, nif, direccion, cp, "
+      "localidad, provincia, representante, telefonoR, mailR, telefono, mail, "
+      "descuento, fechaUltimaCompra, formaPago, notas) "
+      "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
   consulta.bindValue(0, datos.at(0).toInt());
   consulta.bindValue(1, datos.at(1));
   consulta.bindValue(2, datos.at(2));
