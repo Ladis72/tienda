@@ -286,16 +286,20 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
 }
 
 Tienda::~Tienda() {
+  // Siempre preguntamos primero al cerrar la aplicación
   int respuesta = QMessageBox::warning(
       this, tr("Salir de la aplicación"),
-      tr("Quieres hacer una copia de seguridad antes de cerrar?"),
+      tr("¿Quieres hacer una copia de seguridad antes de cerrar?"),
       QMessageBox::Yes | QMessageBox::No);
+      
   if (respuesta == QMessageBox::Yes) {
     base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
-                     "Copia de seguridad creada");
-
+                     "Copia de seguridad iniciada al cerrar");
+    // Esto llamará a la función que automáticamente usa la ruta si existe,
+    // o pregunta por ella si falta.
     on_pushButtonCopia_clicked();
   }
+
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Fin del programa ");
 
@@ -703,16 +707,27 @@ void Tienda::on_pushButtonGenerarVales_clicked() {
 
 void Tienda::on_pushButtonCopia_clicked() {
   QString directorio = base.devolverDirectorio("copia");
-  if (directorio.isEmpty()) {
+  
+  // Si no hay directorio guardado o el directorio guardado ya no existe en el disco, se pregunta
+  if (directorio.isEmpty() || !QDir(directorio).exists()) {
     directorio = QFileDialog::getExistingDirectory(
-        this, "Elegir directorio", QDir::homePath(),
+        this, "Elegir directorio para Copias de Seguridad", QDir::homePath(),
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+        
+    // (Opcional) Si quisiéramos guardar el nuevo directorio elegido en la base de datos
+    // para la próxima vez, se podría añadir aquí la llamada correspondiente.
   }
+  
+  if (directorio.isEmpty()) {
+    qDebug() << "Copia de seguridad cancelada: no se ha seleccionado directorio.";
+    return; // Cancelar si el usuario cierra el diálogo
+  }
+
   qDebug() << directorio;
 
   QString nombreBackup =
       directorio + "/" + base.nombreConexionLocal() + "-" +
-      QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss") + ".sql";
+      QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss") + ".sql";
   qDebug() << nombreBackup;
 
   base.copiaSeguridad(conf->getConexionLocal(), nombreBackup);
