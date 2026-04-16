@@ -87,6 +87,8 @@ private slots:
     void on_pushButtonVer_clicked();
 
     void on_pushButtonAnadir_clicked();
+    
+    void on_pushButtonAnadirAPedido_clicked();
 
     void on_pushButtonEliminar_clicked();
 
