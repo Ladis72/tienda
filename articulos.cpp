@@ -12,6 +12,7 @@
 #include <QInputDialog>
 #include <QtConcurrent/QtConcurrent>
 #include "dialogcomparararticulos.h"
+#include "dialoganadirapedido.h"
 
 Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   listaConexionesRemotas = conf->getNombreConexionesActivas();
@@ -922,7 +923,7 @@ void Articulos::on_pushButtonCambiarCodigo_clicked() {
              "revertida para proteger la integridad de los datos."));
     }
   }
-}
+
 
 void Articulos::on_pushButtonNuevo_clicked() {
   QSqlRecord registroExistente =
@@ -986,6 +987,17 @@ void Articulos::on_pushButtonAnadir_clicked() {
     cargarCodAux();
   }
   return;
+}
+
+void Articulos::on_pushButtonAnadirAPedido_clicked() {
+  QString cod = ui->lineEditCod->text();
+  if (cod.isEmpty()) {
+      QMessageBox::warning(this, "Aviso", "No hay ningún artículo seleccionado para añadir.");
+      return;
+  }
+  DialogAnadirAPedido *dialogo = new DialogAnadirAPedido(cod, this);
+  dialogo->exec();
+  delete dialogo;
 }
 
 void Articulos::on_pushButtonEliminar_clicked() {
