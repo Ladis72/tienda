@@ -87,8 +87,11 @@ void Articulos::refrescarBotones(int i) {
   ui->pushButtonAnterior->setEnabled(i > 0);
   ui->pushButtonSiguiente->setEnabled(i < modeloTabla->rowCount() - 1);
   ui->pushButtonCambiarCodigo->setEnabled(false);
-  QString fichero = QDir::currentPath() + "/" + ui->lineEditFoto->text();
+  QString fichero = base.resolverRutaImagen(ui->lineEditFoto->text());
   QImage foto(fichero);
+  if (foto.isNull()) {
+      qDebug() << "Error cargando imagen:" << fichero;
+  }
   QPixmap imagen = QPixmap::fromImage(foto);
   QPixmap imagenAjustada = imagen.scaled(200, 200, Qt::KeepAspectRatio);
 
@@ -266,8 +269,8 @@ void Articulos::recargarTabla() {
       : "a.pvp";
 
   QString sql = QString(
-      "SELECT a.cod, a.descripcion, %1 as pvp, a.iva, a.stock, a.min, a.max, "
-      "a.pendientes_pedido, a.encargados, a.ultima_venta, a.ultimo_pedido, "
+      "SELECT a.cod, a.descripcion, %1 as pvp, a.iva, 0 as stock, a.min, a.max, "
+      "0 as pendientes_pedido, 0 as encargados, a.ultima_venta, a.ultimo_pedido, "
       "a.familia, a.precio_compra, a.fabricante, a.foto, a.notas, a.formato, "
       "a.cantformato "
       "FROM articulos a "
@@ -690,13 +693,16 @@ void Articulos::on_pushButtonBorrar_clicked() {
 void Articulos::on_pushButtonPonerFoto_clicked() {
   int curr = mapper.currentIndex();
   QString dir = base.devolverDirectorio("imagenes");
-  int i = dir.length();
-  QString fichero = QFileDialog::getOpenFileName(this, "Elige el archivo", dir);
-  fichero.remove(0, i + 1); // Quita i caracteres desde la posicion 0 de la
-                            // cadena fichero i=longitud del path
-  qDebug() << fichero;
-  qDebug() << ui->lineEditCod->text().toInt();
-  base.modificarFotoArticulo(fichero, ui->lineEditCod->text());
+  QString absoluteDir = QDir(dir).absolutePath();
+  QString fichero = QFileDialog::getOpenFileName(this, "Elige el archivo", absoluteDir);
+  
+  if (fichero.isEmpty()) return;
+
+  // Convertir a ruta relativa respecto al directorio de imágenes para mayor portabilidad
+  QString relativeFichero = QDir(absoluteDir).relativeFilePath(fichero);
+  
+  qDebug() << "Guardando imagen con ruta relativa:" << relativeFichero;
+  base.modificarFotoArticulo(relativeFichero, ui->lineEditCod->text());
   recargarTabla();
 
   mapper.setCurrentIndex(curr);
