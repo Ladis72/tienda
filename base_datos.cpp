@@ -195,8 +195,8 @@ QSqlQuery baseDatos::buscarProducto(QSqlDatabase db, QString tabla,
 
     QString sql = QString(
         "SELECT articulos.cod, articulos.descripcion, %1 as pvp, articulos.iva, "
-        "articulos.stock, articulos.min, articulos.max, articulos.pendientes_pedido, "
-        "articulos.encargados, articulos.ultima_venta, articulos.ultimo_pedido, "
+        "0 as stock, articulos.min, articulos.max, 0 as pendientes_pedido, "
+        "0 as encargados, articulos.ultima_venta, articulos.ultimo_pedido, "
         "articulos.familia, articulos.precio_compra, articulos.fabricante, articulos.foto, "
         "articulos.notas, articulos.formato, articulos.cantformato, "
         "SUM(lotes.cantidad) as stock_total, MIN(lotes.fecha) as fecha_caducidad "
@@ -344,31 +344,27 @@ bool baseDatos::modificarArticulo(QSqlDatabase db, QStringList datos,
                                   QString dato) {
   QSqlQuery consulta(db);
   consulta.prepare("UPDATE articulos SET cod = ? , descripcion = ? , pvp = ? , "
-                   "iva = ? , stock = ? , min = ? "
-                   ", max = ? , pendientes_pedido = ? , encargados = ? , "
-                   "ultima_venta = ? , ultimo_pedido = ? "
-                   ", familia = ? , precio_compra = ? , fabricante = ? , foto "
+                   "iva = ? , min = ? , max = ? , "
+                   "ultima_venta = ? , ultimo_pedido = ? , "
+                   "familia = ? , precio_compra = ? , fabricante = ? , foto "
                    "= ? , notas = ? , formato = ? , "
                    "cantformato = ? WHERE cod = ?");
   consulta.bindValue(0, datos.at(0));
   consulta.bindValue(1, datos.at(1));
   consulta.bindValue(2, datos.at(2).toDouble());
   consulta.bindValue(3, datos.at(3).toInt());
-  consulta.bindValue(4, datos.at(4).toInt());
-  consulta.bindValue(5, datos.at(5).toInt());
-  consulta.bindValue(6, datos.at(6).toInt());
-  consulta.bindValue(7, datos.at(7).toInt());
-  consulta.bindValue(8, datos.at(8).toInt());
-  consulta.bindValue(9, datos.at(9));
-  consulta.bindValue(10, datos.at(10));
-  consulta.bindValue(11, datos.at(11).toInt());
-  consulta.bindValue(12, datos.at(12).toDouble());
-  consulta.bindValue(13, datos.at(13).toInt());
-  consulta.bindValue(14, datos.at(14));
-  consulta.bindValue(15, datos.at(15));
-  consulta.bindValue(16, datos.at(16));
-  consulta.bindValue(17, datos.at(17).toDouble());
-  consulta.bindValue(18, dato);
+  consulta.bindValue(4, datos.at(5).toInt()); // min (antes era 5)
+  consulta.bindValue(5, datos.at(6).toInt()); // max (antes era 6)
+  consulta.bindValue(6, datos.at(9));         // ultima_venta (antes era 9)
+  consulta.bindValue(7, datos.at(10));        // ultimo_pedido (antes era 10)
+  consulta.bindValue(8, datos.at(11).toInt());
+  consulta.bindValue(9, datos.at(12).toDouble());
+  consulta.bindValue(10, datos.at(13).toInt());
+  consulta.bindValue(11, datos.at(14));
+  consulta.bindValue(12, datos.at(15));
+  consulta.bindValue(13, datos.at(16));
+  consulta.bindValue(14, datos.at(17).toDouble());
+  consulta.bindValue(15, dato);
 
   qDebug() << db.lastError().text();
   qDebug() << consulta.lastError();
@@ -389,14 +385,26 @@ bool baseDatos::insertarArticulo(QSqlDatabase db, QStringList datos) {
   qDebug() << datos;
   QSqlQuery consulta(db);
   consulta.prepare(
-      "INSERT INTO articulos (cod, descripcion, pvp, iva, stock, min, max, "
-      "pendientes_pedido, encargados, ultima_venta, ultimo_pedido, familia, "
+      "INSERT INTO articulos (cod, descripcion, pvp, iva, min, max, "
+      "ultima_venta, ultimo_pedido, familia, "
       "precio_compra, fabricante, foto, notas, formato, cantformato) "
-      "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+      "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
 
-  for (int i = 0; i < datos.length(); ++i) {
-    consulta.bindValue(i, datos.at(i));
-  }
+  consulta.bindValue(0, datos.at(0));
+  consulta.bindValue(1, datos.at(1));
+  consulta.bindValue(2, datos.at(2));
+  consulta.bindValue(3, datos.at(3));
+  consulta.bindValue(4, datos.at(5));  // min
+  consulta.bindValue(5, datos.at(6));  // max
+  consulta.bindValue(6, datos.at(9));  // ultima_venta
+  consulta.bindValue(7, datos.at(10)); // ultimo_pedido
+  consulta.bindValue(8, datos.at(11));
+  consulta.bindValue(9, datos.at(12));
+  consulta.bindValue(10, datos.at(13));
+  consulta.bindValue(11, datos.at(14));
+  consulta.bindValue(12, datos.at(15));
+  consulta.bindValue(13, datos.at(16));
+  consulta.bindValue(14, datos.at(17));
   if (!consulta.exec()) {
     db.rollback();
     qDebug() << consulta.lastError();
@@ -1938,10 +1946,6 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
   if (consulta.record().value(1).toInt() == uds) {
     consulta.exec("DELETE FROM lotes WHERE id LIKE '" + id + "'");
     qDebug() << consulta.lastError() << "== borrando";
-    consulta.exec("UPDATE articulos SET stock= (SELECT sum(cantidad) FROM "
-                  "lotes WHERE ean = '" +
-                  cod + "') where articulos.cod = '" + cod + "'");
-    qDebug() << consulta.lastError() << "==";
     consulta.exec("SET @skip_sync = 0");
     return;
   }
@@ -1950,10 +1954,6 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
     consulta.exec("DELETE FROM lotes WHERE id = '" + id + "'");
     qDebug() << consulta.lastError() << "1<";
 
-    consulta.exec("UPDATE articulos SET stock = (SELECT sum(cantidad) FROM "
-                  "lotes WHERE ean = '" +
-                  cod + "') where articulos.cod = '" + cod + "'");
-    qDebug() << consulta.lastError() << "2<";
     disminuirLote(cod, fecha, resto);
     consulta.exec("SET @skip_sync = 0");
     return;
@@ -2160,6 +2160,22 @@ QString baseDatos::devolverDirectorio(QString tipo) {
   qDebug() << consulta.lastError();
   consulta.first();
   return consulta.record().value(0).toString();
+}
+
+QString baseDatos::resolverRutaImagen(QString nombreFoto) {
+    if (nombreFoto.isEmpty()) return "";
+    
+    // Si la ruta ya es absoluta y el fichero existe, usarla tal cual
+    if (QFileInfo(nombreFoto).isAbsolute() && QFile::exists(nombreFoto)) {
+        return nombreFoto;
+    }
+    
+    // Obtener el directorio base de imágenes (ej: ./imagenes o /ruta/absoluta/imagenes)
+    QString baseDir = devolverDirectorio("imagenes");
+    QDir d(baseDir);
+    
+    // Devolver la ruta absoluta combinando el directorio base y el nombre del fichero
+    return d.absoluteFilePath(nombreFoto);
 }
 
 QString baseDatos::nombreConexionMaster() {

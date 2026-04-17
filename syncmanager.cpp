@@ -38,7 +38,7 @@ const QStringList SyncManager::TABLAS_MAESTRAS = {
 };
 
 const QMap<QString, QStringList> SyncManager::CAMPOS_EXCLUIDOS = {
-    {"articulos", {"stock", "min", "max", "minimo_pedido", "pendientes_pedido", "ultima_venta", "ultimo_pedido", "encargados"}}
+    {"articulos", {"stock", "min", "max", "pendientes_pedido", "ultima_venta", "ultimo_pedido", "encargados", "minimo_pedido"}}
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

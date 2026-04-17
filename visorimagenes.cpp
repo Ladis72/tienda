@@ -11,8 +11,9 @@ VisorImagenes::VisorImagenes(QString direccion, QWidget *parent)
 {
     ui->setupUi(this);
 
-    QImage imagen(QDir::currentPath() + "/" + direccion);
-    qDebug() << imagen;
+    baseDatos base;
+    QImage imagen(base.resolverRutaImagen(direccion));
+    qDebug() << "Visor: cargando imagen desde" << base.resolverRutaImagen(direccion);
 
     QGraphicsScene *escena = new QGraphicsScene;
     QGraphicsPixmapItem *item = new QGraphicsPixmapItem(QPixmap::fromImage(imagen));
