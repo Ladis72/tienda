@@ -31,8 +31,6 @@ private slots:
 
     void on_pushButtonBorrar_clicked();
 
-    void on_tableView_clicked(const QModelIndex &index);
-
 
     void actualizarTotales();
 
@@ -44,7 +42,6 @@ private:
     baseDatos *base;
     QSqlQuery consulta;
     QSqlTableModel *mTablaSalidas;
-    QString codSeleccionado;
     void actualizarTabla();
     Articulos *articulo;
     void llenarComboTiendas();

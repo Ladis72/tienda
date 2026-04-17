@@ -31,8 +31,6 @@ private slots:
 
     void on_pushButtonBorrar_clicked();
 
-    void on_tableView_clicked(const QModelIndex &index);
-
     void on_dateEditCaducidad_editingFinished();
 
     //void on_comboBoxProcedencia_activated(const QString &arg1);
@@ -51,7 +49,6 @@ private:
     baseDatos *base;
     QSqlTableModel *mTablaEntradas;
     QSqlQuery consulta;
-    QString codSeleccionado;
     Articulos *articulo;
     int lineas;
     double productos;

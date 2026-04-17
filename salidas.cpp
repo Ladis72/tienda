@@ -12,11 +12,12 @@ Salidas::Salidas(QWidget *parent)
     mTablaSalidas = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
     llenarComboTiendas();
     mTablaSalidas->setTable("salidaGenero_tmp");
-    ui->tableView->hideColumn(0);
+    ui->tableView->setModel(mTablaSalidas);
+    ui->tableView->setSortingEnabled(true);
+    mTablaSalidas->setSort(3, Qt::AscendingOrder); // Orden por descripción por defecto
     connect(mTablaSalidas, &QAbstractItemModel::dataChanged, this, &Salidas::actualizarTotales);
 
     actualizarTabla();
-    codSeleccionado = "";
 
     // Desactivar autoDefault para evitar inserciones accidentales al pulsar ENTER
     ui->pushButtonAgregar->setAutoDefault(false);
@@ -115,10 +116,14 @@ void Salidas::actualizarTabla()
     mTablaSalidas->setFilter(
         "idTienda = "
         + QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database(conf->getConexionLocal()),
-                                                    ui->comboBoxDestino->currentText())));
-    mTablaSalidas->setSort(3, Qt::AscendingOrder);
+                                                     ui->comboBoxDestino->currentText())));
     mTablaSalidas->select();
-    ui->tableView->setModel(mTablaSalidas);
+
+    // Forzar la carga de todos los registros para asegurar que rowCount() y la vista sean correctos
+    while (mTablaSalidas->canFetchMore()) {
+        mTablaSalidas->fetchMore();
+    }
+
     ui->tableView->hideColumn(0);
     ui->tableView->resizeColumnsToContents();
     actualizarTotales();
@@ -273,20 +278,21 @@ void Salidas::on_pushButtonEnviar_clicked()
 
 void Salidas::on_pushButtonBorrar_clicked()
 {
-    if (!codSeleccionado.isEmpty()) {
+    QModelIndex index = ui->tableView->currentIndex();
+    if (!index.isValid()) {
+        return;
+    }
+
+    // Obtenemos el ID de la columna 0 de la fila seleccionada actualmente
+    QString id = mTablaSalidas->data(mTablaSalidas->index(index.row(), 0)).toString();
+
+    if (!id.isEmpty()) {
         QSqlQuery tmp = base->ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE id = '"
-                                                    + codSeleccionado + "'",
+                                                    + id + "'",
                                                 conf->getConexionLocal());
         qDebug() << tmp.lastError();
     }
     actualizarTabla();
-}
-
-void Salidas::on_tableView_clicked(const QModelIndex &index)
-{
-    QModelIndex indice = mTablaSalidas->index(index.row(), 0);
-    codSeleccionado = mTablaSalidas->data(indice, Qt::EditRole).toString();
-    qDebug() << codSeleccionado;
 }
 
 
