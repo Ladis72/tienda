@@ -72,15 +72,18 @@ void DialogAnadirAPedido::on_pushButtonAceptar_clicked()
     if (tipoIva.isEmpty()) tipoIva = "21"; // Valor por defecto
     
     // Configurar unidad por defecto
-    QString paramUds = "1";
-    QString paramBonif = "0";
+    double cantidad = ui->doubleSpinBoxCantidad->value();
+    double bonificacion = ui->doubleSpinBoxBonificacion->value();
+    
+    QString paramUds = QString::number(cantidad, 'f', 2);
+    QString paramBonif = QString::number(bonificacion, 'f', 2);
     QString paramLote = "";
     QString paramFecha = QDate::currentDate().toString("yyyy-MM-dd");
     QString paramCosto = QString::number(pvt, 'f', 4);
     QString paramDescuento = "0";
-    QString paramBase = QString::number(pvt, 'f', 4);
     
-    double baseTotal = pvt * 1.0;
+    double baseTotal = pvt * cantidad;
+    QString paramBase = QString::number(baseTotal, 'f', 4);
     
     // Calcular impuestos
     double ivaVal = 0;
@@ -115,7 +118,7 @@ void DialogAnadirAPedido::on_pushButtonAceptar_clicked()
     // Añadimos linea de pedido llamando a base de datos
     base->grabarLineaPedido(conf->getConexionLocal(), datos);
     
-    QMessageBox::information(this, "Éxito", "Artículo añadido al pedido correctamente.\n(Uds: 1)");
+    QMessageBox::information(this, "Éxito", QString("Artículo añadido al pedido correctamente.\n(Uds: %1)").arg(cantidad));
     accept();
 }
 

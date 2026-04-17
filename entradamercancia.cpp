@@ -12,15 +12,14 @@ EntradaMercancia::EntradaMercancia(QWidget *parent)
     productos = 0;
     mTablaEntradas = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
     mTablaEntradas->setTable("entradaGenero_tmp");
-    ui->tableView->hideColumn(0);
-    connect(mTablaEntradas,
-            &QAbstractItemModel::dataChanged,
-            this,
-            &EntradaMercancia::actualizarTotales);
+    ui->tableView->setModel(mTablaEntradas);
+    ui->tableView->setSortingEnabled(true);
+    mTablaEntradas->setSort(3, Qt::AscendingOrder); // Orden por descripción por defecto
+
+    connect(mTablaEntradas, &QSqlTableModel::dataChanged, this, &EntradaMercancia::actualizarTotales);
 
     llenarComboTiendas();
     actualizarTabla();
-    codSeleccionado = "";
 
     // Desactivar autoDefault para evitar inserciones accidentales al pulsar ENTER
     ui->pushButtonAgregarLinea->setAutoDefault(false);
@@ -60,10 +59,14 @@ void EntradaMercancia::actualizarTabla()
     mTablaEntradas->setFilter(
         "idTienda = "
         + QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database(conf->getConexionLocal()),
-                                                    ui->comboBoxProcedencia->currentText())));
-    mTablaEntradas->setSort(3, Qt::AscendingOrder);
+                                                     ui->comboBoxProcedencia->currentText())));
     mTablaEntradas->select();
-    ui->tableView->setModel(mTablaEntradas);
+
+    // Forzar la carga de todos los registros para asegurar que rowCount() y la vista sean correctos
+    while (mTablaEntradas->canFetchMore()) {
+        mTablaEntradas->fetchMore();
+    }
+
     ui->tableView->hideColumn(0);
     ui->tableView->resizeColumnsToContents();
     actualizarTotales();
@@ -159,20 +162,21 @@ void EntradaMercancia::on_lineEditDesc_returnPressed()
 
 void EntradaMercancia::on_pushButtonBorrar_clicked()
 {
-    if (!codSeleccionado.isEmpty()) {
+    QModelIndex index = ui->tableView->currentIndex();
+    if (!index.isValid()) {
+        return;
+    }
+
+    // Obtenemos el ID de la columna 0 de la fila seleccionada actualmente
+    QString id = mTablaEntradas->data(mTablaEntradas->index(index.row(), 0)).toString();
+
+    if (!id.isEmpty()) {
         QSqlQuery tmp = base->ejecutarSentencia("DELETE FROM entradaGenero_tmp WHERE id = '"
-                                                    + codSeleccionado + "'",
+                                                    + id + "'",
                                                 conf->getConexionLocal());
         qDebug() << tmp.lastError();
     }
     actualizarTabla();
-}
-
-void EntradaMercancia::on_tableView_clicked(const QModelIndex &index)
-{
-    QModelIndex indice = mTablaEntradas->index(index.row(), 0);
-    codSeleccionado = mTablaEntradas->data(indice, Qt::EditRole).toString();
-    qDebug() << codSeleccionado;
 }
 
 void EntradaMercancia::on_dateEditCaducidad_editingFinished()

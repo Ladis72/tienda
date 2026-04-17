@@ -92,7 +92,8 @@ SOURCES += main.cpp\
     saneadorglobal.cpp \
     unificarmaestros.cpp \
     dialogcomparararticulos.cpp \
-    dialoganadirapedido.cpp
+    dialoganadirapedido.cpp \
+    dialogcambiocodigo.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -169,7 +170,8 @@ HEADERS  += tienda.h \
     saneadorglobal.h \
     unificarmaestros.h \
     dialogcomparararticulos.h \
-    dialoganadirapedido.h
+    dialoganadirapedido.h \
+    dialogcambiocodigo.h
 
 FORMS    += tienda.ui \
     actualizarclientes.ui \
@@ -228,7 +230,8 @@ FORMS    += tienda.ui \
     saneadorglobal.ui \
     unificarmaestros.ui \
     dialogcomparararticulos.ui \
-    dialoganadirapedido.ui
+    dialoganadirapedido.ui \
+    dialogcambiocodigo.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 

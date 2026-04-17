@@ -11,6 +11,7 @@
 #include <QTimer>
 #include <QDateTime>
 #include "unificarmaestros.h"
+#include <QTcpSocket>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constantes
@@ -172,9 +173,9 @@ bool SyncManager::conectarNube()
     QString sslCa = q.value(5).toString();
     if (!sslCa.isEmpty()) {
         if (QDir::isRelativePath(sslCa)) sslCa = QCoreApplication::applicationDirPath() + "/" + sslCa;
-        dbNube.setConnectOptions("SSL_CA=" + sslCa + ";MYSQL_OPT_CONNECT_TIMEOUT=5");
+        dbNube.setConnectOptions("SSL_CA=" + sslCa + ";MYSQL_OPT_CONNECT_TIMEOUT=2");
     } else {
-        dbNube.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=5");
+        dbNube.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=2");
     }
 
     if (!dbNube.open()) {
@@ -197,15 +198,58 @@ void SyncManager::desconectarNube()
 void SyncManager::comprobarConexion()
 {
     bool anterior = m_hayConexion;
-    desconectarNube();
-    if (conectarNube()) {
-        if (!anterior) {
+    
+    QSqlQuery q(QSqlDatabase::database("DB"));
+    q.exec("SELECT servidor, puerto FROM config_nube WHERE id = 1");
+    if (!q.first()) {
+        if (anterior) emit conexionPerdida();
+        desconectarNube();
+        return;
+    }
+    
+    QString host = q.value(0).toString();
+    int port = q.value(1).toInt() > 0 ? q.value(1).toInt() : 3306;
+
+    if (!anterior) {
+        // Solo hacemos el ping TCP si no estamos conectados, para evitar bloqueos largos de la UI
+        // si la BD está apagada. Si este ping tiene éxito, conectarNube() establecerá
+        // una conexión real que reseteará el contador de errores de conexión (max_connect_errors) en MariaDB.
+        QTcpSocket socket;
+        socket.connectToHost(host, port);
+        if (!socket.waitForConnected(1500)) {
+            // Sigue sin haber conexión o el puerto está cerrado, no bloqueamos la UI
+            return;
+        }
+        socket.disconnectFromHost();
+
+        desconectarNube();
+        if (conectarNube()) {
             prepararTablasRemotas();
             emit conexionRecuperada();
+            // Ejecutamos la primera sincronizacion despues de recuperar
             sincronizar();
         }
     } else {
-        if (anterior) emit conexionPerdida();
+        // Ya estabamos conectados; hacer ping rápido a la BD a través de la conexión existente.
+        // Esto NO incrementa el contador de errores de conexión de MariaDB.
+        QSqlDatabase dbNube = QSqlDatabase::database(CONEXION_NUBE);
+        if (dbNube.isOpen()) {
+            QSqlQuery qPing(dbNube);
+            if (!qPing.exec("SELECT 1")) {
+                desconectarNube();
+                if (!conectarNube()) {
+                    emit conexionPerdida();
+                } else {
+                    prepararTablasRemotas();
+                }
+            }
+        } else {
+            if (!conectarNube()) {
+                emit conexionPerdida();
+            } else {
+                prepararTablasRemotas();
+            }
+        }
     }
 }
 

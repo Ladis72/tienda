@@ -13,7 +13,7 @@
 #include <QtConcurrent/QtConcurrent>
 #include "dialogcomparararticulos.h"
 #include "dialoganadirapedido.h"
-
+#include "dialogcambiocodigo.h"
 Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   listaConexionesRemotas = conf->getNombreConexionesActivas();
   qDebug() << "Lista conexiones remotas: ";
@@ -289,7 +289,7 @@ void Articulos::cargarCompras() {
         "`pedidos` on `nDocumento` = `pedidos`.`npedido` WHERE `cod` = '" +
             ui->lineEditCod->text() + "' ORDER BY `pedidos`.`fechaPedido` DESC",
         QSqlDatabase::database(conf->getConexionLocal()));
-    qDebug() << modeloCompras.lastError();
+    if (modeloCompras.lastError().isValid()) qDebug() << modeloCompras.lastError();
     ui->tableViewCompras->setModel(&modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
   }
@@ -303,7 +303,7 @@ void Articulos::cargarCompras() {
                                "' GROUP BY YEAR(pedidos.fechaPedido) DESC , "
                                "MONTH(pedidos.fechaPedido) DESC ",
                            QSqlDatabase::database(conf->getConexionLocal()));
-    qDebug() << modeloCompras.lastError();
+    if (modeloCompras.lastError().isValid()) qDebug() << modeloCompras.lastError();
     ui->tableViewCompras->setModel(&modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
   }
@@ -510,7 +510,7 @@ void Articulos::cargarVentas() {
             ui->lineEditCod->text() +
             "' GROUP BY YEAR(fecha) desc , MONTH(fecha) desc",
         QSqlDatabase::database(conf->getConexionLocal()));
-    qDebug() << modeloVentas.lastError();
+    if (modeloVentas.lastError().isValid()) qDebug() << modeloVentas.lastError();
     modeloVentas.setHeaderData(0, Qt::Horizontal, "Artculo");
     modeloVentas.setHeaderData(1, Qt::Horizontal, "Fecha");
     modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
@@ -526,7 +526,7 @@ void Articulos::cargarVentas() {
                           "lineasticket WHERE cod = '" +
                               ui->lineEditCod->text() + "' group by fecha desc",
                           QSqlDatabase::database(conf->getConexionLocal()));
-    qDebug() << modeloVentas.lastError();
+    if (modeloVentas.lastError().isValid()) qDebug() << modeloVentas.lastError();
     modeloVentas.setHeaderData(0, Qt::Horizontal, "Producto");
     modeloVentas.setHeaderData(1, Qt::Horizontal, "Fecha");
     modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
@@ -544,7 +544,7 @@ void Articulos::cargarVentas() {
                               "' GROUP BY YEAR(fecha) desc",
                           QSqlDatabase::database(conf->getConexionLocal()));
 
-    qDebug() << modeloVentas.lastError();
+    if (modeloVentas.lastError().isValid()) qDebug() << modeloVentas.lastError();
     modeloVentas.setHeaderData(0, Qt::Horizontal, "Artculo");
     modeloVentas.setHeaderData(1, Qt::Horizontal, "Año");
     modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
@@ -832,12 +832,15 @@ void Articulos::on_pushButtonCambiarCodigo_clicked() {
     return;
   }
 
-  bool ok;
-  QString newCod = QInputDialog::getText(
-      this, tr("Cambiar Código"),
-      tr("Introduzca el nuevo código para el artículo:"), QLineEdit::Normal, "",
-      &ok);
-  if (!ok || newCod.isEmpty()) {
+  QString descripcion = ui->lineEditDesc->text();
+
+  DialogCambioCodigo dialog(oldCod, descripcion, listaConexionesRemotas, this);
+  if (dialog.exec() != QDialog::Accepted) {
+      return;
+  }
+  
+  QString newCod = dialog.getNuevoCodigo();
+  if (newCod.isEmpty()) {
     return;
   }
 
