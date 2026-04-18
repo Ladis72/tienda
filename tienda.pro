@@ -19,7 +19,6 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
     ClickableLabel.cpp \
-    actualizarclientes.cpp \
     conexionesremotas.cpp \
     generarvales.cpp \
     graficoventaswidget.cpp \
@@ -97,7 +96,6 @@ SOURCES += main.cpp\
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
-    actualizarclientes.h \
     conexionesremotas.h \
     generarvales.h \
     graficoventaswidget.h \
@@ -174,7 +172,6 @@ HEADERS  += tienda.h \
     dialogcambiocodigo.h
 
 FORMS    += tienda.ui \
-    actualizarclientes.ui \
     copiaseguridad.ui \
     generarvales.ui \
     impuestos.ui \

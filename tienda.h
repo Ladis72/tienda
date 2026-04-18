@@ -8,7 +8,7 @@
 #include <QPushButton>
 #include <QPalette>
 
-#include "actualizarclientes.h"
+
 #include "articulos.h"
 #include "base_datos.h"
 
@@ -113,7 +113,7 @@ private slots:
     void onToggleNotas();
     void actualizarNotificacionNotas(int count);
 
-    void on_pushButtonActualizarClientes_clicked();
+
 
     void on_pushButtonGenerarVales_clicked();
     // sincronizarVales y comprobarVales eliminados: la propagación de vales
@@ -170,7 +170,7 @@ private:
     Directorios *Director;
     tiendas *Sucursal;
     conexionesRemotas *conexiones;
-    ActualizarClientes *actClientes;
+
     GenerarVales *genVales;
     impuestos *editatImpuestos;
     SyncManager *managerSync;
