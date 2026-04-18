@@ -1,4 +1,5 @@
 #include "visorimagenes.h"
+#include "base_datos.h"
 #include <QDebug>
 #include <QDir>
 #include <QGraphicsPixmapItem>
