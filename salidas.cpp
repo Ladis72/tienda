@@ -10,7 +10,10 @@ Salidas::Salidas(QWidget *parent)
     lineas = 0;
     productos = 0;
     mTablaSalidas = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
+    ui->comboBoxDestino->blockSignals(true);
     llenarComboTiendas();
+    ui->comboBoxDestino->blockSignals(false);
+
     mTablaSalidas->setTable("salidaGenero_tmp");
     ui->tableView->setModel(mTablaSalidas);
     ui->tableView->setSortingEnabled(true);
@@ -39,11 +42,11 @@ Salidas::~Salidas()
 
 void Salidas::on_lineEditCod_returnPressed()
 {
-    // consulta = base->consulta_producto(conf->getConexionLocal(), ui->lineEditCod->text());
+    // consulta = base.consulta_producto(conf->getConexionLocal(), ui->lineEditCod->text());
     // consulta.first();
     // if (!consulta.isValid()) {
-    //     QString cod = base->codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
-    //     consulta = base->consulta_producto(conf->getConexionLocal(), cod);
+    //     QString cod = base.codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
+    //     consulta = base.consulta_producto(conf->getConexionLocal(), cod);
     //     consulta.first();
     // }
     // if (consulta.numRowsAffected() == 1) {
@@ -74,14 +77,14 @@ void Salidas::on_lineEditCod_returnPressed()
     if (codigo.isEmpty())
         return;
 
-    QSqlRecord registro = base->consulta_producto(conf->getConexionLocal(), codigo);
+    QSqlRecord registro = base.consulta_producto(conf->getConexionLocal(), codigo);
 
     // 1. Buscar por código directo
     if (registro.isEmpty()) {
         // 2. Buscar por código auxiliar
-        QString codAux = base->codigoDesdeAux(conf->getConexionLocal(), codigo);
+        QString codAux = base.codigoDesdeAux(conf->getConexionLocal(), codigo);
         if (!codAux.isEmpty()) {
-            registro = base->consulta_producto(conf->getConexionLocal(), codAux);
+            registro = base.consulta_producto(conf->getConexionLocal(), codAux);
         }
     }
 
@@ -113,29 +116,43 @@ void Salidas::on_lineEditCod_returnPressed()
 
 void Salidas::actualizarTabla()
 {
-    mTablaSalidas->setFilter(
-        "idTienda = "
-        + QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database(conf->getConexionLocal()),
-                                                     ui->comboBoxDestino->currentText())));
-    mTablaSalidas->select();
-
-    // Forzar la carga de todos los registros para asegurar que rowCount() y la vista sean correctos
-    while (mTablaSalidas->canFetchMore()) {
-        mTablaSalidas->fetchMore();
+    qDebug() << "Salidas::actualizarTabla - Inicio";
+    QString tienda = ui->comboBoxDestino->currentText();
+    
+    if (tienda.isEmpty()) {
+        mTablaSalidas->setFilter("idTienda = -1");
+        qDebug() << "Salidas::actualizarTabla - Combo vacío, aplicando filtro idTienda = -1";
+    } else {
+        int idTienda = base.idTiendaDesdeNombre(QSqlDatabase::database(conf->getConexionLocal()), tienda);
+        mTablaSalidas->setFilter("idTienda = " + QString::number(idTienda));
+        qDebug() << "Salidas::actualizarTabla - Filtrando por idTienda:" << idTienda;
+    }
+    
+    if (!mTablaSalidas->select()) {
+        qDebug() << "Salidas::actualizarTabla - Error en select:" << mTablaSalidas->lastError().text();
     }
 
+    // Forzar la carga de todos los registros para asegurar que rowCount() y la vista sean correctos
+    int count = 0;
+    while (mTablaSalidas->canFetchMore()) {
+        mTablaSalidas->fetchMore();
+        count++;
+        if (count > 100) break; // Seguridad para evitar bucles infinitos en errores de driver
+    }
+    
     ui->tableView->hideColumn(0);
     ui->tableView->resizeColumnsToContents();
     actualizarTotales();
+    qDebug() << "Salidas::actualizarTabla - Fin. Filas cargadas:" << mTablaSalidas->rowCount();
 }
 
 void Salidas::llenarComboTiendas()
 {
-    QSqlQuery listaCombo = base->tiendas(QSqlDatabase::database("DB"));
-    listaCombo.first();
-    do {
+    ui->comboBoxDestino->clear();
+    QSqlQuery listaCombo = base.tiendas(QSqlDatabase::database("DB"));
+    while (listaCombo.next()) {
         ui->comboBoxDestino->addItem(listaCombo.value("nombre").toString());
-    } while (listaCombo.next());
+    }
 }
 
 void Salidas::on_pushButtonAgregar_clicked()
@@ -146,7 +163,7 @@ void Salidas::on_pushButtonAgregar_clicked()
         return;
     }
 
-    QString idLote = base->idLote(conf->getConexionLocal(),
+    QString idLote = base.idLote(conf->getConexionLocal(),
                                   ui->lineEditCod->text(),
                                   "",
                                   ui->dateEditFC->text());
@@ -167,7 +184,7 @@ void Salidas::on_pushButtonAgregar_clicked()
         }
     }
     QSqlQuery datosLote;
-    datosLote = base->ejecutarSentencia("SELECT cantidad FROM lotes WHERE id ='" + idLote + "'",
+    datosLote = base.ejecutarSentencia("SELECT cantidad FROM lotes WHERE id ='" + idLote + "'",
                                         conf->getConexionLocal());
     datosLote.first();
     int resto = datosLote.record().value("cantidad").toInt() - ui->lineEditCantidad->text().toInt();
@@ -199,9 +216,9 @@ void Salidas::on_pushButtonAgregar_clicked()
     datos.append(ui->lineEditCantidad->text());
     datos.append(ui->dateEditFC->text());
     datos.append(ui->lineEditPrecio->text());
-    datos.append(QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),
+    datos.append(QString::number(base.idTiendaDesdeNombre(QSqlDatabase::database("DB"),
                                                            ui->comboBoxDestino->currentText())));
-    base->insertarEnTabla(QSqlDatabase::database("DB"), "salidaGenero_tmp", datos);
+    base.insertarEnTabla(QSqlDatabase::database("DB"), "salidaGenero_tmp", datos);
 
     //    mTablaSalidas->select();
     ui->lineEditCantidad->clear();
@@ -215,7 +232,7 @@ void Salidas::on_pushButtonAgregar_clicked()
 
 void Salidas::on_lineEditDesc_returnPressed()
 {
-    QSqlQuery consulta = base->buscarProducto(QSqlDatabase::database("DB"),
+    QSqlQuery consulta = base.buscarProducto(QSqlDatabase::database("DB"),
                                               "articulos",
                                               ui->lineEditDesc->text());
     consulta.first();
@@ -249,29 +266,29 @@ void Salidas::on_pushButtonEnviar_clicked()
         uds = mTablaSalidas->record(i).value(4).toInt();
         idTienda = mTablaSalidas->record(i).value(7).toString();
 
-        base->disminuirLote(cod, fechaCaducidad, uds);
+        base.disminuirLote(cod, fechaCaducidad, uds);
         QString precioValidado = pvp.isEmpty() ? "0" : pvp;
-        QSqlQuery tmp = base->ejecutarSentencia("UPDATE articulos SET descripcion = '" + descripcion
+        QSqlQuery tmp = base.ejecutarSentencia("UPDATE articulos SET descripcion = '" + descripcion
                                                     + "' , pvp = " + precioValidado + " WHERE cod = '" + cod
                                                     + "'",
                                                 conf->getConexionLocal());
     }
-    QSqlQuery tmp = base->ejecutarSentencia(
+    QSqlQuery tmp = base.ejecutarSentencia(
         "INSERT INTO salidaGenero (cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp , "
         "idTienda) "
         "SELECT salidaGenero_tmp.cod, salidaGenero_tmp.fechaEntrada, salidaGenero_tmp.descripcion, "
         "salidaGenero_tmp.cantidad, salidaGenero_tmp.fechaCaducidad, salidaGenero_tmp.pvp , "
         "salidaGenero_tmp.idTienda"
         " FROM salidaGenero_tmp WHERE salidaGenero_tmp.idTienda = "
-            + QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),
+            + QString::number(base.idTiendaDesdeNombre(QSqlDatabase::database("DB"),
                                                         ui->comboBoxDestino->currentText())),
         conf->getConexionLocal());
-    base->ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE idTienda = "
+    base.ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE idTienda = "
                                 + QString::number(
-                                    base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),
+                                    base.idTiendaDesdeNombre(QSqlDatabase::database("DB"),
                                                               ui->comboBoxDestino->currentText())),
                             conf->getConexionLocal());
-    base->insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(), "Salida genero ");
+    base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(), "Salida genero ");
 
     actualizarTabla();
 }
@@ -287,7 +304,7 @@ void Salidas::on_pushButtonBorrar_clicked()
     QString id = mTablaSalidas->data(mTablaSalidas->index(index.row(), 0)).toString();
 
     if (!id.isEmpty()) {
-        QSqlQuery tmp = base->ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE id = '"
+        QSqlQuery tmp = base.ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE id = '"
                                                     + id + "'",
                                                 conf->getConexionLocal());
         qDebug() << tmp.lastError();

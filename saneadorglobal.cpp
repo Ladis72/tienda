@@ -22,6 +22,12 @@ SaneadorGlobal::SaneadorGlobal(const UnificarMaestrosConfig &config, QWidget *pa
     // Llenar combo de tiendas online
     ui->comboBoxTienda->addItem(tr("-- Seleccione Tienda --"), "");
     QStringList activas = conf->getNombreConexionesActivas();
+    
+    // Añadir NUBE explícitamente a la lista si la conexión está abierta
+    if (QSqlDatabase::database("NUBE").isOpen() && !activas.contains("NUBE")) {
+        activas.prepend("NUBE");
+    }
+
     for (const QString &c : activas) {
         if (c != "DB" && c != conf->getConexionCommon()) {
             ui->comboBoxTienda->addItem(c, c);

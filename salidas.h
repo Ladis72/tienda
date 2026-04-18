@@ -39,7 +39,7 @@ private slots:
 
 private:
     Ui::Salidas *ui;
-    baseDatos *base;
+    baseDatos base;
     QSqlQuery consulta;
     QSqlTableModel *mTablaSalidas;
     void actualizarTabla();

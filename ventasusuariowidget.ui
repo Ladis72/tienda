@@ -6,15 +6,213 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1054</width>
-    <height>760</height>
+    <width>1100</width>
+    <height>800</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">QWidget { background-color: #f0f2f5; color: #1c1e21; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+QTableView { background-color: white; border: 1px solid #dddfe2; border-radius: 8px; selection-background-color: #e7f3ff; selection-color: #1877f2; gridline-color: #f0f2f5; }
+QHeaderView::section { background-color: #f0f2f5; padding: 10px; border: none; border-bottom: 2px solid #dddfe2; font-weight: bold; color: #65676b; }
+QTabWidget::pane { border: 1px solid #dddfe2; top: -1px; background: white; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+QTabBar::tab { background: #f0f2f5; border: 1px solid #dddfe2; padding: 12px 24px; border-top-left-radius: 8px; border-top-right-radius: 8px; margin-right: 4px; font-weight: 600; color: #65676b; }
+QTabBar::tab:selected { background: white; border-bottom-color: white; color: #1877f2; }
+QGroupBox { font-weight: bold; border: 1px solid #dddfe2; border-radius: 8px; margin-top: 15px; padding-top: 15px; background: white; }
+QGroupBox::title { subcontrol-origin: margin; left: 15px; padding: 0 5px; color: #1877f2; }
+QDateEdit { padding: 5px; border: 1px solid #dddfe2; border-radius: 4px; background: white; }
+QCheckBox { font-weight: bold; color: #1c1e21; }</string>
+  </property>
   <layout class="QGridLayout" name="gridLayout_2">
+   <property name="leftMargin">
+    <number>20</number>
+   </property>
+   <property name="topMargin">
+    <number>20</number>
+   </property>
+   <property name="rightMargin">
+    <number>20</number>
+   </property>
+   <property name="bottomMargin">
+    <number>20</number>
+   </property>
+   <property name="spacing">
+    <number>15</number>
+   </property>
    <item row="0" column="0">
+    <layout class="QHBoxLayout" name="topLayout">
+     <property name="spacing">
+      <number>15</number>
+     </property>
+     <item>
+      <widget class="QGroupBox" name="groupBox">
+       <property name="title">
+        <string>Agrupar por:</string>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QRadioButton" name="radioDia">
+          <property name="text">
+           <string>Día</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radioMes">
+          <property name="text">
+           <string>Mes</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="radioAnio">
+          <property name="text">
+           <string>Año</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QFrame" name="frameStats">
+       <property name="minimumSize">
+        <size>
+         <width>500</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QFrame#frameStats { background-color: #ffffff; border: 1px solid #1877f2; border-radius: 12px; padding: 15px; }</string>
+       </property>
+       <layout class="QVBoxLayout" name="statsLayout">
+        <item>
+         <widget class="QLabel" name="lblStats">
+          <property name="font">
+           <font>
+            <pointsize>11</pointsize>
+            <weight>50</weight>
+            <bold>false</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Estadísticas:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <property name="spacing">
+      <number>15</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Desde:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDateEdit" name="dateDesde">
+       <property name="minimumSize">
+        <size>
+         <width>120</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="displayFormat">
+        <string>yyyy-MM-dd</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Hasta:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDateEdit" name="dateHasta">
+       <property name="minimumSize">
+        <size>
+         <width>120</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="displayFormat">
+        <string>yyyy-MM-dd</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="chkGlobal">
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Cargar Global (Todas las tiendas)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item row="2" column="0">
     <widget class="QTabWidget" name="tabWidge">
      <property name="currentIndex">
       <number>0</number>
@@ -23,77 +221,37 @@
       <attribute name="title">
        <string>Fechas</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_3">
-       <item row="3" column="1">
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
-         <item>
-          <widget class="QLabel" name="label">
-           <property name="text">
-            <string>Desde;</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QDateEdit" name="dateDesde">
-           <property name="displayFormat">
-            <string>yyyy/MM/dd</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="label_2">
-           <property name="text">
-            <string>Hasta</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QDateEdit" name="dateHasta">
-           <property name="displayFormat">
-            <string>yyyy/MM/dd</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item row="0" column="0" colspan="3">
-        <widget class="QGroupBox" name="groupBox">
-         <property name="title">
-          <string>Ordenar por;</string>
+      <layout class="QHBoxLayout" name="horizontalLayout_Fechas" stretch="2,3">
+       <property name="spacing">
+        <number>20</number>
+       </property>
+       <property name="leftMargin">
+        <number>15</number>
+       </property>
+       <property name="topMargin">
+        <number>15</number>
+       </property>
+       <property name="rightMargin">
+        <number>15</number>
+       </property>
+       <property name="bottomMargin">
+        <number>15</number>
+       </property>
+       <item>
+        <widget class="QTableView" name="tableResumen">
+         <property name="alternatingRowColors">
+          <bool>true</bool>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-           <widget class="QRadioButton" name="radioDia">
-            <property name="text">
-             <string>Día</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="radioMes">
-            <property name="text">
-             <string>Mes</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="radioAnio">
-            <property name="text">
-             <string>Año</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <property name="verticalScrollMode">
+          <enum>QAbstractItemView::ScrollPerPixel</enum>
+         </property>
+         <property name="horizontalScrollMode">
+          <enum>QAbstractItemView::ScrollPerPixel</enum>
+         </property>
         </widget>
        </item>
-       <item row="4" column="5">
-        <layout class="QGridLayout" name="fechasLayout"/>
-       </item>
-       <item row="4" column="0" colspan="5">
-        <widget class="QTableView" name="tableResumen"/>
+       <item>
+        <layout class="QVBoxLayout" name="fechasLayout"/>
        </item>
       </layout>
      </widget>
@@ -101,21 +259,117 @@
       <attribute name="title">
        <string>Horas</string>
       </attribute>
+      <layout class="QHBoxLayout" name="horizontalLayout_Horas" stretch="1,2">
+       <property name="spacing">
+        <number>20</number>
+       </property>
+       <property name="leftMargin">
+        <number>15</number>
+       </property>
+       <property name="topMargin">
+        <number>15</number>
+       </property>
+       <property name="rightMargin">
+        <number>15</number>
+       </property>
+       <property name="bottomMargin">
+        <number>15</number>
+       </property>
+       <item>
+        <widget class="QTableView" name="tableHoras">
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="chartLayoutHoras"/>
+       </item>
+      </layout>
      </widget>
      <widget class="QWidget" name="tabSemana">
       <attribute name="title">
-       <string>Dias semana</string>
+       <string>Días Semana</string>
       </attribute>
+      <layout class="QHBoxLayout" name="horizontalLayout_Semana" stretch="1,2">
+       <property name="spacing">
+        <number>20</number>
+       </property>
+       <property name="leftMargin">
+        <number>15</number>
+       </property>
+       <property name="topMargin">
+        <number>15</number>
+       </property>
+       <property name="rightMargin">
+        <number>15</number>
+       </property>
+       <property name="bottomMargin">
+        <number>15</number>
+       </property>
+       <item>
+        <widget class="QTableView" name="tableSemana">
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="chartLayoutSemana"/>
+       </item>
+      </layout>
      </widget>
      <widget class="QWidget" name="tabTickets">
       <attribute name="title">
        <string>Tickets</string>
       </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_Tickets">
+       <property name="leftMargin">
+        <number>15</number>
+       </property>
+       <property name="topMargin">
+        <number>15</number>
+       </property>
+       <property name="rightMargin">
+        <number>15</number>
+       </property>
+       <property name="bottomMargin">
+        <number>15</number>
+       </property>
+       <item>
+        <widget class="QTableView" name="tableTickets">
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
      <widget class="QWidget" name="tabProductos">
       <attribute name="title">
        <string>Productos</string>
       </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_Productos">
+       <property name="leftMargin">
+        <number>15</number>
+       </property>
+       <property name="topMargin">
+        <number>15</number>
+       </property>
+       <property name="rightMargin">
+        <number>15</number>
+       </property>
+       <property name="bottomMargin">
+        <number>15</number>
+       </property>
+       <item>
+        <widget class="QTableView" name="tableProductos">
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </widget>
    </item>

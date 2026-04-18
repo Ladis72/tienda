@@ -2,7 +2,11 @@
 #include "qprocess.h"
 #include <QDate>
 #include <QDebug>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QMessageBox>
+
 
 baseDatos::baseDatos() {}
 
@@ -2366,7 +2370,7 @@ bool baseDatos::crearNota(const QString &db, const QString &titulo,
   q.bindValue(":titulo", titulo);
   q.bindValue(":descripcion", descripcion);
   q.bindValue(":usuario", usuario);
-  q.bindValue(":fechaLimite", fechaLimite.isEmpty() ? QVariant(QVariant::String)
+  q.bindValue(":fechaLimite", fechaLimite.isEmpty() ? QVariant(QMetaType(QMetaType::QString))
                                                     : QVariant(fechaLimite));
   q.bindValue(":prioridad", prioridad.isEmpty() ? "Normal" : prioridad);
   if (!q.exec()) {
@@ -2418,7 +2422,7 @@ bool baseDatos::editarNota(const QString &db, int idNota, const QString &titulo,
       "fecha_limite = :fechaLimite, prioridad = :prioridad WHERE id = :id");
   q.bindValue(":titulo", titulo);
   q.bindValue(":descripcion", descripcion);
-  q.bindValue(":fechaLimite", fechaLimite.isEmpty() ? QVariant(QVariant::String)
+  q.bindValue(":fechaLimite", fechaLimite.isEmpty() ? QVariant(QMetaType(QMetaType::QString))
                                                     : QVariant(fechaLimite));
   q.bindValue(":prioridad", prioridad);
   q.bindValue(":id", idNota);
