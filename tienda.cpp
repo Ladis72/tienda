@@ -17,9 +17,20 @@
 #include <QSizePolicy>
 #include <QSplitter>
 
+/******************************************************************************
+ * CONSTRUCTOR principal de la aplicación Tienda
+ * Inicializa:
+ *  - Conexión a base de datos
+ *  - Creación de tablas si no existen
+ *  - Widgets principales (splitter, notas, sync)
+ *  - Sistema de permisos
+ *  - Carga de logo y configuración
+ ******************************************************************************/
 Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
 
   ui->setupUi(this);
+
+  // Inicializar todos los punteros a nullptr para evitar punteros colgantes
   T = nullptr;
   U = nullptr;
   A = nullptr;
@@ -50,11 +61,15 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   estadisticasDialog = nullptr;
   Director = nullptr;
   Sucursal = nullptr;
-  actClientes = nullptr;
+
   genVales = nullptr;
   editatImpuestos = nullptr;
 
-  // datos = [0:nombre, 1:ip, 2:usuario, 3:password, 4:baseDatos, 5:puerto]
+  /******************************************************************************
+   * CONEXIÓN A BASE DE DATOS
+   * Intenta primero obtener la configuración local de la tabla 'tiendas'
+   * Si no existe, usa valores por defecto: localhost / tiendaNueva / root
+   ******************************************************************************/
   QStringList datos = base.datosConexionLocal();
   if (datos.isEmpty()) {
     // No hay tienda local configurada: usar valores por defecto
@@ -71,12 +86,28 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   }
   conf->setConexionLocal("DB");
 
-  // Cargar configuración global (Modo Nube para comunes)
+  /******************************************************************************
+   * CARGAR CONFIGURACIÓN GLOBAL
+   * Lee opciones como precios_locales para mostrar precios locales
+   * por例外 en cada tienda
+   ******************************************************************************/
   QMap<QString, QVariant> config = base.leerConfiguracion();
   conf->setUsarPreciosLocales(config.value("precios_locales").toBool());
 
+  /******************************************************************************
+   * INICIALIZAR SISTEMA DE PERMISOS
+   * Carga los permisos de la tabla 'permisos' según el rol del usuario
+   ******************************************************************************/
   GestorPermisos::inicializar(conf->getConexionLocal());
 
+  /******************************************************************************
+   * CREAR TABLAS SI NO EXISTEN
+   * Tablas necesarias para el funcionamiento de la app:
+   *  - encargos: pedidos de clientes pendientes
+   *  - historico_stock: control de cambios de stock
+   *  - proveedores: catálogo de proveedores
+   *  - precios_tienda: precios por excepción por tienda
+   ******************************************************************************/
   base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `encargos` ("
                          "  `id_encargo` INT AUTO_INCREMENT PRIMARY KEY,"
                          "  `id_cliente` INT DEFAULT '0',"
@@ -138,13 +169,21 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          "`precios_locales` TINYINT(1) DEFAULT '0';",
                          conf->getConexionLocal());
 
+  /******************************************************************************
+   * CONEXIÓN MAESTRA (NUBE)
+   * Si la conexión local es diferente de la master,某些botones
+   * que solo funcionan en la master se deshabilitan
+   ******************************************************************************/
   QString conexionMaster = base.nombreConexionMaster();
   conf->setConexionMaster(conexionMaster);
   if (conf->getConexionMaster() != conf->getConexionLocal()) {
     ui->pushButtonGenerarVales->setEnabled(false);
-    ui->pushButtonActualizarClientes->setEnabled(false);
   }
 
+  /******************************************************************************
+   * CARGAR LOGO DE LA TIENDA
+   * Busca en el directorio configurado o usa fallbacks
+   ******************************************************************************/
   cargarLogo();
   if (ui->logo) {
     ui->logo->setScaledContents(false);
@@ -153,17 +192,26 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
     ui->logo->installEventFilter(this);
   }
 
+  /******************************************************************************
+   * GESTIÓN DE CONEXIONES REMOTAS
+   * Administra la lista de tiendas y su estado de conexión
+   ******************************************************************************/
   conexiones = new conexionesRemotas(this);
   conexiones->base = &base;
   ui->statusBar->addPermanentWidget(ui->pushButtonConectar);
 
   // Botón de usuario en la barra de estado
+  // Muestra el usuario actual y permite cerrar sesión
   usuario = new QPushButton(conf->getUsuario());
   usuario->setObjectName("usuarioButton");
   ui->statusBar->addPermanentWidget(usuario);
   connect(usuario, SIGNAL(clicked()), this,
           SLOT(on_pushButtonSesion_clicked()));
 
+  /******************************************************************************
+   * SPLITTER PRINCIPAL
+   * Divide el espacio entre el logo y el panel de notas
+   ******************************************************************************/
   mainSplitter = new QSplitter(Qt::Horizontal, ui->centralWidget);
 
   QWidget *logoContainer = new QWidget(mainSplitter);
@@ -178,12 +226,17 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   notasWidget = new NotasWidget(mainSplitter);
   mainSplitter->addWidget(notasWidget);
 
+  /******************************************************************************
+   * CONFIGURAR SPLITTER
+   * Tamaño inicial: 550px logo, 450px notas
+   * Handle ancho para facilitanarrastrar
+   ******************************************************************************/
   mainSplitter->setSizes({550, 450});
   mainSplitter->setHandleWidth(8);
   mainSplitter->setStyleSheet(
       "QSplitter::handle { background-color: #F5F5F5; border-left: 1px solid "
       "#E0E0E0; border-right: 1px solid #E0E0E0; }"
-      "QSplitter::handle:hover { background-color: #1565C0; }");
+      "QSplitter::handle:hover { background-color: #1976D2; }");
   mainSplitter->setChildrenCollapsible(true);
 
   QGridLayout *grid = qobject_cast<QGridLayout *>(ui->centralWidget->layout());
@@ -212,14 +265,14 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   connect(managerSync, &SyncManager::conexionRecuperada, this, [this]() {
     labelEstadoNube->setText("Nube: 🟢");
     labelEstadoNube->setStyleSheet(
-        "font-weight: bold; color: #2e7d32; padding: 0 10px;");
+        "font-weight: bold; color: #388e3c; padding: 0 10px;");
     ui->statusBar->showMessage(tr("Conexión con la nube establecida"), 3000);
   });
 
   connect(managerSync, &SyncManager::conexionPerdida, this, [this]() {
     labelEstadoNube->setText("Nube: 🔴");
     labelEstadoNube->setStyleSheet(
-        "font-weight: bold; color: #c62828; padding: 0 10px;");
+        "font-weight: bold; color: #d32f2f; padding: 0 10px;");
     ui->statusBar->showMessage(tr("Conexión con la nube perdida"), 3000);
   });
 
@@ -285,13 +338,18 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   login();
 }
 
+/******************************************************************************
+ * DESTRUCTOR
+ * Pregunta si quieres hacer copia de seguridad antes de cerrar
+ * Registra el cierre en el log y libera memoria
+ ******************************************************************************/
 Tienda::~Tienda() {
   // Siempre preguntamos primero al cerrar la aplicación
   int respuesta = QMessageBox::warning(
       this, tr("Salir de la aplicación"),
       tr("¿Quieres hacer una copia de seguridad antes de cerrar?"),
       QMessageBox::Yes | QMessageBox::No);
-      
+
   if (respuesta == QMessageBox::Yes) {
     base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                      "Copia de seguridad iniciada al cerrar");
@@ -303,8 +361,8 @@ Tienda::~Tienda() {
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Fin del programa ");
 
-  delete conf;
-  delete ui;
+  delete conf; // Liberar configuración global
+  delete ui;   // Liberar interfaz generada por Qt
 }
 
 void Tienda::cerrarAplicacion() {
@@ -327,19 +385,16 @@ void Tienda::on_ventasButton_clicked() {
   return;
 }
 
-/**
- * @brief Aplica los permisos del rol activo a los widgets de la ventana
- * principal.
+/******************************************************************************
+ * @brief Aplica permisos del rol a los widgets de la ventana principal
  *
- * Utiliza el GestorPermisos centralizado para consultar si el rol actual
- * tiene acceso a cada funcionalidad. Los permisos se definen en la tabla
- * MySQL `permisos` y se cargan automáticamente al hacer setRol().
+ * Mapa de permisos: cada clave → widget controlado
+ * Para añadir nueva funcionalidad:
+ *   1. Añadir entrada al mapa (clave → widget)
+ *   2. Insertar fila en tabla MySQL 'permisos' para los roles con acceso
  *
- * Para añadir una nueva funcionalidad, solo hay que:
- *  1. Añadir una entrada al mapa clave→widget de esta función
- *  2. Insertar la fila en la tabla `permisos` para los roles que deban tener
- * acceso
- */
+ * @param rol Rol del usuario (-1 = sin sesión, 0 =admin, etc.)
+ ******************************************************************************/
 void Tienda::permisos(int rol) {
   // Mapa: cada clave de permiso → widget que controla
   // Al añadir un nuevo botón/funcionalidad, solo hay que añadir aquí una línea
@@ -369,7 +424,7 @@ void Tienda::permisos(int rol) {
       {"gestionar_pedidos", ui->pushButtonGestionar},
       {"cajas", ui->cajasButton},
       {"generar_vales", ui->pushButtonGenerarVales},
-      {"actualizar_clientes", ui->pushButtonActualizarClientes},
+
       {"listado_ventas", ui->listadoVentasButton},
       {"listado_movimientos", ui->pushButtonListadoMovimientos},
       {"listado_arqueos", ui->pushButtonListadoArqueos},
@@ -431,9 +486,9 @@ void Tienda::actualizarNotificacionNotas(int count) {
   if (count > 0) {
     btnNotifNotas->setStyleSheet(
         "QPushButton { font-weight: bold; color: white; background-color: "
-        "#ef5350; "
+        "#d32f2f; "
         "border-radius: 10px; padding: 2px 10px; margin: 2px; }"
-        "QPushButton:hover { background-color: #d32f2f; }");
+        "QPushButton:hover { background-color: #b71c1c; }");
   } else {
     btnNotifNotas->setStyleSheet("QPushButton { font-weight: bold; color: "
                                  "#558b2f; background-color: transparent; "
@@ -544,7 +599,6 @@ void Tienda::on_pushButtonConfigDB_clicked() {
   CBase->exec();
 }
 
-
 void Tienda::on_pushButtonConfiguracion_clicked() {
   ConfigOtros = new ConfiguracionOtros(this);
   ConfigOtros->exec();
@@ -560,7 +614,6 @@ void Tienda::on_pushButtonFacturar_clicked() {
   fa->exec();
   delete fa;
 }
-
 
 void Tienda::on_pushButtonListadoMovimientos_clicked() {
   ListSalidas = new ListadoSalidas(this);
@@ -628,13 +681,13 @@ void Tienda::refrescarConexiones() {
 
     if (isOnline) {
       lab->setStyleSheet(
-          "QLabel { background-color: #2e7d32; color: white; border-radius: "
+          "QLabel { background-color: #388e3c; color: white; border-radius: "
           "4px; "
           "padding: 2px 6px; font-weight: bold; margin-right: 4px; }");
       conexionesActivas << nombre;
     } else {
       lab->setStyleSheet(
-          "QLabel { background-color: #c62828; color: white; border-radius: "
+          "QLabel { background-color: #d32f2f; color: white; border-radius: "
           "4px; "
           "padding: 2px 6px; font-weight: bold; margin-right: 4px; }");
     }
@@ -651,10 +704,7 @@ void Tienda::refrescarConexiones() {
 
 void Tienda::on_pushButtonConectar_clicked() { refrescarConexiones(); }
 
-void Tienda::on_pushButtonActualizarClientes_clicked() {
-  ActualizarClientes *actClientes = new ActualizarClientes(this);
-  actClientes->exec();
-}
+
 
 /**
  * @brief Comprueba si los vales del mes anterior ya están generados.
@@ -676,16 +726,16 @@ void Tienda::on_pushButtonGenerarVales_clicked() {
   q.bindValue(0, mesRef + "%");
   q.exec();
 
-  if (q.first() && q.value(0).toInt() > 0) {
-    // Ya están generados: sólo informamos
-    QMessageBox::information(
-        this, "Vales ya generados",
-        QString("Los vales de %1 ya están generados (%2 vales)."
-                "\n\nSi necesitas regenerarlos, hazlo desde la base de datos.")
-            .arg(mesLabel)
-            .arg(q.value(0).toInt()));
-    return;
-  }
+  // if (q.first() && q.value(0).toInt() > 0) {
+  //   // Ya están generados: sólo informamos
+  //   QMessageBox::information(
+  //       this, "Vales ya generados",
+  //       QString("Los vales de %1 ya están generados (%2 vales)."
+  //               "\n\nSi necesitas regenerarlos, hazlo desde la base de datos.")
+  //           .arg(mesLabel)
+  //           .arg(q.value(0).toInt()));
+  //   return;
+  // }
 
   // No están generados: pedir confirmación
   int resp = QMessageBox::question(
@@ -705,21 +755,32 @@ void Tienda::on_pushButtonGenerarVales_clicked() {
   // en el próximo ciclo de SyncManager (máx. 5 minutos)
 }
 
+/******************************************************************************
+ * @brief Realiza copia de seguridad de la base de datos
+ *
+ * 1. Busca directorio guardado previamente
+ * 2. Si no existe, pregunta al usuario
+ * 3. Genera nombre: {tienda}-{fecha}.sql
+ * 4. Ejecuta mysqldump para exportar
+ ******************************************************************************/
 void Tienda::on_pushButtonCopia_clicked() {
   QString directorio = base.devolverDirectorio("copia");
-  
-  // Si no hay directorio guardado o el directorio guardado ya no existe en el disco, se pregunta
+
+  // Si no hay directorio guardado o el directorio guardado ya no existe en el
+  // disco, se pregunta
   if (directorio.isEmpty() || !QDir(directorio).exists()) {
     directorio = QFileDialog::getExistingDirectory(
         this, "Elegir directorio para Copias de Seguridad", QDir::homePath(),
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-        
-    // (Opcional) Si quisiéramos guardar el nuevo directorio elegido en la base de datos
-    // para la próxima vez, se podría añadir aquí la llamada correspondiente.
+
+    // (Opcional) Si quisiéramos guardar el nuevo directorio elegido en la base
+    // de datos para la próxima vez, se podría añadir aquí la llamada
+    // correspondiente.
   }
-  
+
   if (directorio.isEmpty()) {
-    qDebug() << "Copia de seguridad cancelada: no se ha seleccionado directorio.";
+    qDebug()
+        << "Copia de seguridad cancelada: no se ha seleccionado directorio.";
     return; // Cancelar si el usuario cierra el diálogo
   }
 

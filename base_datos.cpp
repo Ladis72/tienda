@@ -700,23 +700,30 @@ bool baseDatos::actualizarArticuloDesdeRecord(QString cod, const QSqlRecord &rec
 
 QSqlQuery baseDatos::ventasClientes(QString nombreConexion, QDate fechaI,
                                     QDate fechaF) {
-  QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-  consulta.exec(
-      "SELECT cliente , sum(total) FROM tickets WHERE fecha BETWEEN '" +
-      fechaI.toString("yyyy-MM-01") + "' and '" +
-      fechaF.toString("yyyy-MM-" + QString::number(fechaF.daysInMonth())) +
-      "' GROUP BY cliente");
-  qDebug() << fechaI.toString("yyyy-MM-01");
-  // consulta.bindValue(0,fechaI.toString("yyyy-MM-01"));
-  qDebug() << fechaF.toString("yyyy-MM-" +
-                              QString::number(fechaF.daysInMonth()));
-  // consulta.bindValue(1,fechaF.toString("yyyy-MM-"+QString::number(fechaF.daysInMonth())));
-  // if (consulta.exec()) {
-  qDebug() << consulta.numRowsAffected();
+  QSqlDatabase db = QSqlDatabase::database(nombreConexion);
+  QSqlQuery consulta(db);
+  
+  QString desde = fechaI.toString("yyyy-MM-01");
+  QString hasta = fechaF.toString("yyyy-MM-" + QString::number(fechaF.daysInMonth()));
+  
+  QString sql;
+  // Si existe la tabla histórica ticketss, unificamos con tickets
+  if (db.tables().contains("ticketss")) {
+      sql = QString("SELECT cliente, SUM(total) FROM ("
+                    "  SELECT cliente, total FROM tickets WHERE fecha BETWEEN '%1' AND '%2' "
+                    "  UNION ALL "
+                    "  SELECT cliente, total FROM ticketss WHERE fecha BETWEEN '%1' AND '%2' "
+                    ") AS todas_ventas WHERE cliente > 0 GROUP BY cliente").arg(desde, hasta);
+  } else {
+      sql = QString("SELECT cliente, SUM(total) FROM tickets "
+                    "WHERE fecha BETWEEN '%1' AND '%2' AND cliente > 0 GROUP BY cliente").arg(desde, hasta);
+  }
+
+  if (!consulta.exec(sql)) {
+      qDebug() << "Error en ventasClientes (" << nombreConexion << "):" << consulta.lastError().text();
+  }
+  
   return consulta;
-  //}
-  // qDebug() << consulta.lastError();
-  // return consulta;
 }
 
 double baseDatos::valeCliente(QString nombreConexion, QString idCLiente) {
@@ -733,10 +740,14 @@ double baseDatos::valeCliente(QString nombreConexion, QString idCLiente) {
 
 bool baseDatos::caducarVales(QString nombreConexion) {
   QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-  consulta.exec("UPDATE vales SET estado = 0 WHERE estado = 1");
-  if (consulta.isValid()) {
+  // Marcar todos los vales activos como caducados (estado 1 → 0)
+  // Solo se ejecuta en local; el SyncManager propaga el cambio a la nube
+  if (consulta.exec("UPDATE vales SET estado = 0 WHERE estado = 1")) {
+    qDebug() << "Vales caducados correctamente en" << nombreConexion
+             << "(" << consulta.numRowsAffected() << "registros)";
     return true;
   }
+  qDebug() << "Error al caducar vales:" << consulta.lastError();
   return false;
 }
 
