@@ -344,7 +344,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
  * Registra el cierre en el log y libera memoria
  ******************************************************************************/
 Tienda::~Tienda() {
-  // Siempre preguntamos primero al cerrar la aplicación
+  // Preguntamos siempre al cerrar si se desea realizar la copia
   int respuesta = QMessageBox::warning(
       this, tr("Salir de la aplicación"),
       tr("¿Quieres hacer una copia de seguridad antes de cerrar?"),
@@ -353,8 +353,8 @@ Tienda::~Tienda() {
   if (respuesta == QMessageBox::Yes) {
     base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                      "Copia de seguridad iniciada al cerrar");
-    // Esto llamará a la función que automáticamente usa la ruta si existe,
-    // o pregunta por ella si falta.
+    // on_pushButtonCopia_clicked se encargará de usar el directorio guardado ("cseg")
+    // o de preguntar por uno si no está configurado.
     on_pushButtonCopia_clicked();
   }
 
@@ -764,7 +764,8 @@ void Tienda::on_pushButtonGenerarVales_clicked() {
  * 4. Ejecuta mysqldump para exportar
  ******************************************************************************/
 void Tienda::on_pushButtonCopia_clicked() {
-  QString directorio = base.devolverDirectorio("copia");
+  // Se usa la clave "cseg" que es la que se guarda en la tabla directorios
+  QString directorio = base.devolverDirectorio("cseg");
 
   // Si no hay directorio guardado o el directorio guardado ya no existe en el
   // disco, se pregunta
@@ -773,9 +774,12 @@ void Tienda::on_pushButtonCopia_clicked() {
         this, "Elegir directorio para Copias de Seguridad", QDir::homePath(),
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 
-    // (Opcional) Si quisiéramos guardar el nuevo directorio elegido en la base
-    // de datos para la próxima vez, se podría añadir aquí la llamada
-    // correspondiente.
+    // Si el usuario elige un directorio, lo guardamos para la próxima vez
+    if (!directorio.isEmpty()) {
+        QMap<QString, QString> m;
+        m.insert("cseg", directorio);
+        base.guardarDirectorios(conf->getConexionLocal(), m);
+    }
   }
 
   if (directorio.isEmpty()) {
@@ -791,7 +795,10 @@ void Tienda::on_pushButtonCopia_clicked() {
       QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss") + ".sql";
   qDebug() << nombreBackup;
 
-  base.copiaSeguridad(conf->getConexionLocal(), nombreBackup);
+  if (base.copiaSeguridad(conf->getConexionLocal(), nombreBackup)) {
+    // Si la copia ha sido exitosa, ejecutamos la rotación/limpieza
+    limpiarCopiasAntiguas(directorio);
+  }
 }
 
 void Tienda::on_pushButtonSesion_clicked() {
@@ -882,4 +889,57 @@ void Tienda::on_pushButtonVentaArticulos_clicked() {
 void Tienda::on_pushButtonUnificarGlobal_clicked() {
   UnificarProveedores dlg(this);
   dlg.exec();
+}
+
+/**
+ * @brief Rotación de copias de seguridad.
+ * Conserva:
+ *  - Todas las copias de los últimos 7 días.
+ *  - Una copia por cada sábado para el histórico anterior a 7 días.
+ * Borra el resto para ahorrar espacio.
+ */
+void Tienda::limpiarCopiasAntiguas(const QString &directorio) {
+  QDir dir(directorio);
+  if (!dir.exists())
+    return;
+
+  // Filtramos por prefijo de la tienda y extensión .sql
+  QString prefix = base.nombreConexionLocal() + "-";
+  QStringList filtros;
+  filtros << prefix + "*.sql";
+
+  QFileInfoList lista = dir.entryInfoList(filtros, QDir::Files, QDir::Name);
+  QDate hoy = QDate::currentDate();
+
+  qDebug() << "Iniciando limpieza de copias en:" << directorio;
+
+  for (const QFileInfo &info : lista) {
+    QString nombre = info.fileName();
+    // Extraer fecha del nombre (formato: Tienda-yyyy-MM-dd_...)
+    // La fecha empieza justo después del prefijo y ocupa 10 caracteres
+    QString strFecha = nombre.mid(prefix.length(), 10);
+    QDate fechaCopia = QDate::fromString(strFecha, "yyyy-MM-dd");
+
+    if (!fechaCopia.isValid())
+      continue;
+
+    qint64 dias = fechaCopia.daysTo(hoy);
+
+    // 1. Conservar si es de los últimos 7 días
+    if (dias <= 7) {
+      continue;
+    }
+
+    // 2. Conservar si es un sábado (histórico semanal)
+    if (fechaCopia.dayOfWeek() == Qt::Saturday) {
+      continue;
+    }
+
+    // 3. De lo contrario, eliminar
+    if (QFile::remove(info.absoluteFilePath())) {
+      qDebug() << "Rotación: eliminada copia obsoleta ->" << nombre;
+    } else {
+      qWarning() << "Rotación: no se pudo eliminar ->" << nombre;
+    }
+  }
 }

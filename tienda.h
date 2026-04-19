@@ -179,6 +179,7 @@ private:
 
     void cerrarAplicacion();
     void cargarLogo();
+    void limpiarCopiasAntiguas(const QString &directorio);
     NotasWidget *notasWidget;
     QPushButton *btnNotifNotas;
     QPushButton *btnEditorPermisos;
