@@ -137,8 +137,8 @@ void SaneadorGlobal::refrescarComparativa()
     }
 
     // 3. Cruzar datos
-    QSet<QString> todasLasKeys = QSet<QString>::fromList(locales.keys());
-    todasLasKeys.unite(QSet<QString>::fromList(remotos.keys()));
+    QSet<QString> todasLasKeys = QSet<QString>(locales.keyBegin(), locales.keyEnd());
+    todasLasKeys.unite(QSet<QString>(remotos.keyBegin(), remotos.keyEnd()));
     QStringList keysOrdenadas = todasLasKeys.values();
     keysOrdenadas.sort();
 
