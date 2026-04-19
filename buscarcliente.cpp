@@ -11,8 +11,8 @@ BuscarCliente::BuscarCliente(QWidget *parent, QSqlQuery query)
     , ui(new Ui::BuscarCliente)
 {
     ui->setupUi(this);
-    this->query = query;
-    modelo.setQuery(query);
+    this->query = std::move(query);
+    modelo.setQuery(this->query);
     
     proxyModel.setSourceModel(&modelo);
     proxyModel.setFilterCaseSensitivity(Qt::CaseInsensitive);

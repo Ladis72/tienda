@@ -91,34 +91,85 @@ void SaneadorGlobal::refrescarComparativa()
         return;
     }
 
+    struct InfoRow {
+        int id;
+        QString nombre;
+    };
+
     // 1. Cargar Maestros Locales
-    QMap<QString, int> locales;
+    QMap<QString, InfoRow> locales;
     QSqlQuery qL(local);
-    qL.exec(QString("SELECT %1, %2 FROM %3").arg(m_config.campoId, m_config.campoNombre, m_config.tablaMaestra));
-    while (qL.next()) locales.insert(qL.value(1).toString().trimmed().toUpper(), qL.value(0).toInt());
+    QString selectL = QString("SELECT %1, %2").arg(m_config.campoId, m_config.campoNombre);
+    if (!m_config.campoNif.isEmpty()) selectL += ", " + m_config.campoNif;
+    selectL += QString(" FROM %1").arg(m_config.tablaMaestra);
+
+    qL.exec(selectL);
+    while (qL.next()) {
+        int id = qL.value(0).toInt();
+        QString nombre = qL.value(1).toString().trimmed();
+        QString key = nombre.toUpper(); // Default key: Name
+
+        if (!m_config.campoNif.isEmpty()) {
+            QString nif = qL.value(2).toString().trimmed().toUpper();
+            if (!nif.isEmpty()) key = nif; // Override key with NIF if available
+        }
+        locales.insert(key, {id, nombre});
+    }
 
     // 2. Cargar Maestros Remotos
-    QMap<QString, int> remotos;
+    QMap<QString, InfoRow> remotos;
     QSqlQuery qR(remota);
-    qR.exec(QString("SELECT %1, %2 FROM %3").arg(m_config.campoId, m_config.campoNombre, m_config.tablaMaestra));
-    while (qR.next()) remotos.insert(qR.value(1).toString().trimmed().toUpper(), qR.value(0).toInt());
+    QString selectR = QString("SELECT %1, %2").arg(m_config.campoId, m_config.campoNombre);
+    if (!m_config.campoNif.isEmpty()) selectR += ", " + m_config.campoNif;
+    selectR += QString(" FROM %1").arg(m_config.tablaMaestra);
+
+    qR.exec(selectR);
+    while (qR.next()) {
+        int id = qR.value(0).toInt();
+        QString nombre = qR.value(1).toString().trimmed();
+        QString key = nombre.toUpper();
+
+        if (!m_config.campoNif.isEmpty()) {
+            QString nif = qR.value(2).toString().trimmed().toUpper();
+            if (!nif.isEmpty()) key = nif;
+        }
+        remotos.insert(key, {id, nombre});
+    }
 
     // 3. Cruzar datos
-    QStringList kL = locales.keys();
-    QStringList kR = remotos.keys();
-    QSet<QString> setNombres = QSet<QString>(kL.begin(), kL.end());
-    setNombres.unite(QSet<QString>(kR.begin(), kR.end()));
-    QStringList todosLosNombres = setNombres.values();
-    todosLosNombres.sort();
+    QSet<QString> todasLasKeys = QSet<QString>::fromList(locales.keys());
+    todasLasKeys.unite(QSet<QString>::fromList(remotos.keys()));
+    QStringList keysOrdenadas = todasLasKeys.values();
+    keysOrdenadas.sort();
 
-    for (const QString &nombre : todosLosNombres) {
-        int idL = locales.value(nombre, -1);
-        int idR = remotos.value(nombre, -1);
+    for (const QString &key : keysOrdenadas) {
+        bool existeL = locales.contains(key);
+        bool existeR = remotos.contains(key);
+        
+        int idL = existeL ? locales[key].id : -1;
+        int idR = existeR ? remotos[key].id : -1;
+        QString nombreL = existeL ? locales[key].nombre : "";
+        QString nombreR = existeR ? remotos[key].nombre : "";
+
+        QString nombreAMostrar = nombreL.isEmpty() ? nombreR : nombreL;
+        if (!nombreL.isEmpty() && !nombreR.isEmpty() && nombreL != nombreR) {
+            nombreAMostrar = QString("%1 / %2").arg(nombreL, nombreR);
+        }
 
         int row = ui->tableWidget->rowCount();
         ui->tableWidget->insertRow(row);
         
-        ui->tableWidget->setItem(row, 0, new QTableWidgetItem(nombre));
+        // Col 0: Identificador (Nombre o NIF)
+        QString desc = key;
+        if (!m_config.campoNif.isEmpty() && key.length() < 5) { // Probablemente no sea un NIF si es muy corto y hay campoNif
+             desc = QString("%1 (%2)").arg(nombreAMostrar, key);
+        } else if (!m_config.campoNif.isEmpty()) {
+             desc = QString("%1 [%2]").arg(nombreAMostrar, key);
+        } else {
+             desc = nombreAMostrar;
+        }
+
+        ui->tableWidget->setItem(row, 0, new QTableWidgetItem(desc));
         ui->tableWidget->setItem(row, 1, new QTableWidgetItem(idL == -1 ? "" : QString::number(idL)));
         ui->tableWidget->setItem(row, 2, new QTableWidgetItem(idR == -1 ? "" : QString::number(idR)));
 
@@ -128,12 +179,13 @@ void SaneadorGlobal::refrescarComparativa()
                 status->setText("IDENTICO");
                 status->setBackground(Qt::green);
             } else {
-                status->setText("DIFERENTE");
+                status->setText("DIFERENTE ID");
                 status->setBackground(Qt::yellow);
             }
         } else if (idL != -1) {
             status->setText("FALTA EN REMOTA");
             status->setBackground(Qt::red);
+            status->setForeground(Qt::white);
         } else {
             status->setText("FALTA EN LOCAL");
             status->setBackground(Qt::cyan);
@@ -141,7 +193,7 @@ void SaneadorGlobal::refrescarComparativa()
         ui->tableWidget->setItem(row, 3, status);
     }
     
-    log(QString("Análisis finalizado. %1 registros encontrados.").arg(todosLosNombres.count()));
+    log(QString("Análisis finalizado. %1 registros únicos encontrados.").arg(keysOrdenadas.count()));
 }
 
 void SaneadorGlobal::on_pushButtonIgualar_clicked()

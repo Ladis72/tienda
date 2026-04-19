@@ -17,6 +17,7 @@ struct UnificarMaestrosConfig {
     QString tablaMaestra;       ///< Tabla principal a unificar
     QString campoId;            ///< Clave primaria (ej: "id")
     QString campoNombre;        ///< Campo descriptivo (ej: "nombre" o "descripcion")
+    QString campoNif;           ///< Opcional. Campo NIF para unificación por identidad fiscal.
     
     struct Dependencia {
         QString tabla;          ///< Tabla hija que depende de la maestra
@@ -31,19 +32,19 @@ struct UnificarMaestrosConfig {
 
     // Helper para inicialización rápida
     static UnificarMaestrosConfig paraFamilias() {
-        return { "Unificar Familias", "familias", "id", "descripcion", {{"articulos", "familia"}} };
+        return { "Unificar Familias", "familias", "id", "descripcion", "", {{"articulos", "familia"}} };
     }
 
     static UnificarMaestrosConfig paraFabricantes() {
-        return { "Unificar Fabricantes", "fabricantes", "id", "nombre", {{"articulos", "fabricante"}} };
+        return { "Unificar Fabricantes", "fabricantes", "id", "nombre", "", {{"articulos", "fabricante"}} };
     }
 
     static UnificarMaestrosConfig paraMotivosEntrada() {
-        return { "Unificar Motivos de Entrada", "motivosEntrada", "idtiposEntrada", "descripcion", {{"entradasSalidas", "idTiposRentrada", ""}} };
+        return { "Unificar Motivos de Entrada", "motivosEntrada", "idtiposEntrada", "descripcion", "", {{"entradasSalidas", "idTiposRentrada", ""}} };
     }
 
     static UnificarMaestrosConfig paraProveedores() {
-        return { "Unificar Proveedores", "proveedores", "idProveedor", "nombre", {
+        return { "Unificar Proveedores", "proveedores", "idProveedor", "nombre", "nif", {
             {"facturas", "idProveedor", ""},
             {"albaranes", "idProveedor", ""},
             {"albaranes_tmp", "idProveedor", ""},
@@ -53,7 +54,7 @@ struct UnificarMaestrosConfig {
     }
 
     static UnificarMaestrosConfig paraClientes() {
-        return { "Unificar Clientes", "clientes", "idCliente", "nombre", {
+        return { "Unificar Clientes", "clientes", "idCliente", "nombre", "nif", {
             {"tickets", "cliente", ""},
             {"vales", "idCliente", ""},
             {"encargos", "id_cliente", ""}
@@ -61,7 +62,7 @@ struct UnificarMaestrosConfig {
     }
 
     static UnificarMaestrosConfig paraFormasPago() {
-        return { "Unificar Formas de Pago", "fpago", "id", "tipo", {
+        return { "Unificar Formas de Pago", "fpago", "id", "tipo", "", {
             {"tickets", "fpago", ""},
             {"proveedores", "formapago", ""}
         }};
@@ -69,13 +70,13 @@ struct UnificarMaestrosConfig {
 
     static UnificarMaestrosConfig paraFormatos() {
         // En articulos, el formato se guarda por nombre (string), no por ID.
-        return { "Unificar Formatos", "formatos", "id", "formato", {
+        return { "Unificar Formatos", "formatos", "id", "formato", "", {
             {"articulos", "formato", "formato"}
         }};
     }
 
     static UnificarMaestrosConfig paraUsuarios() {
-        return { "Unificar Usuarios", "usuarios", "id", "usuario", {
+        return { "Unificar Usuarios", "usuarios", "id", "usuario", "", {
             {"tickets", "usuario", ""}, // Por ID
             {"historico_stock", "usuario", "usuario"}, // Por login (campo 'usuario' en maestro)
             {"encargos", "empleado", "usuario"},       // Por login (campo 'usuario' en maestro)
