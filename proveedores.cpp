@@ -580,9 +580,24 @@ void Proveedores::on_dateEditHasta_dateChanged(const QDate &date) {
 void Proveedores::on_pushButtonCerrar_clicked() { close(); }
 
 void Proveedores::on_pushButtonNuevo_clicked() {
+  QString nif = ui->lineEditNIF->text().trimmed();
+  if (!nif.isEmpty()) {
+      QSqlQuery q(QSqlDatabase::database("DB"));
+      q.prepare("SELECT idProveedor, nombre FROM proveedores WHERE nif = ?");
+      q.addBindValue(nif);
+      if (q.exec() && q.next()) {
+          QMessageBox::warning(this, tr("Proveedor Duplicado"),
+                               tr("Ya existe un proveedor con el NIF %1:\n\n"
+                                  "ID: %2\n"
+                                  "Nombre: %3\n\n"
+                                  "No se puede duplicar el NIF.").arg(nif, q.value(0).toString(), q.value(1).toString()));
+          return;
+      }
+  }
+
   if (base.existeDatoEnTabla(QSqlDatabase::database("DB"), "proveedores",
                              "idProveedor", ui->lineEditCod->text())) {
-    QMessageBox::warning(this, "ATENCION", "El registro ya existe");
+    QMessageBox::warning(this, "ATENCION", "El ID de proveedor ya existe");
     return;
   }
   QStringList datos = recogerDatosFormulario();
@@ -620,6 +635,24 @@ void Proveedores::on_lineEditNombre_returnPressed() {
 }
 
 void Proveedores::on_pushButtonModificar_clicked() {
+  QString idActual = ui->lineEditCod->text();
+  QString nifNuevo = ui->lineEditNIF->text().trimmed();
+
+  if (!nifNuevo.isEmpty()) {
+      QSqlQuery q(QSqlDatabase::database("DB"));
+      q.prepare("SELECT idProveedor, nombre FROM proveedores WHERE nif = ? AND idProveedor <> ?");
+      q.addBindValue(nifNuevo);
+      q.addBindValue(idActual);
+      if (q.exec() && q.next()) {
+          QMessageBox::warning(this, tr("Conflicto de NIF"),
+                               tr("El NIF %1 ya está asignado a otro proveedor:\n\n"
+                                  "ID: %2\n"
+                                  "Nombre: %3\n\n"
+                                  "No se puede guardar el cambio.").arg(nifNuevo, q.value(0).toString(), q.value(1).toString()));
+          return;
+      }
+  }
+
   QStringList datos = recogerDatosFormulario();
   int i = mapper.currentIndex();
   QMessageBox msgBox;

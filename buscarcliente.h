@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QSqlQuery>
 #include <QSqlQueryModel>
+#include <utility>
 #include <QSortFilterProxyModel>
 #include <QSqlRecord>
 #include "base_datos.h"
