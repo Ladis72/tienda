@@ -26,7 +26,11 @@ protected:
         return QSortFilterProxyModel::filterAcceptsRow(source_row, source_parent);
     }
 public:
-    void actualizar() { invalidateFilter(); }
+    void actualizar() {
+        // En Qt 6, invalidateFilter() está obsoleto. Se recomienda usar begin/endFilterChange()
+        beginFilterChange();
+        endFilterChange();
+    }
 };
 
 namespace Ui {
@@ -40,6 +44,7 @@ class BuscarProducto : public QDialog
 public:
     explicit BuscarProducto(QWidget *parent, QSqlQuery query);
     ~BuscarProducto();
+    void reject() override;
     QString resultado;
 
 private slots:

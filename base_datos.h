@@ -141,7 +141,7 @@ public:
     QStringList datosFactura(QSqlDatabase db, QString nFactura);
 
     //Funciones CAJAS
-    QSqlQuery ventas(QString fecha, QString base);
+    QSqlQuery ventas(QString fecha, QString tabla, QString base);
     QSqlQuery ventasPorUsusario(QString fecha, QString base);
     QSqlQuery ventasDesdeUltimoArqueo(QString fechaI, QString horaI, QString tabla, QString base);
     QSqlQuery recuperarDatosUltimoArqueo(QString base);

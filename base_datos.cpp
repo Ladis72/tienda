@@ -935,12 +935,22 @@ QString baseDatos::etiquetaCliente(QString idCliente) {
 
 QString baseDatos::nombreFormaPago(QString id, QString base) {
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.prepare("SELECT * FROM fpago WHERE id LIKE ?");
-  consulta.bindValue(0, id);
-  consulta.exec();
-  if (consulta.first() == true) {
-    return consulta.value(1).toString();
+  
+  // 1. Intentar buscar por ID (numérico)
+  consulta.prepare("SELECT tipo FROM fpago WHERE id = ?");
+  consulta.bindValue(0, id.toInt());
+  if (consulta.exec() && consulta.first()) {
+    return consulta.value(0).toString();
   }
+  
+  // 2. Fallback: Si no es un número o no se encontró, intentar buscar por el nombre directamente
+  // (útil si hay registros antiguos que guardaron el texto en lugar del ID)
+  consulta.prepare("SELECT tipo FROM fpago WHERE tipo LIKE ?");
+  consulta.bindValue(0, id);
+  if (consulta.exec() && consulta.first()) {
+    return consulta.value(0).toString();
+  }
+
   return "Sin forma de pago asignada";
 }
 
@@ -1754,9 +1764,9 @@ bool baseDatos::pasarLineaPedidoAHistorico(QString base, QStringList datos) {
   return false;
 }
 
-QSqlQuery baseDatos::ventas(QString fecha, QString base) {
+QSqlQuery baseDatos::ventas(QString fecha, QString tabla, QString base) {
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.exec("SELECT sum(total) , fpago FROM tickets WHERE fecha = '" +
+  consulta.exec("SELECT sum(total) , fpago FROM " + tabla + " WHERE fecha = '" +
                 fecha + "' group by fecha , fpago");
   return consulta;
 }
@@ -1832,8 +1842,8 @@ QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF,
 int baseDatos::nTarjetasDesdeUltimoArqueo(QString fechaI, QString horaI,
                                           QString base) {
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.prepare("SELECT count(*) FROM tickets WHERE ((fecha > ?) OR (fecha "
-                   "= ? AND hora >= ?)) AND fpago = 2");
+  consulta.prepare("SELECT count(*) FROM tickets t JOIN fpago f ON t.fpago = f.id WHERE ((t.fecha > ?) OR (t.fecha "
+                   "= ? AND t.hora >= ?)) AND f.efectivo = 0");
   consulta.bindValue(0, fechaI);
   consulta.bindValue(1, fechaI);
   consulta.bindValue(2, horaI);
@@ -2519,8 +2529,10 @@ QSqlQuery baseDatos::estadisticasVentasPorPeriodo(const QString &db,
 
   // En modo consolidado se combinan tickets y ticketss con UNION ALL
   // y se agrupa el resultado en una subconsulta para sumar ambas fuentes
+  bool reallyConsolidado = consolidado && QSqlDatabase::database(db).tables().contains("ticketss");
+
   QString fuenteSQL;
-  if (consolidado) {
+  if (reallyConsolidado) {
     fuenteSQL = QString("(SELECT fecha, total FROM tickets WHERE fecha BETWEEN "
                         ":desde AND :hasta "
                         " UNION ALL "
@@ -2531,7 +2543,7 @@ QSqlQuery baseDatos::estadisticasVentasPorPeriodo(const QString &db,
   }
 
   QString sql;
-  if (consolidado) {
+  if (reallyConsolidado) {
     sql = QString("SELECT %1 AS periodo, SUM(total) AS total_ventas "
                   "FROM %2 "
                   "GROUP BY periodo "
@@ -2549,7 +2561,7 @@ QSqlQuery baseDatos::estadisticasVentasPorPeriodo(const QString &db,
   query.prepare(sql);
   query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
   query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
-  if (consolidado) {
+  if (reallyConsolidado) {
     query.bindValue(":desde2", desde.toString("yyyy-MM-dd"));
     query.bindValue(":hasta2", hasta.toString("yyyy-MM-dd"));
   }
@@ -2566,9 +2578,11 @@ QSqlQuery baseDatos::estadisticasVentasPorUsuario(const QString &db,
                                                   bool consolidado) {
   QSqlQuery query(QSqlDatabase::database(db));
 
+  bool reallyConsolidado = consolidado && QSqlDatabase::database(db).tables().contains("ticketss");
+
   // En modo consolidado se unen tickets y ticketss antes de agrupar por usuario
   QString sql;
-  if (consolidado) {
+  if (reallyConsolidado) {
     sql = "SELECT u.nombre, SUM(t.total) AS total "
           "FROM (SELECT usuario, total FROM tickets WHERE fecha BETWEEN :desde "
           "AND :hasta "
@@ -2587,7 +2601,7 @@ QSqlQuery baseDatos::estadisticasVentasPorUsuario(const QString &db,
   query.prepare(sql);
   query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
   query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
-  if (consolidado) {
+  if (reallyConsolidado) {
     query.bindValue(":desde2", desde.toString("yyyy-MM-dd"));
     query.bindValue(":hasta2", hasta.toString("yyyy-MM-dd"));
   }
@@ -2604,10 +2618,12 @@ QSqlQuery baseDatos::estadisticasVentasPorFormaPago(const QString &db,
                                                     bool consolidado) {
   QSqlQuery query(QSqlDatabase::database(db));
 
+  bool reallyConsolidado = consolidado && QSqlDatabase::database(db).tables().contains("ticketss");
+
   // En modo consolidado se unen tickets y ticketss antes de agrupar por forma
   // de pago
   QString sql;
-  if (consolidado) {
+  if (reallyConsolidado) {
     sql = "SELECT fp.id , fp.tipo, SUM(t.total) AS total "
           "FROM (SELECT fpago, total FROM tickets WHERE fecha BETWEEN :desde "
           "AND :hasta "
@@ -2626,7 +2642,7 @@ QSqlQuery baseDatos::estadisticasVentasPorFormaPago(const QString &db,
   query.prepare(sql);
   query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
   query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
-  if (consolidado) {
+  if (reallyConsolidado) {
     query.bindValue(":desde2", desde.toString("yyyy-MM-dd"));
     query.bindValue(":hasta2", hasta.toString("yyyy-MM-dd"));
   }
@@ -2637,26 +2653,29 @@ QSqlQuery baseDatos::estadisticasVentasPorFormaPago(const QString &db,
   return query;
 }
 
-QSqlQuery baseDatos::estadisticasVentasPorFamilia(const QString &db,
+QSqlQuery baseDatos::estadisticasVentasPorFamilia(const QString &dbName,
                                                   const QDate &desde,
                                                   const QDate &hasta,
                                                   bool consolidado) {
-  QSqlQuery query(QSqlDatabase::database(db));
+  QSqlDatabase db = QSqlDatabase::database(dbName);
+  QSqlQuery query(db);
 
-  // En modo consolidado se unen lineasticket+tickets con
-  // lineasticketss+ticketss
+  // Verificamos si realmente podemos usar el modo consolidado (si existen las tablas históricas)
+  bool reallyConsolidado = consolidado && db.tables().contains("lineasticketss") && 
+                           db.tables().contains("ticketss");
+
   QString sql;
-  if (consolidado) {
+  if (reallyConsolidado) {
     sql = "SELECT COALESCE(f.id, 0) AS id_fam, "
           "COALESCE(f.descripcion, 'SIN FAMILIA') AS nombre_fam, "
-          "ROUND(SUM(COALESCE(ltu.cantidad, 0) * COALESCE(ltu.pvp, 0)), 2) AS "
+          "ROUND(SUM(COALESCE(ltu.cantidad, 0) * COALESCE(ltu.precio, 0)), 2) AS "
           "total "
           "FROM ("
-          "  SELECT lt.cod, lt.cantidad, lt.pvp FROM lineasticket lt "
+          "  SELECT lt.cod, lt.cantidad, lt.precio FROM lineasticket lt "
           "  JOIN tickets t ON lt.nticket = t.ticket "
           "  WHERE t.fecha BETWEEN :desde AND :hasta "
           "  UNION ALL "
-          "  SELECT lt2.cod, lt2.cantidad, lt2.pvp FROM lineasticketss lt2 "
+          "  SELECT lt2.cod, lt2.cantidad, lt2.precio FROM lineasticketss lt2 "
           "  JOIN ticketss t2 ON lt2.nticket = t2.ticket "
           "  WHERE t2.fecha BETWEEN :desde2 AND :hasta2 "
           ") AS ltu "
@@ -2679,7 +2698,7 @@ QSqlQuery baseDatos::estadisticasVentasPorFamilia(const QString &db,
   query.prepare(sql);
   query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
   query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
-  if (consolidado) {
+  if (reallyConsolidado) {
     query.bindValue(":desde2", desde.toString("yyyy-MM-dd"));
     query.bindValue(":hasta2", hasta.toString("yyyy-MM-dd"));
   }
@@ -2689,6 +2708,7 @@ QSqlQuery baseDatos::estadisticasVentasPorFamilia(const QString &db,
              << query.lastError().text();
   return query;
 }
+
 
 QSqlQuery baseDatos::estadisticasTopArticulosVendidos(const QString &db,
                                                       const QDate &desde,
@@ -2700,19 +2720,38 @@ QSqlQuery baseDatos::estadisticasTopArticulosVendidos(const QString &db,
   QSqlQuery query(QSqlDatabase::database(db));
   QString sql;
 
-  sql = QString(
-            "SELECT lt.cod, lt.descripcion, SUM(lt.cantidad) AS cantidad_total "
-            "FROM lineasticket lt "
-            "JOIN tickets t ON lt.nticket = t.ticket "
-            "WHERE t.fecha BETWEEN :desde AND :hasta "
-            "GROUP BY lt.cod, lt.descripcion ORDER BY cantidad_total DESC "
-            "LIMIT %1")
-            .arg(limite);
+  bool reallyConsolidado = consolidado && 
+                           QSqlDatabase::database(db).tables().contains("ticketss") &&
+                           QSqlDatabase::database(db).tables().contains("lineasticketss");
+
+  if (reallyConsolidado) {
+      sql = QString(
+                "SELECT lt.cod, lt.descripcion, SUM(lt.cantidad) AS cantidad_total "
+                "FROM (SELECT nticket, cod, descripcion, cantidad FROM lineasticket "
+                "      UNION ALL "
+                "      SELECT nticket, cod, descripcion, cantidad FROM lineasticketss) lt "
+                "JOIN (SELECT ticket, fecha FROM tickets WHERE fecha BETWEEN :desde AND :hasta "
+                "      UNION ALL "
+                "      SELECT ticket, fecha FROM ticketss WHERE fecha BETWEEN :desde2 AND :hasta2) t "
+                "ON lt.nticket = t.ticket "
+                "GROUP BY lt.cod, lt.descripcion ORDER BY cantidad_total DESC "
+                "LIMIT %1")
+                .arg(limite);
+  } else {
+      sql = QString(
+                "SELECT lt.cod, lt.descripcion, SUM(lt.cantidad) AS cantidad_total "
+                "FROM lineasticket lt "
+                "JOIN tickets t ON lt.nticket = t.ticket "
+                "WHERE t.fecha BETWEEN :desde AND :hasta "
+                "GROUP BY lt.cod, lt.descripcion ORDER BY cantidad_total DESC "
+                "LIMIT %1")
+                .arg(limite);
+  }
 
   query.prepare(sql);
   query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
   query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
-  if (consolidado) {
+  if (reallyConsolidado) {
     query.bindValue(":desde2", desde.toString("yyyy-MM-dd"));
     query.bindValue(":hasta2", hasta.toString("yyyy-MM-dd"));
   }
@@ -2733,8 +2772,26 @@ QSqlQuery baseDatos::estadisticasTopArticulosRentables(const QString &db,
   QSqlQuery query(QSqlDatabase::database(db));
   QString sql;
 
-  sql =
-      QString(
+  bool reallyConsolidado = consolidado && 
+                           QSqlDatabase::database(db).tables().contains("ticketss") &&
+                           QSqlDatabase::database(db).tables().contains("lineasticketss");
+
+  if (reallyConsolidado) {
+      sql = QString(
+          "SELECT lt.cod, lt.descripcion, ROUND(SUM(lt.cantidad * (lt.precio - "
+          "COALESCE(a.precio_compra,0))), 2) AS rentabilidad "
+          "FROM (SELECT nticket, cod, descripcion, cantidad, precio FROM lineasticket "
+          "      UNION ALL "
+          "      SELECT nticket, cod, descripcion, cantidad, precio FROM lineasticketss) lt "
+          "JOIN (SELECT ticket, fecha FROM tickets WHERE fecha BETWEEN :desde AND :hasta "
+          "      UNION ALL "
+          "      SELECT ticket, fecha FROM ticketss WHERE fecha BETWEEN :desde2 AND :hasta2) t "
+          "ON lt.nticket = t.ticket "
+          "LEFT JOIN articulos a ON lt.cod = a.cod "
+          "GROUP BY lt.cod, lt.descripcion ORDER BY rentabilidad DESC LIMIT %1")
+          .arg(limite);
+  } else {
+      sql = QString(
           "SELECT lt.cod, lt.descripcion, ROUND(SUM(lt.cantidad * (lt.precio - "
           "COALESCE(a.precio_compra,0))), 2) AS rentabilidad "
           "FROM lineasticket lt JOIN tickets t ON lt.nticket = t.ticket "
@@ -2742,11 +2799,12 @@ QSqlQuery baseDatos::estadisticasTopArticulosRentables(const QString &db,
           "WHERE t.fecha BETWEEN :desde AND :hasta "
           "GROUP BY lt.cod, lt.descripcion ORDER BY rentabilidad DESC LIMIT %1")
           .arg(limite);
+  }
 
   query.prepare(sql);
   query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
   query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
-  if (consolidado) {
+  if (reallyConsolidado) {
     query.bindValue(":desde2", desde.toString("yyyy-MM-dd"));
     query.bindValue(":hasta2", hasta.toString("yyyy-MM-dd"));
   }
@@ -2783,8 +2841,10 @@ QSqlQuery baseDatos::estadisticasMejoresClientes(const QString &db,
   QSqlQuery query(QSqlDatabase::database(db));
   QString sql;
 
+  bool reallyConsolidado = consolidado && QSqlDatabase::database(db).tables().contains("ticketss");
+
   // En modo consolidado se suman las compras de tickets y ticketss por cliente
-  if (consolidado) {
+  if (reallyConsolidado) {
     sql = QString("SELECT c.nif, CONCAT(c.nombre, ' ', c.apellidos) AS "
                   "nombre_completo, SUM(t.total) AS total_compras "
                   "FROM ("
@@ -2812,7 +2872,7 @@ QSqlQuery baseDatos::estadisticasMejoresClientes(const QString &db,
   query.prepare(sql);
   query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
   query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
-  if (consolidado) {
+  if (reallyConsolidado) {
     query.bindValue(":desde2", desde.toString("yyyy-MM-dd"));
     query.bindValue(":hasta2", hasta.toString("yyyy-MM-dd"));
   }
@@ -2829,7 +2889,9 @@ double baseDatos::estadisticasTotalVentas(const QString &db, const QDate &desde,
   QSqlQuery query(QSqlDatabase::database(db));
 
   // En modo consolidado sumamos el total de tickets y ticketss
-  if (consolidado) {
+  bool reallyConsolidado = consolidado && QSqlDatabase::database(db).tables().contains("ticketss");
+
+  if (reallyConsolidado) {
     query.prepare(
         "SELECT COALESCE(SUM(total), 0) FROM "
         "(SELECT total FROM tickets WHERE fecha BETWEEN :desde AND :hasta "
@@ -2860,7 +2922,9 @@ int baseDatos::estadisticasNumeroTickets(const QString &db, const QDate &desde,
   QSqlQuery query(QSqlDatabase::database(db));
 
   // En modo consolidado contamos tickets y ticketss
-  if (consolidado) {
+  bool reallyConsolidado = consolidado && QSqlDatabase::database(db).tables().contains("ticketss");
+
+  if (reallyConsolidado) {
     query.prepare(
         "SELECT COUNT(*) FROM "
         "(SELECT ticket FROM tickets WHERE fecha BETWEEN :desde AND :hasta "
@@ -2944,8 +3008,8 @@ double baseDatos::estadisticasTotalCompras(const QString &db,
   // Asumiendo que albaranes tiene total o algo similar. Usamos
   // base_datos.sumarBasesPedido Si la tabla facturas o pedidos tiene el total,
   // lo sumaremos de ahí. Verifiquemos si existe 'total' en albaranes o facturas
-  query.prepare("SELECT COALESCE(SUM(base + iva + re), 0) FROM facturas WHERE "
-                "fecha BETWEEN :desde AND :hasta");
+  query.prepare("SELECT COALESCE(SUM(total), 0) FROM facturas WHERE "
+                "fechaFactura BETWEEN :desde AND :hasta");
   query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
   query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
   if (query.exec() && query.first()) {

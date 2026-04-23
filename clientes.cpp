@@ -667,11 +667,16 @@ void Clientes::on_tableView2_doubleClicked(const QModelIndex &index) {
 
   QModelIndex indiceTipo = vistaTickets->index(index.row(), 11);
   QString sector = vistaTickets->data(indiceTipo, Qt::EditRole).toString();
-  QString tablaLineas = (sector == "B") ? "lineasticketss" : "lineasticket";
+  
+  QSqlDatabase db = QSqlDatabase::database(dbName);
+  QString tablaLineas = "lineasticket";
+  if (sector == "B" && db.tables().contains("lineasticketss")) {
+      tablaLineas = "lineasticketss";
+  }
 
   ticket->setQuery("SELECT * FROM " + tablaLineas + " WHERE nticket = '" + nTicket +
                        "'",
-                   QSqlDatabase::database(dbName));
+                   db);
 
   ui->tableViewDetalleTicket->setModel(ticket);
   ui->tableViewDetalleTicket->hideColumn(0);

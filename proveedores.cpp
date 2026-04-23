@@ -425,7 +425,7 @@ void Proveedores::cargarVentas() {
 
     QString subQuery = "SELECT cod, descripcion, cantidad, totallinea, fecha, "
                        "'A' as tipo FROM lineasticket";
-    if (mostrarVentasB) {
+    if (mostrarVentasB && db.tables().contains("lineasticketss")) {
       subQuery += " UNION ALL SELECT cod, descripcion, cantidad, totallinea, "
                   "fecha, 'B' as tipo FROM lineasticketss";
     }

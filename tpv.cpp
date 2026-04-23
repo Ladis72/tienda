@@ -302,7 +302,7 @@ void Tpv::datosProducto(QString IdProducto)
     QSqlRecord registro = base.consulta_producto(conf->getConexionLocal(), IdProducto);
     
     currentFotoPath = registro.value("foto").toString();
-    QString fichero = QDir::currentPath() + "/" + currentFotoPath;
+    QString fichero = base.resolverRutaImagen(currentFotoPath);
     QImage foto(fichero);
     QPixmap imagen = QPixmap::fromImage(foto);
     ui->labelFoto->setPixmap(imagen.scaled(200, 200));
@@ -630,7 +630,7 @@ void Tpv::on_btn_cobrar_clicked()
         totalTicket.append(recopilarDatosTicket());
         totalTicket.append(QString::number(totalizacion->descuento));
         totalTicket.append(QString::number(totalizacion->total));
-        totalTicket.append(base.idFormaPago(totalizacion->efectivo, conf->getConexionLocal()));
+        totalTicket.append(QString::number(totalizacion->formaPago));
         totalTicket.append(totalizacion->facturacion);
         totalTicket.append(QString::number(totalizacion->entrega));
         totalTicket.append(QString::number(totalizacion->cambio));

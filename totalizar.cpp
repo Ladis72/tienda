@@ -12,13 +12,20 @@ totalizar::totalizar(QString datos, double vale, QWidget *parent)
             * (100 - ui->lineEditDescuento->text().toDouble()) / 100;
     ui->lineEditTotal->setText(QString::number(total));
     descuento = 0;
+    base = new baseDatos();
     fpago = base->fpago(QSqlDatabase::database("DB"));
 
     while (fpago.next()) {
-        ui->comboBox->insertItem(fpago.value(0).toInt(), fpago.value(1).toString());
-        ui->comboBox->update();
+        ui->comboBox->addItem(fpago.value(1).toString(), fpago.value(0).toInt());
     }
-    efectivo = ui->comboBox->currentText();
+    
+    if (ui->comboBox->count() > 0) {
+        efectivo = ui->comboBox->currentText();
+        formaPago = ui->comboBox->currentData().toInt();
+    } else {
+        efectivo = "Sin asignar";
+        formaPago = 0;
+    }
     facturacion = "0";
     ticket = false;
     factura = false;
@@ -36,6 +43,7 @@ totalizar::totalizar(QString datos, double vale, QWidget *parent)
 totalizar::~totalizar()
 {
     delete ui;
+    delete base;
 }
 
 void totalizar::on_pushButtonTicket_clicked()
@@ -69,7 +77,11 @@ void totalizar::on_comboBox_currentTextChanged(const QString &arg1)
 
 void totalizar::on_comboBox_currentIndexChanged(int index)
 {
-    qDebug() << index;
+    if (index >= 0) {
+        efectivo = ui->comboBox->currentText();
+        formaPago = ui->comboBox->currentData().toInt();
+    }
+    qDebug() << "Forma pago seleccionada:" << efectivo << "ID:" << formaPago;
 }
 
 void totalizar::keyPressEvent(QKeyEvent *e)
