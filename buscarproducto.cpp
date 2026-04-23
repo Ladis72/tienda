@@ -109,7 +109,7 @@ void BuscarProducto::mostrarDetalles(const QModelIndex &index)
 
     // Cargar Foto
     if (!fotoPath.isEmpty()) {
-        QString fullPath = QDir::currentPath() + "/" + fotoPath;
+        QString fullPath = base.resolverRutaImagen(fotoPath);
         QPixmap pixmap(fullPath);
         if (!pixmap.isNull()) {
             ui->label_foto->setPixmap(pixmap.scaled(ui->label_foto->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
@@ -165,9 +165,15 @@ void BuscarProducto::mostrarDetalles(const QModelIndex &index)
 
 
 
-void BuscarProducto::on_pushButtonCancelar_clicked()
+void BuscarProducto::reject()
 {
     resultado = "";
+    QDialog::reject();
+}
+
+
+void BuscarProducto::on_pushButtonCancelar_clicked()
+{
     this->reject();
 }
 

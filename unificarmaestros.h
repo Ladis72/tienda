@@ -56,6 +56,7 @@ struct UnificarMaestrosConfig {
     static UnificarMaestrosConfig paraClientes() {
         return { "Unificar Clientes", "clientes", "idCliente", "nombre", "nif", {
             {"tickets", "cliente", ""},
+            {"ticketss", "cliente", ""},
             {"vales", "idCliente", ""},
             {"encargos", "id_cliente", ""}
         }};
@@ -64,6 +65,7 @@ struct UnificarMaestrosConfig {
     static UnificarMaestrosConfig paraFormasPago() {
         return { "Unificar Formas de Pago", "fpago", "id", "tipo", "", {
             {"tickets", "fpago", ""},
+            {"ticketss", "fpago", ""},
             {"proveedores", "formapago", ""}
         }};
     }
@@ -78,6 +80,7 @@ struct UnificarMaestrosConfig {
     static UnificarMaestrosConfig paraUsuarios() {
         return { "Unificar Usuarios", "usuarios", "id", "usuario", "", {
             {"tickets", "usuario", ""}, // Por ID
+            {"ticketss", "usuario", ""}, // Por ID
             {"historico_stock", "usuario", "usuario"}, // Por login (campo 'usuario' en maestro)
             {"encargos", "empleado", "usuario"},       // Por login (campo 'usuario' en maestro)
             {"entradasSalidas", "usuario", "usuario"}  // Por login (campo 'usuario' en maestro)

@@ -32,6 +32,7 @@ class BuscarCliente : public QDialog
 public:
     explicit BuscarCliente(QWidget *parent, QSqlQuery query);
     ~BuscarCliente();
+    void reject() override;
     QString resultado;
 
 private slots:

@@ -1,0 +1,16 @@
+Tables_in_tiendaNube
+Tickets
+articulos
+clientes
+codaux
+fabricantes
+familias
+formatos
+fpago
+impuestos
+motivosEntrada
+permisos
+proveedores
+tiendas
+usuarios
+vales

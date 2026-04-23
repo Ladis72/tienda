@@ -141,9 +141,14 @@ void BuscarCliente::mostrarDetalles(const QModelIndex &index)
     ui->label_info->setText(info);
 }
 
+void BuscarCliente::reject()
+{
+    resultado = "";
+    QDialog::reject();
+}
+
 void BuscarCliente::on_pushButtonCancelar_clicked()
 {
-    resultado = ""; // safe standard fallback
     this->reject();
 }
 

@@ -57,16 +57,29 @@ void ListadoVentas::on_tableView_activated(const QModelIndex &index)
 {
     QModelIndex indice = modeloTabla->index(index.row(), 0);
     QString fecha = modeloTabla->data(indice, Qt::DisplayRole).toString();
-    QSqlQuery ventasFormaPago = base->ventas(fecha, conf->getConexionLocal());
+    QSqlQuery ventasA = base->ventas(fecha, "tickets", conf->getConexionLocal());
+    QSqlQuery ventasB = base->ventas(fecha, "ticketss", conf->getConexionLocal());
+
+    QMap<QString, double> totales;
+    
+    while (ventasA.next()) {
+        QString id = ventasA.value(1).toString();
+        totales[id] += ventasA.value(0).toDouble();
+    }
+    while (ventasB.next()) {
+        QString id = ventasB.value(1).toString();
+        totales[id] += ventasB.value(0).toDouble();
+    }
 
     QStandardItemModel *modeloFPago = new QStandardItemModel;
     int i = 0;
-    while (ventasFormaPago.next()) {
-        QString fPago = base->nombreFormaPago(ventasFormaPago.value(1).toString(),
-                                              conf->getConexionLocal());
+    QMapIterator<QString, double> it(totales);
+    while (it.hasNext()) {
+        it.next();
+        QString fPago = base->nombreFormaPago(it.key(), conf->getConexionLocal());
         QStandardItem *itemFPago = new QStandardItem(fPago);
         modeloFPago->setItem(i, 0, itemFPago);
-        QStandardItem *itemVentas = new QStandardItem(ventasFormaPago.value(0).toString());
+        QStandardItem *itemVentas = new QStandardItem(QString::number(it.value()));
         modeloFPago->setItem(i, 1, itemVentas);
         i++;
     }

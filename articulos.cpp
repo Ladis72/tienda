@@ -765,46 +765,89 @@ void Articulos::on_lineEditCod_returnPressed() {
     emit on_lineEditCod_returnPressed();
     return;
   }
-  QMessageBox msgbox;
-  msgbox.setText("NO SE ENCUENTRA EL ARTÍCULO");
-  msgbox.setInformativeText("Desea buscar los datos en otras tiendas?");
-  msgbox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-  msgbox.setDefaultButton(QMessageBox::No);
-  if (msgbox.exec() == QMessageBox::Yes) {
-    qDebug() << "Entrando en buscar";
-    qDebug() << "Lista conexiones:" << listaConexionesRemotas.length();
-    if (listaConexionesRemotas.isEmpty()) {
-      qDebug() << "No hay conexiones remotas activas.";
-    }
-    for (int i = 0; i < listaConexionesRemotas.length(); i++) {
-      QSqlRecord registroRemoto = base.consulta_producto(listaConexionesRemotas.at(i),
-                                                  ui->lineEditCod->text());
-      if (!registroRemoto.isEmpty()) {
-        QStringList datos;
-        datos.clear();
-        for (int i = 0; i < registroRemoto.count(); i++) {
-          datos.append(registroRemoto.value(i).toString());
-          qDebug() << registroRemoto.value(i).toString();
-        }
-        msgbox.setText("¿UTILIZAR ESTOS DATOS?");
-        msgbox.setInformativeText(datos.join("\n"));
-        msgbox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-        if (msgbox.exec() == QMessageBox::Ok) {
-          qDebug() << "Valor devuelto";
-          base.insertarArticulo(
-              QSqlDatabase::database(conf->getConexionLocal()), datos);
-          recargarTabla();
-          emit on_lineEditCod_returnPressed();
-          return;
-        }
+  // --- Búsqueda automática: primero en la nube, luego en tiendas remotas ---
+  qDebug() << "Artículo no encontrado localmente. Iniciando búsqueda automática...";
+
+  QString codBuscado = ui->lineEditCod->text();
+
+  // 1) Buscar en la conexión Master (nube)
+  QString connMaster = conf->getConexionMaster();
+  if (!connMaster.isEmpty() && QSqlDatabase::database(connMaster).isOpen()) {
+    qDebug() << "Buscando en la nube (Master):" << connMaster;
+    QSqlRecord registroNube = base.consulta_producto(connMaster, codBuscado);
+    if (!registroNube.isEmpty()) {
+      qDebug() << "Artículo encontrado en la nube. Preguntando al usuario...";
+      QStringList datos;
+      for (int j = 0; j < registroNube.count(); j++) {
+        datos.append(registroNube.value(j).toString());
       }
+      QMessageBox msgNube(this);
+      msgNube.setWindowTitle("Artículo encontrado en la nube");
+      msgNube.setText("¿UTILIZAR ESTOS DATOS?");
+      msgNube.setInformativeText(datos.join("\n"));
+      msgNube.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+      msgNube.setButtonText(QMessageBox::Ok, "Importar");
+      msgNube.setButtonText(QMessageBox::Cancel, "Cancelar");
+      if (msgNube.exec() == QMessageBox::Ok) {
+        base.insertarArticulo(QSqlDatabase::database(conf->getConexionLocal()), datos);
+        recargarTabla();
+        emit on_lineEditCod_returnPressed();
+        return;
+      }
+      // El usuario canceló: procedemos normalmente sin importar
+      return;
     }
-    msgbox.setText("NO SE ENCUENTRA");
-    msgbox.setInformativeText(
-        "No se ha encontrado el producto en tiendas conectadas");
-    msgbox.setStandardButtons(QMessageBox::Ok);
-    msgbox.exec();
+  } else {
+    qDebug() << "Conexión Master no disponible o no abierta:" << connMaster;
   }
+
+  // 2) Buscar en las tiendas remotas conectadas
+  qDebug() << "Buscando en tiendas remotas. Conexiones:" << listaConexionesRemotas.length();
+  for (int i = 0; i < listaConexionesRemotas.length(); i++) {
+    QString connRemota = listaConexionesRemotas.at(i);
+
+    // Saltar la conexión Master si ya está en la lista remota (evitar doble búsqueda)
+    if (connRemota == connMaster) continue;
+
+    if (!QSqlDatabase::database(connRemota).isOpen()) {
+      qDebug() << "Saltando conexión remota no abierta:" << connRemota;
+      continue;
+    }
+
+    QSqlRecord registroRemoto = base.consulta_producto(connRemota, codBuscado);
+    if (!registroRemoto.isEmpty()) {
+      qDebug() << "Artículo encontrado en tienda remota:" << connRemota;
+      QStringList datos;
+      for (int j = 0; j < registroRemoto.count(); j++) {
+        datos.append(registroRemoto.value(j).toString());
+        qDebug() << registroRemoto.value(j).toString();
+      }
+      QMessageBox msgRemota(this);
+      msgRemota.setWindowTitle(QString("Artículo encontrado en: %1").arg(connRemota));
+      msgRemota.setText("¿UTILIZAR ESTOS DATOS?");
+      msgRemota.setInformativeText(datos.join("\n"));
+      msgRemota.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+      msgRemota.setButtonText(QMessageBox::Ok, "Importar");
+      msgRemota.setButtonText(QMessageBox::Cancel, "Cancelar");
+      if (msgRemota.exec() == QMessageBox::Ok) {
+        base.insertarArticulo(QSqlDatabase::database(conf->getConexionLocal()), datos);
+        recargarTabla();
+        emit on_lineEditCod_returnPressed();
+        return;
+      }
+      // El usuario canceló: procedemos normalmente
+      return;
+    }
+  }
+
+  // 3) No se encontró en ningún sitio → aviso y continuar normalmente
+  QMessageBox msgNoEnc(this);
+  msgNoEnc.setWindowTitle("Artículo no encontrado");
+  msgNoEnc.setText("NO SE ENCUENTRA EL ARTÍCULO");
+  msgNoEnc.setInformativeText(
+      "No se ha encontrado el producto ni en la nube ni en tiendas conectadas.");
+  msgNoEnc.setStandardButtons(QMessageBox::Ok);
+  msgNoEnc.exec();
   return;
 }
 

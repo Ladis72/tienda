@@ -57,7 +57,7 @@ void Ususarios::refrescarBotones(int i)
     ui->pushButtonAnterior->setEnabled(i > 0);
     ui->pushButtonSiguiente->setEnabled(i < modeloTabla->rowCount() - 1);
     ui->labelNombre->setText(ui->lineEditNombre->text() + " " + ui->lineEditApellido->text());
-    QString fichero = QDir::currentPath() + "/" + ui->lineEditArchivoFoto->text();
+    QString fichero = base.resolverRutaImagen(ui->lineEditArchivoFoto->text());
     QImage foto(fichero);
     ui->labelFoto->setPixmap(QPixmap::fromImage(foto));
     ui->labelFoto->setScaledContents(true);
@@ -224,14 +224,16 @@ void Ususarios::on_lineEditNombre_returnPressed()
 void Ususarios::on_pushButtonCargarImagen_clicked()
 {
     int curr = mapper.currentIndex();
-    QString dir = QDir::currentPath();
-    int i = dir.length();
-    QString fichero = QFileDialog::getOpenFileName(this, "Elige el archivo", dir + "/imagenes");
-    fichero.remove(
-        0, i + 1); //Quita i caracteres desde la posicion 0 de la cadena fichero i=longitud del path
-    //qDebug() << fichero;
-    //qDebug() << ui->lineEditCod->text().toInt();
-    base.modificarFotoUsusario(fichero, ui->lineEditCod->text().toInt());
+    QString dir = base.devolverDirectorio("imagenes");
+    QString absoluteDir = QDir(dir).absolutePath();
+    QString fichero = QFileDialog::getOpenFileName(this, "Elige el archivo", absoluteDir);
+    
+    if (fichero.isEmpty()) return;
+
+    // Convertir a ruta relativa respecto al directorio de imágenes
+    QString relativeFichero = QDir(absoluteDir).relativeFilePath(fichero);
+    
+    base.modificarFotoUsusario(relativeFichero, ui->lineEditCod->text().toInt());
     recargarTabla();
 
     mapper.setCurrentIndex(curr);

@@ -125,7 +125,7 @@ void Etiquetas::on_lineEditDesc_returnPressed()
                                               "articulos",
                                               ui->lineEditDesc->text());
     consulta.first();
-    BuscarProducto *buscarProducto = new BuscarProducto(this, consulta);
+    BuscarProducto *buscarProducto = new BuscarProducto(this, std::move(consulta));
     buscarProducto->exec();
     ui->lineEditCod->setText(buscarProducto->resultado);
     emit on_lineEditCod_returnPressed();

@@ -236,7 +236,7 @@ void Salidas::on_lineEditDesc_returnPressed()
                                               "articulos",
                                               ui->lineEditDesc->text());
     consulta.first();
-    BuscarProducto *buscar = new BuscarProducto(this, consulta);
+    BuscarProducto *buscar = new BuscarProducto(this, std::move(consulta));
     buscar->exec();
     ui->lineEditCod->setText(buscar->resultado);
     emit on_lineEditCod_returnPressed();
