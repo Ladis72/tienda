@@ -54,6 +54,7 @@ void Stock::limpiarFormulario() {
   ui->doubleSpinBoxNewCant->setValue(0);
   ui->dateEditNewCad->setDate(QDate::currentDate());
   ui->comboBoxMotivo->setCurrentIndex(0);
+  ui->lineEditNotas->clear();
   currentLoteId = "";
   filaSeleccionada = -1;
   ui->groupBoxAjuste->setEnabled(false);
@@ -81,6 +82,7 @@ void Stock::on_pushButtonValidar_clicked() {
   QDate newCad = ui->dateEditNewCad->date();
   double newCant = ui->doubleSpinBoxNewCant->value();
   QString motivo = ui->comboBoxMotivo->currentText();
+  QString notas = ui->lineEditNotas->text();
   QString usuario = conf->getUsuario();
 
   double oldCant = 0;
@@ -134,8 +136,8 @@ void Stock::on_pushButtonValidar_clicked() {
     // Registrar en histórico
     q.prepare("INSERT INTO historico_stock (ean, lote, fecha_caducidad_ant, "
               "fecha_caducidad_new, "
-              "stock_ant, stock_new, motivo, usuario) VALUES (?, ?, ?, ?, ?, "
-              "?, ?, ?)");
+              "stock_ant, stock_new, motivo, notas, usuario) VALUES (?, ?, ?, ?, ?, "
+              "?, ?, ?, ?)");
     q.addBindValue(codProducto);
     q.addBindValue(lote);
     if (filaSeleccionada != -1) {
@@ -149,6 +151,7 @@ void Stock::on_pushButtonValidar_clicked() {
     }
     q.addBindValue(newCant);
     q.addBindValue(motivo);
+    q.addBindValue(notas);
     q.addBindValue(usuario);
     ok = q.exec();
   }
@@ -187,7 +190,7 @@ void Stock::on_pushButtonHistory_clicked() {
       QString("SELECT fecha_hora as 'Fecha/Hora', usuario as 'Usuario', lote "
               "as 'Lote', "
               "stock_ant as 'Cant. Ant.', stock_new as 'Cant. New', motivo as "
-              "'Motivo', "
+              "'Motivo', notas as 'Notas', "
               "fecha_caducidad_ant as 'Cad. Ant.', fecha_caducidad_new as "
               "'Cad. New' "
               "FROM historico_stock WHERE ean = '%1' ORDER BY fecha_hora DESC")

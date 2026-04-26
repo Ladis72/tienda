@@ -29,7 +29,7 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `albaranes` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `nFactura` char(15) NOT NULL,
   `fechaFactura` date NOT NULL,
   `idProveedor` int(11) NOT NULL,
@@ -56,7 +56,7 @@ CREATE TABLE `albaranes_tmp` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `arqueos` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `fecha` date DEFAULT NULL,
   `hora` varchar(45) DEFAULT NULL,
   `ventasEfectivo` double DEFAULT NULL,
@@ -72,7 +72,7 @@ CREATE TABLE `arqueos` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `arqueos_detalle` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `idArqueo` int(11) NOT NULL,
   `denominacion` decimal(5,2) NOT NULL,
   `cantidad` int(11) NOT NULL DEFAULT 0,
@@ -157,7 +157,7 @@ DELIMITER ;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `clientes` (
-  `idCliente` int(11) NOT NULL,
+  `idCliente` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` char(25) NOT NULL,
   `apellidos` char(50) NOT NULL,
   `direccion` char(50) NOT NULL,
@@ -227,7 +227,7 @@ DELIMITER ;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `codaux` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `cod` char(13) NOT NULL,
   `aux` char(13) NOT NULL,
   `id_tienda_origen` int(11) DEFAULT NULL,
@@ -354,7 +354,7 @@ CREATE TABLE `directorios` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `encargos` (
-  `id_encargo` int(11) NOT NULL,
+  `id_encargo` int(11) NOT NULL AUTO_INCREMENT,
   `id_cliente` int(11) NOT NULL,
   `cod_articulo` varchar(15) NOT NULL,
   `cantidad` int(11) NOT NULL,
@@ -370,7 +370,7 @@ CREATE TABLE `encargos` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `entradaGenero` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `cod` char(13) NOT NULL,
   `fechaEntrada` date NOT NULL,
   `descripcion` char(100) NOT NULL,
@@ -400,7 +400,7 @@ CREATE TABLE `entradaGenero_tmp` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `entradasSalidas` (
-  `identradasSalidas` int(11) NOT NULL,
+  `identradasSalidas` int(11) NOT NULL AUTO_INCREMENT,
   `fecha` date DEFAULT NULL,
   `hora` time DEFAULT NULL,
   `cantidad` double DEFAULT NULL,
@@ -421,7 +421,7 @@ CREATE TABLE `etiquetas` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `fabricantes` (
-  `id` int(3) NOT NULL,
+  `id` int(3) NOT NULL AUTO_INCREMENT,
   `nombre` char(100) NOT NULL,
   `id_tienda_origen` int(11) DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT current_timestamp(),
@@ -478,7 +478,7 @@ DELIMITER ;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `facturas` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `nFactura` text NOT NULL,
   `fechaFactura` date NOT NULL,
   `idProveedor` int(11) NOT NULL,
@@ -494,7 +494,7 @@ CREATE TABLE `facturas` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `familias` (
-  `id` int(4) NOT NULL,
+  `id` int(4) NOT NULL AUTO_INCREMENT,
   `descripcion` char(100) NOT NULL,
   `id_tienda_origen` int(11) DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT current_timestamp(),
@@ -551,7 +551,7 @@ DELIMITER ;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `formatos` (
-  `idformato` int(11) NOT NULL,
+  `idformato` int(11) NOT NULL AUTO_INCREMENT,
   `formato` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `id_tienda_origen` int(11) DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT current_timestamp(),
@@ -608,7 +608,7 @@ DELIMITER ;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `fpago` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `tipo` char(25) NOT NULL,
   `efectivo` tinyint(1) NOT NULL,
   `id_tienda_origen` int(11) DEFAULT NULL,
@@ -666,7 +666,7 @@ DELIMITER ;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `historico_stock` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `ean` varchar(15) NOT NULL,
   `lote` varchar(50) DEFAULT NULL,
   `fecha_caducidad_ant` date DEFAULT NULL,
@@ -674,6 +674,7 @@ CREATE TABLE `historico_stock` (
   `stock_ant` double(10,2) DEFAULT NULL,
   `stock_new` double(10,2) DEFAULT NULL,
   `motivo` varchar(255) DEFAULT NULL,
+  `notas` varchar(255) DEFAULT NULL,
   `usuario` varchar(100) DEFAULT NULL,
   `fecha_hora` datetime DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
@@ -682,7 +683,7 @@ CREATE TABLE `historico_stock` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `impuestos` (
-  `tipoIva` tinyint(4) NOT NULL,
+  `tipoIva` tinyint(4) NOT NULL AUTO_INCREMENT,
   `porcentaje` double DEFAULT NULL,
   `recargo` double DEFAULT NULL,
   `id_tienda_origen` int(11) DEFAULT NULL,
@@ -740,7 +741,7 @@ DELIMITER ;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `lineaspedido` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `nDocumento` char(13) NOT NULL,
   `idProveedor` int(11) NOT NULL,
   `cod` char(13) NOT NULL,
@@ -786,7 +787,7 @@ CREATE TABLE `lineaspedido_tmp` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `lineasticket` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `nticket` char(11) NOT NULL,
   `cod` char(13) NOT NULL,
   `descripcion` char(50) NOT NULL,
@@ -819,7 +820,7 @@ CREATE TABLE `lineasticket_tmp` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `logs` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `timestamp` datetime NOT NULL DEFAULT current_timestamp(),
   `categoria` varchar(50) NOT NULL,
   `usuario` varchar(50) DEFAULT NULL,
@@ -830,7 +831,7 @@ CREATE TABLE `logs` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `lotes` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `ean` char(13) NOT NULL,
   `lote` char(13) NOT NULL,
   `fecha` date NOT NULL,
@@ -874,7 +875,7 @@ DELIMITER ;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `motivosEntrada` (
-  `idtiposEntrada` int(11) NOT NULL,
+  `idtiposEntrada` int(11) NOT NULL AUTO_INCREMENT,
   `descripcion` varchar(45) DEFAULT NULL,
   `id_tienda_origen` int(11) DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT current_timestamp(),
@@ -963,7 +964,7 @@ CREATE TABLE `pedidos` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `permisos` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `rol` int(11) NOT NULL,
   `clave` varchar(64) NOT NULL,
   `id_tienda_origen` int(11) DEFAULT NULL,
@@ -1028,23 +1029,11 @@ CREATE TABLE `precios_tienda` (
   PRIMARY KEY (`cod_articulo`)
 );
 /*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8mb4 */;
-CREATE TABLE `prestamos` (
-  `id` int(11) NOT NULL,
-  `ean` varchar(13) DEFAULT NULL,
-  `producto` varchar(45) DEFAULT NULL,
-  `tienda` varchar(15) DEFAULT NULL,
-  `fecha` date DEFAULT NULL,
-  `cantidad` int(11) DEFAULT NULL,
-  `notas` varchar(45) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-);
-/*!40101 SET character_set_client = @saved_cs_client */;
+
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `proveedores` (
-  `idProveedor` int(11) NOT NULL,
+  `idProveedor` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` char(50) NOT NULL,
   `nif` char(15) NOT NULL,
   `direccion` char(50) NOT NULL,
@@ -1116,7 +1105,7 @@ DELIMITER ;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `salidaGenero` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `cod` char(13) NOT NULL,
   `fechaEntrada` date NOT NULL,
   `descripcion` char(100) NOT NULL,
@@ -1143,18 +1132,11 @@ CREATE TABLE `salidaGenero_tmp` (
   KEY `idTienda` (`idTienda`)
 );
 /*!40101 SET character_set_client = @saved_cs_client */;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8mb4 */;
-CREATE TABLE `sujetoPrestamo` (
-  `id` int(11) NOT NULL,
-  `sujetoPrestamocol` varchar(45) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-);
-/*!40101 SET character_set_client = @saved_cs_client */;
+
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sync_cola` (
-  `id` bigint(20) unsigned NOT NULL,
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `tabla` varchar(64) NOT NULL COMMENT 'Nombre de la tabla modificada',
   `id_registro` varchar(64) NOT NULL COMMENT 'PK del registro modificado',
   `accion` enum('INSERT','UPDATE','DELETE') NOT NULL,
@@ -1175,7 +1157,7 @@ CREATE TABLE `sync_control` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `sync_unificaciones` (
-  `id` bigint(20) unsigned NOT NULL,
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `tabla` varchar(64) NOT NULL,
   `id_perdedor` varchar(64) NOT NULL,
   `id_ganador` varchar(64) NOT NULL,
@@ -1198,7 +1180,7 @@ CREATE TABLE `ticket_tmp` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `tickets` (
-  `ticket` int(10) unsigned NOT NULL,
+  `ticket` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `usuario` int(11) NOT NULL DEFAULT 1,
   `cliente` int(11) NOT NULL DEFAULT 1,
   `fecha` date NOT NULL,
@@ -1217,7 +1199,7 @@ CREATE TABLE `tickets` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `ticketss` (
-  `ticket` int(10) unsigned NOT NULL,
+  `ticket` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `usuario` int(11) NOT NULL DEFAULT 1,
   `cliente` int(11) NOT NULL DEFAULT 1,
   `fecha` date NOT NULL,
@@ -1236,7 +1218,7 @@ CREATE TABLE `ticketss` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `tiendas` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombre` varchar(45) DEFAULT NULL,
   `direccion` varchar(45) DEFAULT NULL,
   `ciudad` varchar(45) DEFAULT NULL,
@@ -1257,7 +1239,7 @@ CREATE TABLE `tiendas` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `usuarios` (
-  `id` int(2) NOT NULL,
+  `id` int(2) NOT NULL AUTO_INCREMENT,
   `nombre` char(20) NOT NULL,
   `apellido` char(40) NOT NULL,
   `direccion` char(50) NOT NULL,
@@ -1327,7 +1309,7 @@ DELIMITER ;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `vales` (
-  `idvales` int(11) NOT NULL,
+  `idvales` int(11) NOT NULL AUTO_INCREMENT,
   `idCliente` int(11) DEFAULT NULL,
   `cantidad` double(10,2) DEFAULT NULL,
   `estado` tinyint(1) DEFAULT NULL,
@@ -1437,4 +1419,30 @@ CREATE TABLE `verifactu_logs` (
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- DATOS INICIALES (Añadidos para nueva instalación)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Usuario administrador inicial
+-- Usuario: jefe | Clave: meganizado
+INSERT INTO `usuarios` (`nombre`, `apellido`, `direccion`, `localidad`, `provincia`, `cp`, `tlfn`, `nif`, `mail`, `usuario`, `clave`, `notas`, `rol`) 
+VALUES ('Administrador', 'Sistema', '', '', '', '', '', '', '', 'jefe', 'meganizado', 'Usuario inicial', 0);
+
+-- Configuración de la tienda local
+-- IMPORTANTE: El ID debe ser único entre todas tus tiendas.
+-- Cambia el '3' por el ID que corresponda si es necesario.
+INSERT INTO `tiendas` (`id`, `nombre`, `local`, `baseDatos`, `usuario`, `clave`) 
+VALUES (3, 'Nueva Tienda', 1, 'tiendaNueva', 'root', 'meganizado');
+
+-- Impuestos básicos (IVA y Recargo de Equivalencia)
+INSERT INTO `impuestos` (`tipoIva`, `porcentaje`, `recargo`) 
+VALUES (1, 21.00, 5.20), (2, 10.00, 1.40), (3, 4.00, 0.50), (4, 0.00, 0.00);
+
+/* CAMBIAR EL ID Configuración de la tienda local
+ POR UN ID QUE NO EXISTA EN EL CONJUNTO DE TIENDAS
+LUEGO CREAR A MANO EL RESTO DE TIENDAS CON LOS MISMOS ID Y DATOS DE LAS DEMAS TIENDAS
+
+*/
+
 

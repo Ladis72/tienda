@@ -94,9 +94,10 @@ bool Tpv::llenar_usuarios(QSqlDatabase db)
     consulta = base.usuarios(db);
     if (consulta.isActive()) {
         while (consulta.next()) {
-            //uno la columna 1 y 2 separada por "-" para luego poder obtener
-            ui->comboBox_vendedor->addItem(consulta.value(0).toString() + "-"
-                                           + consulta.value(1).toString());
+            QString id = consulta.value(0).toString();
+            QString nombre = consulta.value(1).toString();
+            // Guardamos el ID como Data para poder buscarlo fácilmente por código
+            ui->comboBox_vendedor->addItem(id + "-" + nombre, id);
             ui->comboBox_vendedor->update();
         }
         consulta.first();
@@ -516,24 +517,44 @@ void Tpv::keyPressEvent(QKeyEvent *e)
         break;
 
     case Qt::Key_F1:
-        if (ui->comboBox_vendedor->count() >= 1)
-            ui->comboBox_vendedor->setCurrentIndex(0);
+    {
+        QMap<QString, QVariant> config = base.leerConfiguracion();
+        QString id = config.value("vendedor_f1").toString();
+        int index = ui->comboBox_vendedor->findData(id);
+        if (index != -1)
+            ui->comboBox_vendedor->setCurrentIndex(index);
         break;
-
+    }
+    
     case Qt::Key_F2:
-        if (ui->comboBox_vendedor->count() >= 2)
-            ui->comboBox_vendedor->setCurrentIndex(1);
+    {
+        QMap<QString, QVariant> config = base.leerConfiguracion();
+        QString id = config.value("vendedor_f2").toString();
+        int index = ui->comboBox_vendedor->findData(id);
+        if (index != -1)
+            ui->comboBox_vendedor->setCurrentIndex(index);
         break;
-
+    }
+    
     case Qt::Key_F3:
-        if (ui->comboBox_vendedor->count() >= 3)
-            ui->comboBox_vendedor->setCurrentIndex(2);
+    {
+        QMap<QString, QVariant> config = base.leerConfiguracion();
+        QString id = config.value("vendedor_f3").toString();
+        int index = ui->comboBox_vendedor->findData(id);
+        if (index != -1)
+            ui->comboBox_vendedor->setCurrentIndex(index);
         break;
-
+    }
+    
     case Qt::Key_F4:
-        if (ui->comboBox_vendedor->count() >= 4)
-            ui->comboBox_vendedor->setCurrentIndex(3);
+    {
+        QMap<QString, QVariant> config = base.leerConfiguracion();
+        QString id = config.value("vendedor_f4").toString();
+        int index = ui->comboBox_vendedor->findData(id);
+        if (index != -1)
+            ui->comboBox_vendedor->setCurrentIndex(index);
         break;
+    }
 
     case Qt::Key_F8:
         emit on_btn_cobrar_clicked();

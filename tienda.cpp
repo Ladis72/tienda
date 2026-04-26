@@ -131,9 +131,15 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          "  `stock_ant` DOUBLE(10,2),"
                          "  `stock_new` DOUBLE(10,2),"
                          "  `motivo` VARCHAR(255),"
+                         "  `notas` VARCHAR(255),"
                          "  `usuario` VARCHAR(100),"
                          "  `fecha_hora` DATETIME DEFAULT CURRENT_TIMESTAMP"
                          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+                         conf->getConexionLocal());
+
+  // Asegurar que la tabla historico_stock tiene el campo notas
+  base.ejecutarSentencia("ALTER TABLE `historico_stock` ADD COLUMN IF NOT EXISTS "
+                         "`notas` VARCHAR(255);",
                          conf->getConexionLocal());
 
   base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `proveedores` ("
@@ -167,6 +173,20 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   // Asegurar que la tabla configuracion tiene el campo precios_locales
   base.ejecutarSentencia("ALTER TABLE `configuracion` ADD COLUMN IF NOT EXISTS "
                          "`precios_locales` TINYINT(1) DEFAULT '0';",
+                         conf->getConexionLocal());
+
+  // Asegurar que la tabla configuracion tiene los campos para las teclas rápidas de vendedores
+  base.ejecutarSentencia("ALTER TABLE `configuracion` ADD COLUMN IF NOT EXISTS "
+                         "`vendedor_f1` INT DEFAULT NULL;",
+                         conf->getConexionLocal());
+  base.ejecutarSentencia("ALTER TABLE `configuracion` ADD COLUMN IF NOT EXISTS "
+                         "`vendedor_f2` INT DEFAULT NULL;",
+                         conf->getConexionLocal());
+  base.ejecutarSentencia("ALTER TABLE `configuracion` ADD COLUMN IF NOT EXISTS "
+                         "`vendedor_f3` INT DEFAULT NULL;",
+                         conf->getConexionLocal());
+  base.ejecutarSentencia("ALTER TABLE `configuracion` ADD COLUMN IF NOT EXISTS "
+                         "`vendedor_f4` INT DEFAULT NULL;",
                          conf->getConexionLocal());
 
   /******************************************************************************
