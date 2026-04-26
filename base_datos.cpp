@@ -1373,25 +1373,27 @@ bool baseDatos::crearCliente(QSqlDatabase db, QStringList datos) {
 
 double baseDatos::descuentoCliente(QString idCliente) {
   QSqlQuery consulta(QSqlDatabase::database("DB"));
-  consulta.exec("SELECT descuento FROM clientes WHERE idCliente = '" +
-                idCliente + "'");
+  
+  consulta.prepare("SELECT descuento FROM clientes WHERE idCliente = :idcliente");
+  consulta.bindValue(":idcliente", idCliente);
+  
+  consulta.exec();
   consulta.first();
-  if (consulta.isValid()) {
+  
+  if (consulta.isValid() && consulta.next()) {
     return consulta.record().value("descuento").toDouble();
   }
   return 0;
 }
 
 bool baseDatos::existeDatoEnTabla(QSqlDatabase db, QString tabla,
-                                  QString columna, QString dato) {
+                                   QString columna, QString dato) {
   QSqlQuery consulta(db);
-  consulta.exec("SELECT * FROM " + tabla + " WHERE " + columna + " LIKE '" +
-                dato + "'");
-  if (consulta.numRowsAffected() > 0) {
-    return true;
-  } else {
-    return false;
-  }
+  
+  consulta.prepare("SELECT * FROM " + tabla + " WHERE " + columna + " = :dato");
+  consulta.bindValue(":dato", dato);
+  
+  return consulta.exec() && consulta.next();
 }
 
 void baseDatos::insertarEnTabla(QSqlDatabase db, QString tabla,
@@ -2410,8 +2412,7 @@ bool baseDatos::crearNota(const QString &db, const QString &titulo,
   q.bindValue(":titulo", titulo);
   q.bindValue(":descripcion", descripcion);
   q.bindValue(":usuario", usuario);
-  q.bindValue(":fechaLimite", fechaLimite.isEmpty() ? QVariant(QMetaType(QMetaType::QString))
-                                                    : QVariant(fechaLimite));
+  q.bindValue(":fechaLimite", fechaLimite.isEmpty() ? QVariant() : QVariant(fechaLimite));
   q.bindValue(":prioridad", prioridad.isEmpty() ? "Normal" : prioridad);
   if (!q.exec()) {
     qWarning() << "Error al crear nota:" << q.lastError().text();
@@ -2462,8 +2463,7 @@ bool baseDatos::editarNota(const QString &db, int idNota, const QString &titulo,
       "fecha_limite = :fechaLimite, prioridad = :prioridad WHERE id = :id");
   q.bindValue(":titulo", titulo);
   q.bindValue(":descripcion", descripcion);
-  q.bindValue(":fechaLimite", fechaLimite.isEmpty() ? QVariant(QMetaType(QMetaType::QString))
-                                                    : QVariant(fechaLimite));
+  q.bindValue(":fechaLimite", fechaLimite.isEmpty() ? QVariant() : QVariant(fechaLimite));
   q.bindValue(":prioridad", prioridad);
   q.bindValue(":id", idNota);
   if (!q.exec()) {
