@@ -27,9 +27,7 @@ protected:
     }
 public:
     void actualizar() {
-        // En Qt 6, invalidateFilter() está obsoleto. Se recomienda usar begin/endFilterChange()
-        beginFilterChange();
-        endFilterChange();
+        invalidateFilter();
     }
 };
 
