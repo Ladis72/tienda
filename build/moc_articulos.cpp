@@ -1,0 +1,277 @@
+/****************************************************************************
+** Meta object code from reading C++ file 'articulos.h'
+**
+** Created by: The Qt Meta Object Compiler version 69 (Qt 6.10.2)
+**
+** WARNING! All changes made in this file will be lost!
+*****************************************************************************/
+
+#include "../articulos.h"
+#include <QtGui/qtextcursor.h>
+#include <QtGui/qscreen.h>
+#include <QtCharts/qlineseries.h>
+#include <QtCharts/qabstractbarseries.h>
+#include <QtCharts/qvbarmodelmapper.h>
+#include <QtCharts/qboxplotseries.h>
+#include <QtCharts/qcandlestickseries.h>
+#include <QtCore/qabstractitemmodel.h>
+#include <QtCharts/qpieseries.h>
+#include <QtCore/qabstractitemmodel.h>
+#include <QtCharts/qboxplotseries.h>
+#include <QtCore/qabstractitemmodel.h>
+#include <QtCharts/qpieseries.h>
+#include <QtCharts/qpieseries.h>
+#include <QtCore/qabstractitemmodel.h>
+#include <QtCharts/qxyseries.h>
+#include <QtCharts/qxyseries.h>
+#include <QtCore/qabstractitemmodel.h>
+#include <QtCore/qabstractitemmodel.h>
+#include <QtCharts/qboxplotseries.h>
+#include <QtCore/qabstractitemmodel.h>
+#include <QtCharts/qpieseries.h>
+#include <QtCore/qabstractitemmodel.h>
+#include <QtCharts/qxyseries.h>
+#include <QtCore/qabstractitemmodel.h>
+#include <QtCore/qmetatype.h>
+
+#include <QtCore/qtmochelpers.h>
+
+#include <memory>
+
+
+#include <QtCore/qxptype_traits.h>
+#if !defined(Q_MOC_OUTPUT_REVISION)
+#error "The header file 'articulos.h' doesn't include <QObject>."
+#elif Q_MOC_OUTPUT_REVISION != 69
+#error "This file was generated using the moc from 6.10.2. It"
+#error "cannot be used with the include files from this version of Qt."
+#error "(The moc has changed too much.)"
+#endif
+
+#ifndef Q_CONSTINIT
+#define Q_CONSTINIT
+#endif
+
+QT_WARNING_PUSH
+QT_WARNING_DISABLE_DEPRECATED
+QT_WARNING_DISABLE_GCC("-Wuseless-cast")
+namespace {
+struct qt_meta_tag_ZN9ArticulosE_t {};
+} // unnamed namespace
+
+template <> constexpr inline auto Articulos::qt_create_metaobjectdata<qt_meta_tag_ZN9ArticulosE_t>()
+{
+    namespace QMC = QtMocConstants;
+    QtMocHelpers::StringRefStorage qt_stringData {
+        "Articulos",
+        "on_pushButtonAnterior_clicked",
+        "",
+        "on_pushButtonSiguiente_clicked",
+        "on_pushButtonModificar_clicked",
+        "on_pushButtonBorrar_clicked",
+        "on_pushButtonPonerFoto_clicked",
+        "on_pushButtonBorrarFoto_clicked",
+        "on_pushButtonRefrescar_clicked",
+        "on_lineEditCodFamila_textChanged",
+        "arg1",
+        "on_lineEditCodFabricante_textChanged",
+        "on_lineEditDesc_returnPressed",
+        "on_lineEditCod_returnPressed",
+        "on_pushButtonBuscarFamilia_clicked",
+        "on_pushButtonBuscarFabricante_clicked",
+        "on_pushButtonNuevo_clicked",
+        "on_radioButtonVentasDia_clicked",
+        "on_radioButtonVentasMes_clicked",
+        "on_radioButtonVentasAno_clicked",
+        "on_radioButtonFacturas_clicked",
+        "on_radioButtonMeses_clicked",
+        "on_radioButtonAnos_clicked",
+        "on_radioButtonProveedores_clicked",
+        "on_pushButtonVer_clicked",
+        "on_pushButtonAnadir_clicked",
+        "on_pushButtonAnadirAPedido_clicked",
+        "on_pushButtonEliminar_clicked",
+        "on_tableViewCompras_clicked",
+        "QModelIndex",
+        "index",
+        "on_pushButtonEtiqueta_clicked",
+        "on_pushButtonCambiarCodigo_clicked",
+        "on_pushButtonVer_2_clicked",
+        "mostrarFoto",
+        "on_pushButtonVerFactura_clicked",
+        "on_checkBoxRemoto_stateChanged",
+        "on_treeWidgetStockTiendas_itemDoubleClicked",
+        "QTreeWidgetItem*",
+        "item",
+        "column"
+    };
+
+    QtMocHelpers::UintData qt_methods {
+        // Slot 'on_pushButtonAnterior_clicked'
+        QtMocHelpers::SlotData<void()>(1, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonSiguiente_clicked'
+        QtMocHelpers::SlotData<void()>(3, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonModificar_clicked'
+        QtMocHelpers::SlotData<void()>(4, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonBorrar_clicked'
+        QtMocHelpers::SlotData<void()>(5, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonPonerFoto_clicked'
+        QtMocHelpers::SlotData<void()>(6, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonBorrarFoto_clicked'
+        QtMocHelpers::SlotData<void()>(7, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonRefrescar_clicked'
+        QtMocHelpers::SlotData<void()>(8, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_lineEditCodFamila_textChanged'
+        QtMocHelpers::SlotData<void(const QString &)>(9, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 10 },
+        }}),
+        // Slot 'on_lineEditCodFabricante_textChanged'
+        QtMocHelpers::SlotData<void(const QString &)>(11, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 10 },
+        }}),
+        // Slot 'on_lineEditDesc_returnPressed'
+        QtMocHelpers::SlotData<void()>(12, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_lineEditCod_returnPressed'
+        QtMocHelpers::SlotData<void()>(13, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonBuscarFamilia_clicked'
+        QtMocHelpers::SlotData<void()>(14, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonBuscarFabricante_clicked'
+        QtMocHelpers::SlotData<void()>(15, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonNuevo_clicked'
+        QtMocHelpers::SlotData<void()>(16, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_radioButtonVentasDia_clicked'
+        QtMocHelpers::SlotData<void()>(17, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_radioButtonVentasMes_clicked'
+        QtMocHelpers::SlotData<void()>(18, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_radioButtonVentasAno_clicked'
+        QtMocHelpers::SlotData<void()>(19, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_radioButtonFacturas_clicked'
+        QtMocHelpers::SlotData<void()>(20, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_radioButtonMeses_clicked'
+        QtMocHelpers::SlotData<void()>(21, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_radioButtonAnos_clicked'
+        QtMocHelpers::SlotData<void()>(22, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_radioButtonProveedores_clicked'
+        QtMocHelpers::SlotData<void()>(23, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonVer_clicked'
+        QtMocHelpers::SlotData<void()>(24, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonAnadir_clicked'
+        QtMocHelpers::SlotData<void()>(25, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonAnadirAPedido_clicked'
+        QtMocHelpers::SlotData<void()>(26, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonEliminar_clicked'
+        QtMocHelpers::SlotData<void()>(27, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_tableViewCompras_clicked'
+        QtMocHelpers::SlotData<void(const QModelIndex &)>(28, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { 0x80000000 | 29, 30 },
+        }}),
+        // Slot 'on_pushButtonEtiqueta_clicked'
+        QtMocHelpers::SlotData<void()>(31, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonCambiarCodigo_clicked'
+        QtMocHelpers::SlotData<void()>(32, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonVer_2_clicked'
+        QtMocHelpers::SlotData<void()>(33, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'mostrarFoto'
+        QtMocHelpers::SlotData<void()>(34, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_pushButtonVerFactura_clicked'
+        QtMocHelpers::SlotData<void()>(35, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'on_checkBoxRemoto_stateChanged'
+        QtMocHelpers::SlotData<void(int)>(36, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::Int, 10 },
+        }}),
+        // Slot 'on_treeWidgetStockTiendas_itemDoubleClicked'
+        QtMocHelpers::SlotData<void(QTreeWidgetItem *, int)>(37, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { 0x80000000 | 38, 39 }, { QMetaType::Int, 40 },
+        }}),
+    };
+    QtMocHelpers::UintData qt_properties {
+    };
+    QtMocHelpers::UintData qt_enums {
+    };
+    return QtMocHelpers::metaObjectData<Articulos, qt_meta_tag_ZN9ArticulosE_t>(QMC::MetaObjectFlag{}, qt_stringData,
+            qt_methods, qt_properties, qt_enums);
+}
+Q_CONSTINIT const QMetaObject Articulos::staticMetaObject = { {
+    QMetaObject::SuperData::link<QDialog::staticMetaObject>(),
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN9ArticulosE_t>.stringdata,
+    qt_staticMetaObjectStaticContent<qt_meta_tag_ZN9ArticulosE_t>.data,
+    qt_static_metacall,
+    nullptr,
+    qt_staticMetaObjectRelocatingContent<qt_meta_tag_ZN9ArticulosE_t>.metaTypes,
+    nullptr
+} };
+
+void Articulos::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
+{
+    auto *_t = static_cast<Articulos *>(_o);
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        switch (_id) {
+        case 0: _t->on_pushButtonAnterior_clicked(); break;
+        case 1: _t->on_pushButtonSiguiente_clicked(); break;
+        case 2: _t->on_pushButtonModificar_clicked(); break;
+        case 3: _t->on_pushButtonBorrar_clicked(); break;
+        case 4: _t->on_pushButtonPonerFoto_clicked(); break;
+        case 5: _t->on_pushButtonBorrarFoto_clicked(); break;
+        case 6: _t->on_pushButtonRefrescar_clicked(); break;
+        case 7: _t->on_lineEditCodFamila_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 8: _t->on_lineEditCodFabricante_textChanged((*reinterpret_cast<std::add_pointer_t<QString>>(_a[1]))); break;
+        case 9: _t->on_lineEditDesc_returnPressed(); break;
+        case 10: _t->on_lineEditCod_returnPressed(); break;
+        case 11: _t->on_pushButtonBuscarFamilia_clicked(); break;
+        case 12: _t->on_pushButtonBuscarFabricante_clicked(); break;
+        case 13: _t->on_pushButtonNuevo_clicked(); break;
+        case 14: _t->on_radioButtonVentasDia_clicked(); break;
+        case 15: _t->on_radioButtonVentasMes_clicked(); break;
+        case 16: _t->on_radioButtonVentasAno_clicked(); break;
+        case 17: _t->on_radioButtonFacturas_clicked(); break;
+        case 18: _t->on_radioButtonMeses_clicked(); break;
+        case 19: _t->on_radioButtonAnos_clicked(); break;
+        case 20: _t->on_radioButtonProveedores_clicked(); break;
+        case 21: _t->on_pushButtonVer_clicked(); break;
+        case 22: _t->on_pushButtonAnadir_clicked(); break;
+        case 23: _t->on_pushButtonAnadirAPedido_clicked(); break;
+        case 24: _t->on_pushButtonEliminar_clicked(); break;
+        case 25: _t->on_tableViewCompras_clicked((*reinterpret_cast<std::add_pointer_t<QModelIndex>>(_a[1]))); break;
+        case 26: _t->on_pushButtonEtiqueta_clicked(); break;
+        case 27: _t->on_pushButtonCambiarCodigo_clicked(); break;
+        case 28: _t->on_pushButtonVer_2_clicked(); break;
+        case 29: _t->mostrarFoto(); break;
+        case 30: _t->on_pushButtonVerFactura_clicked(); break;
+        case 31: _t->on_checkBoxRemoto_stateChanged((*reinterpret_cast<std::add_pointer_t<int>>(_a[1]))); break;
+        case 32: _t->on_treeWidgetStockTiendas_itemDoubleClicked((*reinterpret_cast<std::add_pointer_t<QTreeWidgetItem*>>(_a[1])),(*reinterpret_cast<std::add_pointer_t<int>>(_a[2]))); break;
+        default: ;
+        }
+    }
+}
+
+const QMetaObject *Articulos::metaObject() const
+{
+    return QObject::d_ptr->metaObject ? QObject::d_ptr->dynamicMetaObject() : &staticMetaObject;
+}
+
+void *Articulos::qt_metacast(const char *_clname)
+{
+    if (!_clname) return nullptr;
+    if (!strcmp(_clname, qt_staticMetaObjectStaticContent<qt_meta_tag_ZN9ArticulosE_t>.strings))
+        return static_cast<void*>(this);
+    return QDialog::qt_metacast(_clname);
+}
+
+int Articulos::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
+{
+    _id = QDialog::qt_metacall(_c, _id, _a);
+    if (_id < 0)
+        return _id;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        if (_id < 33)
+            qt_static_metacall(this, _c, _id, _a);
+        _id -= 33;
+    }
+    if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
+        if (_id < 33)
+            *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
+        _id -= 33;
+    }
+    return _id;
+}
+QT_WARNING_POP

@@ -1,0 +1,171 @@
+/* 
+   GreenLeaf Theme - Refined & Compact 
+   Primary Green: #7cb342
+   Dark Green: #558b2f
+   Light Green: #dcedc8
+   Background: #FFFFFF / #f8f9f8
+*/
+
+QMainWindow, QDialog {
+    background-color: #f8f9f8;
+}
+
+QWidget {
+    font-family: "Inter", "Segoe UI", "Roboto", sans-serif;
+    color: #2e342e;
+}
+
+/* Global Button Style - Reverted to Original Shape */
+QPushButton {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #8bc34a, stop:1 #7cb342);
+    color: white;
+    border-radius: 14px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid #689f38;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #9ccc65, stop:1 #8bc34a);
+}
+
+QPushButton:pressed {
+    background-color: #689f38;
+}
+
+QPushButton:disabled {
+    background-color: #e8f5e9;
+    color: #a5d6a7;
+    border: 1px solid #c8e6c9;
+}
+
+/* Specific button styles */
+QPushButton#usuarioButton {
+    background-color: #ffffff;
+    color: #7cb342;
+    border: 2px solid #7cb342;
+}
+
+/* Input Fields - Reverted to Original Sizes */
+QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QDateEdit, QComboBox {
+    background-color: white;
+    border: 1px solid #c8e6c9;
+    border-radius: 10px;
+    padding: 8px;
+    selection-background-color: #dcedc8;
+    selection-color: #1b5e20;
+}
+
+QLineEdit:focus, QTextEdit:focus, QSpinBox:focus, QComboBox:focus {
+    border: 2px solid #7cb342;
+    background-color: #ffffff;
+}
+
+/* ComboBox Style - Coherent but Compact */
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left: 1px solid #c8e6c9;
+}
+
+QComboBox::down-arrow {
+    image: none;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid #7cb342;
+    width: 0; height: 0;
+    margin-top: 2px;
+}
+
+/* SpinBox Style - Coherent but Compact */
+QSpinBox::up-button, QDoubleSpinBox::up-button, QDateEdit::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 18px;
+    border-left: 1px solid #c8e6c9;
+    border-bottom: 1px solid #c8e6c9;
+}
+
+QSpinBox::down-button, QDoubleSpinBox::down-button, QDateEdit::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 18px;
+    border-left: 1px solid #c8e6c9;
+}
+
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow, QDateEdit::up-arrow {
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    border-bottom: 3px solid #558b2f;
+}
+
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow, QDateEdit::down-arrow {
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    border-top: 3px solid #558b2f;
+}
+
+/* Tables - Compact Headers */
+QTableView {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    gridline-color: #f1f8e9;
+    selection-background-color: #dcedc8;
+    selection-color: #1b5e20;
+    border-radius: 4px;
+    outline: 0;
+}
+
+QHeaderView::section {
+    background-color: #7cb342;
+    color: white;
+    padding: 4px 8px; /* Reduced from 10px */
+    border: none;
+    font-weight: bold;
+}
+
+/* Tabs */
+QTabWidget::pane {
+    border: 1px solid #e0e0e0;
+    background: white;
+    border-radius: 4px;
+}
+
+QTabBar::tab {
+    background: #f5f5f5;
+    color: #757575;
+    padding: 8px 15px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+
+/* GroupBox - Compact Laterals */
+QGroupBox {
+    border: 1px solid #e8f5e9;
+    border-radius: 6px;
+    margin-top: 1em;
+    font-weight: bold;
+    color: #388e3c;
+    padding: 8px; /* Reduced from 15px */
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 3px;
+}
+
+/* ScrollBars - Compact */
+QScrollBar:vertical {
+    border: none;
+    background: #f1f8e9;
+    width: 8px;
+}
+
+QScrollBar::handle:vertical {
+    background: #c5e1a5;
+    min-height: 20px;
+    border-radius: 4px;
+}
