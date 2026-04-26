@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Construir Proyecto (Qt6/QMake)",
+            "type": "shell",
+            "command": "mkdir -p build/Qt6Build && cd build/Qt6Build && qmake6 ../../tienda.pro && make -j$(nproc)",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "detail": "Compila el proyecto en build/Qt6Build usando QMake."
+        },
+        {
+            "label": "Limpiar Raíz",
+            "type": "shell",
+            "command": "./limpiar.sh",
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}
