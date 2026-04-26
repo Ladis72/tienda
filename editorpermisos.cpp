@@ -111,7 +111,7 @@ void EditorPermisos::construirCheckboxes() {
       {"facturar", "Facturar albaranes"},
       {"gestionar_pedidos", "Gestión de pedidos"},
       {"cajas", "Cajas"},
-      {"prestamos", "Préstamos"},
+
       {"preparar", "Preparar pedidos"},
       // ── Administración ──
       {"generar_vales", "Generar vales"},
@@ -129,6 +129,19 @@ void EditorPermisos::construirCheckboxes() {
       {"conectar", "Conectar tiendas remotas"},
       {"config_base", "Configuración de BD"},
       {"tab_config", "Pestaña de administración"},
+
+      // ── Nuevas funcionalidades y granularidad TPV ──
+      {"notas", "Notas y Avisos"},
+      {"encargos", "Sistema de Encargos"},
+      {"editor_permisos", "Editor de Permisos"},
+      {"verifactu", "Logs Verifactu"},
+      {"tpv.anadir", "TPV: Añadir artículo"},
+      {"tpv.borrar", "TPV: Borrar línea"},
+      {"tpv.borrar_todo", "TPV: Borrar todo"},
+      {"tpv.cobrar", "TPV: Cobrar"},
+      {"tpv.preticket", "TPV: Pre-ticket"},
+      {"tpv.hacer_encargo", "TPV: Crear encargo"},
+      {"tpv.gestor_encargos", "TPV: Gestor encargos"},
   };
 
   // Nombres legibles para los grupos
@@ -140,7 +153,7 @@ void EditorPermisos::construirCheckboxes() {
       {"clientes", "Clientes"},
       {"proveedores", "Proveedores"},
       {"formas_pago", "Formas de Pago"},
-      {"prestamistas", "Prestamistas"},
+
       {"usuarios", "Usuarios"},
       {"tiendas", "Tiendas"},
       {"formatos", "Formatos"},
@@ -158,7 +171,7 @@ void EditorPermisos::construirCheckboxes() {
       {"facturar", "Facturar"},
       {"gestionar_pedidos", "Pedidos"},
       {"cajas", "Cajas"},
-      {"prestamos", "Préstamos"},
+
       {"preparar", "Preparar"},
       {"generar_vales", "Vales"},
       {"actualizar_clientes", "Act. Clientes"},
@@ -175,6 +188,13 @@ void EditorPermisos::construirCheckboxes() {
       {"conectar", "Conectar"},
       {"config_base", "Config. BD"},
       {"tab_config", "Tab Config"},
+
+      // Grupos para las nuevas funcionalidades
+      {"tpv", "TPV (Granular)"},
+      {"notas", "Notas"},
+      {"encargos", "Encargos"},
+      {"editor_permisos", "Permisos"},
+      {"verifactu", "VeriFactu"},
   };
 
   // Crear un QGroupBox por cada grupo de permisos

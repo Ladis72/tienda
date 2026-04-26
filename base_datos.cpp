@@ -1342,8 +1342,8 @@ bool baseDatos::crearCliente(QSqlDatabase db, QStringList datos) {
   QSqlQuery consulta(db);
   consulta.prepare(
       "INSERT INTO clientes (idCliente, nombre, apellidos, direccion, cp, "
-      "localidad, provincia, nif, tlfn1, tlfn2, mail, descuento, "
-      "fechaAniversario, notas) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+      "localidad, provincia, nif, telefono, telefono2, mail, descuento, "
+      "fechaAlta, notas) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
   consulta.bindValue(0, datos.at(0).toInt());
   consulta.bindValue(1, datos.at(1));
   consulta.bindValue(2, datos.at(2));
@@ -2128,16 +2128,25 @@ QMap<QString, QVariant> baseDatos::leerConfiguracion() {
   if (consulta.exec("SELECT * FROM configuracion") && consulta.first()) {
     config["recargoeq"] = consulta.value("recargoeq");
     config["precios_locales"] = consulta.value("precios_locales");
+    config["vendedor_f1"] = consulta.value("vendedor_f1");
+    config["vendedor_f2"] = consulta.value("vendedor_f2");
+    config["vendedor_f3"] = consulta.value("vendedor_f3");
+    config["vendedor_f4"] = consulta.value("vendedor_f4");
   }
   return config;
 }
 
 bool baseDatos::GuardarConfiguracion(QMap<QString, QVariant> datos) {
   QSqlQuery consulta(QSqlDatabase::database("DB"));
-  consulta.prepare("UPDATE configuracion SET recargoeq = ?, precios_locales = ? "
+  consulta.prepare("UPDATE configuracion SET recargoeq = ?, precios_locales = ?, "
+                   "vendedor_f1 = ?, vendedor_f2 = ?, vendedor_f3 = ?, vendedor_f4 = ? "
                    "WHERE idconfiguracion = 0");
   consulta.bindValue(0, datos.value("recargoeq", 0));
   consulta.bindValue(1, datos.value("precios_locales", 0));
+  consulta.bindValue(2, datos.value("vendedor_f1"));
+  consulta.bindValue(3, datos.value("vendedor_f2"));
+  consulta.bindValue(4, datos.value("vendedor_f3"));
+  consulta.bindValue(5, datos.value("vendedor_f4"));
   if (consulta.exec()) {
     return true;
   }
@@ -2148,19 +2157,29 @@ bool baseDatos::GuardarConfiguracion(QMap<QString, QVariant> datos) {
 bool baseDatos::guardarDirectorios(QString base,
                                    QMap<QString, QString> directorios) {
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.prepare("UPDATE directorios SET directorio = ? WHERE nombre = ?");
+  
+  // Usamos una transacción para asegurar integridad si hay varios cambios
+  QSqlDatabase::database(base).transaction();
+  
   QMapIterator<QString, QString> it(directorios);
   while (it.hasNext()) {
     it.next();
-    consulta.bindValue(0, it.value());
-    consulta.bindValue(1, it.key());
+    // Usamos INSERT ... ON DUPLICATE KEY UPDATE porque hemos añadido un índice UNIQUE en 'nombre'
+    // Esto asegura que si el nombre ya existe, se actualiza la ruta; si no, se crea.
+    consulta.prepare("INSERT INTO directorios (nombre, directorio) VALUES (?, ?) "
+                     "ON DUPLICATE KEY UPDATE directorio = VALUES(directorio)");
+    consulta.bindValue(0, it.key());
+    consulta.bindValue(1, it.value());
+    
     if (!consulta.exec()) {
       qWarning() << "Error al guardar directorio '" + it.key() + "':"
                  << consulta.lastError().text();
+      QSqlDatabase::database(base).rollback();
       return false;
     }
   }
-  return true;
+  
+  return QSqlDatabase::database(base).commit();
 }
 
 QMap<QString, QString> baseDatos::cargarDirectorios(QString base) {

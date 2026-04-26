@@ -29,11 +29,9 @@ lotes
 motivosEntrada
 novadiet
 pedidos
-prestamos
 proveedores
 salidaGenero
 salidaGenero_tmp
-sujetoPrestamo
 ticket_tmp
 tickets
 ticketss

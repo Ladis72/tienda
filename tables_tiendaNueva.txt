@@ -36,11 +36,9 @@ notas
 pedidos
 permisos
 precios_tienda
-prestamos
 proveedores
 salidaGenero
 salidaGenero_tmp
-sujetoPrestamo
 sync_cola
 sync_control
 sync_unificaciones

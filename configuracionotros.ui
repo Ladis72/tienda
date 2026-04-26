@@ -121,6 +121,55 @@
     </widget>
    </item>
    <item>
+    <widget class="QGroupBox" name="groupBoxHotkeys">
+     <property name="title">
+      <string>Teclas Rápidas de Vendedores (F1-F4)</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayoutHotkeys">
+      <item row="0" column="0">
+       <widget class="QLabel" name="labelF1">
+        <property name="text">
+         <string>Tecla F1:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="comboBoxF1"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="labelF2">
+        <property name="text">
+         <string>Tecla F2:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="comboBoxF2"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="labelF3">
+        <property name="text">
+         <string>Tecla F3:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="comboBoxF3"/>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="labelF4">
+        <property name="text">
+         <string>Tecla F4:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QComboBox" name="comboBoxF4"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayoutButtons">
      <item>
       <spacer name="horizontalSpacerButtons">

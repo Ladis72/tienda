@@ -34,7 +34,8 @@ const QStringList SyncManager::TABLAS_MAESTRAS = {
     "codaux",       // depende de articulos
     "usuarios",
     "permisos",
-    "vales"         // vales de fidelidad (estado se propaga via nube)
+    "vales",         // vales de fidelidad (estado se propaga via nube)
+    "directorios"    // configuración de rutas compartida
 };
 
 const QMap<QString, QStringList> SyncManager::CAMPOS_EXCLUIDOS = {
@@ -507,7 +508,7 @@ QString SyncManager::getPkTabla(const QString &tabla) const
         {"articulos","cod"},{"clientes","idCliente"},{"familias","id"},{"fabricantes","id"},
         {"proveedores","idProveedor"},{"codaux","id"},{"fpago","id"},{"impuestos","tipoIva"},
         {"formatos","idformato"},{"motivosEntrada","idtiposEntrada"},{"usuarios","id"},
-        {"permisos","id"},{"vales","idvales"}
+        {"permisos","id"},{"vales","idvales"},{"directorios","id"}
     };
     return m.value(tabla, "");
 }

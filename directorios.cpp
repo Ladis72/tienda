@@ -17,10 +17,27 @@ Directorios::~Directorios()
 
 void Directorios::on_pushButtonAceptar_clicked()
 {
+    // Solo el administrador (Rol 0) puede modificar los directorios
+    if (conf->getRol() != 0) {
+        QMessageBox::warning(this, tr("Acceso denegado"),
+                             tr("Solo el administrador puede modificar la configuración de directorios."));
+        return;
+    }
+
+    // Aseguramos que todas las rutas sean relativas antes de guardar
+    ui->lineEditDocumentos->setText(rutaRelativa(ui->lineEditDocumentos->text()));
+    ui->lineEditLogFactura->setText(rutaRelativa(ui->lineEditLogFactura->text()));
+    ui->lineEditCseg->setText(rutaRelativa(ui->lineEditCseg->text()));
+    ui->lineEditLogo->setText(rutaRelativa(ui->lineEditLogo->text()));
+    ui->lineEditImagenes->setText(rutaRelativa(ui->lineEditImagenes->text()));
+
+    // Cargamos los datos de la UI al mapa para guardar
     cargarListaLineEdit();
+
+    // Guardamos en la base de datos local (el SyncManager se encargará de subirlo a la nube)
     if (base->guardarDirectorios(conf->getConexionLocal(), listaDatos)) {
-        qDebug() << listaDatos;
-        this->close();
+        qDebug() << "Directorios guardados y listos para sincronización:" << listaDatos;
+        this->accept(); // Usamos accept en lugar de close para indicar éxito
     }
 }
 
