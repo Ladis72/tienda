@@ -723,7 +723,7 @@ QSqlQuery baseDatos::ventasClientes(QString nombreConexion, QDate fechaI,
 double baseDatos::valeCliente(QString nombreConexion, QString idCLiente) {
   QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
   consulta.exec("SELECT cantidad FROM vales WHERE idCLiente ='" + idCLiente +
-                "' AND estado = 1");
+                "' AND estado = 1 ORDER BY fechaEmision DESC, vale_uuid DESC LIMIT 1");
   qDebug() << consulta.lastError();
   if (consulta.numRowsAffected() > 0) {
     consulta.first();
@@ -748,7 +748,7 @@ bool baseDatos::caducarVales(QString nombreConexion) {
 int baseDatos::idVale(QString nombreConexion, QString idCliente) {
   QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
   consulta.exec("SELECT idVales FROM vales WHERE idCliente='" + idCliente +
-                "' AND estado = 1");
+                "' AND estado = 1 ORDER BY fechaEmision DESC, vale_uuid DESC LIMIT 1");
   if (consulta.numRowsAffected() > 0) {
     consulta.first();
     return consulta.value(0).toInt();
