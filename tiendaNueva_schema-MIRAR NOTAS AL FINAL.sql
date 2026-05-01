@@ -792,15 +792,15 @@ CREATE TABLE `lineasticket` (
   `cod` char(13) NOT NULL,
   `descripcion` char(50) NOT NULL,
   `cantidad` int(11) NOT NULL,
-  `iva` double NOT NULL DEFAULT 0,
-  `precio` double NOT NULL DEFAULT 0,
-  `descuento` double NOT NULL DEFAULT 0,
-  `totallinea` double NOT NULL DEFAULT 0,
+  `iva` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `precio` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `descuento` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `totallinea` decimal(10,2) NOT NULL DEFAULT 0.00,
   `fecha` date NOT NULL,
   `hora` time NOT NULL,
   PRIMARY KEY (`id`),
   KEY `nticket` (`nticket`)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -1185,16 +1185,19 @@ CREATE TABLE `tickets` (
   `cliente` int(11) NOT NULL DEFAULT 1,
   `fecha` date NOT NULL,
   `hora` time NOT NULL,
-  `base` double NOT NULL DEFAULT 0,
-  `iva` double NOT NULL DEFAULT 0,
-  `descuento` float NOT NULL,
-  `total` decimal(10,2) NOT NULL,
+  `base` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `iva` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `descuento` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `total` decimal(10,2) NOT NULL DEFAULT 0.00,
   `fpago` int(11) NOT NULL,
   `cobrado` tinyint(1) NOT NULL,
-  `entrega` double DEFAULT NULL,
-  `cambio` double DEFAULT NULL,
-  PRIMARY KEY (`ticket`)
-);
+  `entrega` decimal(10,2) DEFAULT NULL,
+  `cambio` decimal(10,2) DEFAULT NULL,
+  PRIMARY KEY (`ticket`),
+  KEY `idx_fecha` (`fecha`),
+  KEY `idx_cliente` (`cliente`),
+  KEY `idx_usuario` (`usuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -1204,16 +1207,16 @@ CREATE TABLE `ticketss` (
   `cliente` int(11) NOT NULL DEFAULT 1,
   `fecha` date NOT NULL,
   `hora` time NOT NULL,
-  `base` float(10,4) NOT NULL DEFAULT 0.0000,
-  `iva` float(10,4) NOT NULL DEFAULT 0.0000,
-  `descuento` float NOT NULL,
-  `total` float(10,2) NOT NULL,
+  `base` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `iva` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `descuento` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `total` decimal(10,2) NOT NULL DEFAULT 0.00,
   `fpago` int(11) NOT NULL,
   `cobrado` tinyint(1) NOT NULL,
-  `entrega` double DEFAULT NULL,
-  `cambio` double DEFAULT NULL,
+  `entrega` decimal(10,2) DEFAULT NULL,
+  `cambio` decimal(10,2) DEFAULT NULL,
   PRIMARY KEY (`ticket`)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -1429,11 +1432,7 @@ CREATE TABLE `verifactu_logs` (
 INSERT INTO `usuarios` (`nombre`, `apellido`, `direccion`, `localidad`, `provincia`, `cp`, `tlfn`, `nif`, `mail`, `usuario`, `clave`, `notas`, `rol`) 
 VALUES ('Administrador', 'Sistema', '', '', '', '', '', '', '', 'jefe', 'meganizado', 'Usuario inicial', 0);
 
--- Configuración de la tienda local
--- IMPORTANTE: El ID debe ser único entre todas tus tiendas.
--- Cambia el '3' por el ID que corresponda si es necesario.
-INSERT INTO `tiendas` (`id`, `nombre`, `local`, `baseDatos`, `usuario`, `clave`) 
-VALUES (3, 'Nueva Tienda', 1, 'tiendaNueva', 'root', 'meganizado');
+
 
 -- Impuestos básicos (IVA y Recargo de Equivalencia)
 INSERT INTO `impuestos` (`tipoIva`, `porcentaje`, `recargo`) 
@@ -1444,5 +1443,9 @@ VALUES (1, 21.00, 5.20), (2, 10.00, 1.40), (3, 4.00, 0.50), (4, 0.00, 0.00);
 LUEGO CREAR A MANO EL RESTO DE TIENDAS CON LOS MISMOS ID Y DATOS DE LAS DEMAS TIENDAS
 
 */
-
+-- Configuración de la tienda local
+-- IMPORTANTE: El ID debe ser único entre todas tus tiendas.
+-- Cambia el '3' por el ID que corresponda si es necesario.
+INSERT INTO `tiendas` (`id`, `nombre`, `local`, `baseDatos`, `usuario`, `clave`) 
+VALUES (3, 'Nueva Tienda', 1, 'tiendaNueva', 'root', 'meganizado');
 

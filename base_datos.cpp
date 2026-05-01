@@ -296,15 +296,9 @@ bool baseDatos::modificarUsuaruio(QSqlDatabase db, QStringList datos,
       ", provincia=? , cp=? , tlfn=? , nif=? , mail=? , usuario=? , clave=? , "
       "notas=? , rol=? , foto=?  WHERE id=?");
   consulta.bindValue(0, datos.at(0).toInt());
-  qDebug() << dato.at(0);
-
   consulta.bindValue(1, datos.at(1));
-  qDebug() << dato[1];
-
   consulta.bindValue(2, datos.at(2));
-  qDebug() << dato[2];
   consulta.bindValue(3, datos.at(3));
-  qDebug() << dato[3];
   consulta.bindValue(4, datos.at(4));
   consulta.bindValue(5, datos.at(5));
   consulta.bindValue(6, datos.at(6));
@@ -1377,11 +1371,8 @@ double baseDatos::descuentoCliente(QString idCliente) {
   consulta.prepare("SELECT descuento FROM clientes WHERE idCliente = :idcliente");
   consulta.bindValue(":idcliente", idCliente);
   
-  consulta.exec();
-  consulta.first();
-  
-  if (consulta.isValid() && consulta.next()) {
-    return consulta.record().value("descuento").toDouble();
+  if (consulta.exec() && consulta.first()) {
+    return consulta.value("descuento").toDouble();
   }
   return 0;
 }

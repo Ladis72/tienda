@@ -2,8 +2,9 @@
 #include "ui_generarvales.h"
 
 #include <QMessageBox>
-#include <QCheckBox>
-#include <QGridLayout>
+#include <QHeaderView>
+#include <QSqlError>
+#include <QSqlRecord>
 
 /**
  * @brief Constructor del diálogo de generación de vales.
@@ -13,16 +14,19 @@ GenerarVales::GenerarVales(QWidget *parent)
     , ui(new Ui::GenerarVales)
 {
     ui->setupUi(this);
-    // Conexiones remotas activas: se usarán para leer ventas (Opción B)
-    tiendas = conf->getNombreConexionesActivas();
-    ui->dateEdit->setDate(QDate::currentDate());
 
-    // Añadir checkbox de simulación dinámicamente
-    simularCheck = new QCheckBox("Modo Simulación (no guardar en BD)", this);
-    simularCheck->setChecked(true); // Por seguridad, activado por defecto
-    if (ui->gridLayout) {
-        ui->gridLayout->addWidget(simularCheck, 3, 0, 1, 2);
-    }
+    // Fecha por defecto: primer día del mes anterior
+    QDate hoy = QDate::currentDate();
+    QDate mesAnterior = hoy.addMonths(-1);
+    ui->dateEdit->setDate(QDate(mesAnterior.year(), mesAnterior.month(), 1));
+
+    // Ajustar columnas de la tabla de previsualización
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+
+    // Lista de todas las conexiones disponibles (local + remotas)
+    tiendas = conf->getNombreConexiones();
 }
 
 GenerarVales::~GenerarVales()
@@ -30,209 +34,248 @@ GenerarVales::~GenerarVales()
     delete ui;
 }
 
-void GenerarVales::on_pushButtonGenerar_clicked()
+/**
+ * @brief Calcula las ventas de un cliente en un mes concreto sumando
+ *        todas las tiendas que estén conectadas en ese momento.
+ *
+ * @param idCliente  ID del cliente
+ * @param desde      Primer día del mes (yyyy-MM-01)
+ * @param hasta      Último día del mes  (yyyy-MM-DD)
+ * @return Total de ventas en euros
+ */
+double GenerarVales::ventasTotalesCliente(int idCliente,
+                                          const QString &desde,
+                                          const QString &hasta)
 {
-    // ── 0. Verificar que TODAS las tiendas estén conectadas ──────────────
-    ui->label->setText("Verificando conexiones...");
-    QStringList todasLasTiendas = conf->getNombreConexiones();
-    QStringList tiendasDesconectadas;
+    double total = 0.0;
 
-    for (const QString &nombre : todasLasTiendas) {
-        if (!QSqlDatabase::database(nombre).isOpen()) {
-            tiendasDesconectadas << nombre;
+    for (const QString &conexion : tiendas) {
+        QSqlDatabase db = QSqlDatabase::database(conexion);
+        if (!db.isOpen()) continue;
+
+        // Construimos la consulta unificando tickets y ticketss si existe
+        QString sql;
+        if (db.tables().contains("ticketss")) {
+            sql = QString("SELECT COALESCE(SUM(total),0) FROM ("
+                          "  SELECT total FROM tickets  WHERE cliente=%1 AND fecha BETWEEN '%2' AND '%3' "
+                          "  UNION ALL "
+                          "  SELECT total FROM ticketss WHERE cliente=%1 AND fecha BETWEEN '%2' AND '%3'"
+                          ") AS todas").arg(idCliente).arg(desde).arg(hasta);
+        } else {
+            sql = QString("SELECT COALESCE(SUM(total),0) FROM tickets "
+                          "WHERE cliente=%1 AND fecha BETWEEN '%2' AND '%3'")
+                      .arg(idCliente).arg(desde).arg(hasta);
+        }
+
+        QSqlQuery q(db);
+        if (q.exec(sql) && q.first()) {
+            total += q.value(0).toDouble();
+        } else {
+            qWarning() << "Error consultando ventas en" << conexion << ":" << q.lastError().text();
         }
     }
+    return total;
+}
 
-    if (!tiendasDesconectadas.isEmpty()) {
-        QMessageBox::critical(this, "Error de Conexión",
-                              "No se pueden generar los vales porque hay tiendas desconectadas:\n\n" +
-                              tiendasDesconectadas.join(", ") + "\n\n"
-                              "Asegúrese de que todas las tiendas estén encendidas y conectadas "
-                              "para que el cálculo de ventas sea completo.");
-        return;
-    }
-
-    // ── 1. Validar la fecha seleccionada ──────────────────────────────────
-    ui->label->setText("Comprobando la fecha");
+void GenerarVales::on_pushButtonGenerar_clicked()
+{
+    // ── 0. Validar la fecha seleccionada ──────────────────────────────────
+    ui->label->setText("Comprobando la fecha...");
     ui->progressBar->setValue(5);
-    QDate fecha = ui->dateEdit->date();
-    QDate fechaActual = QDate::currentDate();
+    QDate fecha     = ui->dateEdit->date();
+    QDate fechaHoy  = QDate::currentDate();
 
-    if (fecha >= fechaActual) {
-        QMessageBox::warning(this, "Error de fecha",
-                             "La fecha seleccionada debe ser anterior a hoy.");
-        return;
-    }
-    if (fecha.month() == fechaActual.month()
-        && fecha.year() == fechaActual.year()) {
+    if (fecha.month() == fechaHoy.month() && fecha.year() == fechaHoy.year()) {
         QMessageBox::warning(this, "Error de fecha",
                              "No se pueden generar los vales de un mes en curso.");
         return;
     }
-    if (base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
-                               "vales",
-                               "fechaEmision",
-                               fecha.toString("yyyy-MM-01"))) {
-        QMessageBox::information(this, "Vales ya generados",
-                                 "Ya existen vales para el mes seleccionado.");
+    if (fecha > fechaHoy) {
+        QMessageBox::warning(this, "Error de fecha",
+                             "La fecha seleccionada no puede ser futura.");
         return;
     }
 
-    // ── 2. Caducar los vales activos anteriores ───────────────────────────
-    ui->label->setText("Caducando vales anteriores");
+    // Rango del mes seleccionado
+    QString desde = fecha.toString("yyyy-MM-01");
+    QString hasta = fecha.toString(QString("yyyy-MM-") + QString::number(fecha.daysInMonth()));
+
+    // ── 1. Comprobar vales ya existentes para ese mes ─────────────────────
+    QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
+    if (base.existeDatoEnTabla(dbLocal, "vales", "fechaEmision", desde)) {
+        QMessageBox::StandardButton res = QMessageBox::question(
+            this, "Vales ya generados",
+            QString("Ya existen vales para %1.\n"
+                    "¿Deseas eliminar los no usados y recalcular?")
+                .arg(fecha.toString("MMMM yyyy")),
+            QMessageBox::Yes | QMessageBox::No);
+        if (res == QMessageBox::No) return;
+
+        // Borrar únicamente los vales activos (estado=1) de ese mes
+        QSqlQuery qBorrar(dbLocal);
+        qBorrar.prepare("DELETE FROM vales WHERE fechaEmision = ? AND estado = 1");
+        qBorrar.bindValue(0, desde);
+        qBorrar.exec();
+    }
+
+    // ── 2. Caducar vales activos anteriores ──────────────────────────────
+    ui->label->setText("Caducando vales anteriores...");
     ui->progressBar->setValue(10);
-    if (simularCheck->isChecked()) {
+    if (ui->checkBoxSimular->isChecked()) {
         qDebug() << "SIMULACIÓN: Saltando caducación de vales.";
     } else {
         if (!base.caducarVales(conf->getConexionLocal())) {
-            qWarning() << "Advertencia: no se pudieron caducar los vales anteriores";
+            qWarning() << "No se pudieron caducar los vales anteriores.";
         }
     }
 
-    // ── 3. Asegurar y vaciar la tabla temporal ───────────────────────────
-    ui->label->setText("Vaciando datos antiguos");
-    ui->progressBar->setValue(15);
-    QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
-    QSqlQuery queryPrep(dbLocal);
-    // Aseguramos que la tabla existe por si es una instalación limpia
-    queryPrep.exec("CREATE TABLE IF NOT EXISTS comprasClienteTMP ("
-                   "id INT AUTO_INCREMENT PRIMARY KEY, "
-                   "idCliente INT, "
-                   "cantidad DOUBLE, "
-                   "fecha DATE)");
-    base.vaciarTabla("comprasClienteTMP", dbLocal);
-
-    // ── 4. Cargar ventas del mes desde la BD local ────────────────────────
-    ui->label->setText("Cargando datos locales");
+    // ── 3. Obtener todos los clientes con descuento > 0 ───────────────────
+    //    Usamos la BD local (tablas maestras sincronizadas vía SyncManager)
+    ui->label->setText("Cargando clientes con descuento...");
     ui->progressBar->setValue(20);
-    QSqlQuery consulta(dbLocal);
-    QSqlQuery compras = base.ventasClientes(conf->getConexionLocal(),
-                                            fecha, fecha);
-    while (compras.next()) {
-        consulta.prepare("INSERT INTO comprasClienteTMP (idCliente, cantidad, fecha) "
-                         "VALUES (?, ?, ?)");
-        consulta.bindValue(0, compras.value(0).toInt());
-        consulta.bindValue(1, compras.value(1).toDouble());
-        consulta.bindValue(2, fecha.toString("yyyy-MM-01"));
-        if (!consulta.exec()) {
-            qWarning() << "Error insertando en TMP local:" << consulta.lastError().text();
-        }
-    }
 
-    // ── 5. Cargar ventas remotas (conexiones directas) ────────────────────
-    ui->label->setText("Cargando datos remotos");
-    ui->progressBar->setValue(30);
-    
-    // Filtramos para no repetir la conexión local si estuviera en la lista
-    QStringList tiendasRemotas;
-    for (const QString &t : tiendas) {
-        if (t != conf->getConexionLocal()) tiendasRemotas << t;
-    }
-
-    int totalTiendasRemotas = tiendasRemotas.length();
-    for (int t = 0; t < totalTiendasRemotas; t++) {
-        QString nombreTienda = tiendasRemotas.at(t);
-        QSqlDatabase dbRemota = QSqlDatabase::database(nombreTienda);
-        if (!dbRemota.isOpen()) {
-            qWarning() << "Tienda" << nombreTienda << "no está abierta, saltando...";
-            continue;
-        }
-
-        QSqlQuery comprasRemotas = base.ventasClientes(nombreTienda, fecha, fecha);
-        while (comprasRemotas.next()) {
-            consulta.prepare("INSERT INTO comprasClienteTMP (idCliente, cantidad, fecha) "
-                             "VALUES (?, ?, ?)");
-            consulta.bindValue(0, comprasRemotas.value(0).toInt());
-            consulta.bindValue(1, comprasRemotas.value(1).toDouble());
-            consulta.bindValue(2, fecha.toString("yyyy-MM-01"));
-            consulta.exec();
-        }
-        int progreso = 30 + ((40 * (t + 1)) / qMax(1, totalTiendasRemotas));
-        ui->progressBar->setValue(progreso);
-    }
-
-    // ── 6. Generar vales ──────────────────────────────────────────────────
-    ui->label->setText("Generando los vales");
-    ui->progressBar->setValue(75);
-
-    QSqlQuery comprasTotal(dbLocal);
-    if (!comprasTotal.exec("SELECT idCliente, SUM(cantidad) AS total "
-                          "FROM comprasClienteTMP GROUP BY idCliente")) {
-        QMessageBox::critical(this, "Error", "No se pudo calcular el total de compras: " + comprasTotal.lastError().text());
+    QSqlQuery qClientes(dbLocal);
+    if (!qClientes.exec("SELECT idCliente, nombre, apellidos, descuento "
+                        "FROM clientes WHERE descuento > 0 ORDER BY idCliente")) {
+        QMessageBox::critical(this, "Error",
+                              "No se pudo obtener la lista de clientes:\n" +
+                              qClientes.lastError().text());
         return;
     }
 
-    int valesGenerados = 0;
-    if (!simularCheck->isChecked()) {
+    // Almacenamos en lista para poder mostrar progreso
+    struct DatosCliente { int id; QString nombre; double descuento; };
+    QList<DatosCliente> clientes;
+    while (qClientes.next()) {
+        clientes.append({qClientes.value(0).toInt(),
+                         qClientes.value(1).toString() + " " + qClientes.value(2).toString(),
+                         qClientes.value(3).toDouble()});
+    }
+
+    if (clientes.isEmpty()) {
+        QMessageBox::information(this, "Sin clientes",
+                                 "No hay clientes con porcentaje de descuento configurado.");
+        ui->progressBar->setValue(0);
+        return;
+    }
+
+    // ── 4. Calcular vales iterando sobre clientes ─────────────────────────
+    ui->tableWidget->setRowCount(0);
+    ui->pushButtonGenerar->setEnabled(false);
+
+    int valesCalculados = 0;
+    double totalImporteVales = 0.0;
+
+    if (!ui->checkBoxSimular->isChecked()) {
         dbLocal.transaction();
     }
 
-    QSqlQuery insertVale(dbLocal);
-    while (comprasTotal.next()) {
-        int idCliente = comprasTotal.value(0).toInt();
-        double totalCompras = comprasTotal.value(1).toDouble();
-        double pctDescuento = descuentoCliente(idCliente);
+    int n = clientes.size();
+    for (int i = 0; i < n; ++i) {
+        const DatosCliente &cli = clientes.at(i);
 
-        if (pctDescuento <= 0 || totalCompras <= 0) continue;
+        // Progreso: de 20 a 90
+        ui->progressBar->setValue(20 + (70 * (i + 1)) / n);
+        ui->label->setText(QString("Calculando: %1...").arg(cli.nombre));
+        QCoreApplication::processEvents(); // Mantener UI responsiva
 
-        double importeVale = totalCompras * (pctDescuento / 100.0);
-        // Redondear a 2 decimales
-        importeVale = qRound(importeVale * 100.0) / 100.0;
+        // Suma de ventas en TODAS las tiendas conectadas
+        double totalVentas = ventasTotalesCliente(cli.id, desde, hasta);
 
+        if (totalVentas <= 0) continue;
+
+        double importeVale = qRound(totalVentas * (cli.descuento / 100.0) * 100.0) / 100.0;
         if (importeVale < 0.01) continue;
 
-        if (simularCheck->isChecked()) {
-            valesGenerados++;
-            qDebug() << "SIMULACIÓN - Vale calculado: cliente" << idCliente
-                     << "importe" << importeVale << "€ (Ventas:" << totalCompras << ")";
-        } else {
-            // Estructura: idvales (NULL), idCliente, cantidad, estado (1=activo), fechaEmision, fechaUso (NULL)
-            insertVale.prepare("INSERT INTO vales (idCliente, cantidad, estado, fechaEmision, fechaUso) "
-                               "VALUES (?, ?, 1, ?, NULL)");
-            insertVale.bindValue(0, idCliente);
-            insertVale.bindValue(1, importeVale);
-            insertVale.bindValue(2, fecha.toString("yyyy-MM-01"));
-            
-            if (insertVale.exec()) {
-                valesGenerados++;
-            } else {
-                qWarning() << "Error al generar vale para cliente" << idCliente << ":" << insertVale.lastError().text();
-            }
+        // Mostrar en tabla de previsualización
+        int row = ui->tableWidget->rowCount();
+        ui->tableWidget->insertRow(row);
+        ui->tableWidget->setItem(row, 0, new QTableWidgetItem(QString::number(cli.id)));
+        ui->tableWidget->setItem(row, 1, new QTableWidgetItem(cli.nombre));
+        ui->tableWidget->setItem(row, 2, new QTableWidgetItem(
+            QString::number(totalVentas, 'f', 2) + " €"));
+        ui->tableWidget->setItem(row, 3, new QTableWidgetItem(
+            QString::number(cli.descuento, 'f', 1) + " %"));
+        ui->tableWidget->setItem(row, 4, new QTableWidgetItem(
+            QString::number(importeVale, 'f', 2) + " €"));
+
+        valesCalculados++;
+        totalImporteVales += importeVale;
+
+        if (ui->checkBoxSimular->isChecked()) {
+            qDebug() << "SIMULACIÓN — Cliente:" << cli.id << cli.nombre
+                     << "| Ventas:" << totalVentas
+                     << "| Descuento:" << cli.descuento << "%"
+                     << "| Vale:" << importeVale << "€";
+            continue;
+        }
+
+        // Inserción real en la BD local.
+        // vale_uuid se genera con UUID() de MariaDB para garantizar
+        // unicidad global: evita colisiones de idvales entre tiendas.
+        QSqlQuery qInsert(dbLocal);
+        qInsert.prepare("INSERT INTO vales "
+                        "(idCliente, cantidad, estado, fechaEmision, id_tienda_origen, vale_uuid) "
+                        "VALUES (?, ?, 1, ?, ?, UUID())");
+        qInsert.bindValue(0, cli.id);
+        qInsert.bindValue(1, importeVale);
+        qInsert.bindValue(2, desde);
+        // Obtener el ID de la tienda local
+        int idTiendaOrigen = 1; // Default fallback
+        QSqlQuery qTienda("SELECT id FROM tiendas WHERE local = 1", dbLocal);
+        if (qTienda.exec() && qTienda.first()) {
+            idTiendaOrigen = qTienda.value(0).toInt();
+        }
+
+        qInsert.bindValue(3, idTiendaOrigen);
+
+        if (!qInsert.exec()) {
+            qWarning() << "Error insertando vale para cliente"
+                       << cli.id << ":" << qInsert.lastError().text();
         }
     }
 
-    if (!simularCheck->isChecked()) {
-        if (dbLocal.commit()) {
-            qDebug() << "Transacción de vales completada.";
-        } else {
+    // ── 5. Confirmar transacción ──────────────────────────────────────────
+    if (!ui->checkBoxSimular->isChecked()) {
+        if (!dbLocal.commit()) {
             dbLocal.rollback();
-            QMessageBox::critical(this, "Error", "No se pudieron guardar los vales en la base de datos.");
+            QMessageBox::critical(this, "Error",
+                                  "No se pudieron guardar los vales.\n" +
+                                  dbLocal.lastError().text());
+            ui->pushButtonGenerar->setEnabled(true);
             return;
         }
     }
 
-    // ── 7. Resultado ──────────────────────────────────────────────────────
-    QString msgFin = simularCheck->isChecked() ? "Simulación finalizada" : "Finalizado";
-    ui->label->setText(
-        QString("%1: %2 vales calculados").arg(msgFin).arg(valesGenerados));
+    // ── 6. Resultado ──────────────────────────────────────────────────────
     ui->progressBar->setValue(100);
+    ui->pushButtonGenerar->setEnabled(true);
 
-    if (valesGenerados > 0) {
-        if (simularCheck->isChecked()) {
-             QMessageBox::information(
-                this, "Simulación completada",
-                QString("Se han calculado %1 vales.\n\n"
-                        "Revisa la consola para ver el detalle de importes por cliente.\n"
-                        "No se ha modificado nada en la base de datos.")
-                    .arg(valesGenerados));
-        } else {
-            QMessageBox::information(
-                this, "Vales generados",
-                QString("Se han generado %1 vales correctamente.")
-                    .arg(valesGenerados));
-        }
+    QString msgFinal = ui->checkBoxSimular->isChecked()
+                           ? "Simulación finalizada"
+                           : "Generación completada";
+
+    ui->label->setText(QString("%1: %2 vales · %3 €")
+                           .arg(msgFinal)
+                           .arg(valesCalculados)
+                           .arg(QString::number(totalImporteVales, 'f', 2)));
+
+    if (ui->checkBoxSimular->isChecked()) {
+        QMessageBox::information(
+            this, "Simulación finalizada",
+            QString("Clientes con ventas en el periodo: %1\n"
+                    "Vales que se generarían: %2\n"
+                    "Importe total: %3 €\n\n"
+                    "(No se ha guardado nada en la base de datos.)")
+                .arg(n).arg(valesCalculados)
+                .arg(totalImporteVales, 0, 'f', 2));
     } else {
-        QMessageBox::warning(this, "Sin vales", "No se ha generado ningún vale.");
+        QMessageBox::information(
+            this, "Vales generados",
+            QString("Se han generado %1 vales de fidelidad.\n"
+                    "Importe total: %2 €")
+                .arg(valesCalculados)
+                .arg(totalImporteVales, 0, 'f', 2));
     }
 }
 

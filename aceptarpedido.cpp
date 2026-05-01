@@ -107,7 +107,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     QStringList datos;
     QString idLinea, ean, descripcion, lote, fechaCaducidad, descuentoLinea, tipoIva, baseProducto,
         baseLinea, ivaLinea, reLinea;
-    int uds, unidades, bonificacion, tipoActualizacion = 0; //0-preguntar 1-pedido 2 almacen
+    int uds = 0, unidades = 0, bonificacion = 0, tipoActualizacion = 0; //0-preguntar 1-pedido 2 almacen
     double precioCosto, pvp;
     if (ui->comboBox->currentText() == "Seleccionar") {
         QMessageBox msg;

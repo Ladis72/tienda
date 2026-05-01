@@ -1079,11 +1079,24 @@ void Tpv::usarVale(int ticket, int idVale, double cantVale)
     // autom\u00e1tica cuando se recupere la conexi\u00f3n con la nube.
     QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
     if (dbNube.isOpen()) {
-        if (base.usarVale(SyncManager::CONEXION_NUBE, idVale)) {
-            qDebug() << "Vale" << idVale << "marcado como usado en la nube";
+        // Obtener el vale_uuid del vale recién marcado en local
+        QSqlQuery qUuid(QSqlDatabase::database(conexionLocal));
+        qUuid.prepare("SELECT vale_uuid FROM vales WHERE idvales = ?");
+        qUuid.addBindValue(idVale);
+        if (qUuid.exec() && qUuid.first()) {
+            QString uuid = qUuid.value(0).toString();
+            
+            // Marcar en la nube usando el UUID (idvales no es igual en la nube)
+            QSqlQuery qNubeUpdate(dbNube);
+            qNubeUpdate.prepare("UPDATE vales SET estado = 2, fechaUso = CURRENT_DATE() WHERE vale_uuid = ?");
+            qNubeUpdate.addBindValue(uuid);
+            if (qNubeUpdate.exec()) {
+                qDebug() << "Vale" << idVale << "(UUID:" << uuid << ") marcado como usado en la nube inmediatamente.";
+            } else {
+                qWarning() << "Error al marcar vale UUID" << uuid << "en la nube:" << qNubeUpdate.lastError().text();
+            }
         } else {
-            qWarning() << "No se pudo marcar el vale" << idVale
-                       << "en la nube (se sincronizar\u00e1 en el pr\u00f3ximo ciclo)";
+            qWarning() << "No se pudo obtener el vale_uuid para idvales" << idVale;
         }
     } else {
         qDebug() << "Vale" << idVale << ": nube no disponible, sync_cola propagar\u00e1 el cambio";

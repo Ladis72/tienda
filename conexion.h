@@ -16,7 +16,7 @@
     connect to a database.
 */
 //! [0]
-static bool createConnection()
+[[maybe_unused]] static bool createConnection()
 {
     QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", "DB");
     db.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=3");
@@ -35,7 +35,7 @@ static bool createConnection()
 
     return true;
 }
-static bool createConnection(QString host,
+[[maybe_unused]] static bool createConnection(QString host,
                              QString puerto,
                              QString baseDatos,
                              QString usuario,

@@ -24,6 +24,10 @@ Ususarios::Ususarios(QWidget *parent)
 
     ui->lineEditCod->installEventFilter(this);
 
+    foreach(QPushButton *btn, findChildren<QPushButton*>()) {
+        btn->setAutoDefault(false);
+    }
+
     ui->pushButtonUnificar->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
     ui->pushButtonSaneador->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
     ui->pushButtonNuevo->setIcon(style()->standardIcon(QStyle::SP_FileDialogNewFolder));

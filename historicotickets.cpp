@@ -116,7 +116,7 @@ void HistoricoTickets::on_tableViewTickets_activated(const QModelIndex &index)
 void HistoricoTickets::on_pushButtonImprimir_clicked()
 {
     if (nTicket == "") {
-        int msg = QMessageBox::information(this, "Error", "Primero debe seleccionar un ticket");
+        QMessageBox::information(this, "Error", "Primero debe seleccionar un ticket");
         return;
     }
     ImprimirTicket c1(nTicket, "ticket");
@@ -125,7 +125,7 @@ void HistoricoTickets::on_pushButtonImprimir_clicked()
 void HistoricoTickets::on_pushButtonFormaPago_clicked()
 {
     if (nTicket == "") {
-        int msg = QMessageBox::information(this, "Error", "Primero debe seleccionar un ticket");
+        QMessageBox::information(this, "Error", "Primero debe seleccionar un ticket");
         return;
     }
     FormasPago *FP = new FormasPago;
@@ -145,7 +145,7 @@ void HistoricoTickets::on_pushButtonFormaPago_clicked()
 void HistoricoTickets::on_pushButtonImprimirFactura_clicked()
 {
     if (nTicket == "") {
-        int msg = QMessageBox::information(this, "Error", "Primero debe seleccionar un ticket");
+        QMessageBox::information(this, "Error", "Primero debe seleccionar un ticket");
         return;
     }
     ImprimirFactura fact(nTicket);
