@@ -138,9 +138,10 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          conf->getConexionLocal());
 
   // Asegurar que la tabla historico_stock tiene el campo notas
-  base.ejecutarSentencia("ALTER TABLE `historico_stock` ADD COLUMN IF NOT EXISTS "
-                         "`notas` VARCHAR(255);",
-                         conf->getConexionLocal());
+  base.ejecutarSentencia(
+      "ALTER TABLE `historico_stock` ADD COLUMN IF NOT EXISTS "
+      "`notas` VARCHAR(255);",
+      conf->getConexionLocal());
 
   base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `proveedores` ("
                          "  `idProveedor` INT PRIMARY KEY,"
@@ -175,7 +176,8 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          "`precios_locales` TINYINT(1) DEFAULT '0';",
                          conf->getConexionLocal());
 
-  // Asegurar que la tabla configuracion tiene los campos para las teclas rápidas de vendedores
+  // Asegurar que la tabla configuracion tiene los campos para las teclas
+  // rápidas de vendedores
   base.ejecutarSentencia("ALTER TABLE `configuracion` ADD COLUMN IF NOT EXISTS "
                          "`vendedor_f1` INT DEFAULT NULL;",
                          conf->getConexionLocal());
@@ -196,9 +198,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
    ******************************************************************************/
   QString conexionMaster = base.nombreConexionMaster();
   conf->setConexionMaster(conexionMaster);
-  if (conf->getConexionMaster() != conf->getConexionLocal()) {
-    ui->pushButtonGenerarVales->setEnabled(false);
-  }
+  ui->pushButtonGenerarVales->setEnabled(true);
 
   /******************************************************************************
    * CARGAR LOGO DE LA TIENDA
@@ -373,8 +373,8 @@ Tienda::~Tienda() {
   if (respuesta == QMessageBox::Yes) {
     base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                      "Copia de seguridad iniciada al cerrar");
-    // on_pushButtonCopia_clicked se encargará de usar el directorio guardado ("cseg")
-    // o de preguntar por uno si no está configurado.
+    // on_pushButtonCopia_clicked se encargará de usar el directorio guardado
+    // ("cseg") o de preguntar por uno si no está configurado.
     on_pushButtonCopia_clicked();
   }
 
@@ -724,8 +724,6 @@ void Tienda::refrescarConexiones() {
 
 void Tienda::on_pushButtonConectar_clicked() { refrescarConexiones(); }
 
-
-
 /**
  * @brief Comprueba si los vales del mes anterior ya están generados.
  *
@@ -734,45 +732,10 @@ void Tienda::on_pushButtonConectar_clicked() { refrescarConexiones(); }
  * propagados a la nube automáticamente por el SyncManager.
  */
 void Tienda::on_pushButtonGenerarVales_clicked() {
-  // Calcular el primer día del mes anterior (referencia para comprobar)
-  QDate hoy = QDate::currentDate();
-  QDate primerDiaMesAnterior = QDate(hoy.year(), hoy.month(), 1).addMonths(-1);
-  QString mesRef = primerDiaMesAnterior.toString("yyyy-MM");
-  QString mesLabel = primerDiaMesAnterior.toString("MMMM yyyy");
-
-  // Comprobar si ya existen vales generados para ese mes
-  QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
-  q.prepare("SELECT COUNT(*) FROM vales WHERE fechaEmision LIKE ?");
-  q.bindValue(0, mesRef + "%");
-  q.exec();
-
-  // if (q.first() && q.value(0).toInt() > 0) {
-  //   // Ya están generados: sólo informamos
-  //   QMessageBox::information(
-  //       this, "Vales ya generados",
-  //       QString("Los vales de %1 ya están generados (%2 vales)."
-  //               "\n\nSi necesitas regenerarlos, hazlo desde la base de datos.")
-  //           .arg(mesLabel)
-  //           .arg(q.value(0).toInt()));
-  //   return;
-  // }
-
-  // No están generados: pedir confirmación
-  int resp = QMessageBox::question(
-      this, "Generar vales",
-      QString("No se han encontrado vales para %1.\n"
-              "¿Deseas generar los vales de fidelidad ahora?")
-          .arg(mesLabel),
-      QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-
-  if (resp != QMessageBox::Yes)
-    return;
-
-  // Lanzar el proceso de generación
-  genVales = new GenerarVales(this);
+  // Lanzar el proceso de generación de vales de fidelidad
+  GenerarVales *genVales = new GenerarVales(this);
   genVales->exec();
-  // Los vales insertados en local serán propagados a la nube
-  // en el próximo ciclo de SyncManager (máx. 5 minutos)
+  delete genVales;
 }
 
 /******************************************************************************
@@ -796,9 +759,9 @@ void Tienda::on_pushButtonCopia_clicked() {
 
     // Si el usuario elige un directorio, lo guardamos para la próxima vez
     if (!directorio.isEmpty()) {
-        QMap<QString, QString> m;
-        m.insert("cseg", directorio);
-        base.guardarDirectorios(conf->getConexionLocal(), m);
+      QMap<QString, QString> m;
+      m.insert("cseg", directorio);
+      base.guardarDirectorios(conf->getConexionLocal(), m);
     }
   }
 

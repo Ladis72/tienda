@@ -8,8 +8,6 @@
 
 extern Configuracion *conf;
 
-#include <QCheckBox>
-#include <QGridLayout>
 
 namespace Ui {
 class GenerarVales;
@@ -38,12 +36,16 @@ private slots:
     /// Devuelve el % de descuento asignado a un cliente
     double descuentoCliente(int idCliente);
 
+    /// Suma las ventas de un cliente en todas las tiendas para el rango de fechas dado
+    double ventasTotalesCliente(int idCliente,
+                                const QString &desde,
+                                const QString &hasta);
+
 private:
     Ui::GenerarVales *ui;
     baseDatos base;
     /// Conexiones remotas activas para leer ventas (Opción B)
     QStringList tiendas;
-    QCheckBox *simularCheck;
 };
 
 #endif // GENERARVALES_H

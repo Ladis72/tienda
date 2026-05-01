@@ -1,5 +1,6 @@
 #include "directorios.h"
 #include <QFileDialog>
+#include <QMessageBox>
 #include "ui_directorios.h"
 
 Directorios::Directorios(QWidget *parent)

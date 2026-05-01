@@ -39,7 +39,8 @@ const QStringList SyncManager::TABLAS_MAESTRAS = {
 };
 
 const QMap<QString, QStringList> SyncManager::CAMPOS_EXCLUIDOS = {
-    {"articulos", {"stock", "min", "max", "pendientes_pedido", "ultima_venta", "ultimo_pedido", "encargados", "minimo_pedido"}}
+    {"articulos", {"stock", "min", "max", "pendientes_pedido", "ultima_venta", "ultimo_pedido", "encargados", "minimo_pedido"}},
+    {"vales", {"idvales"}}
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -101,17 +102,33 @@ void SyncManager::crearTablasSyncLocal()
         q.exec(QString("ALTER TABLE `%1` ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP "
                        "ON UPDATE CURRENT_TIMESTAMP").arg(tabla));
         
-        // Evitar duplicar índices: solo añadir si no existe
-        q.exec(QString("SELECT COUNT(*) FROM information_schema.statistics "
-                       "WHERE table_schema = DATABASE() AND table_name = '%1' "
-                       "AND column_name = 'updated_at'").arg(tabla));
-        if (q.next() && q.value(0).toInt() == 0) {
-            q.exec(QString("ALTER TABLE `%1` ADD INDEX (updated_at)").arg(tabla));
+        // Evitar duplicar índices: solo añadir si no existe. 
+        // Usamos una consulta más robusta que no dependa de DATABASE() si es posible,
+        // aunque en local DATABASE() suele ser fiable.
+        QString checkIdx = QString("SELECT COUNT(*) FROM information_schema.statistics "
+                                   "WHERE table_schema = (SELECT DATABASE()) AND table_name = '%1' "
+                                   "AND column_name = 'updated_at'").arg(tabla);
+        if (q.exec(checkIdx) && q.next() && q.value(0).toInt() == 0) {
+            q.exec(QString("ALTER TABLE `%1` ADD INDEX idx_%1_updated (updated_at)").arg(tabla));
         }
         
         q.prepare("INSERT IGNORE INTO sync_control (tabla) VALUES (?)");
         q.addBindValue(tabla);
         q.exec();
+    }
+
+    // ── Migración: vale_uuid como identificador global único para vales ──────
+    // Evita colisiones de idvales AUTO_INCREMENT entre tiendas al sincronizar.
+    q.exec("ALTER TABLE `vales` ADD COLUMN IF NOT EXISTS "
+           "vale_uuid CHAR(36) NOT NULL DEFAULT ''");
+    // Rellenar UUID en los vales existentes que lo tengan vacío
+    q.exec("UPDATE vales SET vale_uuid = UUID() WHERE vale_uuid = '' OR vale_uuid IS NULL");
+    // Índice único para garantizar unicidad en la nube
+    q.exec("SELECT COUNT(*) FROM information_schema.statistics "
+           "WHERE table_schema = DATABASE() AND table_name = 'vales' "
+           "AND index_name = 'uq_vale_uuid'");
+    if (q.next() && q.value(0).toInt() == 0) {
+        q.exec("ALTER TABLE vales ADD UNIQUE INDEX uq_vale_uuid (vale_uuid)");
     }
 
     q.prepare("INSERT IGNORE INTO sync_control (tabla) VALUES ('sync_unificaciones')");
@@ -504,11 +521,13 @@ QDateTime SyncManager::ultimaSync(const QString &tabla)
 
 QString SyncManager::getPkTabla(const QString &tabla) const
 {
+    // Para 'vales' se usa vale_uuid como clave de sincronización global
+    // porque idvales es AUTO_INCREMENT local y puede colisionar entre tiendas.
     static const QMap<QString, QString> m = {
         {"articulos","cod"},{"clientes","idCliente"},{"familias","id"},{"fabricantes","id"},
         {"proveedores","idProveedor"},{"codaux","id"},{"fpago","id"},{"impuestos","tipoIva"},
         {"formatos","idformato"},{"motivosEntrada","idtiposEntrada"},{"usuarios","id"},
-        {"permisos","id"},{"vales","idvales"},{"directorios","id"}
+        {"permisos","id"},{"vales","vale_uuid"},{"directorios","id"}
     };
     return m.value(tabla, "");
 }
@@ -518,8 +537,38 @@ void SyncManager::prepararTablasRemotas()
     if (!m_hayConexion) return;
     QSqlQuery q(QSqlDatabase::database(CONEXION_NUBE));
     for (const QString &tabla : TABLAS_MAESTRAS) {
-        q.exec(QString("ALTER TABLE `%1` ADD COLUMN id_tienda_origen INT DEFAULT NULL").arg(tabla));
-        q.exec(QString("ALTER TABLE `%1` ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP").arg(tabla));
-        q.exec(QString("ALTER TABLE `%1` ADD INDEX (updated_at)").arg(tabla));
+        q.exec(QString("ALTER TABLE `%1` ADD COLUMN IF NOT EXISTS id_tienda_origen INT DEFAULT NULL").arg(tabla));
+        q.exec(QString("ALTER TABLE `%1` ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP").arg(tabla));
+        
+        // 1. Asegurar Clave Primaria en la nube si falta
+        QString pk = getPkTabla(tabla);
+        if (!pk.isEmpty() && pk != "vale_uuid") { // vale_uuid se maneja aparte abajo
+             q.exec(QString("SELECT COUNT(*) FROM information_schema.statistics "
+                            "WHERE table_schema = (SELECT DATABASE()) AND table_name = '%1' "
+                            "AND index_name = 'PRIMARY'").arg(tabla));
+             if (q.next() && q.value(0).toInt() == 0) {
+                 qDebug() << "SyncManager: Añadiendo PK faltante a" << tabla << "en la nube";
+                 q.exec(QString("ALTER TABLE `%1` ADD PRIMARY KEY (`%2`)").arg(tabla, pk));
+             }
+        }
+
+        // 2. Evitar error si el índice de updated_at ya existe
+        // Usamos un nombre de índice explícito para evitar duplicados automáticos
+        q.exec(QString("SELECT COUNT(*) FROM information_schema.statistics "
+                       "WHERE table_schema = (SELECT DATABASE()) AND table_name = '%1' "
+                       "AND column_name = 'updated_at'").arg(tabla));
+        if (q.next() && q.value(0).toInt() == 0) {
+            q.exec(QString("ALTER TABLE `%1` ADD INDEX idx_%1_updated (updated_at)").arg(tabla));
+        }
     }
+
+    // Migración vale_uuid en la nube
+    q.exec("ALTER TABLE `vales` ADD COLUMN IF NOT EXISTS "
+           "vale_uuid CHAR(36) NOT NULL DEFAULT ''");
+    q.exec("UPDATE vales SET vale_uuid = UUID() WHERE vale_uuid = '' OR vale_uuid IS NULL");
+    q.exec("SELECT COUNT(*) FROM information_schema.statistics "
+           "WHERE table_schema = DATABASE() AND table_name = 'vales' "
+           "AND index_name = 'uq_vale_uuid'");
+    if (q.next() && q.value(0).toInt() == 0)
+        q.exec("ALTER TABLE vales ADD UNIQUE INDEX uq_vale_uuid (vale_uuid)");
 }
