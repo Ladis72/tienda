@@ -44,3 +44,8 @@ Makefile.Release
 Thumbs.db
 imagenes/
 documentos/
+scratch/
+scripts/
+.agents/
+.cache/
+.qtcreator/
