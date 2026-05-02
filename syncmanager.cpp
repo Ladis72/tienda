@@ -200,6 +200,17 @@ bool SyncManager::conectarNube()
         QSqlDatabase::removeDatabase(CONEXION_NUBE);
         return false;
     }
+    
+    // Forzar zona horaria UTC para que los updated_at sean universales
+    QSqlQuery qTZ(dbNube);
+    qTZ.exec("SET time_zone = '+00:00'");
+    
+    // Verificar conexión real
+    qTZ.exec("SELECT DATABASE()");
+    if (qTZ.next()) {
+        qDebug() << "SyncManager: Conectado a" << dbNube.hostName() << "Base de Datos:" << qTZ.value(0).toString();
+    }
+    
     m_hayConexion = true;
     return true;
 }
@@ -340,6 +351,10 @@ int SyncManager::subirCambios()
                               .arg(tabla, campos.join(","), valores.join(","), updates.join(","));
                 QSqlQuery ins(dbNube);
                 ok = ins.exec(sql);
+                if (!ok) {
+                    qDebug() << "SyncManager: Error subiendo a" << tabla << ":" << ins.lastError().text();
+                    qDebug() << "SQL fallido:" << sql;
+                }
             } else ok = true;
         }
         if (ok) { procesados << idCola; subidos++; }
@@ -392,46 +407,31 @@ int SyncManager::bajarCambios()
 
     for (const QString &tabla : TABLAS_MAESTRAS) {
         QDateTime ultimaSyncActual = ultimaSync(tabla);
-        QDateTime desde = ultimaSyncActual.addSecs(-120); // 2 min overlap for safety
+        QDateTime desde = ultimaSyncActual.addSecs(-120); // 2 min overlap
         QSqlQuery qN(dbNube);
         
         qDebug() << "   -> Consultando tabla:" << tabla << "desde" << desde.toString("yyyy-MM-dd HH:mm:ss");
 
         qN.prepare(QString("SELECT * FROM `%1` WHERE updated_at > ? ORDER BY updated_at ASC").arg(tabla));
-        qN.addBindValue(desde.toString("yyyy-MM-dd HH:mm:ss"));
-        if (!qN.exec()) continue;
+        qN.addBindValue(desde.toUTC().toString("yyyy-MM-dd HH:mm:ss"));
+        if (!qN.exec()) {
+            qDebug() << "SyncManager: Error consultando tabla" << tabla << "en la nube:" << qN.lastError().text();
+            continue;
+        }
 
         QString pk = getPkTabla(tabla);
         QStringList excluidos = CAMPOS_EXCLUIDOS.value(tabla);
         QSqlRecord recLoc = dbLocal.record(tabla);
         QStringList avisosPrecios;
         QDateTime maxUpdate = desde;
-        int count = 0;
 
         QSqlQuery(dbLocal).exec("SET @skip_sync = 1");
         while (qN.next()) {
-            count++;
             QSqlRecord rec = qN.record();
             QString idReg = rec.value(pk).toString();
             QDateTime recUpd = rec.value("updated_at").toDateTime();
 
-            QStringList campos, valores, updates;
-            for (int i = 0; i < rec.count(); ++i) {
-                QString campo = rec.fieldName(i);
-                if (recLoc.indexOf(campo) == -1 || excluidos.contains(campo.toLower())) continue;
-                QVariant val = rec.value(i);
-                QString vStr = "NULL";
-                if (!val.isNull()) {
-                    if (val.userType() == QMetaType::QDateTime || val.userType() == QMetaType::QDate)
-                        vStr = "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
-                    else
-                        vStr = "'" + val.toString().replace("'", "''") + "'";
-                }
-                campos << "`" + campo + "`"; valores << vStr;
-                updates << QString("`%1` = VALUES(`%1`)").arg(campo);
-            }
-
-            // Detectar cambio de precio antes de aplicar
+            // Variables para alerta de precios
             double pOld = 0;
             bool existeLoc = false;
             if (tabla == "articulos") {
@@ -444,29 +444,46 @@ int SyncManager::bajarCambios()
                 }
             }
 
+            QStringList campos, valores, updates;
+            for (int i = 0; i < rec.count(); ++i) {
+                QString campo = rec.fieldName(i);
+                
+                // NUNCA sincronizar el ID físico local ni la PK aquí (se añade luego)
+                if (campo == pk || campo.toLower() == "id" + tabla.toLower()) continue;
+                if (recLoc.indexOf(campo) == -1 || excluidos.contains(campo.toLower())) continue;
+                
+                QVariant val = rec.value(i);
+                QString vStr = "NULL";
+                if (!val.isNull()) {
+                    if (val.userType() == QMetaType::QDateTime || val.userType() == QMetaType::QDate)
+                        vStr = "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
+                    else
+                        vStr = "'" + val.toString().replace("'", "''") + "'";
+                }
+                campos << "`" + campo + "`"; valores << vStr;
+                updates << QString("`%1` = VALUES(`%1`)").arg(campo);
+            }
+            
+            campos << "`" + pk + "`";
+            valores << "'" + idReg.replace("'", "''") + "'";
+
             QString sql = QString("INSERT INTO `%1` (%2) VALUES (%3) ON DUPLICATE KEY UPDATE %4")
                           .arg(tabla, campos.join(","), valores.join(","), updates.join(","));
             
             QSqlQuery qIns(dbLocal);
             if (qIns.exec(sql)) {
-                QDateTime regUpdate = rec.value("updated_at").toDateTime();
-                if (regUpdate > maxUpdate) maxUpdate = regUpdate;
-                
-                // Solo contamos como "bajado" si es realmente más nuevo que nuestra última marca
-                if (regUpdate > ultimaSyncActual) {
+                if (recUpd > maxUpdate) maxUpdate = recUpd;
+                if (recUpd > ultimaSyncActual) {
                     bajados++;
                 }
                 if (tabla == "articulos" && existeLoc) {
                     double pNew = rec.value("pvp").toDouble();
                     if (qAbs(pOld - pNew) > 0.01) {
-                        qDebug() << "   [!] Cambio de precio detectado:" << rec.value("descripcion").toString() << pOld << "->" << pNew;
-                        QSqlQuery qE(dbLocal);
-                        qE.prepare("SELECT count(*) FROM precios_tienda WHERE cod_articulo = ?");
-                        qE.addBindValue(idReg);
-                        if (qE.exec() && qE.first() && qE.value(0).toInt() == 0)
-                            avisosPrecios << QString("- %1: %2 -> %3").arg(rec.value("descripcion").toString()).arg(pOld).arg(pNew);
+                        avisosPrecios << QString("- %1: %2 -> %3").arg(rec.value("descripcion").toString()).arg(pOld).arg(pNew);
                     }
                 }
+            } else {
+                qDebug() << "SyncManager: ERROR bajando" << tabla << ":" << qIns.lastError().text();
             }
         }
         if (!avisosPrecios.isEmpty()) {
