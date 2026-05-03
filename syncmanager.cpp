@@ -34,8 +34,7 @@ const QStringList SyncManager::TABLAS_MAESTRAS = {
     "codaux",       // depende de articulos
     "usuarios",
     "permisos",
-    "vales",         // vales de fidelidad (estado se propaga via nube)
-    "directorios"    // configuración de rutas compartida
+    "vales"         // vales de fidelidad (estado se propaga via nube)
 };
 
 const QMap<QString, QStringList> SyncManager::CAMPOS_EXCLUIDOS = {
@@ -153,6 +152,12 @@ void SyncManager::crearTriggers()
         crearTrigger(tabla, pk, "UPDATE");
         crearTrigger(tabla, pk, "DELETE");
     }
+    
+    // Limpieza: eliminar triggers de tablas que ya no se sincronizan (como 'directorios')
+    QSqlQuery q(QSqlDatabase::database("DB"));
+    q.exec("DROP TRIGGER IF EXISTS sync_directorios_insert");
+    q.exec("DROP TRIGGER IF EXISTS sync_directorios_update");
+    q.exec("DROP TRIGGER IF EXISTS sync_directorios_delete");
 }
 
 void SyncManager::crearTrigger(const QString &nombreTabla, const QString &clavePrimaria, const QString &evento)
@@ -544,7 +549,7 @@ QString SyncManager::getPkTabla(const QString &tabla) const
         {"articulos","cod"},{"clientes","idCliente"},{"familias","id"},{"fabricantes","id"},
         {"proveedores","idProveedor"},{"codaux","id"},{"fpago","id"},{"impuestos","tipoIva"},
         {"formatos","idformato"},{"motivosEntrada","idtiposEntrada"},{"usuarios","id"},
-        {"permisos","id"},{"vales","vale_uuid"},{"directorios","id"}
+        {"permisos","id"},{"vales","vale_uuid"}
     };
     return m.value(tabla, "");
 }
@@ -552,40 +557,64 @@ QString SyncManager::getPkTabla(const QString &tabla) const
 void SyncManager::prepararTablasRemotas()
 {
     if (!m_hayConexion) return;
-    QSqlQuery q(QSqlDatabase::database(CONEXION_NUBE));
+    
+    QSqlDatabase dbLocal = QSqlDatabase::database("DB");
+    QSqlDatabase dbNube = QSqlDatabase::database(CONEXION_NUBE);
+    QSqlQuery qN(dbNube);
+    QSqlQuery qL(dbLocal);
+
     for (const QString &tabla : TABLAS_MAESTRAS) {
-        q.exec(QString("ALTER TABLE `%1` ADD COLUMN IF NOT EXISTS id_tienda_origen INT DEFAULT NULL").arg(tabla));
-        q.exec(QString("ALTER TABLE `%1` ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP").arg(tabla));
+        // 0. Asegurar que la tabla existe en la nube (copiando esquema local si falta)
+        qN.exec(QString("SHOW TABLES LIKE '%1'").arg(tabla));
+        if (!qN.next()) {
+            qDebug() << "SyncManager: La tabla" << tabla << "no existe en la nube. Intentando crearla...";
+            if (qL.exec(QString("SHOW CREATE TABLE `%1`").arg(tabla)) && qL.next()) {
+                QString createSql = qL.value(1).toString();
+                // Ejecutamos el CREATE TABLE tal cual viene del local
+                if (qN.exec(createSql)) {
+                    qDebug() << "SyncManager: Tabla" << tabla << "creada con éxito en la nube.";
+                } else {
+                    qWarning() << "SyncManager: Error al crear tabla" << tabla << "en la nube:" << qN.lastError().text();
+                    continue; // No podemos seguir con esta tabla si no se pudo crear
+                }
+            } else {
+                qWarning() << "SyncManager: No se pudo obtener el esquema local para la tabla" << tabla;
+                continue;
+            }
+        }
+
+        // 1. Asegurar columnas de sincronización (por si acaso la tabla ya existía pero era antigua)
+        qN.exec(QString("ALTER TABLE `%1` ADD COLUMN IF NOT EXISTS id_tienda_origen INT DEFAULT NULL").arg(tabla));
+        qN.exec(QString("ALTER TABLE `%1` ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP").arg(tabla));
         
-        // 1. Asegurar Clave Primaria en la nube si falta
+        // 2. Asegurar Clave Primaria en la nube si falta
         QString pk = getPkTabla(tabla);
         if (!pk.isEmpty() && pk != "vale_uuid") { // vale_uuid se maneja aparte abajo
-             q.exec(QString("SELECT COUNT(*) FROM information_schema.statistics "
+             qN.exec(QString("SELECT COUNT(*) FROM information_schema.statistics "
                             "WHERE table_schema = (SELECT DATABASE()) AND table_name = '%1' "
                             "AND index_name = 'PRIMARY'").arg(tabla));
-             if (q.next() && q.value(0).toInt() == 0) {
+             if (qN.next() && qN.value(0).toInt() == 0) {
                  qDebug() << "SyncManager: Añadiendo PK faltante a" << tabla << "en la nube";
-                 q.exec(QString("ALTER TABLE `%1` ADD PRIMARY KEY (`%2`)").arg(tabla, pk));
+                 qN.exec(QString("ALTER TABLE `%1` ADD PRIMARY KEY (`%2`)").arg(tabla, pk));
              }
         }
 
-        // 2. Evitar error si el índice de updated_at ya existe
-        // Usamos un nombre de índice explícito para evitar duplicados automáticos
-        q.exec(QString("SELECT COUNT(*) FROM information_schema.statistics "
+        // 3. Evitar error si el índice de updated_at ya existe
+        qN.exec(QString("SELECT COUNT(*) FROM information_schema.statistics "
                        "WHERE table_schema = (SELECT DATABASE()) AND table_name = '%1' "
                        "AND column_name = 'updated_at'").arg(tabla));
-        if (q.next() && q.value(0).toInt() == 0) {
-            q.exec(QString("ALTER TABLE `%1` ADD INDEX idx_%1_updated (updated_at)").arg(tabla));
+        if (qN.next() && qN.value(0).toInt() == 0) {
+            qN.exec(QString("ALTER TABLE `%1` ADD INDEX idx_%1_updated (updated_at)").arg(tabla));
         }
     }
 
-    // Migración vale_uuid en la nube
-    q.exec("ALTER TABLE `vales` ADD COLUMN IF NOT EXISTS "
+    // Migración vale_uuid en la nube (caso especial para vales)
+    qN.exec("ALTER TABLE `vales` ADD COLUMN IF NOT EXISTS "
            "vale_uuid CHAR(36) NOT NULL DEFAULT ''");
-    q.exec("UPDATE vales SET vale_uuid = UUID() WHERE vale_uuid = '' OR vale_uuid IS NULL");
-    q.exec("SELECT COUNT(*) FROM information_schema.statistics "
+    qN.exec("UPDATE vales SET vale_uuid = UUID() WHERE vale_uuid = '' OR vale_uuid IS NULL");
+    qN.exec("SELECT COUNT(*) FROM information_schema.statistics "
            "WHERE table_schema = DATABASE() AND table_name = 'vales' "
            "AND index_name = 'uq_vale_uuid'");
-    if (q.next() && q.value(0).toInt() == 0)
-        q.exec("ALTER TABLE vales ADD UNIQUE INDEX uq_vale_uuid (vale_uuid)");
+    if (qN.next() && qN.value(0).toInt() == 0)
+        qN.exec("ALTER TABLE vales ADD UNIQUE INDEX uq_vale_uuid (vale_uuid)");
 }
