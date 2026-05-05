@@ -11,6 +11,12 @@
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QtConcurrent/QtConcurrent>
+#include <QToolBar>
+#include <QTextCharFormat>
+#include <QTextCursor>
+#include <QMimeData>
+#include <QAction>
+#include <QVBoxLayout>
 #include "dialogcomparararticulos.h"
 #include "dialoganadirapedido.h"
 #include "dialogcambiocodigo.h"
@@ -64,9 +70,116 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   mapper.addMapping(ui->lineEditCosto, 12);
   mapper.addMapping(ui->lineEditCodFabricante, 13);
   mapper.addMapping(ui->lineEditFoto, 14);
-  mapper.addMapping(ui->plainTextEdit, 15);
+  // NOTA: textEditNotas (notas HTML) se carga/guarda manualmente en
+  //       refrescarBotones() y recogerDatosFormulario() respectivamente.
+  //       QDataWidgetMapper no gestiona bien HTML en QTextEdit.
   mapper.addMapping(ui->comboBoxFormato, 16);
   mapper.addMapping(ui->lineEditCantidad, 17);
+
+  // ── Barra de herramientas de formato para las notas ──────────────────────
+  // Se inserta dinámicamente encima del QTextEdit usando el layout de la fila 9.
+  // QToolBar necesita un QWidget padre; aquí usamos el widget «General».
+  QToolBar *tbNotas = new QToolBar(ui->General);
+  tbNotas->setObjectName("toolBarNotas");
+  tbNotas->setIconSize(QSize(16, 16));
+  tbNotas->setStyleSheet(
+      "QToolBar { background: #fff9f0; border: 1px solid #ffe0b2; "
+      "           border-radius: 4px; padding: 2px; spacing: 4px; }"
+      "QToolButton { padding: 2px 6px; font-weight: bold; }"
+      "QToolButton:checked { background: #ffe0b2; border-radius: 3px; }"
+  );
+
+  // Botón Negrita
+  QAction *actBold = tbNotas->addAction("B");
+  actBold->setCheckable(true);
+  actBold->setToolTip(tr("Negrita (Ctrl+B)"));
+  QFont fBold = actBold->font(); fBold.setBold(true); actBold->setFont(fBold);
+  connect(actBold, &QAction::triggered, this, [this](bool on){
+      QTextCharFormat fmt;
+      fmt.setFontWeight(on ? QFont::Bold : QFont::Normal);
+      ui->textEditNotas->mergeCurrentCharFormat(fmt);
+  });
+
+  // Botón Cursiva
+  QAction *actItalic = tbNotas->addAction("I");
+  actItalic->setCheckable(true);
+  actItalic->setToolTip(tr("Cursiva (Ctrl+I)"));
+  QFont fItalic = actItalic->font(); fItalic.setItalic(true); actItalic->setFont(fItalic);
+  connect(actItalic, &QAction::triggered, this, [this](bool on){
+      QTextCharFormat fmt;
+      fmt.setFontItalic(on);
+      ui->textEditNotas->mergeCurrentCharFormat(fmt);
+  });
+
+  // Botón Subrayado
+  QAction *actUnder = tbNotas->addAction("U");
+  actUnder->setCheckable(true);
+  actUnder->setToolTip(tr("Subrayado (Ctrl+U)"));
+  QFont fUnder = actUnder->font(); fUnder.setUnderline(true); actUnder->setFont(fUnder);
+  connect(actUnder, &QAction::triggered, this, [this](bool on){
+      QTextCharFormat fmt;
+      fmt.setFontUnderline(on);
+      ui->textEditNotas->mergeCurrentCharFormat(fmt);
+  });
+
+  tbNotas->addSeparator();
+
+  // Botón: Pegar como texto plano (sin formato)
+  QAction *actPastePlain = tbNotas->addAction(tr("Pegar sin formato"));
+  actPastePlain->setToolTip(tr("Pega el texto del portapapeles eliminando todo el formato"));
+  connect(actPastePlain, &QAction::triggered, this, [this](){
+      const QMimeData *md = QApplication::clipboard()->mimeData();
+      if (md && md->hasText()) {
+          ui->textEditNotas->insertPlainText(md->text());
+      }
+  });
+
+  tbNotas->addSeparator();
+
+  // Botón: Limpiar todo el formato de la selección
+  QAction *actClearFmt = tbNotas->addAction(tr("Limpiar formato"));
+  actClearFmt->setToolTip(tr("Elimina el formato del texto seleccionado"));
+  connect(actClearFmt, &QAction::triggered, this, [this](){
+      QTextCursor cur = ui->textEditNotas->textCursor();
+      if (cur.hasSelection()) {
+          QTextCharFormat fmt;
+          // Al no establecer FontWeight, mergeCharFormat mantendrá el estado actual (negrita o normal)
+          fmt.setFontItalic(false);
+          fmt.setFontUnderline(false);
+          fmt.clearProperty(QTextFormat::ForegroundBrush);
+          fmt.clearProperty(QTextFormat::BackgroundBrush);
+          fmt.clearProperty(QTextFormat::FontFamily);
+          fmt.clearProperty(QTextFormat::FontPointSize);
+          
+          // mergeCharFormat mezcla el formato nuevo con el existente en lugar de reemplazarlo totalmente
+          cur.mergeCharFormat(fmt);
+      }
+  });
+
+  // Sincronizar estado de los botones de formato con el cursor actual
+  connect(ui->textEditNotas, &QTextEdit::currentCharFormatChanged,
+          this, [actBold, actItalic, actUnder](const QTextCharFormat &fmt){
+      actBold->setChecked(fmt.fontWeight() >= QFont::Bold);
+      actItalic->setChecked(fmt.fontItalic());
+      actUnder->setChecked(fmt.fontUnderline());
+  });
+
+  // Insertar la toolbar en el gridLayout encima del textEditNotas (fila 9)
+  // Obtenemos el gridLayout del widget General y añadimos la toolbar en fila 8b
+  // La forma más fiable es envolver en un layout vertical dentro de un contenedor.
+  QWidget *notasContainer = new QWidget(ui->General);
+  QVBoxLayout *notasLayout = new QVBoxLayout(notasContainer);
+  notasLayout->setContentsMargins(0, 0, 0, 0);
+  notasLayout->setSpacing(2);
+  notasLayout->addWidget(tbNotas);
+  notasLayout->addWidget(ui->textEditNotas);
+  // Insertar el contenedor en el gridLayout en la misma posición que el textEditNotas
+  QGridLayout *grid = qobject_cast<QGridLayout*>(ui->General->layout());
+  if (grid) {
+      // Quitar el textEditNotas del grid (ya fue puesto por el .ui)
+      grid->removeWidget(ui->textEditNotas);
+      grid->addWidget(notasContainer, 9, 0, 1, 10);
+  }
 
   mapper.toFirst();
 
@@ -96,7 +209,22 @@ void Articulos::refrescarBotones(int i) {
   QPixmap imagenAjustada = imagen.scaled(200, 200, Qt::KeepAspectRatio);
 
   ui->labelFoto->setPixmap(imagenAjustada);
-  
+
+  // ── Cargar notas como HTML en el editor de texto enriquecido ─────────────
+  // El campo notas se lee directamente del modelo para esta fila.
+  // Como el mapper ya no gestiona textEditNotas, lo hacemos aquí manualmente.
+  int filaActual = mapper.currentIndex();
+  if (filaActual >= 0 && modeloTabla && filaActual < modeloTabla->rowCount()) {
+      QString notasRaw = modeloTabla->record(filaActual).value("notas").toString();
+      // Si el contenido parece HTML (empieza con '<'), cargarlo como tal;
+      // de lo contrario tratarlo como texto plano para retrocompatibilidad.
+      if (notasRaw.trimmed().startsWith('<')) {
+          ui->textEditNotas->setHtml(notasRaw);
+      } else {
+          ui->textEditNotas->setPlainText(notasRaw);
+      }
+  }
+
   // Buscar excepción de precio local para mostrarla en el formulario
   QSqlRecord registroConOverride = base.consulta_producto(conf->getConexionCommon(), ui->lineEditCod->text());
   if (!registroConOverride.isEmpty()) {
@@ -250,7 +378,15 @@ QStringList Articulos::recogerDatosFormulario() {
   } else {
     listaDatosFormulario.append(ui->lineEditFoto->text());
   }
-  listaDatosFormulario.append(ui->plainTextEdit->toPlainText());
+  // Guardar las notas como HTML si tienen formato, o como texto plano si están vacías.
+  // Esto garantiza retrocompatibilidad con registros que ya tenían texto plano en la BD.
+  QString notasHtml = ui->textEditNotas->toHtml();
+  QString notasPlain = ui->textEditNotas->toPlainText().trimmed();
+  if (notasPlain.isEmpty()) {
+      listaDatosFormulario.append("");  // Campo vacío → guardar vacío
+  } else {
+      listaDatosFormulario.append(notasHtml);  // Guardar HTML completo
+  }
   listaDatosFormulario.append(ui->comboBoxFormato->currentText());
   if (ui->lineEditCantidad->text().isEmpty()) {
     listaDatosFormulario.append(nullptr);
@@ -587,6 +723,7 @@ void Articulos::borrarFormulario() {
   ui->labelPrecioGrande->setText("0.00 €");
   ui->comboBoxFormato->setCurrentIndex(0);
   ui->pushButtonCambiarCodigo->setEnabled(false);
+  ui->textEditNotas->clear();  // Limpiar el editor de notas enriquecidas
 }
 
 void Articulos::on_pushButtonAnterior_clicked() {
