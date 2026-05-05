@@ -439,9 +439,16 @@
             </property>
            </widget>
           </item>
-          <item row="9" column="0" colspan="10">
-           <widget class="QPlainTextEdit" name="plainTextEdit"/>
-          </item>
+           <item row="9" column="0" colspan="10">
+            <widget class="QTextEdit" name="textEditNotas">
+             <property name="toolTip">
+              <string>Notas del artículo. Acepta texto con formato HTML (negrita, cursiva, listas, etc.)</string>
+             </property>
+             <property name="acceptRichText">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
           <item row="1" column="1" colspan="6">
            <widget class="QLineEdit" name="lineEditDesc"/>
           </item>
@@ -846,7 +853,7 @@
   <tabstop>pushButtonCerrar</tabstop>
   <tabstop>pushButtonVer</tabstop>
   <tabstop>pushButtonPonerFoto</tabstop>
-  <tabstop>plainTextEdit</tabstop>
+  <tabstop>textEditNotas</tabstop>
   <tabstop>treeWidgetStockTiendas</tabstop>
   <tabstop>lineEditEncargados</tabstop>
   <tabstop>lineEditPendientes</tabstop>
