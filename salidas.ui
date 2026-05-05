@@ -85,6 +85,12 @@
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
         </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
        </spacer>
       </item>
       <item>
@@ -133,6 +139,12 @@
        <spacer name="horizontalSpacerDest">
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
         </property>
        </spacer>
       </item>
@@ -246,11 +258,11 @@
          <height>40</height>
         </size>
        </property>
-       <property name="text">
-        <string>Añadir Línea</string>
-       </property>
        <property name="styleSheet">
         <string notr="true">QPushButton { background-color: #ef6c00; color: white; font-weight: bold; }</string>
+       </property>
+       <property name="text">
+        <string>Añadir Línea</string>
        </property>
       </widget>
      </item>
@@ -275,11 +287,11 @@
          <height>40</height>
         </size>
        </property>
-       <property name="text">
-        <string>Procesar Salida</string>
-       </property>
        <property name="styleSheet">
         <string notr="true">QPushButton { background-color: #2e7d32; color: white; font-weight: bold; }</string>
+       </property>
+       <property name="text">
+        <string>Procesar Salida</string>
        </property>
       </widget>
      </item>
@@ -287,6 +299,12 @@
       <spacer name="horizontalSpacerActions">
        <property name="orientation">
         <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
        </property>
       </spacer>
      </item>
@@ -310,6 +328,19 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>comboBoxDestino</tabstop>
+  <tabstop>lineEditCod</tabstop>
+  <tabstop>lineEditDesc</tabstop>
+  <tabstop>lineEditCantidad</tabstop>
+  <tabstop>lineEditPrecio</tabstop>
+  <tabstop>dateEditFC</tabstop>
+  <tabstop>pushButtonAgregar</tabstop>
+  <tabstop>pushButtonBorrar</tabstop>
+  <tabstop>pushButtonEnviar</tabstop>
+  <tabstop>pushButtonCerrar</tabstop>
+  <tabstop>tableView</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

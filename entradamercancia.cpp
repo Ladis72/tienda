@@ -26,6 +26,10 @@ EntradaMercancia::EntradaMercancia(QWidget *parent)
     ui->pushButtonAgregarLinea->setDefault(false);
     ui->pushButtonAceptar->setAutoDefault(false);
     ui->pushButtonAceptar->setDefault(false);
+    ui->pushButtonBorrar->setAutoDefault(false);
+    ui->pushButtonBorrar->setDefault(false);
+    ui->pushButtonSalir->setAutoDefault(false);
+    ui->pushButtonSalir->setDefault(false);
 
     // Cadena de enfoque mediante ENTER
     connect(ui->lineEditUds, &QLineEdit::returnPressed, [this](){
