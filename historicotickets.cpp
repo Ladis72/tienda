@@ -30,12 +30,12 @@ void HistoricoTickets::mostrarTickets()
     fechaF = ui->dateTimeEditHasta->date().toString("yyyy-MM-dd");
     horaI = ui->dateTimeEditDesde->time().toString("HH:mm:ss");
     horaF = ui->dateTimeEditHasta->time().toString("HH:mm:ss");
-    listaTickets->setQuery("SELECT * FROM tickets WHERE concat_ws('/',fecha,hora) >='" + fechaI
-                               + "/" + horaI
-                               + "' AND "
-                                 "concat_ws('/',fecha,hora) <= '"
-                               + fechaF + "/" + horaF + "'",
-                           QSqlDatabase::database(conf->getConexionLocal()));
+    QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
+    query.prepare("SELECT * FROM tickets WHERE concat_ws('/',fecha,hora) >= ? AND concat_ws('/',fecha,hora) <= ?");
+    query.bindValue(0, fechaI + "/" + horaI);
+    query.bindValue(1, fechaF + "/" + horaF);
+    query.exec();
+    listaTickets->setQuery(query);
     QStandardItemModel *vistaTickets = new QStandardItemModel(listaTickets->rowCount(),
                                                               listaTickets->columnCount() - 3, this);
     for (int i = 0; i < listaTickets->rowCount(); ++i) {
@@ -103,8 +103,11 @@ void HistoricoTickets::on_tableViewTickets_activated(const QModelIndex &index)
 
     if (nTicket.isEmpty()) return;
 
-    ticket->setQuery("SELECT * FROM lineasticket WHERE nticket = " + nTicket,
-                     QSqlDatabase::database(conf->getConexionLocal()));
+    QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
+    q.prepare("SELECT * FROM lineasticket WHERE nticket = ?");
+    q.bindValue(0, nTicket);
+    q.exec();
+    ticket->setQuery(q);
 
     ui->tableViewLineasTicket->setModel(ticket);
     ui->tableViewLineasTicket->hideColumn(0); // id
@@ -134,9 +137,11 @@ void HistoricoTickets::on_pushButtonFormaPago_clicked()
         if (idFormaPago == "") {
             return;
         }
-        QSqlQuery consulta = base.ejecutarSentencia("UPDATE tickets SET fpago ='" + FP->resultado
-                                                        + "' WHERE ticket = '" + nTicket + "'",
-                                                    conf->getConexionLocal());
+        QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
+        consulta.prepare("UPDATE tickets SET fpago = ? WHERE ticket = ?");
+        consulta.bindValue(0, FP->resultado);
+        consulta.bindValue(1, nTicket);
+        consulta.exec();
         qDebug() << consulta.lastError();
         mostrarTickets();
     }

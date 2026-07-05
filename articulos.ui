@@ -175,7 +175,21 @@
            </widget>
           </item>
           <item row="2" column="6">
-           <widget class="QLineEdit" name="lineEditPvp"/>
+           <layout class="QHBoxLayout" name="horizontalLayoutPvp">
+            <item>
+             <widget class="QLineEdit" name="lineEditPvp"/>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonHistorialPrecios">
+              <property name="text">
+               <string>Historial Precios</string>
+              </property>
+              <property name="toolTip">
+               <string>Ver historial de cambios de precio</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
           <item row="7" column="4">
            <widget class="QLabel" name="label_12">

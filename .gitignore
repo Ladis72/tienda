@@ -49,3 +49,30 @@ scripts/
 .agents/
 .cache/
 .qtcreator/
+
+# SEC-06: Bases de datos locales (pueden contener datos reales)
+*.db
+*.sqlite
+DB
+.database
+
+# SEC-06: Dumps SQL con datos reales
+tienda.sql
+*.dump.sql
+
+# SEC-06: Logs
+*.log
+
+# SEC-06: Certificados SSL
+*.pem
+*.crt
+*.cer
+*.ca-bundle
+
+# SEC-06: Ficheros de test con credenciales hardcodeadas
+test_query*.cpp
+test_db.cpp
+test_db.py
+
+# SEC-06: Fichero de configuración con credenciales
+tienda.ini

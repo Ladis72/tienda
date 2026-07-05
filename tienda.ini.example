@@ -1,0 +1,12 @@
+; =============================================================
+; Fichero de ejemplo de configuración de credenciales
+; SEC-01: Copiar como tienda.ini y rellenar con datos reales
+; =============================================================
+
+[BaseDatos]
+; Credenciales para la conexión local a MariaDB/MySQL
+host=localhost
+puerto=3306
+baseDatos=tiendaNueva
+usuario=CAMBIAR_USUARIO
+clave=CAMBIAR_CLAVE

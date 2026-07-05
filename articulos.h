@@ -102,6 +102,8 @@ private slots:
     void on_pushButtonVer_2_clicked();
     void mostrarFoto();
 
+    void on_pushButtonHistorialPrecios_clicked();
+
     void on_pushButtonVerFactura_clicked();
 
     void on_checkBoxRemoto_stateChanged(int arg1);

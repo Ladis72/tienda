@@ -7,7 +7,7 @@ BuscarProveedor::BuscarProveedor(QWidget *parent, QString nombre)
 {
     ui->setupUi(this);
 
-    QSqlQuery query = base->buscarEnTabla(QSqlDatabase::database("DB"),
+    QSqlQuery query = base->buscarEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
                                           "proveedores",
                                           "nombre",
                                           nombre);

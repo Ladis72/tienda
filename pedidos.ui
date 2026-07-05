@@ -120,6 +120,33 @@ QTableView { background-color: white; border: 1px solid #dee2e6; gridline-color:
        </spacer>
       </item>
       <item>
+       <widget class="QLabel" name="labelNotas">
+        <property name="text">
+         <string>Notas:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="leNotasPedido">
+        <property name="minimumSize">
+         <size>
+          <width>350</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="placeholderText">
+         <string>Notas sobre el pedido...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacerHeader2">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+      <item>
        <widget class="QLabel" name="labelDocumento">
         <property name="font">
          <font>

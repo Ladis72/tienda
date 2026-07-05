@@ -3,6 +3,7 @@
 #include "qprocess.h"
 #include "qtextdocument.h"
 #include "ui_listadoarqueos.h"
+#include "dialogdetallearqueo.h"
 
 ListadoArqueos::ListadoArqueos(QWidget *parent)
     : QDialog(parent)
@@ -78,7 +79,13 @@ void ListadoArqueos::on_pushButtonImprimir_clicked()
 </html>
 )";
     for (int i = 0; i < modeloTabla->rowCount(); ++i) {
-        QString fecha = modeloTabla->data(modeloTabla->index(i, 1)).toString();
+        // En Qt 6.11, QSqlTableModel devuelve QDate para columnas DATE.
+        // toString() sin formato usa el locale del sistema y puede devolver vacío.
+        // Se extrae el QDate y se formatea explícitamente en "yyyy-MM-dd".
+        QVariant fechaVar = modeloTabla->data(modeloTabla->index(i, 1));
+        QString fecha = fechaVar.toDate().isValid()
+                            ? fechaVar.toDate().toString("yyyy-MM-dd")
+                            : fechaVar.toString();
         QString hora = modeloTabla->data(modeloTabla->index(i, 2)).toString();
         QString vefect = modeloTabla->data(modeloTabla->index(i, 3)).toString();
         QString vtarj = modeloTabla->data(modeloTabla->index(i, 4)).toString();
@@ -107,4 +114,18 @@ void ListadoArqueos::on_pushButtonImprimir_clicked()
     QProcess::startDetached("xdg-open",
                             QStringList()
                                 << base->devolverDirectorio("documentos") + "/ListadoArqueos.pdf");
+}
+
+void ListadoArqueos::on_tableView_doubleClicked(const QModelIndex &index)
+{
+    if (!index.isValid()) return;
+    
+    // Obtener el ID del arqueo de la columna 0 de la fila seleccionada
+    int idArqueo = modeloTabla->data(modeloTabla->index(index.row(), 0)).toInt();
+    
+    if (idArqueo > 0) {
+        // Mostrar el diálogo del desglose del arqueo
+        DialogDetalleArqueo dialog(idArqueo, this);
+        dialog.exec();
+    }
 }

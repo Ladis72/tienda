@@ -12,6 +12,9 @@
 #include <QDateTime>
 #include "unificarmaestros.h"
 #include <QTcpSocket>
+#include "configuracion.h"
+
+extern Configuracion *conf;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constantes
@@ -79,7 +82,7 @@ void SyncManager::iniciar()
 
 void SyncManager::crearTablasSyncLocal()
 {
-    QSqlDatabase db = QSqlDatabase::database("DB");
+    QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
     QSqlQuery q(db);
 
     q.exec("CREATE TABLE IF NOT EXISTS sync_cola ("
@@ -101,12 +104,12 @@ void SyncManager::crearTablasSyncLocal()
         q.exec(QString("ALTER TABLE `%1` ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP "
                        "ON UPDATE CURRENT_TIMESTAMP").arg(tabla));
         
-        // Evitar duplicar índices: solo añadir si no existe. 
-        // Usamos una consulta más robusta que no dependa de DATABASE() si es posible,
-        // aunque en local DATABASE() suele ser fiable.
+        // Comprobar por nombre de índice exacto para evitar duplicados.
+        // Buscar por index_name (no por column_name) para no confundirse con
+        // otros índices que usen la misma columna (p.ej. PRIMARY, UNIQUE).
         QString checkIdx = QString("SELECT COUNT(*) FROM information_schema.statistics "
                                    "WHERE table_schema = (SELECT DATABASE()) AND table_name = '%1' "
-                                   "AND column_name = 'updated_at'").arg(tabla);
+                                   "AND index_name = 'idx_%1_updated'").arg(tabla);
         if (q.exec(checkIdx) && q.next() && q.value(0).toInt() == 0) {
             q.exec(QString("ALTER TABLE `%1` ADD INDEX idx_%1_updated (updated_at)").arg(tabla));
         }
@@ -154,7 +157,7 @@ void SyncManager::crearTriggers()
     }
     
     // Limpieza: eliminar triggers de tablas que ya no se sincronizan (como 'directorios')
-    QSqlQuery q(QSqlDatabase::database("DB"));
+    QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
     q.exec("DROP TRIGGER IF EXISTS sync_directorios_insert");
     q.exec("DROP TRIGGER IF EXISTS sync_directorios_update");
     q.exec("DROP TRIGGER IF EXISTS sync_directorios_delete");
@@ -162,7 +165,7 @@ void SyncManager::crearTriggers()
 
 void SyncManager::crearTrigger(const QString &nombreTabla, const QString &clavePrimaria, const QString &evento)
 {
-    QSqlDatabase db = QSqlDatabase::database("DB");
+    QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
     QSqlQuery q(db);
     QString nombreTrigger = QString("sync_%1_%2").arg(nombreTabla).arg(evento.toLower());
     q.exec(QString("DROP TRIGGER IF EXISTS %1").arg(nombreTrigger));
@@ -182,7 +185,7 @@ bool SyncManager::conectarNube()
 {
     if (QSqlDatabase::database(CONEXION_NUBE).isOpen()) return true;
 
-    QSqlQuery q(QSqlDatabase::database("DB"));
+    QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
     q.exec("SELECT servidor, puerto, baseDatos, usuario, clave, ssl_ca FROM config_nube WHERE id = 1");
     if (!q.first()) return false;
 
@@ -233,7 +236,7 @@ void SyncManager::comprobarConexion()
 {
     bool anterior = m_hayConexion;
     
-    QSqlQuery q(QSqlDatabase::database("DB"));
+    QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
     q.exec("SELECT servidor, puerto FROM config_nube WHERE id = 1");
     if (!q.first()) {
         if (anterior) emit conexionPerdida();
@@ -305,7 +308,7 @@ void SyncManager::sincronizar()
 
 int SyncManager::subirCambios()
 {
-    QSqlDatabase dbLocal = QSqlDatabase::database("DB");
+    QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
     QSqlDatabase dbNube  = QSqlDatabase::database(CONEXION_NUBE);
     QSqlQuery cola(dbLocal);
     cola.exec("SELECT id, tabla, id_registro, accion FROM sync_cola WHERE subido = 0 ORDER BY fecha ASC");
@@ -328,9 +331,11 @@ int SyncManager::subirCambios()
         } else {
             QString pk = getPkTabla(tabla);
             QSqlQuery reg(dbLocal);
-            reg.prepare(QString("SELECT * FROM `%1` WHERE `%2` = ?").arg(tabla, pk));
-            reg.addBindValue(idReg);
-            if (reg.exec() && reg.first()) {
+            // Usar consulta directa para evitar el bug del protocolo binario de MySQL/MariaDB
+            // en Qt 6, el cual lee los campos de fecha como QDateTime(Invalid) al usar prepare().
+            QString sqlReg = QString("SELECT * FROM `%1` WHERE `%2` = '%3'")
+                             .arg(tabla, pk, QString(idReg).replace("'", "''"));
+            if (reg.exec(sqlReg) && reg.first()) {
                 QSqlRecord rec = reg.record();
                 QStringList campos, valores, updates;
                 QStringList excluidos = CAMPOS_EXCLUIDOS.value(tabla);
@@ -344,10 +349,18 @@ int SyncManager::subirCambios()
                     QVariant val = rec.value(i);
                     QString vStr = "NULL";
                     if (!val.isNull()) {
-                        if (val.userType() == QMetaType::QDateTime || val.userType() == QMetaType::QDate)
-                            vStr = "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
-                        else
+                        if (val.userType() == QMetaType::QDateTime || val.userType() == QMetaType::QDate) {
+                            QDateTime dt = val.toDateTime();
+                            // Si la fecha no es válida (p.ej. '0000-00-00'), la enviamos como NULL
+                            // para evitar errores de sintaxis/formato incorrecto en la base de datos.
+                            if (dt.isValid()) {
+                                vStr = "'" + dt.toString("yyyy-MM-dd HH:mm:ss") + "'";
+                            } else {
+                                vStr = "NULL";
+                            }
+                        } else {
                             vStr = "'" + val.toString().replace("'", "''") + "'";
+                        }
                     }
                     campos << "`" + campo + "`"; valores << vStr;
                     updates << QString("`%1` = VALUES(`%1`)").arg(campo);
@@ -373,17 +386,18 @@ int SyncManager::subirCambios()
 
 int SyncManager::bajarCambios()
 {
-    QSqlDatabase dbLocal = QSqlDatabase::database("DB");
+    QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
     QSqlDatabase dbNube  = QSqlDatabase::database(CONEXION_NUBE);
     int bajados = 0;
     QDateTime ahora = QDateTime::currentDateTime();
 
     QDateTime maxUpdate = ultimaSync("sync_unificaciones");
     QSqlQuery qNU(dbNube);
-    qNU.prepare("SELECT tabla, id_perdedor, id_ganador, fecha FROM sync_unificaciones WHERE fecha > ? ORDER BY fecha ASC");
-    qNU.addBindValue(maxUpdate.toString("yyyy-MM-dd HH:mm:ss"));
+    // Usar consulta directa para evitar el bug del protocolo binario con QDateTime(Invalid) en prepared statements.
+    QString sqlU = QString("SELECT tabla, id_perdedor, id_ganador, fecha FROM sync_unificaciones WHERE fecha > '%1' ORDER BY fecha ASC")
+                   .arg(maxUpdate.toString("yyyy-MM-dd HH:mm:ss"));
     
-    if (qNU.exec()) {
+    if (qNU.exec(sqlU)) {
         while (qNU.next()) {
             QString t = qNU.value(0).toString();
             QString p = qNU.value(1).toString();
@@ -417,9 +431,10 @@ int SyncManager::bajarCambios()
         
         qDebug() << "   -> Consultando tabla:" << tabla << "desde" << desde.toString("yyyy-MM-dd HH:mm:ss");
 
-        qN.prepare(QString("SELECT * FROM `%1` WHERE updated_at > ? ORDER BY updated_at ASC").arg(tabla));
-        qN.addBindValue(desde.toUTC().toString("yyyy-MM-dd HH:mm:ss"));
-        if (!qN.exec()) {
+        // Usar consulta directa para evitar el bug del protocolo binario de MariaDB que devuelve QDateTime(Invalid)
+        QString sqlN = QString("SELECT * FROM `%1` WHERE updated_at > '%2' ORDER BY updated_at ASC")
+                       .arg(tabla, desde.toUTC().toString("yyyy-MM-dd HH:mm:ss"));
+        if (!qN.exec(sqlN)) {
             qDebug() << "SyncManager: Error consultando tabla" << tabla << "en la nube:" << qN.lastError().text();
             continue;
         }
@@ -460,10 +475,18 @@ int SyncManager::bajarCambios()
                 QVariant val = rec.value(i);
                 QString vStr = "NULL";
                 if (!val.isNull()) {
-                    if (val.userType() == QMetaType::QDateTime || val.userType() == QMetaType::QDate)
-                        vStr = "'" + val.toDateTime().toString("yyyy-MM-dd HH:mm:ss") + "'";
-                    else
+                    if (val.userType() == QMetaType::QDateTime || val.userType() == QMetaType::QDate) {
+                        QDateTime dt = val.toDateTime();
+                        // Evitar que fechas no válidas (como '0000-00-00') generen un string vacío
+                        // y provoquen un error de "Incorrect date value: ''" al insertar en la base de datos local.
+                        if (dt.isValid()) {
+                            vStr = "'" + dt.toString("yyyy-MM-dd HH:mm:ss") + "'";
+                        } else {
+                            vStr = "NULL";
+                        }
+                    } else {
                         vStr = "'" + val.toString().replace("'", "''") + "'";
+                    }
                 }
                 campos << "`" + campo + "`"; valores << vStr;
                 updates << QString("`%1` = VALUES(`%1`)").arg(campo);
@@ -484,7 +507,23 @@ int SyncManager::bajarCambios()
                 if (tabla == "articulos" && existeLoc) {
                     double pNew = rec.value("pvp").toDouble();
                     if (qAbs(pOld - pNew) > 0.01) {
-                        avisosPrecios << QString("- %1: %2 -> %3").arg(rec.value("descripcion").toString()).arg(pOld).arg(pNew);
+                        int idOrigen = rec.value("id_tienda_origen").toInt();
+                        QString tiendaName = "Desconocida";
+                        if (idOrigen > 0) {
+                            QSqlQuery qTienda(dbLocal);
+                            qTienda.prepare("SELECT nombre FROM tiendas WHERE id = ?");
+                            qTienda.addBindValue(idOrigen);
+                            if (qTienda.exec() && qTienda.next()) {
+                                tiendaName = qTienda.value(0).toString();
+                            } else {
+                                tiendaName = QString("Tienda %1").arg(idOrigen);
+                            }
+                        }
+                        avisosPrecios << QString("- %1: %2 -> %3 (desde %4)")
+                                             .arg(rec.value("descripcion").toString())
+                                             .arg(pOld)
+                                             .arg(pNew)
+                                             .arg(tiendaName);
                     }
                 }
             } else {
@@ -519,25 +558,36 @@ int SyncManager::bajarCambios()
 
 void SyncManager::actualizarUltimaSync(const QString &tabla, const QDateTime &momento)
 {
-    QSqlQuery q(QSqlDatabase::database("DB"));
-    q.prepare("UPDATE sync_control SET ultima_sync = ? WHERE tabla = ?");
-    q.addBindValue(momento); q.addBindValue(tabla);
-    q.exec();
+    QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
+    // Usar consulta directa para evitar el bug del protocolo binario con QDateTime(Invalid)
+    QString sql = QString("UPDATE sync_control SET ultima_sync = '%1' WHERE tabla = '%2'")
+                  .arg(momento.toString("yyyy-MM-dd HH:mm:ss"), tabla);
+    q.exec(sql);
 }
 
 void SyncManager::cargarIdTiendaLocal()
 {
-    QSqlQuery q(QSqlDatabase::database("DB"));
+    QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
     if (q.exec("SELECT id FROM tiendas WHERE local = 1 LIMIT 1") && q.first())
         m_idTiendaLocal = q.value(0).toInt();
 }
 
 QDateTime SyncManager::ultimaSync(const QString &tabla)
 {
-    QSqlQuery q(QSqlDatabase::database("DB"));
-    q.prepare("SELECT ultima_sync FROM sync_control WHERE tabla = ?");
-    q.addBindValue(tabla);
-    if (q.exec() && q.first()) return q.value(0).toDateTime();
+    QString connName = conf->getConexionLocal();
+    QSqlDatabase db = QSqlDatabase::database(connName);
+    QSqlQuery q(db);
+    // Usar consulta directa para evitar el bug del protocolo binario de MySQL/MariaDB en Qt 6,
+    // que retorna QDateTime(Invalid) en campos de fecha/hora cuando se preparan consultas (prepare()).
+    QString sql = QString("SELECT ultima_sync FROM sync_control WHERE tabla = '%1'").arg(tabla);
+    if (!q.exec(sql)) {
+        qWarning() << "SyncManager: Error en ultimaSync para" << tabla 
+                   << "usando conexion" << connName 
+                   << "abierta:" << db.isOpen() 
+                   << "error:" << q.lastError().text();
+    } else if (q.first()) {
+        return q.value(0).toDateTime();
+    }
     return QDateTime::fromString("2000-01-01 00:00:00", "yyyy-MM-dd HH:mm:ss");
 }
 
@@ -558,7 +608,7 @@ void SyncManager::prepararTablasRemotas()
 {
     if (!m_hayConexion) return;
     
-    QSqlDatabase dbLocal = QSqlDatabase::database("DB");
+    QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
     QSqlDatabase dbNube = QSqlDatabase::database(CONEXION_NUBE);
     QSqlQuery qN(dbNube);
     QSqlQuery qL(dbLocal);
@@ -595,14 +645,18 @@ void SyncManager::prepararTablasRemotas()
                             "AND index_name = 'PRIMARY'").arg(tabla));
              if (qN.next() && qN.value(0).toInt() == 0) {
                  qDebug() << "SyncManager: Añadiendo PK faltante a" << tabla << "en la nube";
-                 qN.exec(QString("ALTER TABLE `%1` ADD PRIMARY KEY (`%2`)").arg(tabla, pk));
+                 if (!qN.exec(QString("ALTER TABLE `%1` ADD PRIMARY KEY (`%2`)").arg(tabla, pk))) {
+                     qWarning() << "SyncManager: Error al añadir PK a" << tabla << "en la nube:" << qN.lastError().text();
+                 }
              }
         }
 
-        // 3. Evitar error si el índice de updated_at ya existe
+        // 3. Comprobar por nombre de índice exacto para evitar duplicados.
+        // Buscar por index_name (no por column_name) evita confundirse con
+        // PRIMARY KEY u otros índices que incluyan la columna updated_at.
         qN.exec(QString("SELECT COUNT(*) FROM information_schema.statistics "
                        "WHERE table_schema = (SELECT DATABASE()) AND table_name = '%1' "
-                       "AND column_name = 'updated_at'").arg(tabla));
+                       "AND index_name = 'idx_%1_updated'").arg(tabla));
         if (qN.next() && qN.value(0).toInt() == 0) {
             qN.exec(QString("ALTER TABLE `%1` ADD INDEX idx_%1_updated (updated_at)").arg(tabla));
         }
@@ -617,4 +671,9 @@ void SyncManager::prepararTablasRemotas()
            "AND index_name = 'uq_vale_uuid'");
     if (qN.next() && qN.value(0).toInt() == 0)
         qN.exec("ALTER TABLE vales ADD UNIQUE INDEX uq_vale_uuid (vale_uuid)");
+
+    // SEC-02: Asegurar columna salt y ampliar el tamaño de la clave en la tabla usuarios de la nube
+    // Esto evita que los hashes SHA-256 se trunquen o que falle la inserción de salt en la nube.
+    qN.exec("ALTER TABLE `usuarios` ADD COLUMN IF NOT EXISTS `salt` VARCHAR(64) DEFAULT NULL");
+    qN.exec("ALTER TABLE `usuarios` MODIFY COLUMN `clave` VARCHAR(64) NOT NULL");
 }

@@ -1,5 +1,9 @@
 #include "configuracionotros.h"
 #include "ui_configuracionotros.h"
+#include <QCoreApplication>
+#include <QSettings>
+#include <QFileDialog>
+#include <QDir>
 
 ConfiguracionOtros::ConfiguracionOtros(QWidget *parent)
     : QDialog(parent)
@@ -14,7 +18,7 @@ ConfiguracionOtros::ConfiguracionOtros(QWidget *parent)
     }
 
     // Poblar combos de vendedores
-    QSqlQuery q = base->usuarios(QSqlDatabase::database("DB"));
+    QSqlQuery q = base->usuarios(QSqlDatabase::database(conf->getConexionLocal()));
     ui->comboBoxF1->addItem(tr("Ninguno"), QVariant());
     ui->comboBoxF2->addItem(tr("Ninguno"), QVariant());
     ui->comboBoxF3->addItem(tr("Ninguno"), QVariant());
@@ -30,11 +34,12 @@ ConfiguracionOtros::ConfiguracionOtros(QWidget *parent)
         ui->comboBoxF4->addItem(itemText, id);
     }
 
-    // Cargar valores actuales
+    // Cargar valores actuales de vendedores
     ui->comboBoxF1->setCurrentIndex(ui->comboBoxF1->findData(config.value("vendedor_f1").toString()));
     ui->comboBoxF2->setCurrentIndex(ui->comboBoxF2->findData(config.value("vendedor_f2").toString()));
     ui->comboBoxF3->setCurrentIndex(ui->comboBoxF3->findData(config.value("vendedor_f3").toString()));
     ui->comboBoxF4->setCurrentIndex(ui->comboBoxF4->findData(config.value("vendedor_f4").toString()));
+
 }
 
 ConfiguracionOtros::~ConfiguracionOtros()
@@ -58,5 +63,7 @@ void ConfiguracionOtros::on_pushButtonAceptar_clicked()
     
     base->GuardarConfiguracion(config);
     conf->setUsarPreciosLocales(ui->checkBoxNube->isChecked());
+
     emit accept();
 }
+

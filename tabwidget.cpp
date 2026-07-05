@@ -152,7 +152,7 @@ void Ususarios::on_pushButtonModificar_clicked()
     msgBox.setDefaultButton(QMessageBox::Ok);
     int resp = msgBox.exec();
     if (resp == QMessageBox::Ok) {
-        if (base.modificarUsuaruio(QSqlDatabase::database("DB"), datos, ui->lineEditCod->text())) {
+        if (base.modificarUsuaruio(QSqlDatabase::database(conf->getConexionLocal()), datos, ui->lineEditCod->text())) {
             msgBox.setText("Guardado con exito");
             msgBox.setInformativeText("El registro se ha modificado correctamente");
             msgBox.setStandardButtons(QMessageBox::Ok);
@@ -256,7 +256,7 @@ void Ususarios::on_pushButtonBorrarImagen_clicked()
 void Ususarios::on_pushButtonBorrar_clicked()
 {
     int curr = mapper.currentIndex();
-    if (base.borrarUsusario(QSqlDatabase::database("DB"), ui->lineEditCod->text().toInt())) {
+    if (base.borrarUsusario(QSqlDatabase::database(conf->getConexionLocal()), ui->lineEditCod->text().toInt())) {
         QMessageBox::information(this, "Borrado", "El usuario ha sido borrado");
         recargarTabla();
         mapper.setCurrentIndex(curr - 1);

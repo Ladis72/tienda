@@ -9,7 +9,7 @@ TiposEntradasSalidas::TiposEntradasSalidas(QWidget *parent)
 {
     ui->setupUi(this);
     connect(ui->pushButton_2, &QPushButton::clicked, this, &TiposEntradasSalidas::guardarCambios);
-    modelo = new QSqlTableModel(this, QSqlDatabase::database("DB"));
+    modelo = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
     modelo->setTable("motivosEntrada");
     modelo->setEditStrategy(QSqlTableModel::OnManualSubmit);
     modelo->select();

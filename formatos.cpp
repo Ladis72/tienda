@@ -7,7 +7,7 @@ Formatos::Formatos(QWidget *parent)
     , ui(new Ui::Formatos)
 {
     ui->setupUi(this);
-    modelo = new QSqlTableModel(this, QSqlDatabase::database("DB"));
+    modelo = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
     modelo->setTable("formatos");
     modelo->setEditStrategy(QSqlTableModel::OnManualSubmit);
     modelo->select();

@@ -446,6 +446,13 @@
           </property>
          </widget>
         </item>
+        <item row="0" column="4">
+         <widget class="QPushButton" name="pushButtonConfigLocal">
+          <property name="text">
+           <string>Base de Datos Local</string>
+          </property>
+         </widget>
+        </item>
         <item row="0" column="5">
          <widget class="QPushButton" name="pushButtonConfigDB">
           <property name="text">

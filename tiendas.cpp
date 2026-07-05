@@ -60,7 +60,7 @@ void tiendas::on_tableViewTiendas_clicked(const QModelIndex &index)
 
 void tiendas::recargarTabla()
 {
-    modeloTabla->setQuery("SELECT * FROM tiendas", QSqlDatabase::database("DB"));
+    modeloTabla->setQuery("SELECT * FROM tiendas", QSqlDatabase::database(conf->getConexionLocal()));
     mapper.setModel(modeloTabla);
     
     if(modeloTabla->rowCount() > 0) {

@@ -149,7 +149,15 @@ bool Cajas::recuperarDatosUltimoArqueo()
 {
     QSqlQuery resultado = base->recuperarDatosUltimoArqueo(conf->getConexionLocal());
     resultado.first();
-    fechaUltimoArqueo = resultado.value("fecha").toString();
+
+    // En Qt 6.11 + MariaDB 12.x, el campo DATE llega como QDate.
+    // toString() sin formato usa el locale del sistema (p.ej. "27/06/2026" en español)
+    // lo que rompe la consulta SQL posterior que espera "yyyy-MM-dd".
+    QVariant fechaVar = resultado.value("fecha");
+    fechaUltimoArqueo = fechaVar.toDate().isValid()
+                            ? fechaVar.toDate().toString("yyyy-MM-dd")
+                            : fechaVar.toString();
+
     horaUltimoArqueo = resultado.value("hora").toString();
     saldoAnterior = resultado.value("efectivoReal").toDouble();
     ui->labelFUArqueo->setText(fechaUltimoArqueo + " " + horaUltimoArqueo);

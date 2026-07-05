@@ -152,9 +152,10 @@ imprimirFacturaProveedor::imprimirFacturaProveedor(QString tienda,
             "<tbody>\n";
 
     // Datos tabla
-    QSqlQuery consulta = base->ejecutarSentencia("SELECT * FROM lineaspedido WHERE nDocumento = '"
-                                                     + idFactura + "'",
-                                                 conf->getConexionLocal());
+    QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
+    consulta.prepare("SELECT * FROM lineaspedido WHERE nDocumento = ?");
+    consulta.bindValue(0, idFactura);
+    consulta.exec();
 
     if (consulta.first()) {
         do {

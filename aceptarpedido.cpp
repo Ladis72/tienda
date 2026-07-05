@@ -128,6 +128,15 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         return false;
     }
 
+    // Recuperar las notas del pedido temporal antes de que sea eliminado
+    QString notasPedido = "";
+    QSqlQuery queryNotes(QSqlDatabase::database(conf->getConexionLocal()));
+    queryNotes.prepare("SELECT notas FROM albaranes_tmp WHERE id = :id");
+    queryNotes.bindValue(":id", idPedido);
+    if (queryNotes.exec() && queryNotes.next()) {
+        notasPedido = queryNotes.value("notas").toString();
+    }
+
     for (int i = 0; i < modelo->rowCount(); ++i) {
         datos.clear();
         idLinea = modelo->record(i).value("id").toString();
@@ -159,12 +168,16 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
                 base.aumentarLote(conf->getConexionLocal(), idLoteGeneric, udsPorProcesar);
                 udsPorProcesar = 0;
             } else if (abs(pendientes) == udsPorProcesar) {
-                base.ejecutarSentencia("DELETE FROM lotes WHERE id = '" + idLoteGeneric + "'",
-                                       conf->getConexionLocal());
+                QSqlQuery delQuery(QSqlDatabase::database(conf->getConexionLocal()));
+                delQuery.prepare("DELETE FROM lotes WHERE id = ?");
+                delQuery.bindValue(0, idLoteGeneric);
+                delQuery.exec();
                 udsPorProcesar = 0;
             } else {
-                base.ejecutarSentencia("DELETE FROM lotes WHERE id = '" + idLoteGeneric + "'",
-                                       conf->getConexionLocal());
+                QSqlQuery delQuery(QSqlDatabase::database(conf->getConexionLocal()));
+                delQuery.prepare("DELETE FROM lotes WHERE id = ?");
+                delQuery.bindValue(0, idLoteGeneric);
+                delQuery.exec();
                 udsPorProcesar += pendientes; // pendientes es negativo, ej: 10 + (-4) = 6
             }
         }
@@ -284,6 +297,8 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     } else {
         datosPedido.append("0");
     }
+    // Añadir el campo de notas recuperado
+    datosPedido.append(notasPedido);
 
     if (!base.contabilizarPedido(conf->getConexionLocal(), datosPedido)) {
         db.rollback();
@@ -303,6 +318,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     if (ui->comboBox->currentText() == "Factura") {
         datosFactura.append(ui->dateEditVencimiento->text());
         datosFactura.append("0");
+        datosFactura.append(notasPedido); // Guardar notas en factura
         if (!base.grabarFactura(conf->getConexionLocal(), datosFactura)) {
             base.insertarLog(conf->getConexionLocal(),
                              "Error",
@@ -314,6 +330,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     } else {
         datosFactura.append("0");
         datosFactura.append(NULL);
+        datosFactura.append(notasPedido); // Guardar notas en albarán
         if (!base.grabarAlbaran(conf->getConexionLocal(), datosFactura)) {
             base.insertarLog(conf->getConexionLocal(),
                              "Error",

@@ -1,6 +1,7 @@
 #include "imprimirticket.h"
 #include <QDate>
 #include <QFile>
+#include "verifactuclass.h"
 
 ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, bool noTicketRegalo, QObject *parent)
     : QObject(parent)
@@ -180,6 +181,46 @@ bool ImprimirTicket::imprimirPie()
 
     if (!cambio.isEmpty() && cambio != "0.00") {
         printer->imprimirLinea("Cambio: " + cambio);
+    }
+
+    // --- Código QR Tributario y Leyendas de VeriFactu ---
+    VeriFactuConfig vfConfig = verifactuClass::cargarConfiguracion();
+    if (vfConfig.modo != 0) { // Si VeriFactu o Firma Local están habilitados
+        printer->alimentarLineas(1);
+        
+        // 1. Leyenda superior del QR
+        printer->imprimirLineaCentrada("QR tributario");
+        
+        // 2. Formatear la fecha como DD-MM-YYYY
+        QDate dateExp = QDate::fromString(fecha, "yyyy-MM-dd");
+        QString fechaExpAEAT = dateExp.isValid() ? dateExp.toString("dd-MM-yyyy") : QDate::currentDate().toString("dd-MM-yyyy");
+        
+        // 3. Generar la URL de cotejo de la AEAT
+        QString urlCotejo = verifactuClass::generarUrlQR(
+            vfConfig.emisorNif,
+            ticket, // número de ticket / serie
+            fechaExpAEAT,
+            total.toDouble(),
+            vfConfig.entorno
+        );
+        
+        // 4. Renderizar la imagen QR
+        QImage qrImage = verifactuClass::generarCodigoQR(urlCotejo);
+        
+        // 5. Imprimir la imagen del QR centrada
+        if (!qrImage.isNull()) {
+            printer->imprimirImagen(qrImage, true);
+        }
+        
+        // 6. Leyenda inferior reglamentaria
+        if (vfConfig.modo == 1) {
+            printer->imprimirLineaCentrada("Factura verificable en la sede");
+            printer->imprimirLineaCentrada("electronica de la AEAT - VERI*FACTU");
+        } else {
+            printer->imprimirLineaCentrada("Factura simplificada");
+        }
+        
+        printer->alimentarLineas(1);
     }
 
     printer->alimentarLineas(2);

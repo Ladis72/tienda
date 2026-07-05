@@ -59,7 +59,7 @@ void SaneadorGlobal::log(const QString &msg)
     ui->textEditLog->append(QString("[%1] %2").arg(QTime::currentTime().toString(), msg));
 }
 
-QSqlDatabase SaneadorGlobal::dbLocal() { return QSqlDatabase::database("DB"); }
+QSqlDatabase SaneadorGlobal::dbLocal() { return QSqlDatabase::database(conf->getConexionLocal()); }
 QSqlDatabase SaneadorGlobal::dbRemota() { return QSqlDatabase::database(m_nombreConexionRemota); }
 
 void SaneadorGlobal::on_comboBoxTienda_currentIndexChanged(int index)

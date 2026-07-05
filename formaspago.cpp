@@ -9,7 +9,7 @@ FormasPago::FormasPago(QWidget *parent)
 {
     ui->setupUi(this);
 
-    modelolista = new QSqlTableModel(this, QSqlDatabase::database("DB"));
+    modelolista = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
     modelolista->setTable("fpago");
     modelolista->setEditStrategy(QSqlTableModel::OnManualSubmit);
     modelolista->select();

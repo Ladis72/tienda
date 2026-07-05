@@ -109,7 +109,10 @@ void ListadoSalidas::imprimirInforme()
     QString filas = "";
     for (int row = 0; row < modeloTabla->rowCount(); ++row) {
         filas += "<tr>";
-        filas += "<td>" + modeloTabla->record(row).value("fecha").toString() + "</td>";
+        // En Qt 6.11, QSqlTableModel devuelve QDate para columnas DATE.
+        // Se formatea explícitamente para evitar cadena vacía con el locale español.
+        QVariant fVar = modeloTabla->record(row).value("fecha");
+        filas += "<td>" + (fVar.toDate().isValid() ? fVar.toDate().toString("yyyy-MM-dd") : fVar.toString()) + "</td>";
         filas += "<td>" + modeloTabla->record(row).value("hora").toString() + "</td>";
         filas += "<td>" + modeloTabla->record(row).value("cantidad").toString() + " €</td>";
         filas += "<td>" + modeloTabla->record(row).value("descripcion").toString() + "</td>";

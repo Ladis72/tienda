@@ -128,6 +128,7 @@ void EditorPermisos::construirCheckboxes() {
       {"copia_seguridad", "Copia de seguridad"},
       {"conectar", "Conectar tiendas remotas"},
       {"config_base", "Configuración de BD"},
+      {"config_local", "Configurar BD Local (.ini)"},
       {"tab_config", "Pestaña de administración"},
 
       // ── Nuevas funcionalidades y granularidad TPV ──
@@ -187,6 +188,7 @@ void EditorPermisos::construirCheckboxes() {
       {"copia_seguridad", "Copia Seguridad"},
       {"conectar", "Conectar"},
       {"config_base", "Config. BD"},
+      {"config_local", "Config. BD Local"},
       {"tab_config", "Tab Config"},
 
       // Grupos para las nuevas funcionalidades

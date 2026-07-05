@@ -4,6 +4,7 @@
 #include <QPrinter>
 #include <QProcess>
 #include <QTextDocument>
+#include "verifactuclass.h"
 
 ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent)
     : QObject(parent)
@@ -95,7 +96,7 @@ void ImprimirFactura::facturaPDF()
   <p>Total IVA: <strong>%IVA% €</strong></p>
   <div class='total-final'>TOTAL FACTURA: %TOTAL% €</div>
 </div>
-
+%QR_CODE%
 </body>
 </html>
 )";
@@ -143,9 +144,36 @@ void ImprimirFactura::facturaPDF()
     }
     html.replace("%LINEAS%", lineasHTML);
 
-    html.replace("%BASE%", QString::number(totalBase, 'f', 2)) + " €";
-    html.replace("%IVA%", QString::number(totalIva, 'f', 2)) + " €";
-    html.replace("%TOTAL%", QString::number(totalBase + totalIva, 'f', 2)) + " €";
+    html.replace("%BASE%", QString::number(totalBase, 'f', 2));
+    html.replace("%IVA%", QString::number(totalIva, 'f', 2));
+    html.replace("%TOTAL%", QString::number(totalBase + totalIva, 'f', 2));
+
+    // --- Integración QR de VeriFactu en el PDF ---
+    VeriFactuConfig vfConfig = verifactuClass::cargarConfiguracion();
+    QString qrHtml = "";
+    if (vfConfig.modo != 0) {
+        QDate dateExp = QDate::fromString(fecha, "yyyy-MM-dd");
+        QString fechaExpAEAT = dateExp.isValid() ? dateExp.toString("dd-MM-yyyy") : QDate::currentDate().toString("dd-MM-yyyy");
+        QString urlCotejo = verifactuClass::generarUrlQR(vfConfig.emisorNif, ticket, fechaExpAEAT, total.toDouble(), vfConfig.entorno);
+        QImage qrImage = verifactuClass::generarCodigoQR(urlCotejo);
+        
+        QString qrPath = base.devolverDirectorio("documentos") + "/verifactu_qr_tmp.png";
+        if (!qrPath.isEmpty() && qrImage.save(qrPath)) {
+            qrHtml = QString(R"(
+            <table style="width: 100%; margin-top: 30px; border-top: 1px solid #ccc; padding-top: 15px;">
+              <tr>
+                <td style="text-align: center; font-family: Arial, sans-serif; font-size: 8pt; line-height: 1.4;">
+                  <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">QR tributario</div>
+                  <img src="%1" width="100" height="100" />
+                  <div style="margin-top: 5px;">%2</div>
+                </td>
+              </tr>
+            </table>
+            )").arg(qrPath, (vfConfig.modo == 1 ? "Factura verificable en la sede electrónica de la AEAT - VERI*FACTU" : "Factura simplificada"));
+        }
+    }
+    html.replace("%QR_CODE%", qrHtml);
+
     documento.setHtml(html);
     QPrinter printer(QPrinter::HighResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
@@ -154,5 +182,5 @@ void ImprimirFactura::facturaPDF()
     printer.setPageMargins(QMargins(15, 15, 15, 15), QPageLayout::Millimeter);
     documento.print(&printer);
     QProcess::startDetached("xdg-open",
-                            QStringList() << base.devolverDirectorio("documentos") + "/Factura.pdf");
+                             QStringList() << base.devolverDirectorio("documentos") + "/Factura.pdf");
 }

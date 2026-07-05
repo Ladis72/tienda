@@ -1,4 +1,5 @@
 #include "tpv.h"
+#include "verifactuclass.h"
 #include <QDate>
 #include <QDebug>
 #include <QDir>
@@ -11,9 +12,16 @@
 #include "imprimirticket.h"
 #include "ui_tpv.h"
 #include <QCursor>
+#include "visorimagenes.h"
 #include "buscarcliente.h"
 #include "encargosdialog.h"
 #include "gestorencargosdialog.h"
+#include <QTextDocument>
+#include <QPrinter>
+#include <QProcess>
+#include <QMessageBox>
+#include <QPushButton>
+#include <QSqlRecord>
 
 Tpv::Tpv(QWidget *parent)
     : QWidget(parent)
@@ -295,9 +303,10 @@ QString Tpv::formatearCadena(QString cadena, int tamano)
 void Tpv::datosProducto(QString IdProducto)
 {
     ui->labelStock->setText(base.sumarStockArticulo(IdProducto, conf->getConexionLocal()));
-    QSqlQuery tmp = base.ejecutarSentencia("SELECT fecha FROM lotes WHERE ean = " + IdProducto
-                                               + " ORDER BY fecha asc",
-                                           conf->getConexionLocal());
+    QSqlQuery tmp(QSqlDatabase::database(conf->getConexionLocal()));
+    tmp.prepare("SELECT fecha FROM lotes WHERE ean = ? ORDER BY fecha asc");
+    tmp.bindValue(0, IdProducto);
+    tmp.exec();
     tmp.first();
     ui->labelFecha->setText(tmp.value(0).toString());
     QSqlRecord registro = base.consulta_producto(conf->getConexionLocal(), IdProducto);
@@ -410,7 +419,7 @@ void Tpv::on_lineEdit_cod_returnPressed()
         datosProducto(registro.value("cod").toString());
         linea << registro.value("descripcion").toString();
         linea << ui->lineEdit_Uds->text();
-        linea << registro.value("impuesto").toString();
+        linea << registro.value("iva").toString();
         
         if (ui->lineEdit_precio->text().isEmpty()) {
             linea << QString::number(registro.value("pvp").toDouble());
@@ -458,7 +467,7 @@ bool Tpv::cargarEncargo(QString codArticulo, double anticipo, int cantidad)
     lineaArt << codArticulo;
     lineaArt << registro.value("descripcion").toString();
     lineaArt << QString::number(cantidad);
-    lineaArt << registro.value("impuesto").toString();
+    lineaArt << registro.value("iva").toString();
     lineaArt << QString::number(registro.value("pvp").toDouble(), 'f', 2);
     lineaArt << "0"; // Descuento
     double totalLinea = registro.value("pvp").toDouble() * cantidad;
@@ -628,6 +637,11 @@ void Tpv::on_btn_cobrar_clicked()
         return;
     }
 
+    // Obtener el número de ticket de forma atómica dentro de la transacción.
+    // FOR UPDATE bloquea las tablas tickets/ticketss hasta que se haga commit,
+    // evitando que dos puestos obtengan el mismo número.
+    ticket = base.obtenerSiguienteTicketAtomico(db);
+
     QString serie = QString::number(ticket);
 
     if (totalizacion->facturacion == "1"
@@ -659,25 +673,113 @@ void Tpv::on_btn_cobrar_clicked()
         if (totalizacion->facturacion == "0") {
             tabla = "tickets";
             ticketImpresion = QString::number(ticket);
-            ticket += 1;
+            // Ya no se incrementa ticket manualmente: se obtiene atómicamente
+            // de la BD al inicio de cada transacción de cobro.
         }
 
         if (!base.grabarTicket(conf->getConexionLocal(), tabla, totalTicket)) {
             throw std::runtime_error("Error al grabar el ticket");
         }
-        if (tabla == "tickets") {
-            QString ultimoHash = base.obtenerUltimoHash(conf->getConexionLocal());
-            QString datosFactura = generarDatosFactura(totalTicket, ultimoHash);
-            QString hashFactura = generarHashFactura(datosFactura);
-            if (base.registrarTickeckVerifactu(conf->getConexionLocal(),
-                                               totalTicket.at(0).toInt(),
-                                               totalTicket.at(3),
-                                               totalTicket.at(4),
-                                               hashFactura,
-                                               ultimoHash,
-                                               datosFactura,
-                                               totalTicket.at(1).toInt())
-                == "") {
+        // --- Integración VeriFactu ---
+        // Con la tecla F2 (venta especial/B), el ticket se graba en la tabla 'ticketss'
+        // en lugar de 'tickets'. Para cumplir con los requisitos y evitar errores de
+        // restricción de clave foránea en la tabla verifactu_logs (que apunta a 'tickets'),
+        // no procesamos VeriFactu para ventas que no vayan a la tabla oficial 'tickets'.
+        VeriFactuConfig vfConfig = verifactuClass::cargarConfiguracion();
+        if (vfConfig.modo != 0 && tabla == "tickets") { // 1 = VeriFactu (remisión), 2 = No VeriFactu (local)
+            // Obtener el último hash de forma atómica (FOR UPDATE) dentro
+            // de la transacción para que otro puesto espere si está cobrando
+            // simultáneamente, evitando romper la cadena de hashes.
+            QString ultimoHash = base.obtenerUltimoHashAtomico(db);
+            QString fechaHoraGen = verifactuClass::obtenerFechaHoraHusoActual();
+            
+            // Serie y número de factura
+            QString numSerie = serie;
+            
+            // Fecha de expedición formateada como DD-MM-YYYY
+            QDate dateExp = QDate::fromString(totalTicket.at(3), "yyyy-MM-dd");
+            QString fechaExpAEAT = dateExp.isValid() ? dateExp.toString("dd-MM-yyyy") : QDate::currentDate().toString("dd-MM-yyyy");
+            
+            // Tipo de factura
+            QString tipoFacturaAEAT = (tabla == "ticketss") ? "F1" : "F2";
+            
+            // Formatear bases e importes para el hash de la AEAT
+            QString baseStr = verifactuClass::formatearDecimalAEAT(totalTicket.at(5).toDouble());
+            QString ivaStr = verifactuClass::formatearDecimalAEAT(totalTicket.at(6).toDouble());
+            QString totalStr = verifactuClass::formatearDecimalAEAT(totalTicket.at(8).toDouble());
+            
+            // Calcular el hash oficial de alta
+            QString hashFactura = verifactuClass::calcularHuellaAlta(
+                vfConfig.emisorNif,
+                numSerie,
+                fechaExpAEAT,
+                tipoFacturaAEAT,
+                ivaStr,
+                totalStr,
+                ultimoHash,
+                fechaHoraGen
+            );
+            
+            // Generar el XML oficial de alta de facturación
+            QString xmlContent = verifactuClass::generarXmlAlta(
+                vfConfig,
+                numSerie,
+                fechaExpAEAT,
+                totalTicket.at(4), // hora
+                totalTicket.at(5).toDouble(), // base
+                totalTicket.at(6).toDouble(), // iva
+                totalTicket.at(8).toDouble(), // total
+                tipoFacturaAEAT,
+                ultimoHash,
+                hashFactura,
+                fechaHoraGen
+            );
+            
+            // Si el modo es VERI*FACTU, remitimos telemáticamente a la AEAT
+            int estadoEnvio = 1;
+            if (vfConfig.modo == 1) {
+                QString errStr;
+                bool okEnvio = verifactuClass::enviarAEAT(xmlContent, vfConfig, errStr);
+                if (!okEnvio) {
+                    estadoEnvio = 0; // 0 = Pendiente / Error
+                    qWarning() << "Error en la remisión VeriFactu a la AEAT:" << errStr;
+                    // Registramos en local pero guardando el error en el log del sistema
+                    base.insertarLog(conf->getConexionLocal(), "VeriFactuError", conf->getUsuario(),
+                                     QString("Fallo envío ticket %1: %2").arg(numSerie).arg(errStr));
+                } else {
+                    qDebug() << "Ticket" << numSerie << "remitido con éxito a la AEAT.";
+                }
+            } else if (vfConfig.modo == 2) {
+                // Modo No VeriFactu: guardar el XML firmado localmente en una carpeta del sistema
+                QString dirCopia = base.devolverDirectorio("cseg");
+                if (dirCopia.isEmpty() || !QDir(dirCopia).exists()) {
+                    dirCopia = QCoreApplication::applicationDirPath() + "/verifactu_xml";
+                } else {
+                    dirCopia += "/verifactu_xml";
+                }
+                QDir().mkpath(dirCopia);
+                QString fileXmlPath = QString("%1/%2.xml").arg(dirCopia).arg(numSerie);
+                QFile file(fileXmlPath);
+                if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                    file.write(xmlContent.toUtf8());
+                    file.close();
+                } else {
+                    qWarning() << "No se pudo guardar el XML de VeriFactu localmente en:" << fileXmlPath;
+                }
+            }
+            
+            // Registrar los datos en la tabla verifactu_logs de la base de datos
+            if (base.registrarTickeckVerifactu(
+                    conf->getConexionLocal(),
+                    totalTicket.at(0).toInt(),
+                    totalTicket.at(3),
+                    totalTicket.at(4),
+                    hashFactura,
+                    ultimoHash,
+                    xmlContent, // Guardamos el XML completo en cadena_firmada
+                    totalTicket.at(1).toInt(),
+                    estadoEnvio
+                ) == "") {
                 throw std::runtime_error("Error al grabar VeriFactuLog");
             }
         }
@@ -890,75 +992,216 @@ void Tpv::on_tableView_clicked(const QModelIndex &index)
 
 void Tpv::on_btn_preTicket_clicked()
 {
-    QStringList lineaTicket;
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Pre-ticket / Presupuesto");
+    msgBox.setText("¿Qué desea imprimir?");
+    QPushButton *btnTicket = msgBox.addButton("Ticket", QMessageBox::ActionRole);
+    QPushButton *btnPresupuesto = msgBox.addButton("Presupuesto", QMessageBox::ActionRole);
+    msgBox.addButton("Cancelar", QMessageBox::RejectRole);
+    
+    msgBox.exec();
+    
+    if (msgBox.clickedButton() == btnTicket) {
+        QStringList lineaTicket;
 
-    QStringList confTicket = base.recuperarConfigTicket(conf->getConexionLocal());
+        QStringList confTicket = base.recuperarConfigTicket(conf->getConexionLocal());
 
-    QFile impresora("ticket.txt");
-    impresora.open(QIODevice::WriteOnly);
-    QTextStream texto(&impresora);
-    QString abrirCajon = confTicket.at(4);
-    QStringList comandoAbrirCajon = abrirCajon.split(",");
-    for (int i = 0; i < comandoAbrirCajon.size(); ++i) {
-        texto << char(comandoAbrirCajon.at(i).toInt());
-    }
-    texto << confTicket.at(0) + "\n\n";
-    texto << QDate::currentDate().toString("yyyy-MM-dd") + "  "
-                 + QTime::currentTime().toString("hh:mm") + "   " + "Ticket: TICKET";
-    texto << "\n";
-    texto << "UDS|  Producto            |Prec.|Dto|Total\n";
-    texto << "------------------------------------------\n";
-
-    for (int i = 0; i < modeloTicket->rowCount(); i++) {
-        lineaTicket.clear();
-        lineaTicket.append("TICKET");
-        for (int x = 2; x < modeloTicket->columnCount(); ++x) {
-            lineaTicket.append(modeloTicket->record(i).value(x).toString());
+        QFile impresora("ticket.txt");
+        impresora.open(QIODevice::WriteOnly);
+        QTextStream texto(&impresora);
+        QString abrirCajon = confTicket.at(4);
+        QStringList comandoAbrirCajon = abrirCajon.split(",");
+        for (int i = 0; i < comandoAbrirCajon.size(); ++i) {
+            texto << char(comandoAbrirCajon.at(i).toInt());
         }
-        QString dato;
-        dato = lineaTicket.at(3);
-        dato = formatearCadena(dato, 3);
-        qDebug() << dato;
-        texto << dato;
-        texto << " ";
-        dato = lineaTicket.at(2);
-        dato = formatearCadena(dato, 23);
-        qDebug() << dato;
-        texto << dato;
-        texto << " ";
-        dato = lineaTicket.at(5);
-        dato = formatearCadena(dato, 6);
-        texto << dato;
-        texto << " ";
-        dato.clear();
-        dato = lineaTicket.at(6);
-        dato = formatearCadena(dato, 2);
-        texto << dato;
-        texto << " ";
-        dato.clear();
-        dato = lineaTicket.at(7);
-        dato = formatearCadena(dato, 6);
-        texto << dato;
+        texto << confTicket.at(0) + "\n\n";
+        texto << QDate::currentDate().toString("yyyy-MM-dd") + "  "
+                     + QTime::currentTime().toString("hh:mm") + "   " + "Ticket: TICKET";
         texto << "\n";
-        dato.clear();
-        qDebug() << lineaTicket;
-    }
-    texto << "\n\n";
-    texto << "Total : " + QString::number(calcularPrecioTotal()) + "\n";
+        texto << "UDS|  Producto            |Prec.|Dto|Total\n";
+        texto << "------------------------------------------\n";
 
-    texto << "\n\n\n";
-    texto << confTicket.at(1);
-    texto << "\n\n\n\n";
-    QString codCorte = confTicket.at(5);
-    QStringList cadaCodCorte = codCorte.split(",");
-    for (int i = 0; i < cadaCodCorte.size(); ++i) {
-        texto << char(cadaCodCorte.at(i).toInt());
+        for (int i = 0; i < modeloTicket->rowCount(); i++) {
+            lineaTicket.clear();
+            lineaTicket.append("TICKET");
+            for (int x = 2; x < modeloTicket->columnCount(); ++x) {
+                lineaTicket.append(modeloTicket->record(i).value(x).toString());
+            }
+            QString dato;
+            dato = lineaTicket.at(3);
+            dato = formatearCadena(dato, 3);
+            qDebug() << dato;
+            texto << dato;
+            texto << " ";
+            dato = lineaTicket.at(2);
+            dato = formatearCadena(dato, 23);
+            qDebug() << dato;
+            texto << dato;
+            texto << " ";
+            dato = lineaTicket.at(5);
+            dato = formatearCadena(dato, 6);
+            texto << dato;
+            texto << " ";
+            dato.clear();
+            dato = lineaTicket.at(6);
+            dato = formatearCadena(dato, 2);
+            texto << dato;
+            texto << " ";
+            dato.clear();
+            dato = lineaTicket.at(7);
+            dato = formatearCadena(dato, 6);
+            texto << dato;
+            texto << "\n";
+            dato.clear();
+            qDebug() << lineaTicket;
+        }
+        texto << "\n\n";
+        texto << "Total : " + QString::number(calcularPrecioTotal()) + "\n";
+
+        texto << "\n\n\n";
+        texto << confTicket.at(1);
+        texto << "\n\n\n\n";
+        QString codCorte = confTicket.at(5);
+        QStringList cadaCodCorte = codCorte.split(",");
+        for (int i = 0; i < cadaCodCorte.size(); ++i) {
+            texto << char(cadaCodCorte.at(i).toInt());
+        }
+        texto << "\n\n";
+        impresora.close();
+        QString imprimir = "cat ./ticket.txt >> " + confTicket.at(3);
+        const char *ch = imprimir.toLocal8Bit().constData();
+        system(ch);
+    } else if (msgBox.clickedButton() == btnPresupuesto) {
+        QTextDocument documento;
+        QString html = R"(
+<html>
+<head>
+  <meta charset='utf-8'>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 10pt; color: #333; margin: 0; padding: 0; }
+    .cabecera-superior { padding: 10px; border-bottom: 2px solid #2c3e50; margin-bottom: 10px; text-align: right; }
+    .numero-factura { font-size: 14pt; font-weight: bold; color: #2c3e50; }
+    table.cabecera { width: 100%; border: none; margin-bottom: 20px; }
+    .lineas { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    .lineas th { background-color: #2c3e50; color: white; padding: 8px; font-size: 9pt; }
+    .lineas td { border: 1px solid #ccc; padding: 6px; text-align: right; font-size: 9pt; }
+    .lineas td:nth-child(2) { text-align: left; }
+    .totales { text-align: right; margin-top: 20px; font-size: 11pt; }
+    .total-final { font-size: 14pt; color: #e74c3c; font-weight: bold; border-top: 2px solid #2c3e50; padding-top: 10px; }
+  </style>
+</head>
+<body>
+<!-- Número de factura y fecha en la parte SUPERIOR -->
+<div class='cabecera-superior'>
+    <div class='numero-factura' style='font-size: 18pt; text-transform: uppercase;'>PRESUPUESTO</div>
+    <div>FECHA: %FECHA%</div>
+</div>
+
+<table class='cabecera' style='width: 100%; border-collapse: collapse;'>
+  <!-- Logo centrado y ancho -->
+  <tr>
+    <td colspan='2' style='text-align: center; padding: 10px 0;'>
+      <img src=':/imagenes/documentos/Cabecera factura.png' width='600' style='max-width: 100%; height: auto;' alt='Logo Emeicjac'/>
+    </td>
+  </tr>
+
+  <!-- Información en dos columnas -->
+  <tr>
+    <td style='width: 50%; vertical-align: top; padding: 15px; background-color: #f9f9f9; border-radius: 5px;'>
+      <div style='color: #2c3e50; font-weight: bold; margin-bottom: 5px;'>CLIENTE:</div>
+      <b>%CLIENTE%</b>
+    </td>
+
+    <td style='width: 50%; vertical-align: top; padding: 15px; text-align: right;'>
+      <div style='color: #2c3e50; font-weight: bold; margin-bottom: 5px;'>EMISOR:</div>
+      %TIENDA%
+    </td>
+  </tr>
+</table>
+
+<table class='lineas'>
+  <thead>
+    <tr>
+      <th>CANTIDAD</th>
+      <th>DESCRIPCIÓN</th>
+      <th>PRECIO</th>
+      <th>DESC.</th>
+      <th>IVA</th>
+      <th>TOTAL</th>
+    </tr>
+  </thead>
+  <tbody>
+    %LINEAS%
+  </tbody>
+</table>
+
+<div class='totales'>
+  <p>Total Base: <strong>%BASE% €</strong></p>
+  <p>Total IVA: <strong>%IVA% €</strong></p>
+  <div class='total-final'>TOTAL PRESUPUESTO: %TOTAL% €</div>
+</div>
+
+</body>
+</html>
+)";
+
+        QString datosTiendaLocal = "";
+        QStringList datosTienda = base.datosTiendaLocal(conf->getConexionLocal());
+
+        for (int i = 1; i < 7; ++i) {
+            datosTiendaLocal += datosTienda.at(i) + "<br>";
+        }
+        html.replace("%TIENDA%", datosTiendaLocal);
+        html.replace("%CLIENTE%", ui->lineEdit_nobre_cliente->text());
+        html.replace("%FECHA%", QDate::currentDate().toString("yyyy-MM-dd"));
+        
+        double totalBase = 0;
+        double totalIva = 0;
+        QString lineasHTML;
+        
+        for (int i = 0; i < modeloTicket->rowCount(); i++) {
+            QString cod = modeloTicket->record(i).value(2).toString();
+            QString descripcion = modeloTicket->record(i).value(3).toString();
+            QString cantidad = modeloTicket->record(i).value(4).toString();
+            QString tipoiva = modeloTicket->record(i).value(5).toString() + "%";
+            QString precio = QString::number(modeloTicket->record(i).value(6).toDouble(), 'f', 2);
+            QString descuento = QString::number(modeloTicket->record(i).value(7).toDouble(), 'f', 2);
+            double totalLinea = modeloTicket->record(i).value(8).toDouble();
+            QString total = QString::number(totalLinea, 'f', 2);
+
+            double baseTMP = totalLinea / (1 + (modeloTicket->record(i).value(5).toDouble() / 100));
+            double ivaTMP = totalLinea - baseTMP;
+
+            totalBase += baseTMP;
+            totalIva += ivaTMP;
+
+            lineasHTML += QString(R"(
+            <tr>
+                <td>%1</td>
+                <td>%2</td>
+                <td>%3 €</td>
+                <td>%4 %</td>
+                <td>%5</td>
+                <td>%6 €</td>
+            </tr>
+        )").arg(cantidad, descripcion, precio, descuento, tipoiva, total);
+        }
+        
+        html.replace("%LINEAS%", lineasHTML);
+
+        html.replace("%BASE%", QString::number(totalBase, 'f', 2));
+        html.replace("%IVA%", QString::number(totalIva, 'f', 2));
+        html.replace("%TOTAL%", QString::number(totalBase + totalIva, 'f', 2));
+        
+        documento.setHtml(html);
+        QPrinter printer(QPrinter::HighResolution);
+        printer.setOutputFormat(QPrinter::PdfFormat);
+        printer.setOutputFileName(base.devolverDirectorio("documentos") + "/Presupuesto.pdf");
+        printer.setPageSize(QPageSize::A4);
+        printer.setPageMargins(QMargins(15, 15, 15, 15), QPageLayout::Millimeter);
+        documento.print(&printer);
+        QProcess::startDetached("xdg-open", QStringList() << base.devolverDirectorio("documentos") + "/Presupuesto.pdf");
     }
-    texto << "\n\n";
-    impresora.close();
-    QString imprimir = "cat ./ticket.txt >> " + confTicket.at(3);
-    const char *ch = imprimir.toLocal8Bit().constData();
-    system(ch);
 }
 
 #include "encargosdialog.h"
@@ -1140,3 +1383,4 @@ void Tpv::on_btnGestorEncargos_clicked()
     GestorEncargosDialog dial("", this);
     dial.exec();
 }
+

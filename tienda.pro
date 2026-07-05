@@ -6,10 +6,12 @@
 
 
 
-QT       += sql charts webenginewidgets concurrent
+QT       += sql charts webenginewidgets concurrent network
 greaterThan(QT_MAJOR_VERSION, 5): QT += core5compat
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+
+LIBS     += -lqrencode
 
 CONFIG -= lto ltcg
 
@@ -70,11 +72,13 @@ SOURCES += main.cpp\
     imprimirfactura.cpp \
     configticket.cpp \
     configbase.cpp \
+    configlocal.cpp \
     verifactuclass.cpp \
     visorimagenes.cpp \
     visorfacturas.cpp \
     dateeditdelegate.cpp \
     configuracionotros.cpp \
+    verifactudialog.cpp \
     listadosalidas.cpp \
     listadoarqueos.cpp \
     listadocaducados.cpp \
@@ -92,7 +96,12 @@ SOURCES += main.cpp\
     unificarmaestros.cpp \
     dialogcomparararticulos.cpp \
     dialoganadirapedido.cpp \
-    dialogcambiocodigo.cpp
+    historialprecios.cpp \
+    dialogcambiocodigo.cpp \
+    visorlog.cpp \
+    dialogdetallearqueo.cpp \
+    monitorcaducidades.cpp \
+    dialogrecomendaciones.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -147,11 +156,13 @@ HEADERS  += tienda.h \
     imprimirfactura.h \
     configticket.h \
     configbase.h \
+    configlocal.h \
     verifactuclass.h \
     visorimagenes.h \
     visorfacturas.h \
     dateeditdelegate.h \
     configuracionotros.h \
+    verifactudialog.h \
     listadosalidas.h \
     listadoarqueos.h \
     listadocaducados.h \
@@ -169,7 +180,13 @@ HEADERS  += tienda.h \
     unificarmaestros.h \
     dialogcomparararticulos.h \
     dialoganadirapedido.h \
-    dialogcambiocodigo.h
+    historialprecios.h \
+    dialogcambiocodigo.h \
+    hashutil.h \
+    visorlog.h \
+    dialogdetallearqueo.h \
+    monitorcaducidades.h \
+    dialogrecomendaciones.h
 
 FORMS    += tienda.ui \
     copiaseguridad.ui \
@@ -211,9 +228,11 @@ FORMS    += tienda.ui \
     etiquetas.ui \
     configticket.ui \
     configbase.ui \
+    configlocal.ui \
     visorimagenes.ui \
     visorfacturas.ui \
     configuracionotros.ui \
+    verifactudialog.ui \
     listadosalidas.ui \
     listadoarqueos.ui \
     listadocaducados.ui \
@@ -228,7 +247,12 @@ FORMS    += tienda.ui \
     unificarmaestros.ui \
     dialogcomparararticulos.ui \
     dialoganadirapedido.ui \
-    dialogcambiocodigo.ui
+    historialprecios.ui \
+    dialogcambiocodigo.ui \
+    dialogcambiocodigo.ui \
+    dialogdetallearqueo.ui \
+    dialogrecomendaciones.ui \
+    visorlog.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 

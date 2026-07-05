@@ -91,7 +91,7 @@ void EntradaMercancia::on_lineEditCod_returnPressed()
     
     if (registro.isEmpty()) {
         QString cod = base->codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
-        registro = base->consulta_producto("DB", cod);
+        registro = base->consulta_producto(conf->getConexionLocal(), cod);
     }
     
     if (!registro.isEmpty()) {
@@ -139,9 +139,9 @@ void EntradaMercancia::on_pushButtonAgregarLinea_clicked()
     datos.append(ui->lineEditUds->text());
     datos.append(ui->dateEditCaducidad->text());
     datos.append(ui->lineEditPVP->text());
-    datos.append(QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database("DB"),
+    datos.append(QString::number(base->idTiendaDesdeNombre(QSqlDatabase::database(conf->getConexionLocal()),
                                                            ui->comboBoxProcedencia->currentText())));
-    base->insertarEnTabla(QSqlDatabase::database("DB"), "entradaGenero_tmp", datos);
+    base->insertarEnTabla(QSqlDatabase::database(conf->getConexionLocal()), "entradaGenero_tmp", datos);
 
     //mTablaEntradas->select();
     ui->lineEditCod->clear();
@@ -154,7 +154,7 @@ void EntradaMercancia::on_pushButtonAgregarLinea_clicked()
 
 void EntradaMercancia::on_lineEditDesc_returnPressed()
 {
-    QSqlQuery consulta = base->buscarProducto(QSqlDatabase::database("DB"),
+    QSqlQuery consulta = base->buscarProducto(QSqlDatabase::database(conf->getConexionLocal()),
                                               "articulos",
                                               ui->lineEditDesc->text());
     consulta.first();
@@ -175,9 +175,11 @@ void EntradaMercancia::on_pushButtonBorrar_clicked()
     QString id = mTablaEntradas->data(mTablaEntradas->index(index.row(), 0)).toString();
 
     if (!id.isEmpty()) {
-        QSqlQuery tmp = base->ejecutarSentencia("DELETE FROM entradaGenero_tmp WHERE id = '"
-                                                    + id + "'",
-                                                conf->getConexionLocal());
+        // Se utiliza una consulta preparada para evitar inyecciones SQL al borrar una línea temporal de entrada de mercancía
+        QSqlQuery tmp(QSqlDatabase::database(conf->getConexionLocal()));
+        tmp.prepare("DELETE FROM entradaGenero_tmp WHERE id = ?");
+        tmp.bindValue(0, id);
+        tmp.exec();
         qDebug() << tmp.lastError();
     }
     actualizarTabla();
@@ -228,8 +230,11 @@ void EntradaMercancia::procesarLineaEntrada(const QSqlRecord &registro)
         if (abs(pendientes) > uds) {
             base->aumentarLote(conf->getConexionLocal(), idLote, uds);
         } else {
-            base->ejecutarSentencia("DELETE FROM lotes WHERE id = '" + idLote + "'",
-                                    conf->getConexionLocal());
+            // Se parametriza la consulta de borrado de lote para garantizar la seguridad
+            QSqlQuery deleteLoteQuery(QSqlDatabase::database(conf->getConexionLocal()));
+            deleteLoteQuery.prepare("DELETE FROM lotes WHERE id = ?");
+            deleteLoteQuery.bindValue(0, idLote);
+            deleteLoteQuery.exec();
             int nuevasUnidades = uds + pendientes;
 
             idLote = base->idLote(conf->getConexionLocal(), cod, "", fechaCaducidad);
@@ -266,30 +271,36 @@ void EntradaMercancia::actualizarArticulo(const QString &cod,
 
         if (descripcion != descAnt || precio != pvpAnt) {
             QString precioValidado = precio.isEmpty() ? "0" : precio;
-            base->ejecutarSentencia(
-                QString("UPDATE articulos SET descripcion = '%1', pvp = %2 WHERE cod = '%3'")
-                    .arg(descripcion, precioValidado, cod),
-                conf->getConexionLocal());
+            // Se utiliza una consulta preparada para evitar inyecciones SQL al actualizar la descripción y precio del artículo
+            QSqlQuery updateQuery(QSqlDatabase::database(conf->getConexionLocal()));
+            updateQuery.prepare("UPDATE articulos SET descripcion = ?, pvp = ? WHERE cod = ?");
+            updateQuery.bindValue(0, descripcion);
+            updateQuery.bindValue(1, precioValidado.toDouble());
+            updateQuery.bindValue(2, cod);
+            updateQuery.exec();
         }
     }
 }
 
 void EntradaMercancia::guardarArticulo(int idTienda)
 {
-    base->ejecutarSentencia(
-        QString("INSERT INTO entradaGenero (cod, fechaEntrada, descripcion, cantidad, "
-                "fechaCaducidad, pvp, idTienda) "
-                "SELECT cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp, idTienda "
-                "FROM entradaGenero_tmp WHERE idTienda = %1")
-            .arg(idTienda),
-        conf->getConexionLocal());
+    // Se parametriza la inserción masiva desde la tabla temporal filtrando de forma segura por idTienda
+    QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
+    query.prepare("INSERT INTO entradaGenero (cod, fechaEntrada, descripcion, cantidad, "
+                  "fechaCaducidad, pvp, idTienda) "
+                  "SELECT cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp, idTienda "
+                  "FROM entradaGenero_tmp WHERE idTienda = ?");
+    query.bindValue(0, idTienda);
+    query.exec();
 }
 
 void EntradaMercancia::limpiarTabla(int idTienda)
 {
-    base->ejecutarSentencia(QString("DELETE FROM entradaGenero_tmp WHERE idTienda = %1")
-                                .arg(idTienda),
-                            conf->getConexionLocal());
+    // Se parametriza el borrado de la tabla temporal filtrando de forma segura por idTienda
+    QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
+    query.prepare("DELETE FROM entradaGenero_tmp WHERE idTienda = ?");
+    query.bindValue(0, idTienda);
+    query.exec();
 }
 
 void EntradaMercancia::on_comboBoxProcedencia_currentIndexChanged(int)
