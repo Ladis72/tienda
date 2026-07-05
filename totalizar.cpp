@@ -13,7 +13,7 @@ totalizar::totalizar(QString datos, double vale, QWidget *parent)
     ui->lineEditTotal->setText(QString::number(total));
     descuento = 0;
     base = new baseDatos();
-    fpago = base->fpago(QSqlDatabase::database("DB"));
+    fpago = base->fpago(QSqlDatabase::database(conf->getConexionLocal()));
 
     while (fpago.next()) {
         ui->comboBox->addItem(fpago.value(1).toString(), fpago.value(0).toInt());

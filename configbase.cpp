@@ -37,7 +37,7 @@ ConfigBase::~ConfigBase()
  */
 void ConfigBase::crearTablaConfigNube()
 {
-    QSqlQuery q(QSqlDatabase::database("DB"));
+    QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
     q.exec("CREATE TABLE IF NOT EXISTS config_nube ("
            "  id       INT          NOT NULL DEFAULT 1 PRIMARY KEY,"
            "  servidor VARCHAR(255) NOT NULL DEFAULT '',"
@@ -57,7 +57,7 @@ void ConfigBase::crearTablaConfigNube()
  */
 void ConfigBase::cargarDatos()
 {
-    QSqlQuery q(QSqlDatabase::database("DB"));
+    QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
     q.exec("SELECT servidor, puerto, baseDatos, usuario, clave, ssl_ca FROM config_nube WHERE id = 1");
 
     if (q.first()) {
@@ -140,7 +140,7 @@ void ConfigBase::on_pushButton_clicked()
         return;
     }
 
-    QSqlQuery q(QSqlDatabase::database("DB"));
+    QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
     q.prepare("UPDATE config_nube SET "
               "servidor = :servidor, puerto = :puerto, baseDatos = :bd, "
               "usuario = :usuario, clave = :clave, ssl_ca = :ssl_ca "

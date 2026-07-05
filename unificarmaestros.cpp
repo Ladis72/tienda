@@ -45,9 +45,9 @@ void UnificarMaestros::refrescarTabla()
 {
     qDebug() << "[UnificarMaestros] Entrando en refrescarTabla()";
     
-    QSqlDatabase db = QSqlDatabase::database("DB");
+    QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
     if (!db.isOpen()) {
-        qDebug() << "[UnificarMaestros] ERROR: La conexión 'DB' no está abierta.";
+        qDebug() << "[UnificarMaestros] ERROR: La conexión local no está abierta.";
         return;
     }
 
@@ -127,7 +127,7 @@ void UnificarMaestros::on_pushButtonFusionar_clicked()
 
 bool UnificarMaestros::ejecutarFusion(int idGanador, const QList<int> &idsPerdedores)
 {
-    QSqlDatabase db = QSqlDatabase::database("DB");
+    QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
     
     if (!db.transaction()) {
         QMessageBox::critical(this, tr("Error"), tr("No se pudo iniciar la transacción: ") + db.lastError().text());
@@ -228,7 +228,7 @@ void UnificarMaestros::on_pushButtonRenombrar_clicked()
                                                 QLineEdit::Normal, nombreActual, &ok);
     
     if (ok && !nuevoNombre.isEmpty() && nuevoNombre != nombreActual) {
-        QSqlQuery q(QSqlDatabase::database("DB"));
+        QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
         q.prepare(QString("UPDATE %1 SET %2 = :nombre WHERE %3 = :id")
                   .arg(m_config.tablaMaestra, m_config.campoNombre, m_config.campoId));
         q.bindValue(":nombre", nuevoNombre);

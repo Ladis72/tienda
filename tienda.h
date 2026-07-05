@@ -7,6 +7,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QPalette>
+#include <QTimer>
 
 
 #include "articulos.h"
@@ -17,6 +18,7 @@
 #include "clientes.h"
 #include "conexionesremotas.h"
 #include "configbase.h"
+#include "configlocal.h"
 #include "configticket.h"
 #include "configuracion.h"
 #include "configuracionotros.h"
@@ -45,8 +47,11 @@
 #include "tiposentradassalidas.h"
 #include "tpv.h"
 #include "verfacturas.h"
+#include "visorlog.h"
 #include "notaswidget.h"
 #include "syncmanager.h"
+#include "monitorcaducidades.h"
+#include "dialogrecomendaciones.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -92,6 +97,7 @@ private slots:
 
     void on_pushButtonTicket_clicked();
     void on_pushButtonConfigDB_clicked();
+    void on_pushButtonConfigLocal_clicked();
     void on_pushButtonConfiguracion_clicked();
     void on_pushButtonAlbaranes_clicked();
     void on_pushButtonFacturar_clicked();
@@ -128,6 +134,10 @@ private slots:
     void on_pushButtonVentaArticulos_clicked();
     void on_pushButtonUnificarGlobal_clicked();
 
+    void onRecomendacionesListas(QList<RecomendacionCaducidad> recomendaciones);
+    void onBtnMonitorCaducidadesClicked();
+    void onMonitorCaducidadesError(QString msg);
+
 private:
     // sincroVales eliminado: ya no se usa el mecanismo de vales pendientes marcar
     QPushButton *usuario;
@@ -158,6 +168,7 @@ private:
 
     ConfigTicket *CTicket;
     ConfigBase *CBase;
+    ConfigLocal *CLocal;
     ConfiguracionOtros *ConfigOtros;
     ListadoSalidas *ListSalidas;
     ListadoArqueos *ListaArqueos;
@@ -184,8 +195,16 @@ private:
     QPushButton *btnNotifNotas;
     QPushButton *btnEditorPermisos;
     QPushButton *btnVerifactu;
+    QPushButton *btnVisorLog;
     QPushButton *btnEncargosMain = nullptr;
     QSplitter   *mainSplitter;
+    QTimer      *verifactuTimer;
+    
+    // Monitor Inteligente de Caducidades
+    QPushButton *btnMonitorCaducidades;
+    MonitorCaducidades *m_monitorCaducidades;
+    QList<RecomendacionCaducidad> m_recomendacionesActivas;
+
 protected:
     void resizeEvent(QResizeEvent *event) override;
     bool eventFilter(QObject *obj, QEvent *event) override;

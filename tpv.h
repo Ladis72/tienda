@@ -17,7 +17,7 @@
 #include "syncmanager.h"  // para SyncManager::CONEXION_NUBE
 #include "totalizar.h"
 #include "visorimagenes.h"
-
+#include "monitorcaducidades.h"
 extern Configuracion *conf;
 
 namespace Ui {
@@ -98,7 +98,7 @@ private:
     VisorImagenes *visor;
     QString currentFotoPath;
     int idEncargoPendiente;
-
+    
 protected:
     void keyPressEvent(QKeyEvent *e) override;
     void closeEvent(QCloseEvent *event) override;

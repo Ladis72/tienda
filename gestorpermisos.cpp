@@ -347,6 +347,7 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
       {"copia_seguridad",           {0, 1}},
       {"conectar",                  {0, 1}},
       {"config_base",               {0}},
+      {"config_local",              {0}},
       {"tab_config",                {0}},
 
       // ── Preparar (pedidos) ──
@@ -360,7 +361,7 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
 
       // ── Configuración Avanzada ──
       {"editor_permisos",           {0}},
-      {"verifactu",                 {0, 1}},
+      {"verifactu",                 {0}},
 
       // ── TPV (Acciones granulares) ──
       {"tpv.anadir",                {0, 1, 2, 3}},

@@ -168,7 +168,7 @@
      <item>
       <widget class="QPushButton" name="btn_preTicket">
        <property name="text">
-        <string>Pre-ticket</string>
+        <string>Pre-ticket/Presupuesto</string>
        </property>
       </widget>
      </item>

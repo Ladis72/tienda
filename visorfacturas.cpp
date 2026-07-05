@@ -6,9 +6,10 @@ VisorFacturas::VisorFacturas(QString nFactura, QWidget *parent)
     , ui(new Ui::VisorFacturas)
 {
     ui->setupUi(this);
-    QSqlQuery consulta = base->ejecutarSentencia("SELECT * FROM lineaspedido WHERE nDocumento = '"
-                                                     + nFactura + "'",
-                                                 conf->getConexionLocal());
+    QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
+    consulta.prepare("SELECT * FROM lineaspedido WHERE nDocumento = ?");
+    consulta.bindValue(0, nFactura);
+    consulta.exec();
     qDebug() << consulta.lastError();
     consulta.first();
     modelo.setQuery(consulta);

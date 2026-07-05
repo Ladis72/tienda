@@ -25,8 +25,9 @@ GenerarVales::GenerarVales(QWidget *parent)
     ui->tableWidget->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     ui->tableWidget->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
 
-    // Lista de todas las conexiones disponibles (local + remotas)
-    tiendas = conf->getNombreConexiones();
+    // NOTA: La lista de conexiones activas se carga en el momento de generar
+    // (on_pushButtonGenerar_clicked), no aquí, para reflejar el estado actual
+    // de las conexiones en el instante de calcular los vales.
 }
 
 GenerarVales::~GenerarVales()
@@ -94,6 +95,48 @@ void GenerarVales::on_pushButtonGenerar_clicked()
         QMessageBox::warning(this, "Error de fecha",
                              "La fecha seleccionada no puede ser futura.");
         return;
+    }
+
+    // ── 0b. Verificar que TODAS las tiendas están conectadas ───────────────
+    // Los vales son UNIFICADOS: si alguna tienda remota no está conectada,
+    // los totales serían incorrectos (incompletos). Se bloquea la generación
+    // hasta que todas estén disponibles.
+    {
+        // Tiendas remotas configuradas en la BD (local = 0)
+        const QStringList todasRemotas  = conf->getNombreConexiones();
+        // Tiendas remotas con conexión activa en este instante
+        const QStringList activas       = conf->getNombreConexionesActivas();
+
+        // Detectar cuáles remotas están offline
+        QStringList offline;
+        for (const QString &t : todasRemotas) {
+            if (!activas.contains(t)) {
+                offline << t;
+            }
+        }
+
+        if (!offline.isEmpty()) {
+            // Hay tiendas sin conexión → no se puede garantizar un cálculo completo
+            QMessageBox::critical(
+                this,
+                tr("Tiendas no conectadas"),
+                tr("No se pueden generar los vales porque las siguientes tiendas "
+                   "no están conectadas:\n\n  • %1\n\n"
+                   "Conéctelas pulsando el botón «Conectar» e inténtelo de nuevo.")
+                    .arg(offline.join("\n  • ")));
+            ui->progressBar->setValue(0);
+            ui->label->setText(tr("Generación cancelada: hay tiendas offline."));
+            return;
+        }
+
+        // Todas las remotas están activas.
+        // La lista de cálculo = conexión local + todas las remotas activas.
+        // IMPORTANTE: getNombreConexiones() solo devuelve remotas (local=0),
+        // por eso añadimos explícitamente la BD local.
+        tiendas.clear();
+        tiendas << conf->getConexionLocal(); // BD local (tickets propios)
+        tiendas << activas;                  // BDs remotas (tickets de las demás)
+        qDebug() << "GenerarVales: Tiendas para el cálculo:" << tiendas;
     }
 
     // Rango del mes seleccionado
@@ -170,6 +213,19 @@ void GenerarVales::on_pushButtonGenerar_clicked()
         dbLocal.transaction();
     }
 
+    // ── 3b. Obtener el ID de la tienda local (una sola vez, fuera del bucle) ──
+    // Se hace aquí para no repetir la query por cada cliente.
+    int idTiendaOrigen = 1; // Fallback por defecto
+    {
+        QSqlQuery qTienda(dbLocal);
+        if (qTienda.exec("SELECT id FROM tiendas WHERE local = 1") && qTienda.first()) {
+            idTiendaOrigen = qTienda.value(0).toInt();
+        } else {
+            qWarning() << "GenerarVales: No se pudo obtener id_tienda_origen; usando 1 por defecto."
+                       << qTienda.lastError().text();
+        }
+    }
+
     int n = clientes.size();
     for (int i = 0; i < n; ++i) {
         const DatosCliente &cli = clientes.at(i);
@@ -220,13 +276,7 @@ void GenerarVales::on_pushButtonGenerar_clicked()
         qInsert.bindValue(0, cli.id);
         qInsert.bindValue(1, importeVale);
         qInsert.bindValue(2, desde);
-        // Obtener el ID de la tienda local
-        int idTiendaOrigen = 1; // Default fallback
-        QSqlQuery qTienda("SELECT id FROM tiendas WHERE local = 1", dbLocal);
-        if (qTienda.exec() && qTienda.first()) {
-            idTiendaOrigen = qTienda.value(0).toInt();
-        }
-
+        // idTiendaOrigen ya fue calculado antes del bucle (ver paso 3b)
         qInsert.bindValue(3, idTiendaOrigen);
 
         if (!qInsert.exec()) {

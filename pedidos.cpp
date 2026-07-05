@@ -59,6 +59,25 @@ pedidos::pedidos(QString idPed, QString proveedor, QString ndoc,
   
   // Establecer fecha actual por defecto
   ui->dateEdit->setDate(QDate::currentDate());
+
+  // Cargar notas del pedido actual desde la tabla temporal
+  QSqlQuery queryNotes(QSqlDatabase::database(conf->getConexionLocal()));
+  queryNotes.prepare("SELECT notas FROM albaranes_tmp WHERE id = :id");
+  queryNotes.bindValue(":id", idPedido);
+  if (queryNotes.exec() && queryNotes.next()) {
+      ui->leNotasPedido->setText(queryNotes.value("notas").toString());
+  }
+
+  // Guardar notas de forma reactiva al terminar de editar el campo
+  connect(ui->leNotasPedido, &QLineEdit::editingFinished, this, [this]() {
+      QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
+      query.prepare("UPDATE albaranes_tmp SET notas = :notas WHERE id = :id");
+      query.bindValue(":notas", ui->leNotasPedido->text());
+      query.bindValue(":id", idPedido);
+      if (!query.exec()) {
+          qDebug() << "Error al guardar notas en albaranes_tmp: " << query.lastError().text();
+      }
+  });
 }
 
 pedidos::~pedidos() {

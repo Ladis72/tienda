@@ -6,7 +6,7 @@ Caducidades::Caducidades(QWidget *parent)
     , ui(new Ui::Caducidades)
 {
     ui->setupUi(this);
-    modelo = new QSqlRelationalTableModel(this, QSqlDatabase::database("DB"));
+    modelo = new QSqlRelationalTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
     modelo->setTable("lotes");
     modelo->setRelation(1, QSqlRelation("articulos", "cod", "descripcion"));
     modelo->setSort(3, Qt::AscendingOrder);

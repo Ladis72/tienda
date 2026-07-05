@@ -1,4 +1,5 @@
 #include "base_datos.h"
+#include "hashutil.h"
 #include "qprocess.h"
 #include <QDate>
 #include <QDebug>
@@ -14,7 +15,7 @@ bool baseDatos::conectar(QString host, QString puerto, QString baseDatos,
                          QString usuario, QString clave) {
   QSqlDatabase db;
   if (QSqlDatabase::contains("DB")) {
-    db = QSqlDatabase::database("DB");
+    db = QSqlDatabase::database(conf->getConexionLocal());
   } else {
     db = QSqlDatabase::addDatabase("QMYSQL", "DB");
   }
@@ -32,13 +33,32 @@ bool baseDatos::conectar(QString host, QString puerto, QString baseDatos,
     return false;
   }
 
+  // Asegurar de forma eficiente que las columnas de notas existen en albaranes_tmp y pedidos
+  QSqlQuery checkQuery(db);
+  
+  // Comprobar si existe la columna en 'albaranes_tmp'
+  checkQuery.prepare("SELECT COUNT(*) FROM information_schema.columns "
+                     "WHERE table_schema = DATABASE() AND table_name = 'albaranes_tmp' AND column_name = 'notas'");
+  if (checkQuery.exec() && checkQuery.next() && checkQuery.value(0).toInt() == 0) {
+      QSqlQuery queryAlter(db);
+      queryAlter.exec("ALTER TABLE albaranes_tmp ADD COLUMN notas TEXT NULL");
+  }
+
+  // Comprobar si existe la columna en 'pedidos'
+  checkQuery.prepare("SELECT COUNT(*) FROM information_schema.columns "
+                     "WHERE table_schema = DATABASE() AND table_name = 'pedidos' AND column_name = 'notas'");
+  if (checkQuery.exec() && checkQuery.next() && checkQuery.value(0).toInt() == 0) {
+      QSqlQuery queryAlter(db);
+      queryAlter.exec("ALTER TABLE pedidos ADD COLUMN notas TEXT NULL");
+  }
+
   return true;
 }
 
 bool baseDatos::guardarDatosConexion(QString host, QString puerto,
                                      QString baseDatos, QString usuario,
                                      QString clave) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("UPDATE configBase SET servidor =? , puerto =?, baseDatos "
                    "=? , usuario =? , "
                    "clave =? WHERE id=1");
@@ -59,7 +79,7 @@ bool baseDatos::guardarDatosConexion(QString host, QString puerto,
 }
 
 QStringList baseDatos::datosConexion() {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.exec("SELECT * FROM configBase");
   consulta.first();
   QStringList datos;
@@ -73,7 +93,7 @@ QStringList baseDatos::datosConexion() {
 bool baseDatos::guardarDatosConexionMaster(QString host, QString puerto,
                                            QString baseDatos, QString usuario,
                                            QString clave) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("UPDATE configMaster SET servidor =? , puerto =?, baseDatos "
                    "=? , usuario =? , "
                    "clave =? WHERE id=1");
@@ -94,7 +114,7 @@ bool baseDatos::guardarDatosConexionMaster(QString host, QString puerto,
 }
 
 QStringList baseDatos::datosConexionMaster() {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.exec("SELECT * FROM configMaster");
   consulta.first();
   QStringList datos;
@@ -112,7 +132,7 @@ QStringList baseDatos::datosConexionLocal() {
   //   [0] nombre, [1] ip, [2] usuario, [3] password, [4] baseDatos, [5] puerto
   // Primero busca por la bandera local=1; si no, busca por IP de loopback como
   // fallback.
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.exec("SELECT nombre , ip , usuario , password , baseDatos , "
                 "COALESCE(puerto, 3306) AS puerto FROM tiendas "
                 "WHERE local = 1 OR ip IN ('localhost','127.0.0.1','::1') "
@@ -174,7 +194,7 @@ QSqlRecord baseDatos::consulta_producto(QString nombreConnexion, QString cod) {
       
       // Si se usan precios locales, buscar excepción en la conexión "DB" (precios_tienda no se sincroniza)
       if (conf->getUsarPreciosLocales()) {
-          QSqlQuery qLocal(QSqlDatabase::database("DB"));
+          QSqlQuery qLocal(QSqlDatabase::database(conf->getConexionLocal()));
           qLocal.prepare("SELECT pvp, precio_venta FROM precios_tienda WHERE cod_articulo = ?");
           qLocal.bindValue(0, cod);
           if (qLocal.exec() && qLocal.next()) {
@@ -218,21 +238,41 @@ QSqlQuery baseDatos::buscarProducto(QSqlDatabase db, QString tabla,
 
 bool baseDatos::insertarUsuario(QSqlDatabase db, QStringList datos) {
   QSqlQuery consulta(db);
-  consulta.prepare(
-      "INSERT INTO usuarios (id , nombre , apellido , direccion , localidad , "
-      "provincia , cp , tlfn , nif , mail , usuario , clave , notas , rol , "
-      "foto) "
-      "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+
+  // SEC-02: Comprobar de forma dinámica si la columna 'salt' existe en la tabla usuarios.
+  bool tieneSalt = false;
+  QSqlQuery checkCol(db);
+  if (checkCol.exec("SHOW COLUMNS FROM usuarios LIKE 'salt'")) {
+      tieneSalt = checkCol.next();
+  }
+
+  QString claveFinal = datos.at(11);
+  QString saltFinal = "";
+
+  if (tieneSalt) {
+      // Generar un salt seguro de 16 bytes y hashear la clave.
+      saltFinal = HashUtil::generarSalt();
+      claveFinal = HashUtil::hashPassword(claveFinal, saltFinal);
+  }
+
+  if (tieneSalt) {
+      consulta.prepare(
+          "INSERT INTO usuarios (id , nombre , apellido , direccion , localidad , "
+          "provincia , cp , tlfn , nif , mail , usuario , clave , notas , rol , "
+          "foto, salt) "
+          "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+  } else {
+      consulta.prepare(
+          "INSERT INTO usuarios (id , nombre , apellido , direccion , localidad , "
+          "provincia , cp , tlfn , nif , mail , usuario , clave , notas , rol , "
+          "foto) "
+          "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+  }
+
   consulta.bindValue(0, datos.at(0).toInt());
-  qDebug() << datos.at(0);
-
   consulta.bindValue(1, datos.at(1));
-  qDebug() << datos[1];
-
   consulta.bindValue(2, datos.at(2));
-  qDebug() << datos[2];
   consulta.bindValue(3, datos.at(3));
-  qDebug() << datos[3];
   consulta.bindValue(4, datos.at(4));
   consulta.bindValue(5, datos.at(5));
   consulta.bindValue(6, datos.at(6));
@@ -240,21 +280,20 @@ bool baseDatos::insertarUsuario(QSqlDatabase db, QStringList datos) {
   consulta.bindValue(8, datos.at(8));
   consulta.bindValue(9, datos.at(9));
   consulta.bindValue(10, datos.at(10));
-  consulta.bindValue(11, datos.at(11));
+  consulta.bindValue(11, claveFinal);
   consulta.bindValue(12, datos.at(12));
   consulta.bindValue(13, datos.at(13).toInt());
   consulta.bindValue(14, datos.at(14));
-  qDebug() << db.lastError().text();
-  qDebug() << consulta.lastError();
-  if (!consulta.exec()) {
-    // QMessageBox::warning(this,"Advertencia!","No se pudo realizar la
-    // operacion solicitada \n"+db.lastError().text());
-    db.rollback();
-    // QSqlDatabase::database().rollback();
-    return false;
 
+  if (tieneSalt) {
+      consulta.bindValue(15, saltFinal);
+  }
+
+  if (!consulta.exec()) {
+    db.rollback();
+    return false;
   } else {
-    db.commit(); // QSqlDatabase::database().commit();
+    db.commit();
     return true;
   }
 }
@@ -290,11 +329,41 @@ QSqlQuery baseDatos::buscarEnTabla(QSqlDatabase db, QString tabla,
 bool baseDatos::modificarUsuaruio(QSqlDatabase db, QStringList datos,
                                   QString dato) {
   QSqlQuery consulta(db);
-  consulta.prepare(
-      "UPDATE usuarios SET id =?, nombre=? , apellido=? , direccion=? , "
-      "localidad=? "
-      ", provincia=? , cp=? , tlfn=? , nif=? , mail=? , usuario=? , clave=? , "
-      "notas=? , rol=? , foto=?  WHERE id=?");
+
+  // SEC-02: Comprobar de forma dinámica si la columna 'salt' existe en la tabla usuarios.
+  bool tieneSalt = false;
+  QSqlQuery checkCol(db);
+  if (checkCol.exec("SHOW COLUMNS FROM usuarios LIKE 'salt'")) {
+      tieneSalt = checkCol.next();
+  }
+
+  QString claveFinal = datos.at(11);
+  QString saltFinal = "";
+  bool actualizarSalt = false;
+
+  if (tieneSalt) {
+      // Si la clave NO es un hash SHA-256 válido, significa que es texto plano y se está modificando.
+      if (!HashUtil::esHashSHA256(claveFinal)) {
+          saltFinal = HashUtil::generarSalt();
+          claveFinal = HashUtil::hashPassword(claveFinal, saltFinal);
+          actualizarSalt = true;
+      }
+  }
+
+  if (tieneSalt && actualizarSalt) {
+      consulta.prepare(
+          "UPDATE usuarios SET id =?, nombre=? , apellido=? , direccion=? , "
+          "localidad=? "
+          ", provincia=? , cp=? , tlfn=? , nif=? , mail=? , usuario=? , clave=? , "
+          "notas=? , rol=? , foto=? , salt=?  WHERE id=?");
+  } else {
+      consulta.prepare(
+          "UPDATE usuarios SET id =?, nombre=? , apellido=? , direccion=? , "
+          "localidad=? "
+          ", provincia=? , cp=? , tlfn=? , nif=? , mail=? , usuario=? , clave=? , "
+          "notas=? , rol=? , foto=?  WHERE id=?");
+  }
+
   consulta.bindValue(0, datos.at(0).toInt());
   consulta.bindValue(1, datos.at(1));
   consulta.bindValue(2, datos.at(2));
@@ -306,29 +375,29 @@ bool baseDatos::modificarUsuaruio(QSqlDatabase db, QStringList datos,
   consulta.bindValue(8, datos.at(8));
   consulta.bindValue(9, datos.at(9));
   consulta.bindValue(10, datos.at(10));
-  consulta.bindValue(11, datos.at(11));
+  consulta.bindValue(11, claveFinal);
   consulta.bindValue(12, datos.at(12));
   consulta.bindValue(13, datos.at(13).toInt());
   consulta.bindValue(14, datos.at(14));
-  consulta.bindValue(15, dato.toInt());
 
-  qDebug() << db.lastError().text();
-  qDebug() << consulta.lastError();
-  if (!consulta.exec()) {
-    // QMessageBox::warning(this,"Advertencia!","No se pudo realizar la
-    // operacion solicitada \n"+db.lastError().text());
-    db.rollback();
-    // QSqlDatabase::database().rollback();
-    return false;
-
+  if (tieneSalt && actualizarSalt) {
+      consulta.bindValue(15, saltFinal);
+      consulta.bindValue(16, dato.toInt());
   } else {
-    db.commit(); // QSqlDatabase::database().commit();
+      consulta.bindValue(15, dato.toInt());
+  }
+
+  if (!consulta.exec()) {
+    db.rollback();
+    return false;
+  } else {
+    db.commit();
     return true;
   }
 }
 
 bool baseDatos::modificarFotoUsusario(QString foto, int id) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("UPDATE usuarios SET foto=? WHERE id =?");
   consulta.bindValue(0, foto);
   consulta.bindValue(1, id);
@@ -548,7 +617,7 @@ bool baseDatos::borrarArticulo(QSqlDatabase db, QString dato) {
 }
 
 bool baseDatos::modificarFotoArticulo(QString foto, QString dato) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("UPDATE articulos SET foto=? WHERE cod LIKE ?");
   consulta.bindValue(0, foto);
   consulta.bindValue(1, dato);
@@ -722,11 +791,12 @@ QSqlQuery baseDatos::ventasClientes(QString nombreConexion, QDate fechaI,
 
 double baseDatos::valeCliente(QString nombreConexion, QString idCLiente) {
   QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-  consulta.exec("SELECT cantidad FROM vales WHERE idCLiente ='" + idCLiente +
-                "' AND estado = 1 ORDER BY fechaEmision DESC, vale_uuid DESC LIMIT 1");
-  qDebug() << consulta.lastError();
-  if (consulta.numRowsAffected() > 0) {
-    consulta.first();
+  // NOTA: numRowsAffected() no funciona con SELECT (siempre devuelve -1 o 0).
+  // Se usa consulta.next() para comprobar si hay resultado.
+  consulta.prepare("SELECT cantidad FROM vales WHERE idCLiente = ? "
+                   "AND estado = 1 ORDER BY fechaEmision DESC, vale_uuid DESC LIMIT 1");
+  consulta.bindValue(0, idCLiente);
+  if (consulta.exec() && consulta.next()) {
     return consulta.value(0).toDouble();
   }
   return 0;
@@ -747,10 +817,12 @@ bool baseDatos::caducarVales(QString nombreConexion) {
 
 int baseDatos::idVale(QString nombreConexion, QString idCliente) {
   QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
-  consulta.exec("SELECT idVales FROM vales WHERE idCliente='" + idCliente +
-                "' AND estado = 1 ORDER BY fechaEmision DESC, vale_uuid DESC LIMIT 1");
-  if (consulta.numRowsAffected() > 0) {
-    consulta.first();
+  // NOTA: numRowsAffected() no funciona con SELECT (siempre devuelve -1 o 0).
+  // Se usa consulta.next() para comprobar si hay resultado.
+  consulta.prepare("SELECT idVales FROM vales WHERE idCliente= ? "
+                   "AND estado = 1 ORDER BY fechaEmision DESC, vale_uuid DESC LIMIT 1");
+  consulta.bindValue(0, idCliente);
+  if (consulta.exec() && consulta.next()) {
     return consulta.value(0).toInt();
   }
   return 0;
@@ -769,19 +841,22 @@ bool baseDatos::usarVale(QString nombreConexion, int idVale) {
 
 // NOTA: valesPendientesMarcar, hayValesPendientesMarcar, valesPendientes y
 // borrarValePendiente han sido eliminados (2026-04-11).
-// La propagaci\u00f3n del estado de los vales se hace ahora v\u00eda nube
+// La propagación del estado de los vales se hace ahora vía nube
 // (SyncManager):
 //   - usarVale() marca en local + nube directamente
-//   - Si la nube no est\u00e1 disponible, sync_cola propaga el cambio
-//   autom\u00e1ticamente
+//   - Si la nube no está disponible, sync_cola propaga el cambio
+//   automáticamente
 
 QSqlQuery baseDatos::tickesPorCLiente(QString nombreConexion, QString fechaI,
                                       QString fechaF, QString idCliente) {
   QSqlQuery consulta(QSqlDatabase::database(nombreConexion));
+  consulta.prepare("SELECT * FROM tickets WHERE cliente = ? "
+                   "AND fecha BETWEEN ? AND ?");
+  consulta.bindValue(0, idCliente);
+  consulta.bindValue(1, fechaI);
+  consulta.bindValue(2, fechaF);
 
-  if (consulta.exec("SELECT * FROM tickets WHERE cliente = '" + idCliente +
-                    "' AND fecha BETWEEN '" + fechaI + "' AND '" + fechaF +
-                    "'")) {
+  if (consulta.exec()) {
     qDebug() << consulta.lastQuery() << consulta.boundValue(0).toString()
              << consulta.boundValue(1).toString()
              << consulta.boundValue(2).toString();
@@ -865,7 +940,7 @@ QSqlQuery baseDatos::productosPorClienteFecha(QString nombreConexion,
 }
 
 QString baseDatos::nombreFamilia(QString id) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("SELECT * FROM familias WHERE id LIKE ?");
   consulta.bindValue(0, id);
   consulta.exec();
@@ -876,7 +951,7 @@ QString baseDatos::nombreFamilia(QString id) {
 }
 
 QString baseDatos::nombreFabricante(QString id) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("SELECT * FROM fabricantes WHERE id LIKE ?");
   consulta.bindValue(0, id);
   consulta.exec();
@@ -898,7 +973,7 @@ QString baseDatos::nombreUsusario(QString id, QString base) {
 }
 
 QString baseDatos::nombreCliente(QString id) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("SELECT * FROM clientes WHERE idCliente LIKE ?");
   consulta.bindValue(0, id);
   consulta.exec();
@@ -909,7 +984,7 @@ QString baseDatos::nombreCliente(QString id) {
 }
 
 QString baseDatos::etiquetaCliente(QString idCliente) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("SELECT * FROM clientes WHERE idCliente LIKE ?");
   consulta.bindValue(0, idCliente);
   consulta.exec();
@@ -972,7 +1047,7 @@ bool baseDatos::insertarEtiqueta(QString base, QString etiqueta) {
 }
 
 bool baseDatos::modificarTienda(QStringList datos) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare(
       "UPDATE tiendas SET nombre = ? , direccion = ? , ciudad = ? , telefono = "
       "? , whatsapp = ? "
@@ -1001,7 +1076,7 @@ bool baseDatos::modificarTienda(QStringList datos) {
 }
 
 bool baseDatos::borrarTienda(QString dato) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("DELETE FROM tiendas where id = ?");
   consulta.bindValue(0, dato);
   if (consulta.exec()) {
@@ -1011,14 +1086,14 @@ bool baseDatos::borrarTienda(QString dato) {
 }
 
 bool baseDatos::crearTienda(QStringList datos) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("INSERT INTO tiendas (nombre, direccion, ciudad, telefono, "
                    "whatsapp, email, ip, "
                    "usuario, password, master, local, baseDatos, puerto, "
                    "ssl_ca) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
   // Comprobar duplicados por nombre o IP
-  QSqlQuery check(QSqlDatabase::database("DB"));
+  QSqlQuery check(QSqlDatabase::database(conf->getConexionLocal()));
   check.prepare("SELECT id FROM tiendas WHERE nombre = ? OR ip = ?");
   check.bindValue(0, datos.at(1));
   check.bindValue(1, datos.at(7));
@@ -1047,8 +1122,9 @@ QSqlQuery baseDatos::tiendas(QSqlDatabase db) {
 
 int baseDatos::idTiendaDesdeNombre(QSqlDatabase db, QString nombreTienda) {
   QSqlQuery consulta(db);
-  if (!consulta.exec("SELECT id FROM tiendas WHERE nombre = '" + nombreTienda +
-                     "'")) {
+  consulta.prepare("SELECT id FROM tiendas WHERE nombre = ?");
+  consulta.bindValue(0, nombreTienda);
+  if (!consulta.exec()) {
     qDebug() << consulta.lastError();
   }
   consulta.first();
@@ -1134,7 +1210,7 @@ bool baseDatos::borrarProveedor(QSqlDatabase db, QString dato) {
 }
 
 QString baseDatos::descuentoProveedor(QString proveedor) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("SELECT descuento FROM proveedores WHERE nombre LIKE ?");
   consulta.bindValue(0, proveedor);
   if (consulta.exec() == true) {
@@ -1155,7 +1231,7 @@ QStringList baseDatos::listadoProveedores(QString db) {
 }
 
 QString baseDatos::codigoParaNuevoProveedor() {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.exec("SELECT max(idProveedor) FROM proveedores");
   consulta.first();
   int id = consulta.value(0).toInt() + 1;
@@ -1164,21 +1240,27 @@ QString baseDatos::codigoParaNuevoProveedor() {
 
 QString baseDatos::codigoDesdeAux(QString base, QString aux) {
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.exec("SELECT cod FROM codaux WHERE aux = '" + aux + "'");
+  consulta.prepare("SELECT cod FROM codaux WHERE aux = ?");
+  consulta.bindValue(0, aux);
+  consulta.exec();
   consulta.first();
   return consulta.value(0).toString();
 }
 
 QSqlQuery baseDatos::datosTicket(QString base, QString nTicket) {
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.exec("SELECT * FROM tickets WHERE ticket = '" + nTicket + "'");
+  consulta.prepare("SELECT * FROM tickets WHERE ticket = ?");
+  consulta.bindValue(0, nTicket);
+  consulta.exec();
   consulta.first();
   return consulta;
 }
 
 QSqlQuery baseDatos::consultarLineasTicket(QString base, QString nTicket) {
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.exec("SELECT * FROM lineasticket WHERE nticket = '" + nTicket + "'");
+  consulta.prepare("SELECT * FROM lineasticket WHERE nticket = ?");
+  consulta.bindValue(0, nTicket);
+  consulta.exec();
   return consulta;
 }
 
@@ -1187,6 +1269,36 @@ double baseDatos::obtenerNumeroUltimoTicket(QSqlDatabase db) {
   consulta.exec("SELECT max(ticket) FROM tickets");
   consulta.first();
   return consulta.value(0).toDouble();
+}
+
+/**
+ * @brief Obtiene el siguiente número de ticket de forma atómica.
+ *
+ * Utiliza FOR UPDATE para bloquear la lectura del máximo ticket,
+ * garantizando que dos puestos no obtengan el mismo número.
+ * Consulta tanto la tabla 'tickets' como 'ticketss' para evitar colisiones.
+ *
+ * @warning DEBE llamarse dentro de una transacción activa (db.transaction()).
+ * @param db Conexión a la base de datos (debe tener una transacción abierta).
+ * @return El siguiente número de ticket disponible.
+ */
+int baseDatos::obtenerSiguienteTicketAtomico(QSqlDatabase db) {
+  QSqlQuery consulta(db);
+  // Obtenemos el máximo de ambas tablas con bloqueo FOR UPDATE
+  // para que otro puesto que intente lo mismo espere a que esta
+  // transacción termine (commit/rollback).
+  bool ok = consulta.exec(
+      "SELECT GREATEST("
+      "  COALESCE((SELECT MAX(ticket) FROM tickets FOR UPDATE), 0),"
+      "  COALESCE((SELECT MAX(ticket) FROM ticketss FOR UPDATE), 0)"
+      ") + 1 AS siguiente");
+  if (ok && consulta.first()) {
+    return consulta.value(0).toInt();
+  }
+  // Fallback: si falla la consulta atómica, usar el método clásico
+  qWarning() << "obtenerSiguienteTicketAtomico: fallback al método no-atómico"
+             << consulta.lastError().text();
+  return static_cast<int>(obtenerNumeroUltimoTicket(db)) + 1;
 }
 
 QSqlQuery baseDatos::tcketsPendientes(QSqlDatabase db) {
@@ -1210,7 +1322,7 @@ int baseDatos::maxTicketPendiente(QSqlDatabase db) {
 }
 
 bool baseDatos::nuevoTicketTmp(int orden, int cliente, int vendedor) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("INSERT INTO ticket_tmp VALUES (?,?,?)");
   consulta.bindValue(0, orden);
   consulta.bindValue(1, cliente);
@@ -1239,7 +1351,7 @@ bool baseDatos::grabarTicket(QString base, QString serie, QStringList datos) {
 }
 
 bool baseDatos::grabarLineaTicket(QStringList datos) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare(
       "INSERT INTO lineasticket VALUES (NULL,?,?,?,?,?,?,?,?,?,?)");
   for (int i = 0; i < datos.length(); ++i) {
@@ -1253,7 +1365,7 @@ bool baseDatos::grabarLineaTicket(QStringList datos) {
 }
 
 bool baseDatos::borrarTicketTmp(int ticket) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("DELETE FROM ticket_tmp WHERE orden = ?");
   consulta.bindValue(0, ticket);
   if (consulta.exec()) {
@@ -1366,7 +1478,7 @@ bool baseDatos::crearCliente(QSqlDatabase db, QStringList datos) {
 }
 
 double baseDatos::descuentoCliente(QString idCliente) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   
   consulta.prepare("SELECT descuento FROM clientes WHERE idCliente = :idcliente");
   consulta.bindValue(":idcliente", idCliente);
@@ -1541,7 +1653,7 @@ bool baseDatos::ticketPromo(QString base) {
  * @return true si se grabó correctamente, false en caso de error
  */
 bool baseDatos::grabarConfiguracionTicket(QStringList configTicket) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare(
       "UPDATE configTicket SET cabecera = ? , pie = ? , promocion = ? , "
       "boolPromocion = ? , ruta = ? , codApertura = ? , codCorte = ? , "
@@ -1626,7 +1738,7 @@ bool baseDatos::modificarLineaPedido(QString base, QStringList datos) {
 }
 
 QStringList baseDatos::listadoPrestamistas() {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   QStringList prestamistas;
   consulta.exec("SELECT nombre FROM prestamistas");
   while (consulta.next()) {
@@ -1697,7 +1809,14 @@ bool baseDatos::borrarLineaPedido(QString base, QString idLinea) {
 
 bool baseDatos::contabilizarPedido(QString base, QStringList datos) {
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.prepare("INSERT INTO pedidos VALUES(NULL,?,?,?,?,?,?,?,?,?,?,?)");
+  
+  // Utilizar campos explícitos para soportar de forma robusta la columna 'notas' opcional
+  if (datos.length() == 12) {
+    consulta.prepare("INSERT INTO pedidos (idProveedor, npedido, fechaPedido, nLineas, nArticulos, descuento, totalbase, totaliva, totalre, total, nFactura, notas) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+  } else {
+    consulta.prepare("INSERT INTO pedidos (idProveedor, npedido, fechaPedido, nLineas, nArticulos, descuento, totalbase, totaliva, totalre, total, nFactura) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+  }
+
   for (int i = 0; i < datos.length(); ++i) {
     consulta.bindValue(i, datos.at(i));
   }
@@ -1710,7 +1829,14 @@ bool baseDatos::contabilizarPedido(QString base, QStringList datos) {
 bool baseDatos::grabarFactura(QString base, QStringList datos) {
   QSqlQuery consulta(QSqlDatabase::database(base));
   qDebug() << datos;
-  consulta.prepare("INSERT INTO facturas VALUES(NULL,?,?,?,?,?,?,?,?,?)");
+  
+  // Utilizar campos explícitos para soportar de forma robusta la columna 'notas' opcional
+  if (datos.length() == 10) {
+    consulta.prepare("INSERT INTO facturas (nFactura, fechaFactura, idProveedor, totalBase, totalIva, totalRe, total, vencimiento, pagada, notas) VALUES (?,?,?,?,?,?,?,?,?,?)");
+  } else {
+    consulta.prepare("INSERT INTO facturas (nFactura, fechaFactura, idProveedor, totalBase, totalIva, totalRe, total, vencimiento, pagada) VALUES (?,?,?,?,?,?,?,?,?)");
+  }
+
   for (int i = 0; i < datos.length(); ++i) {
     consulta.bindValue(i, datos.at(i));
   }
@@ -1724,7 +1850,14 @@ bool baseDatos::grabarFactura(QString base, QStringList datos) {
 
 bool baseDatos::grabarAlbaran(QString base, QStringList datos) {
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.prepare("INSERT INTO albaranes VALUES(NULL,?,?,?,?,?,?,?,?,?)");
+  
+  // Utilizar campos explícitos para soportar de forma robusta la columna 'notas' opcional
+  if (datos.length() == 10) {
+    consulta.prepare("INSERT INTO albaranes (nFactura, fechaFactura, idProveedor, totalBase, totalIva, totalRe, total, facturada, idFactura, notas) VALUES (?,?,?,?,?,?,?,?,?,?)");
+  } else {
+    consulta.prepare("INSERT INTO albaranes (nFactura, fechaFactura, idProveedor, totalBase, totalIva, totalRe, total, facturada, idFactura) VALUES (?,?,?,?,?,?,?,?,?)");
+  }
+
   for (int i = 0; i < datos.length(); ++i) {
     consulta.bindValue(i, datos.at(i));
   }
@@ -1735,7 +1868,7 @@ bool baseDatos::grabarAlbaran(QString base, QStringList datos) {
 }
 
 bool baseDatos::borrarAlbaranTmp(QString idAlbaran) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("DELETE FROM albaranes_tmp WHERE id = ?");
   consulta.bindValue(0, idAlbaran);
   if (consulta.exec())
@@ -1823,8 +1956,11 @@ bool baseDatos::grabarArqueo(QStringList datos, QString base,
 
 QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF,
                                        QString tabla, QString base) {
+  // Se usa DATE_FORMAT para que la fecha llegue como VARCHAR "yyyy-MM-dd" al driver
+  // Qt 6.11 + MariaDB 12.x. Sin el format, el driver devuelve QDate y toString()
+  // sin formato usa el locale del sistema (vacío o "dd/MM/yyyy" en español).
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.prepare("SELECT fecha , SUM(total) FROM " + tabla +
+  consulta.prepare("SELECT DATE_FORMAT(fecha,'%Y-%m-%d') , SUM(total) FROM " + tabla +
                    " WHERE fecha >= ? AND fecha <= ? GROUP BY fecha");
   consulta.bindValue(0, fechaI);
   consulta.bindValue(1, FechaF);
@@ -1846,7 +1982,7 @@ int baseDatos::nTarjetasDesdeUltimoArqueo(QString fechaI, QString horaI,
 }
 
 QSqlQuery baseDatos::devolverTablaCompleta(QString base, QString nombreTabla) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.exec("SELECT * FROM " + nombreTabla);
   return consulta;
 }
@@ -1939,7 +2075,7 @@ void baseDatos::aumentarLote(QString base, QString idLote, int uds) {
 }
 
 void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   
   // No sincronizar cambios realizados desde el proceso de venta (TPV)
   consulta.exec("SET @skip_sync = 1");
@@ -1998,9 +2134,13 @@ void baseDatos::crearLote(QString base, QString ean, QString lote,
 }
 
 QSqlQuery baseDatos::lotesProducto(QString cod, QString nombreConnexion) {
-  // Devuelve los diferentes lotes de un producto
+  // Devuelve los diferentes lotes de un producto.
+  // Usamos DATE_FORMAT para que la fecha llegue como QString "yyyy-MM-dd" y no
+  // como QDate, evitando que Qt 6 la convierta con el locale del sistema al
+  // llamar a toString() sin formato explícito.
   QSqlQuery consulta(QSqlDatabase::database(nombreConnexion));
-  consulta.prepare("SELECT * FROM lotes WHERE ean = ? group by fecha");
+  consulta.prepare("SELECT id, ean, lote, DATE_FORMAT(fecha,'%Y-%m-%d') AS fecha, cantidad "
+                   "FROM lotes WHERE ean = ? GROUP BY fecha");
   consulta.bindValue(0, cod);
   if (!consulta.exec()) {
     qDebug() << consulta.lastError();
@@ -2022,7 +2162,7 @@ QString baseDatos::sumarStockArticulo(QString id, QString nombreConnexion) {
 
 QString baseDatos::ticketCercanoFecha(QString tabla, QString fecha,
                                       QString cuando) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   if (cuando == "minimo") {
     consulta.exec("SELECT min(ticket) FROM " + tabla +
                   " WHERE concat_ws('/',fecha,hora) >= '" + fecha + "'");
@@ -2044,7 +2184,7 @@ QSqlQuery baseDatos::estadisticasVentaProductos(QString nPrimerTicket,
                                                 QString nUltimoTicket,
                                                 QString nPrimerTicketB,
                                                 QString nUltimoTicketB) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.exec("SELECT descripcion , sum(cantidad) FROM lineasticket WHERE "
                 "cast(nticket as "
                 "unsigned) between '" +
@@ -2074,7 +2214,8 @@ QSqlQuery baseDatos::listadoMovimientosEfectivo(QString db, QString inicio,
                                                 QString final, int idTipo) {
   QSqlQuery consulta(QSqlDatabase::database(db));
   QString sql =
-      "SELECT fecha , hora , cantidad , motivosEntrada.descripcion , "
+      // DATE_FORMAT: evita que Qt 6.11 devuelva QDate con toString() vacío en locale español
+      "SELECT DATE_FORMAT(fecha,'%Y-%m-%d') AS fecha , hora , cantidad , motivosEntrada.descripcion , "
       "entradasSalidas.descripcion "
       "FROM entradasSalidas left join motivosEntrada on "
       "entradasSalidas.idTiposRentrada = "
@@ -2117,7 +2258,7 @@ QSqlQuery baseDatos::listadoCaducados(QString base, QString desde,
 
 QMap<QString, QVariant> baseDatos::leerConfiguracion() {
   QMap<QString, QVariant> config;
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   if (consulta.exec("SELECT * FROM configuracion") && consulta.first()) {
     config["recargoeq"] = consulta.value("recargoeq");
     config["precios_locales"] = consulta.value("precios_locales");
@@ -2130,7 +2271,7 @@ QMap<QString, QVariant> baseDatos::leerConfiguracion() {
 }
 
 bool baseDatos::GuardarConfiguracion(QMap<QString, QVariant> datos) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("UPDATE configuracion SET recargoeq = ?, precios_locales = ?, "
                    "vendedor_f1 = ?, vendedor_f2 = ?, vendedor_f3 = ?, vendedor_f4 = ? "
                    "WHERE idconfiguracion = 0");
@@ -2190,7 +2331,7 @@ QMap<QString, QString> baseDatos::cargarDirectorios(QString base) {
 }
 
 QString baseDatos::devolverDirectorio(QString tipo) {
-  QSqlQuery consulta(QSqlDatabase::database("DB"));
+  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("SELECT directorio FROM directorios WHERE nombre = ?");
   consulta.bindValue(0, tipo);
   consulta.exec();
@@ -2241,18 +2382,27 @@ bool baseDatos::copiaSeguridad(QString base, QString nombre) {
   argumentos << "--host=" + QSqlDatabase::database(base).hostName()
              << "--port=" + QString::number(QSqlDatabase::database(base).port())
              << "--user=" + QSqlDatabase::database(base).userName()
-             << "--password=" + QSqlDatabase::database(base).password()
              << QSqlDatabase::database(base).databaseName();
-  qDebug() << argumentos;
-  QProcess *process = new QProcess();
-  process->setStandardOutputFile(nombre);
-  process->start("mysqldump", argumentos);
-  if (process->waitForFinished(-1)) {
+  
+  // Impresión en logs de depuración ocultando la contraseña para mayor seguridad (SEC-04)
+  qDebug() << argumentos << "(--password=********)";
+
+  // SEC-10: Objeto local en pila en vez de new para evitar memory leak
+  QProcess process;
+
+  // Se inyecta la contraseña de forma segura en las variables de entorno del proceso hijo (SEC-04)
+  QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+  env.insert("MYSQL_PWD", QSqlDatabase::database(base).password());
+  process.setProcessEnvironment(env);
+
+  process.setStandardOutputFile(nombre);
+  process.start("mysqldump", argumentos);
+  if (process.waitForFinished(-1)) {
     qDebug() << "Compretada sin errores el backup de: " << nombre;
     return true;
   } else {
     qDebug() << "Backup error";
-    qDebug() << process->errorString();
+    qDebug() << process.errorString();
   }
 
   return false;
@@ -2340,22 +2490,46 @@ QString baseDatos::obtenerUltimoHash(const QString db) {
   return QString(64, '0');
 }
 
+/**
+ * @brief Obtiene el último hash VeriFactu con bloqueo FOR UPDATE.
+ *
+ * Garantiza que dos puestos no lean el mismo hash antes de grabar
+ * su ticket, lo que rompería la cadena de integridad VeriFactu.
+ *
+ * @warning DEBE llamarse dentro de una transacción activa (db.transaction()).
+ * @param db Conexión a la base de datos (debe tener una transacción abierta).
+ * @return El último hash almacenado, o 64 ceros si no hay registros.
+ */
+QString baseDatos::obtenerUltimoHashAtomico(QSqlDatabase db) {
+  QSqlQuery query(db);
+  // FOR UPDATE bloquea la fila del último registro para que otro puesto
+  // que intente leerla espere a que esta transacción termine.
+  if (query.exec(
+          "SELECT hash_actual FROM verifactu_logs ORDER BY id DESC LIMIT 1 FOR UPDATE")) {
+    if (query.next())
+      return query.value(0).toString();
+  }
+  // Si no hay registros, devolver 64 ceros
+  return QString(64, '0');
+}
+
 QString baseDatos::registrarTickeckVerifactu(
     const QString db, const int ticket, const QString fecha, const QString hora,
     const QString hashActual, const QString hashAnterior,
-    const QString datosFactura, const int ususario) {
+    const QString datosFactura, const int ususario, const int estadoEnvio) {
   QSqlQuery query(QSqlDatabase::database(db));
   query.prepare("INSERT INTO verifactu_logs (id_factura, fecha_hora, "
                 "hash_actual, hash_anterior, "
-                "cadena_firmada, usuario) "
+                "cadena_firmada, usuario, estado_envio) "
                 "VALUES (:ticket, :fecha_hora, :hash_actual, :hash_anterior, "
-                ":cadena_firmada, :usuario)");
+                ":cadena_firmada, :usuario, :estado_envio)");
   query.bindValue(":ticket", ticket);
   query.bindValue(":fecha_hora", fecha + " " + hora);
   query.bindValue(":hash_actual", hashActual);
   query.bindValue(":hash_anterior", hashAnterior);
   query.bindValue(":cadena_firmada", datosFactura);
   query.bindValue(":usuario", ususario); // campo usuario
+  query.bindValue(":estado_envio", estadoEnvio);
 
   if (!query.exec()) {
     qWarning() << "Error al insertar en verifactu_logs:"

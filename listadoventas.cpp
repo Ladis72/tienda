@@ -38,9 +38,10 @@ void ListadoVentas::on_pushButtonVer_clicked()
                                                     fecha,
                                                     "ticketss",
                                                     conf->getConexionLocal());
-        ventasB.first();
-        QStandardItem *itemVentas = new QStandardItem(ventasB.value(1).toString());
-        modeloTabla->setItem(i, 2, itemVentas);
+        // Si no hay registros en ticketss para esa fecha, first() devuelve false
+        // y value() generaría el warning "not positioned on a valid record".
+        QString totalB = ventasB.first() ? ventasB.value(1).toString() : "0";
+        modeloTabla->setItem(i, 2, new QStandardItem(totalB));
     }
 
     modeloTabla->setHeaderData(0, Qt::Horizontal, "FECHA");

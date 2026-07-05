@@ -1,25 +1,27 @@
 #include "articulos.h"
 #include "conexion.h"
+#include "familias.h"
 #include "graficoventaswidget.h"
+#include "historialprecios.h"
 #include "imprimirfacturaproveedor.h"
 #include "ui_articulos.h"
 
+#include "dialoganadirapedido.h"
+#include "dialogcambiocodigo.h"
+#include "dialogcomparararticulos.h"
+#include <QAction>
 #include <QDate>
 #include <QDir>
 #include <QFileDialog>
+#include <QInputDialog>
 #include <QList>
 #include <QMessageBox>
-#include <QInputDialog>
-#include <QtConcurrent/QtConcurrent>
-#include <QToolBar>
+#include <QMimeData>
 #include <QTextCharFormat>
 #include <QTextCursor>
-#include <QMimeData>
-#include <QAction>
+#include <QToolBar>
 #include <QVBoxLayout>
-#include "dialogcomparararticulos.h"
-#include "dialoganadirapedido.h"
-#include "dialogcambiocodigo.h"
+#include <QtConcurrent/QtConcurrent>
 Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   listaConexionesRemotas = conf->getNombreConexionesActivas();
   qDebug() << "Lista conexiones remotas: ";
@@ -77,8 +79,9 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   mapper.addMapping(ui->lineEditCantidad, 17);
 
   // ── Barra de herramientas de formato para las notas ──────────────────────
-  // Se inserta dinámicamente encima del QTextEdit usando el layout de la fila 9.
-  // QToolBar necesita un QWidget padre; aquí usamos el widget «General».
+  // Se inserta dinámicamente encima del QTextEdit usando el layout de la
+  // fila 9. QToolBar necesita un QWidget padre; aquí usamos el widget
+  // «General».
   QToolBar *tbNotas = new QToolBar(ui->General);
   tbNotas->setObjectName("toolBarNotas");
   tbNotas->setIconSize(QSize(16, 16));
@@ -86,52 +89,58 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
       "QToolBar { background: #fff9f0; border: 1px solid #ffe0b2; "
       "           border-radius: 4px; padding: 2px; spacing: 4px; }"
       "QToolButton { padding: 2px 6px; font-weight: bold; }"
-      "QToolButton:checked { background: #ffe0b2; border-radius: 3px; }"
-  );
+      "QToolButton:checked { background: #ffe0b2; border-radius: 3px; }");
 
   // Botón Negrita
   QAction *actBold = tbNotas->addAction("B");
   actBold->setCheckable(true);
   actBold->setToolTip(tr("Negrita (Ctrl+B)"));
-  QFont fBold = actBold->font(); fBold.setBold(true); actBold->setFont(fBold);
-  connect(actBold, &QAction::triggered, this, [this](bool on){
-      QTextCharFormat fmt;
-      fmt.setFontWeight(on ? QFont::Bold : QFont::Normal);
-      ui->textEditNotas->mergeCurrentCharFormat(fmt);
+  QFont fBold = actBold->font();
+  fBold.setBold(true);
+  actBold->setFont(fBold);
+  connect(actBold, &QAction::triggered, this, [this](bool on) {
+    QTextCharFormat fmt;
+    fmt.setFontWeight(on ? QFont::Bold : QFont::Normal);
+    ui->textEditNotas->mergeCurrentCharFormat(fmt);
   });
 
   // Botón Cursiva
   QAction *actItalic = tbNotas->addAction("I");
   actItalic->setCheckable(true);
   actItalic->setToolTip(tr("Cursiva (Ctrl+I)"));
-  QFont fItalic = actItalic->font(); fItalic.setItalic(true); actItalic->setFont(fItalic);
-  connect(actItalic, &QAction::triggered, this, [this](bool on){
-      QTextCharFormat fmt;
-      fmt.setFontItalic(on);
-      ui->textEditNotas->mergeCurrentCharFormat(fmt);
+  QFont fItalic = actItalic->font();
+  fItalic.setItalic(true);
+  actItalic->setFont(fItalic);
+  connect(actItalic, &QAction::triggered, this, [this](bool on) {
+    QTextCharFormat fmt;
+    fmt.setFontItalic(on);
+    ui->textEditNotas->mergeCurrentCharFormat(fmt);
   });
 
   // Botón Subrayado
   QAction *actUnder = tbNotas->addAction("U");
   actUnder->setCheckable(true);
   actUnder->setToolTip(tr("Subrayado (Ctrl+U)"));
-  QFont fUnder = actUnder->font(); fUnder.setUnderline(true); actUnder->setFont(fUnder);
-  connect(actUnder, &QAction::triggered, this, [this](bool on){
-      QTextCharFormat fmt;
-      fmt.setFontUnderline(on);
-      ui->textEditNotas->mergeCurrentCharFormat(fmt);
+  QFont fUnder = actUnder->font();
+  fUnder.setUnderline(true);
+  actUnder->setFont(fUnder);
+  connect(actUnder, &QAction::triggered, this, [this](bool on) {
+    QTextCharFormat fmt;
+    fmt.setFontUnderline(on);
+    ui->textEditNotas->mergeCurrentCharFormat(fmt);
   });
 
   tbNotas->addSeparator();
 
   // Botón: Pegar como texto plano (sin formato)
   QAction *actPastePlain = tbNotas->addAction(tr("Pegar sin formato"));
-  actPastePlain->setToolTip(tr("Pega el texto del portapapeles eliminando todo el formato"));
-  connect(actPastePlain, &QAction::triggered, this, [this](){
-      const QMimeData *md = QApplication::clipboard()->mimeData();
-      if (md && md->hasText()) {
-          ui->textEditNotas->insertPlainText(md->text());
-      }
+  actPastePlain->setToolTip(
+      tr("Pega el texto del portapapeles eliminando todo el formato"));
+  connect(actPastePlain, &QAction::triggered, this, [this]() {
+    const QMimeData *md = QApplication::clipboard()->mimeData();
+    if (md && md->hasText()) {
+      ui->textEditNotas->insertPlainText(md->text());
+    }
   });
 
   tbNotas->addSeparator();
@@ -139,46 +148,50 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   // Botón: Limpiar todo el formato de la selección
   QAction *actClearFmt = tbNotas->addAction(tr("Limpiar formato"));
   actClearFmt->setToolTip(tr("Elimina el formato del texto seleccionado"));
-  connect(actClearFmt, &QAction::triggered, this, [this](){
-      QTextCursor cur = ui->textEditNotas->textCursor();
-      if (cur.hasSelection()) {
-          QTextCharFormat fmt;
-          // Al no establecer FontWeight, mergeCharFormat mantendrá el estado actual (negrita o normal)
-          fmt.setFontItalic(false);
-          fmt.setFontUnderline(false);
-          fmt.clearProperty(QTextFormat::ForegroundBrush);
-          fmt.clearProperty(QTextFormat::BackgroundBrush);
-          fmt.clearProperty(QTextFormat::FontFamily);
-          fmt.clearProperty(QTextFormat::FontPointSize);
-          
-          // mergeCharFormat mezcla el formato nuevo con el existente en lugar de reemplazarlo totalmente
-          cur.mergeCharFormat(fmt);
-      }
+  connect(actClearFmt, &QAction::triggered, this, [this]() {
+    QTextCursor cur = ui->textEditNotas->textCursor();
+    if (cur.hasSelection()) {
+      QTextCharFormat fmt;
+      // Al no establecer FontWeight, mergeCharFormat mantendrá el estado actual
+      // (negrita o normal)
+      fmt.setFontItalic(false);
+      fmt.setFontUnderline(false);
+      fmt.clearProperty(QTextFormat::ForegroundBrush);
+      fmt.clearProperty(QTextFormat::BackgroundBrush);
+      fmt.clearProperty(QTextFormat::FontFamily);
+      fmt.clearProperty(QTextFormat::FontPointSize);
+
+      // mergeCharFormat mezcla el formato nuevo con el existente en lugar de
+      // reemplazarlo totalmente
+      cur.mergeCharFormat(fmt);
+    }
   });
 
   // Sincronizar estado de los botones de formato con el cursor actual
-  connect(ui->textEditNotas, &QTextEdit::currentCharFormatChanged,
-          this, [actBold, actItalic, actUnder](const QTextCharFormat &fmt){
-      actBold->setChecked(fmt.fontWeight() >= QFont::Bold);
-      actItalic->setChecked(fmt.fontItalic());
-      actUnder->setChecked(fmt.fontUnderline());
-  });
+  connect(ui->textEditNotas, &QTextEdit::currentCharFormatChanged, this,
+          [actBold, actItalic, actUnder](const QTextCharFormat &fmt) {
+            actBold->setChecked(fmt.fontWeight() >= QFont::Bold);
+            actItalic->setChecked(fmt.fontItalic());
+            actUnder->setChecked(fmt.fontUnderline());
+          });
 
   // Insertar la toolbar en el gridLayout encima del textEditNotas (fila 9)
   // Obtenemos el gridLayout del widget General y añadimos la toolbar en fila 8b
-  // La forma más fiable es envolver en un layout vertical dentro de un contenedor.
+  // La forma más fiable es envolver en un layout vertical dentro de un
+  // contenedor.
   QWidget *notasContainer = new QWidget(ui->General);
   QVBoxLayout *notasLayout = new QVBoxLayout(notasContainer);
   notasLayout->setContentsMargins(0, 0, 0, 0);
   notasLayout->setSpacing(2);
   notasLayout->addWidget(tbNotas);
   notasLayout->addWidget(ui->textEditNotas);
-  // Insertar el contenedor en el gridLayout en la misma posición que el textEditNotas
-  QGridLayout *grid = qobject_cast<QGridLayout*>(ui->General->layout());
+  // Insertar el contenedor en el gridLayout en la misma posición que el
+  // textEditNotas
+  QGridLayout *grid = qobject_cast<QGridLayout *>(ui->General->layout());
   if (grid) {
-      // Quitar el textEditNotas del grid (ya fue puesto por el .ui)
-      grid->removeWidget(ui->textEditNotas);
-      grid->addWidget(notasContainer, 9, 0, 1, 10);
+    // Quitar el textEditNotas del grid (ya fue puesto por el .ui)
+    grid->removeWidget(ui->textEditNotas);
+    grid->addWidget(notasContainer, 9, 0, 1, 10);
   }
 
   mapper.toFirst();
@@ -203,7 +216,7 @@ void Articulos::refrescarBotones(int i) {
   QString fichero = base.resolverRutaImagen(ui->lineEditFoto->text());
   QImage foto(fichero);
   if (foto.isNull()) {
-      qDebug() << "Error cargando imagen:" << fichero;
+    qDebug() << "Error cargando imagen:" << fichero;
   }
   QPixmap imagen = QPixmap::fromImage(foto);
   QPixmap imagenAjustada = imagen.scaled(200, 200, Qt::KeepAspectRatio);
@@ -215,20 +228,22 @@ void Articulos::refrescarBotones(int i) {
   // Como el mapper ya no gestiona textEditNotas, lo hacemos aquí manualmente.
   int filaActual = mapper.currentIndex();
   if (filaActual >= 0 && modeloTabla && filaActual < modeloTabla->rowCount()) {
-      QString notasRaw = modeloTabla->record(filaActual).value("notas").toString();
-      // Si el contenido parece HTML (empieza con '<'), cargarlo como tal;
-      // de lo contrario tratarlo como texto plano para retrocompatibilidad.
-      if (notasRaw.trimmed().startsWith('<')) {
-          ui->textEditNotas->setHtml(notasRaw);
-      } else {
-          ui->textEditNotas->setPlainText(notasRaw);
-      }
+    QString notasRaw =
+        modeloTabla->record(filaActual).value("notas").toString();
+    // Si el contenido parece HTML (empieza con '<'), cargarlo como tal;
+    // de lo contrario tratarlo como texto plano para retrocompatibilidad.
+    if (notasRaw.trimmed().startsWith('<')) {
+      ui->textEditNotas->setHtml(notasRaw);
+    } else {
+      ui->textEditNotas->setPlainText(notasRaw);
+    }
   }
 
   // Buscar excepción de precio local para mostrarla en el formulario
-  QSqlRecord registroConOverride = base.consulta_producto(conf->getConexionCommon(), ui->lineEditCod->text());
+  QSqlRecord registroConOverride = base.consulta_producto(
+      conf->getConexionCommon(), ui->lineEditCod->text());
   if (!registroConOverride.isEmpty()) {
-      ui->lineEditPvp->setText(registroConOverride.value("pvp").toString());
+    ui->lineEditPvp->setText(registroConOverride.value("pvp").toString());
   }
 
   ui->labelNombreProducto->setText(ui->lineEditDesc->text());
@@ -241,26 +256,23 @@ void Articulos::refrescarBotones(int i) {
   double sumPedido = 0.0;
   QString codArticulo = ui->lineEditCod->text();
 
-  QSqlQuery qEntrada = base.ejecutarSentencia(
-      "SELECT sum(cantidad) FROM entradaGenero_tmp WHERE cod = '" +
-          codArticulo + "'",
-      conf->getConexionLocal());
-  if (qEntrada.next())
+  QSqlQuery qEntrada(QSqlDatabase::database(conf->getConexionLocal()));
+  qEntrada.prepare("SELECT sum(cantidad) FROM entradaGenero_tmp WHERE cod = ?");
+  qEntrada.bindValue(0, codArticulo);
+  if (qEntrada.exec() && qEntrada.next())
     sumEntrada = qEntrada.value(0).toDouble();
 
-  QSqlQuery qSalida = base.ejecutarSentencia(
-      "SELECT sum(cantidad) FROM salidaGenero_tmp WHERE cod = '" + codArticulo +
-          "'",
-      conf->getConexionLocal());
-  if (qSalida.next())
+  QSqlQuery qSalida(QSqlDatabase::database(conf->getConexionLocal()));
+  qSalida.prepare("SELECT sum(cantidad) FROM salidaGenero_tmp WHERE cod = ?");
+  qSalida.bindValue(0, codArticulo);
+  if (qSalida.exec() && qSalida.next())
     sumSalida = qSalida.value(0).toDouble();
 
-  QSqlQuery qPedido =
-      base.ejecutarSentencia("SELECT sum(cantidad + bonificacion) FROM "
-                             "lineaspedido_tmp WHERE cod = '" +
-                                 codArticulo + "'",
-                             conf->getConexionLocal());
-  if (qPedido.next())
+  QSqlQuery qPedido(QSqlDatabase::database(conf->getConexionLocal()));
+  qPedido.prepare("SELECT sum(cantidad + bonificacion) FROM lineaspedido_tmp "
+                  "WHERE cod = ?");
+  qPedido.bindValue(0, codArticulo);
+  if (qPedido.exec() && qPedido.next())
     sumPedido = qPedido.value(0).toDouble();
 
   QStringList resumenTmp;
@@ -288,12 +300,12 @@ void Articulos::refrescarBotones(int i) {
   }
 
   // AÑADIDO: Lógica de encargados
-  QSqlQuery qEncargos = base.ejecutarSentencia(
-      "SELECT sum(cantidad) FROM encargos WHERE cod_articulo = '" +
-          codArticulo + "' AND estado IN ('Pendiente', 'Recibido')",
-      conf->getConexionLocal());
+  QSqlQuery qEncargos(QSqlDatabase::database(conf->getConexionLocal()));
+  qEncargos.prepare("SELECT sum(cantidad) FROM encargos WHERE cod_articulo = ? "
+                    "AND estado IN ('Pendiente', 'Recibido')");
+  qEncargos.bindValue(0, codArticulo);
   double sumEncargos = 0.0;
-  if (qEncargos.next())
+  if (qEncargos.exec() && qEncargos.next())
     sumEncargos = qEncargos.value(0).toDouble();
   ui->lineEditEncargados->setText(QString::number(sumEncargos));
   if (sumEncargos > 0) {
@@ -378,14 +390,15 @@ QStringList Articulos::recogerDatosFormulario() {
   } else {
     listaDatosFormulario.append(ui->lineEditFoto->text());
   }
-  // Guardar las notas como HTML si tienen formato, o como texto plano si están vacías.
-  // Esto garantiza retrocompatibilidad con registros que ya tenían texto plano en la BD.
+  // Guardar las notas como HTML si tienen formato, o como texto plano si están
+  // vacías. Esto garantiza retrocompatibilidad con registros que ya tenían
+  // texto plano en la BD.
   QString notasHtml = ui->textEditNotas->toHtml();
   QString notasPlain = ui->textEditNotas->toPlainText().trimmed();
   if (notasPlain.isEmpty()) {
-      listaDatosFormulario.append("");  // Campo vacío → guardar vacío
+    listaDatosFormulario.append(""); // Campo vacío → guardar vacío
   } else {
-      listaDatosFormulario.append(notasHtml);  // Guardar HTML completo
+    listaDatosFormulario.append(notasHtml); // Guardar HTML completo
   }
   listaDatosFormulario.append(ui->comboBoxFormato->currentText());
   if (ui->lineEditCantidad->text().isEmpty()) {
@@ -399,19 +412,22 @@ QStringList Articulos::recogerDatosFormulario() {
 
 void Articulos::recargarTabla() {
   qDebug() << "Cargando artículos desde:" << conf->getConexionCommon();
-  
-  QString pvpQuery = conf->getUsarPreciosLocales() 
-      ? "IF(pt.pvp IS NOT NULL, pt.pvp, a.pvp)" 
-      : "a.pvp";
 
-  QString sql = QString(
-      "SELECT a.cod, a.descripcion, %1 as pvp, a.iva, 0 as stock, a.min, a.max, "
-      "0 as pendientes_pedido, 0 as encargados, a.ultima_venta, a.ultimo_pedido, "
-      "a.familia, a.precio_compra, a.fabricante, a.foto, a.notas, a.formato, "
-      "a.cantformato "
-      "FROM articulos a "
-      "LEFT JOIN precios_tienda pt ON a.cod = pt.cod_articulo")
-      .arg(pvpQuery);
+  QString pvpQuery = conf->getUsarPreciosLocales()
+                         ? "IF(pt.pvp IS NOT NULL, pt.pvp, a.pvp)"
+                         : "a.pvp";
+
+  QString sql =
+      QString("SELECT a.cod, a.descripcion, %1 as pvp, a.iva, 0 as stock, "
+              "a.min, a.max, "
+              "0 as pendientes_pedido, 0 as encargados, a.ultima_venta, "
+              "a.ultimo_pedido, "
+              "a.familia, a.precio_compra, a.fabricante, a.foto, a.notas, "
+              "a.formato, "
+              "a.cantformato "
+              "FROM articulos a "
+              "LEFT JOIN precios_tienda pt ON a.cod = pt.cod_articulo")
+          .arg(pvpQuery);
 
   modeloTabla->setQuery(sql, QSqlDatabase::database(conf->getConexionCommon()));
   mapper.setModel(modeloTabla);
@@ -419,59 +435,77 @@ void Articulos::recargarTabla() {
 
 void Articulos::cargarCompras() {
   modeloCompras.clear();
+  QString codArticulo = ui->lineEditCod->text();
+  QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
+
   if (ui->radioButtonFacturas->isChecked()) {
-    modeloCompras.setQuery(
-        "SELECT `nDocumento` , `pedidos`.`idProveedor` , `cantidad` , "
-        "`bonificacion` "
-        ", `costo` , `descuento1`, `pedidos`.`fechaPedido` FROM `lineaspedido` "
-        "JOIN "
-        "`pedidos` on `nDocumento` = `pedidos`.`npedido` WHERE `cod` = '" +
-            ui->lineEditCod->text() + "' ORDER BY `pedidos`.`fechaPedido` DESC",
-        QSqlDatabase::database(conf->getConexionLocal()));
-    if (modeloCompras.lastError().isValid()) qDebug() << modeloCompras.lastError();
+    QSqlQuery query(db);
+    query.prepare(
+        "SELECT `nDocumento` as 'Nº Factura', `pedidos`.`idProveedor` as 'Cód Prov', `cantidad` as 'Uds', "
+        "`bonificacion` as 'Bonif', `costo` as 'Costo Bruto', `descuento1` as '% Dto', DATE_FORMAT(`pedidos`.`fechaPedido`, '%Y-%m-%d') as 'Fecha' "
+        "FROM `lineaspedido` "
+        "JOIN `pedidos` on `nDocumento` = `pedidos`.`npedido` "
+        "WHERE `cod` = ? ORDER BY `pedidos`.`fechaPedido` DESC");
+    query.addBindValue(codArticulo);
+    query.exec();
+    modeloCompras.setQuery(query);
+    if (modeloCompras.lastError().isValid())
+      qDebug() << modeloCompras.lastError();
     ui->tableViewCompras->setModel(&modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
   }
   if (ui->radioButtonMeses->isChecked()) {
-    modeloCompras.setQuery("SELECT YEAR(pedidos.fechaPedido) , "
-                           "MONTH(pedidos.fechaPedido) , sum(cantidad) , "
-                           "sum(bonificacion) FROM lineaspedido JOIN pedidos "
-                           "ON nDocumento = pedidos.npedido "
-                           "WHERE cod = '" +
-                               ui->lineEditCod->text() +
-                               "' GROUP BY YEAR(pedidos.fechaPedido) DESC , "
-                               "MONTH(pedidos.fechaPedido) DESC ",
-                           QSqlDatabase::database(conf->getConexionLocal()));
-    if (modeloCompras.lastError().isValid()) qDebug() << modeloCompras.lastError();
+    QSqlQuery query(db);
+    query.prepare(
+        "SELECT YEAR(pedidos.fechaPedido) as 'Año', MONTH(pedidos.fechaPedido) as 'Mes', "
+        "sum(cantidad) as 'Uds', sum(bonificacion) as 'Bonif' "
+        "FROM lineaspedido JOIN pedidos ON nDocumento = pedidos.npedido "
+        "WHERE cod = ? "
+        "GROUP BY YEAR(pedidos.fechaPedido) DESC , MONTH(pedidos.fechaPedido) "
+        "DESC");
+    query.addBindValue(codArticulo);
+    query.exec();
+    modeloCompras.setQuery(query);
+    if (modeloCompras.lastError().isValid())
+      qDebug() << modeloCompras.lastError();
     ui->tableViewCompras->setModel(&modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
   }
   if (ui->radioButtonAnos->isChecked()) {
-    modeloCompras.setQuery("SELECT YEAR(pedidos.fechaPedido) , sum(cantidad) , "
-                           "sum(bonificacion) FROM "
-                           "lineaspedido JOIN pedidos ON nDocumento = "
-                           "pedidos.npedido WHERE cod = '" +
-                               ui->lineEditCod->text() +
-                               "' GROUP BY YEAR(pedidos.fechaPedido) DESC",
-                           QSqlDatabase::database(conf->getConexionLocal()));
+    QSqlQuery query(db);
+    query.prepare(
+        "SELECT YEAR(pedidos.fechaPedido) as 'Año', sum(cantidad) as 'Uds', sum(bonificacion) as 'Bonif' "
+        "FROM lineaspedido JOIN pedidos ON nDocumento = pedidos.npedido "
+        "WHERE cod = ? "
+        "GROUP BY YEAR(pedidos.fechaPedido) DESC");
+    query.addBindValue(codArticulo);
+    query.exec();
+    modeloCompras.setQuery(query);
     ui->tableViewCompras->setModel(&modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
   }
   if (ui->radioButtonProveedores->isChecked()) {
-    modeloCompras.setQuery(
-        "SELECT proveedores.idProveedor, proveedores.nombre, "
-        "SUM(cantidad) as Unidades, SUM(bonificacion) as Bonif, "
-        "ROUND(SUM(cantidad * costo * (1 - descuento1/100)) / SUM(cantidad + "
-        "bonificacion), 4) as 'Costo Medio Neto' "
-        "FROM lineaspedido "
-        "JOIN pedidos ON lineaspedido.nDocumento = pedidos.npedido "
-        "JOIN proveedores ON pedidos.idProveedor = proveedores.idProveedor "
-        "WHERE cod = '" +
-            ui->lineEditCod->text() +
-            "' "
-            "AND YEAR(pedidos.fechaPedido) >= YEAR(CURDATE()) - 1 "
-            "GROUP BY proveedores.idProveedor, proveedores.nombre ",
-        QSqlDatabase::database(conf->getConexionLocal()));
+    QSqlQuery query(db);
+    query.prepare(
+        "SELECT proveedores.idProveedor as 'Cód Prov', proveedores.nombre as 'Proveedor', "
+        "SUM(lp.cantidad) as 'Uds', SUM(lp.bonificacion) as 'Bonif', "
+        "ROUND(SUM("
+        "  lp.costo * (1 - COALESCE(lp.descuento1, 0)/100) * "
+        "  (1 - COALESCE(p.descuento, 0)/100) * "
+        "  (1 + i.porcentaje/100 + i.recargo/100) * "
+        "  lp.cantidad"
+        ") / SUM(lp.cantidad + lp.bonificacion), 2) as 'Costo Medio con IVA y "
+        "RE' "
+        "FROM lineaspedido lp "
+        "JOIN pedidos p ON lp.nDocumento = p.npedido "
+        "JOIN proveedores ON p.idProveedor = proveedores.idProveedor "
+        "LEFT JOIN impuestos i ON i.porcentaje = lp.tipoIva "
+        "WHERE lp.cod = ? "
+        "AND YEAR(p.fechaPedido) >= YEAR(CURDATE()) - 1 "
+        "GROUP BY proveedores.idProveedor, proveedores.nombre");
+    query.addBindValue(codArticulo);
+    query.exec();
+    modeloCompras.setQuery(query);
     ui->tableViewCompras->setModel(&modeloCompras);
     ui->tableViewCompras->hideColumn(0); // Ocultar ID del proveedor
     ui->tableViewCompras->resizeColumnsToContents();
@@ -483,14 +517,20 @@ void Articulos::cargarCodAux() {
       this, QSqlDatabase::database(conf->getConexionLocal()));
   modeloAux->setTable("codaux");
   modeloAux->setEditStrategy(QSqlTableModel::OnRowChange);
-  modeloAux->setFilter("cod =" + ui->lineEditCod->text());
+
+  // Se sanitiza la entrada rodeándola con comillas simples y escapando comillas
+  // internas
+  QString codSanitizado = ui->lineEditCod->text().replace("'", "''");
+  modeloAux->setFilter(QString("cod = '%1'").arg(codSanitizado));
+
   modeloAux->select();
   ui->tableViewAux->setModel(modeloAux);
   ui->tableViewAux->hideColumn(0);
 }
 
 void Articulos::llenarComboFormatos() {
-  QSqlQuery consulta = base.devolverTablaCompleta(conf->getConexionLocal(), "formatos");
+  QSqlQuery consulta =
+      base.devolverTablaCompleta(conf->getConexionLocal(), "formatos");
   consulta.first();
   do {
     ui->comboBoxFormato->addItem(consulta.value("formato").toString());
@@ -514,22 +554,23 @@ void Articulos::llenarStockRemoto(QString ean) {
 
     // Calcular pendientes remotos
     double rE = 0, rS = 0, rP = 0;
-    QSqlQuery qRE = base.ejecutarSentencia(
-        "SELECT sum(cantidad) FROM entradaGenero_tmp WHERE cod = '" + ean + "'",
-        conn);
-    if (qRE.next())
+    QSqlQuery qRE(QSqlDatabase::database(conn));
+    qRE.prepare("SELECT sum(cantidad) FROM entradaGenero_tmp WHERE cod = ?");
+    qRE.bindValue(0, ean);
+    if (qRE.exec() && qRE.next())
       rE = qRE.value(0).toDouble();
-    QSqlQuery qRS = base.ejecutarSentencia(
-        "SELECT sum(cantidad) FROM salidaGenero_tmp WHERE cod = '" + ean + "'",
-        conn);
-    if (qRS.next())
+
+    QSqlQuery qRS(QSqlDatabase::database(conn));
+    qRS.prepare("SELECT sum(cantidad) FROM salidaGenero_tmp WHERE cod = ?");
+    qRS.bindValue(0, ean);
+    if (qRS.exec() && qRS.next())
       rS = qRS.value(0).toDouble();
-    QSqlQuery qRP =
-        base.ejecutarSentencia("SELECT sum(cantidad + bonificacion) FROM "
-                               "lineaspedido_tmp WHERE cod = '" +
-                                   ean + "'",
-                               conn);
-    if (qRP.next())
+
+    QSqlQuery qRP(QSqlDatabase::database(conn));
+    qRP.prepare("SELECT sum(cantidad + bonificacion) FROM lineaspedido_tmp "
+                "WHERE cod = ?");
+    qRP.bindValue(0, ean);
+    if (qRP.exec() && qRP.next())
       rP = qRP.value(0).toDouble();
 
     QStringList pList;
@@ -634,26 +675,23 @@ void Articulos::cargarDatosGrafico(DatosGrafico nuevosDatos) {
 
 void Articulos::cargarVentas() {
   modeloVentas.clear();
+  QString codArticulo = ui->lineEditCod->text();
+  QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
+
   if (ui->radioButtonVentasMes->isChecked()) {
-    // modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , MONTH(fecha) ,
-    // sum(cantidad) "
-    //                       "from lineasticket WHERE cod = '"
-    //                           + ui->lineEditCod->text()
-    //                           + "' GROUP BY YEAR(fecha) desc , MONTH(fecha)
-    //                           desc",
-    //                       QSqlDatabase::database(conf->getConexionLocal()));
-    // qDebug() << modeloVentas.lastError();
-    modeloVentas.setQuery(
+    QSqlQuery query(db);
+    query.prepare(
         "SELECT descripcion , DATE_FORMAT(fecha, '%Y-%m') , sum(cantidad) "
-        "from lineasticket WHERE cod = '" +
-            ui->lineEditCod->text() +
-            "' GROUP BY YEAR(fecha) desc , MONTH(fecha) desc",
-        QSqlDatabase::database(conf->getConexionLocal()));
-    if (modeloVentas.lastError().isValid()) qDebug() << modeloVentas.lastError();
-    modeloVentas.setHeaderData(0, Qt::Horizontal, "Artculo");
+        "from lineasticket WHERE cod = ? "
+        "GROUP BY YEAR(fecha) desc , MONTH(fecha) desc");
+    query.addBindValue(codArticulo);
+    query.exec();
+    modeloVentas.setQuery(query);
+    if (modeloVentas.lastError().isValid())
+      qDebug() << modeloVentas.lastError();
+    modeloVentas.setHeaderData(0, Qt::Horizontal, "Artículo");
     modeloVentas.setHeaderData(1, Qt::Horizontal, "Fecha");
     modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
-    // modeloVentas.setHeaderData(3, Qt::Horizontal, "Cantidad");
 
     ui->tableViewVentas->setModel(&modeloVentas);
     ui->tableViewVentas->resizeColumnsToContents();
@@ -661,14 +699,19 @@ void Articulos::cargarVentas() {
     cargarDatosGrafico(nuevosDatos);
   }
   if (ui->radioButtonVentasDia->isChecked()) {
-    modeloVentas.setQuery("SELECT descripcion , fecha , sum(cantidad) FROM "
-                          "lineasticket WHERE cod = '" +
-                              ui->lineEditCod->text() + "' group by fecha desc",
-                          QSqlDatabase::database(conf->getConexionLocal()));
-    if (modeloVentas.lastError().isValid()) qDebug() << modeloVentas.lastError();
+    QSqlQuery query(db);
+    query.prepare("SELECT descripcion , DATE_FORMAT(fecha, '%Y-%m-%d') , "
+                  "sum(cantidad), precio FROM "
+                  "lineasticket WHERE cod = ? group by fecha desc");
+    query.addBindValue(codArticulo);
+    query.exec();
+    modeloVentas.setQuery(query);
+    if (modeloVentas.lastError().isValid())
+      qDebug() << modeloVentas.lastError();
     modeloVentas.setHeaderData(0, Qt::Horizontal, "Producto");
     modeloVentas.setHeaderData(1, Qt::Horizontal, "Fecha");
     modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
+    modeloVentas.setHeaderData(3, Qt::Horizontal, "Precio");
     ui->tableViewVentas->setModel(&modeloVentas);
     ui->tableViewVentas->resizeColumnsToContents();
     DatosGrafico nuevosDatos = extraerVentasPorFechas(&modeloVentas);
@@ -676,15 +719,17 @@ void Articulos::cargarVentas() {
   }
   if (ui->radioButtonVentasAno->isChecked()) {
     modeloVentas.clear();
+    QSqlQuery query(db);
+    query.prepare("SELECT descripcion , YEAR(fecha) , sum(cantidad) "
+                  "from lineasticket WHERE cod = ? "
+                  "GROUP BY YEAR(fecha) desc");
+    query.addBindValue(codArticulo);
+    query.exec();
+    modeloVentas.setQuery(query);
 
-    modeloVentas.setQuery("SELECT descripcion , YEAR(fecha) , sum(cantidad) "
-                          "from lineasticket WHERE cod = '" +
-                              ui->lineEditCod->text() +
-                              "' GROUP BY YEAR(fecha) desc",
-                          QSqlDatabase::database(conf->getConexionLocal()));
-
-    if (modeloVentas.lastError().isValid()) qDebug() << modeloVentas.lastError();
-    modeloVentas.setHeaderData(0, Qt::Horizontal, "Artculo");
+    if (modeloVentas.lastError().isValid())
+      qDebug() << modeloVentas.lastError();
+    modeloVentas.setHeaderData(0, Qt::Horizontal, "Artículo");
     modeloVentas.setHeaderData(1, Qt::Horizontal, "Año");
     modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
 
@@ -723,7 +768,7 @@ void Articulos::borrarFormulario() {
   ui->labelPrecioGrande->setText("0.00 €");
   ui->comboBoxFormato->setCurrentIndex(0);
   ui->pushButtonCambiarCodigo->setEnabled(false);
-  ui->textEditNotas->clear();  // Limpiar el editor de notas enriquecidas
+  ui->textEditNotas->clear(); // Limpiar el editor de notas enriquecidas
 }
 
 void Articulos::on_pushButtonAnterior_clicked() {
@@ -746,7 +791,7 @@ void Articulos::on_pushButtonModificar_clicked() {
   QMessageBox msgBox(this);
   msgBox.setWindowTitle("Confirmar Cambios");
   msgBox.setText("¿Desea guardar los cambios realizados?");
-  
+
   msgBox.setIcon(QMessageBox::Question);
   msgBox.setStandardButtons(QMessageBox::Save | QMessageBox::Cancel);
   msgBox.setDefaultButton(QMessageBox::Save);
@@ -754,47 +799,53 @@ void Articulos::on_pushButtonModificar_clicked() {
   msgBox.setButtonText(QMessageBox::Cancel, "Cancelar");
 
   if (msgBox.exec() == QMessageBox::Save) {
-      bool ok = false;
-      if (conf->getUsarPreciosLocales()) {
-          // 1. Guardar PVP localmente (No sincronizado)
-          QSqlQuery qLocal(QSqlDatabase::database("DB"));
-          qLocal.prepare("INSERT INTO precios_tienda (cod_articulo, pvp, precio_venta) "
-                         "VALUES (?,?,?) ON DUPLICATE KEY UPDATE pvp=?, precio_venta=?");
-          qLocal.bindValue(0, cod);
-          qLocal.bindValue(1, ui->lineEditPvp->text().toDouble());
-          qLocal.bindValue(2, ui->lineEditPvp->text().toDouble());
-          qLocal.bindValue(3, ui->lineEditPvp->text().toDouble());
-          qLocal.bindValue(4, ui->lineEditPvp->text().toDouble());
-          qLocal.exec();
+    bool ok = false;
+    if (conf->getUsarPreciosLocales()) {
+      // 1. Guardar PVP localmente (No sincronizado)
+      QSqlQuery qLocal(QSqlDatabase::database(conf->getConexionLocal()));
+      qLocal.prepare(
+          "INSERT INTO precios_tienda (cod_articulo, pvp, precio_venta) "
+          "VALUES (?,?,?) ON DUPLICATE KEY UPDATE pvp=?, precio_venta=?");
+      qLocal.bindValue(0, cod);
+      qLocal.bindValue(1, ui->lineEditPvp->text().toDouble());
+      qLocal.bindValue(2, ui->lineEditPvp->text().toDouble());
+      qLocal.bindValue(3, ui->lineEditPvp->text().toDouble());
+      qLocal.bindValue(4, ui->lineEditPvp->text().toDouble());
+      qLocal.exec();
 
-          // 2. Guardar el resto de campos globalmente (Sincronizado)
-          // Para no alterar el PVP global de otras tiendas, mantenemos el PVP original de 'articulos'
-          QSqlQuery queryOri(QSqlDatabase::database("DB"));
-          queryOri.prepare("SELECT pvp FROM articulos WHERE cod = ?");
-          queryOri.bindValue(0, cod);
-          if (queryOri.exec() && queryOri.next()) {
-              datos.replace(2, queryOri.value(0).toString());
-          }
-          ok = base.modificarArticulo(QSqlDatabase::database("DB"), datos, cod);
-      } else {
-          // Guardar todo de forma global
-          ok = base.modificarArticulo(QSqlDatabase::database("DB"), datos, cod);
-          
-          // Limpiar excepción local si existiera
-          QSqlQuery qDel(QSqlDatabase::database("DB"));
-          qDel.prepare("DELETE FROM precios_tienda WHERE cod_articulo = ?");
-          qDel.bindValue(0, cod);
-          qDel.exec();
+      // 2. Guardar el resto de campos globalmente (Sincronizado)
+      // Para no alterar el PVP global de otras tiendas, mantenemos el PVP
+      // original de 'articulos'
+      QSqlQuery queryOri(QSqlDatabase::database(conf->getConexionLocal()));
+      queryOri.prepare("SELECT pvp FROM articulos WHERE cod = ?");
+      queryOri.bindValue(0, cod);
+      if (queryOri.exec() && queryOri.next()) {
+        datos.replace(2, queryOri.value(0).toString());
       }
+      ok = base.modificarArticulo(
+          QSqlDatabase::database(conf->getConexionLocal()), datos, cod);
+    } else {
+      // Guardar todo de forma global
+      ok = base.modificarArticulo(
+          QSqlDatabase::database(conf->getConexionLocal()), datos, cod);
 
-      if (ok) {
-          QMessageBox::information(this, "Éxito", "Cambios guardados correctamente.");
-      } else {
-          QMessageBox::critical(this, "Error", "No se pudieron guardar los cambios.");
-      }
-      recargarTabla();
-      mapper.setCurrentIndex(idx);
-      refrescarBotones(mapper.currentIndex());
+      // Limpiar excepción local si existiera
+      QSqlQuery qDel(QSqlDatabase::database(conf->getConexionLocal()));
+      qDel.prepare("DELETE FROM precios_tienda WHERE cod_articulo = ?");
+      qDel.bindValue(0, cod);
+      qDel.exec();
+    }
+
+    if (ok) {
+      QMessageBox::information(this, "Éxito",
+                               "Cambios guardados correctamente.");
+    } else {
+      QMessageBox::critical(this, "Error",
+                            "No se pudieron guardar los cambios.");
+    }
+    recargarTabla();
+    mapper.setCurrentIndex(idx);
+    refrescarBotones(mapper.currentIndex());
   }
 }
 
@@ -831,13 +882,16 @@ void Articulos::on_pushButtonPonerFoto_clicked() {
   int curr = mapper.currentIndex();
   QString dir = base.devolverDirectorio("imagenes");
   QString absoluteDir = QDir(dir).absolutePath();
-  QString fichero = QFileDialog::getOpenFileName(this, "Elige el archivo", absoluteDir);
-  
-  if (fichero.isEmpty()) return;
+  QString fichero =
+      QFileDialog::getOpenFileName(this, "Elige el archivo", absoluteDir);
 
-  // Convertir a ruta relativa respecto al directorio de imágenes para mayor portabilidad
+  if (fichero.isEmpty())
+    return;
+
+  // Convertir a ruta relativa respecto al directorio de imágenes para mayor
+  // portabilidad
   QString relativeFichero = QDir(absoluteDir).relativeFilePath(fichero);
-  
+
   qDebug() << "Guardando imagen con ruta relativa:" << relativeFichero;
   base.modificarFotoArticulo(relativeFichero, ui->lineEditCod->text());
   recargarTabla();
@@ -895,15 +949,17 @@ void Articulos::on_lineEditCod_returnPressed() {
   qDebug() << "MAL";
   QString cod =
       base.codigoDesdeAux(conf->getConexionLocal(), ui->lineEditCod->text());
-  QSqlRecord registroProd = base.consulta_producto(conf->getConexionLocal(), cod);
-  
+  QSqlRecord registroProd =
+      base.consulta_producto(conf->getConexionLocal(), cod);
+
   if (!registroProd.isEmpty()) {
     ui->lineEditCod->setText(registroProd.value("cod").toString());
     emit on_lineEditCod_returnPressed();
     return;
   }
   // --- Búsqueda automática: primero en la nube, luego en tiendas remotas ---
-  qDebug() << "Artículo no encontrado localmente. Iniciando búsqueda automática...";
+  qDebug()
+      << "Artículo no encontrado localmente. Iniciando búsqueda automática...";
 
   QString codBuscado = ui->lineEditCod->text();
 
@@ -926,7 +982,8 @@ void Articulos::on_lineEditCod_returnPressed() {
       msgNube.setButtonText(QMessageBox::Ok, "Importar");
       msgNube.setButtonText(QMessageBox::Cancel, "Cancelar");
       if (msgNube.exec() == QMessageBox::Ok) {
-        base.insertarArticulo(QSqlDatabase::database(conf->getConexionLocal()), datos);
+        base.insertarArticulo(QSqlDatabase::database(conf->getConexionLocal()),
+                              datos);
         recargarTabla();
         emit on_lineEditCod_returnPressed();
         return;
@@ -939,12 +996,15 @@ void Articulos::on_lineEditCod_returnPressed() {
   }
 
   // 2) Buscar en las tiendas remotas conectadas
-  qDebug() << "Buscando en tiendas remotas. Conexiones:" << listaConexionesRemotas.length();
+  qDebug() << "Buscando en tiendas remotas. Conexiones:"
+           << listaConexionesRemotas.length();
   for (int i = 0; i < listaConexionesRemotas.length(); i++) {
     QString connRemota = listaConexionesRemotas.at(i);
 
-    // Saltar la conexión Master si ya está en la lista remota (evitar doble búsqueda)
-    if (connRemota == connMaster) continue;
+    // Saltar la conexión Master si ya está en la lista remota (evitar doble
+    // búsqueda)
+    if (connRemota == connMaster)
+      continue;
 
     if (!QSqlDatabase::database(connRemota).isOpen()) {
       qDebug() << "Saltando conexión remota no abierta:" << connRemota;
@@ -960,14 +1020,16 @@ void Articulos::on_lineEditCod_returnPressed() {
         qDebug() << registroRemoto.value(j).toString();
       }
       QMessageBox msgRemota(this);
-      msgRemota.setWindowTitle(QString("Artículo encontrado en: %1").arg(connRemota));
+      msgRemota.setWindowTitle(
+          QString("Artículo encontrado en: %1").arg(connRemota));
       msgRemota.setText("¿UTILIZAR ESTOS DATOS?");
       msgRemota.setInformativeText(datos.join("\n"));
       msgRemota.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
       msgRemota.setButtonText(QMessageBox::Ok, "Importar");
       msgRemota.setButtonText(QMessageBox::Cancel, "Cancelar");
       if (msgRemota.exec() == QMessageBox::Ok) {
-        base.insertarArticulo(QSqlDatabase::database(conf->getConexionLocal()), datos);
+        base.insertarArticulo(QSqlDatabase::database(conf->getConexionLocal()),
+                              datos);
         recargarTabla();
         emit on_lineEditCod_returnPressed();
         return;
@@ -981,8 +1043,8 @@ void Articulos::on_lineEditCod_returnPressed() {
   QMessageBox msgNoEnc(this);
   msgNoEnc.setWindowTitle("Artículo no encontrado");
   msgNoEnc.setText("NO SE ENCUENTRA EL ARTÍCULO");
-  msgNoEnc.setInformativeText(
-      "No se ha encontrado el producto ni en la nube ni en tiendas conectadas.");
+  msgNoEnc.setInformativeText("No se ha encontrado el producto ni en la nube "
+                              "ni en tiendas conectadas.");
   msgNoEnc.setStandardButtons(QMessageBox::Ok);
   msgNoEnc.exec();
   return;
@@ -1022,9 +1084,9 @@ void Articulos::on_pushButtonCambiarCodigo_clicked() {
 
   DialogCambioCodigo dialog(oldCod, descripcion, listaConexionesRemotas, this);
   if (dialog.exec() != QDialog::Accepted) {
-      return;
+    return;
   }
-  
+
   QString newCod = dialog.getNuevoCodigo();
   if (newCod.isEmpty()) {
     return;
@@ -1037,8 +1099,8 @@ void Articulos::on_pushButtonCambiarCodigo_clicked() {
   }
 
   // Validar que el nuevo código no existe localmente
-  if (base.existeDatoEnTabla(QSqlDatabase::database("DB"), "articulos", "cod",
-                             newCod)) {
+  if (base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()),
+                             "articulos", "cod", newCod)) {
     QMessageBox::warning(
         this, tr("Error"),
         tr("El código introducido ya existe en la base de datos."));
@@ -1047,15 +1109,17 @@ void Articulos::on_pushButtonCambiarCodigo_clicked() {
 
   // --- Validar existencia en la Nube ---
   bool existeNube = base.existeArticuloEnNube(newCod);
-  DialogCompararArticulos::Resultado eleccion = DialogCompararArticulos::Cancelar;
+  DialogCompararArticulos::Resultado eleccion =
+      DialogCompararArticulos::Cancelar;
 
   if (existeNube) {
     QSqlRecord recordNube = base.getArticuloNube(newCod);
     QSqlRecord recordLocal;
-    QSqlQuery qLocal(QSqlDatabase::database("DB"));
+    QSqlQuery qLocal(QSqlDatabase::database(conf->getConexionLocal()));
     qLocal.prepare("SELECT * FROM articulos WHERE cod = ?");
     qLocal.addBindValue(oldCod);
-    if (qLocal.exec() && qLocal.next()) recordLocal = qLocal.record();
+    if (qLocal.exec() && qLocal.next())
+      recordLocal = qLocal.record();
 
     DialogCompararArticulos dialog(recordLocal, recordNube, this);
     if (dialog.exec() == QDialog::Accepted) {
@@ -1072,7 +1136,8 @@ void Articulos::on_pushButtonCambiarCodigo_clicked() {
         this, tr("Confirmar"),
         tr("¿Está seguro de que desea cambiar el código de '%1' a '%2'?\n\n"
            "Este cambio realizará las siguientes acciones:\n"
-           "1. Migrará TODO el historial local (ventas, stock, pedidos) al nuevo "
+           "1. Migrará TODO el historial local (ventas, stock, pedidos) al "
+           "nuevo "
            "código.\n"
            "2. El código anterior seguiría activo en la nube y otras tiendas.\n"
            "3. El nuevo código aparecerá en la nube tras la sincronización.")
@@ -1086,33 +1151,33 @@ void Articulos::on_pushButtonCambiarCodigo_clicked() {
 
   // --- Ejecutar el cambio ---
   if (base.propagarCambioCodigoArticulo(oldCod, newCod)) {
-    // Si hubo conflicto y se eligió usar datos de la nube, actualizar ahora el local
+    // Si hubo conflicto y se eligió usar datos de la nube, actualizar ahora el
+    // local
     if (existeNube && eleccion == DialogCompararArticulos::UsarNube) {
-        QSqlRecord recordNube = base.getArticuloNube(newCod);
-        base.actualizarArticuloDesdeRecord(newCod, recordNube);
+      QSqlRecord recordNube = base.getArticuloNube(newCod);
+      base.actualizarArticuloDesdeRecord(newCod, recordNube);
     }
 
     QMessageBox::information(
         this, tr("Éxito"),
         tr("El código ha sido cambiado correctamente localmente.\n"
            "El proceso ha terminado exitosamente."));
-      recargarTabla();
-      // Buscar el nuevo registro para posicionar el cursor
-      for (int i = 0; i < modeloTabla->rowCount(); ++i) {
-        if (modeloTabla->record(i).value("cod").toString() == newCod) {
-          mapper.setCurrentIndex(i);
-          refrescarBotones(i);
-          break;
-        }
+    recargarTabla();
+    // Buscar el nuevo registro para posicionar el cursor
+    for (int i = 0; i < modeloTabla->rowCount(); ++i) {
+      if (modeloTabla->record(i).value("cod").toString() == newCod) {
+        mapper.setCurrentIndex(i);
+        refrescarBotones(i);
+        break;
       }
-    } else {
-      QMessageBox::critical(
-          this, tr("Error"),
-          tr("No se pudo completar el cambio de código. La operación ha sido "
-             "revertida para proteger la integridad de los datos."));
     }
+  } else {
+    QMessageBox::critical(
+        this, tr("Error"),
+        tr("No se pudo completar el cambio de código. La operación ha sido "
+           "revertida para proteger la integridad de los datos."));
   }
-
+}
 
 void Articulos::on_pushButtonNuevo_clicked() {
   QSqlRecord registroExistente =
@@ -1181,8 +1246,9 @@ void Articulos::on_pushButtonAnadir_clicked() {
 void Articulos::on_pushButtonAnadirAPedido_clicked() {
   QString cod = ui->lineEditCod->text();
   if (cod.isEmpty()) {
-      QMessageBox::warning(this, "Aviso", "No hay ningún artículo seleccionado para añadir.");
-      return;
+    QMessageBox::warning(this, "Aviso",
+                         "No hay ningún artículo seleccionado para añadir.");
+    return;
   }
   DialogAnadirAPedido *dialogo = new DialogAnadirAPedido(cod, this);
   dialogo->exec();
@@ -1227,20 +1293,24 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index) {
     // Cargamos el detalle específico para este proveedor, calculando el neto
     // por línea (Año actual y anterior)
     modeloCompras.setQuery(
-        "SELECT `nDocumento`, `pedidos`.`idProveedor`, `cantidad`, "
-        "`bonificacion`, "
-        "`costo` as 'Bruto', `descuento1` as '% Desc', "
-        "ROUND((cantidad * costo * (1 - descuento1/100)) / (cantidad + "
-        "bonificacion), 4) as 'Neto Unidad', "
-        "`pedidos`.`fechaPedido` "
-        "FROM `lineaspedido` JOIN "
-        "`pedidos` on `nDocumento` = `pedidos`.`npedido` "
-        "WHERE `cod` = '" +
-            ui->lineEditCod->text() + "' AND `pedidos`.`idProveedor` = '" +
-            idProv +
+        "SELECT lp.nDocumento as 'Nº Factura', p.idProveedor as 'Cód Prov', lp.cantidad as 'Uds', "
+        "lp.bonificacion as 'Bonif', "
+        "lp.costo as 'Bruto', lp.descuento1 as '% Desc L', p.descuento as '% "
+        "Desc P', "
+        "ROUND((lp.costo * (1 - COALESCE(lp.descuento1, 0)/100) * "
+        "(1 - COALESCE(p.descuento, 0)/100) * "
+        "(1 + i.porcentaje/100 + i.recargo/100) * "
+        "lp.cantidad) / (lp.cantidad + lp.bonificacion), 2) as 'Neto + IVA + "
+        "RE', "
+        "DATE_FORMAT(p.fechaPedido, '%Y-%m-%d') as 'Fecha' "
+        "FROM lineaspedido lp "
+        "JOIN pedidos p ON lp.nDocumento = p.npedido "
+        "LEFT JOIN impuestos i ON i.porcentaje = lp.tipoIva "
+        "WHERE lp.cod = '" +
+            ui->lineEditCod->text() + "' AND p.idProveedor = '" + idProv +
             "' "
-            "AND YEAR(pedidos.fechaPedido) >= YEAR(CURDATE()) - 1 "
-            "ORDER BY `pedidos`.`fechaPedido` DESC",
+            "AND YEAR(p.fechaPedido) >= YEAR(CURDATE()) - 1 "
+            "ORDER BY p.fechaPedido DESC",
         QSqlDatabase::database(conf->getConexionLocal()));
 
     ui->tableViewCompras->setModel(&modeloCompras);
@@ -1249,7 +1319,6 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index) {
     ui->pushButtonVerFactura->setEnabled(true);
   }
 }
-
 
 void Articulos::on_pushButtonVer_2_clicked() {}
 
@@ -1311,4 +1380,17 @@ void Articulos::on_treeWidgetStockTiendas_itemDoubleClicked(
   comprasVentasRemoto *cvr = new comprasVentasRemoto(
       QSqlDatabase::database(baseDatosRemota), ui->lineEditCod->text());
   cvr->show();
+}
+
+void Articulos::on_pushButtonHistorialPrecios_clicked() {
+  QString codArticulo = ui->lineEditCod->text();
+  if (codArticulo.isEmpty()) {
+    QMessageBox::warning(
+        this, tr("Atención"),
+        tr("Debe seleccionar un artículo para ver su historial de precios."));
+    return;
+  }
+
+  HistorialPrecios dialog(codArticulo, this);
+  dialog.exec();
 }

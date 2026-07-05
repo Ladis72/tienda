@@ -6,6 +6,8 @@
 #include "ui_tienda.h"
 #include "unificarproveedores.h"
 #include "verfacturas.h"
+#include "verifactudialog.h"
+#include "verifactuclass.h"
 
 #include "facturaralbaranes.h"
 #include "gestorpermisos.h"
@@ -13,7 +15,9 @@
 #include <QEvent>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QtConcurrent>
 #include <QPalette>
+#include <QSettings>
 #include <QSizePolicy>
 #include <QSplitter>
 
@@ -70,20 +74,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
    * Intenta primero obtener la configuración local de la tabla 'tiendas'
    * Si no existe, usa valores por defecto: localhost / tiendaNueva / root
    ******************************************************************************/
-  QStringList datos = base.datosConexionLocal();
-  if (datos.isEmpty()) {
-    // No hay tienda local configurada: usar valores por defecto
-    createConnection("localhost", "3306", "tiendaNueva", "root", "meganizado",
-                     "DB");
-  } else {
-    // Usar el puerto almacenado en la tabla tiendas; fallback a 3306 si falta
-    QString puerto =
-        (datos.size() > 5 && !datos.at(5).isEmpty() && datos.at(5) != "0")
-            ? datos.at(5)
-            : "3306";
-    createConnection(datos.at(1), puerto, datos.at(4), datos.at(2), datos.at(3),
-                     "DB");
-  }
+  // SEC-01: Mantener siempre la conexión local abierta en main.cpp desde tienda.ini
   conf->setConexionLocal("DB");
 
   /******************************************************************************
@@ -171,6 +162,46 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
                          conf->getConexionLocal());
 
+  // Tabla y trigger para registrar el historial de precios (Opción B)
+  base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `historico_precios` ("
+                         "  `id` INT AUTO_INCREMENT PRIMARY KEY,"
+                         "  `cod_articulo` VARCHAR(64) NOT NULL,"
+                         "  `tipo` VARCHAR(20) NOT NULL,"
+                         "  `precio_viejo` DOUBLE(10,3),"
+                         "  `precio_nuevo` DOUBLE(10,3),"
+                         "  `fecha_cambio` DATETIME DEFAULT CURRENT_TIMESTAMP"
+                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+                         conf->getConexionLocal());
+
+  base.ejecutarSentencia("DROP TRIGGER IF EXISTS `set_tienda_origen_precio`", conf->getConexionLocal());
+  base.ejecutarSentencia(
+      "CREATE TRIGGER `set_tienda_origen_precio` BEFORE UPDATE ON `articulos` "
+      "FOR EACH ROW "
+      "BEGIN "
+      "  IF @skip_sync IS NULL OR @skip_sync = 0 THEN "
+      "    IF NEW.pvp <> OLD.pvp OR NEW.precio_compra <> OLD.precio_compra THEN "
+      "      SET NEW.id_tienda_origen = (SELECT id FROM tiendas WHERE local = 1 LIMIT 1); "
+      "    END IF; "
+      "  END IF; "
+      "END;",
+      conf->getConexionLocal());
+
+  base.ejecutarSentencia("DROP TRIGGER IF EXISTS `log_cambio_precio`", conf->getConexionLocal());
+  base.ejecutarSentencia(
+      "CREATE TRIGGER `log_cambio_precio` AFTER UPDATE ON `articulos` "
+      "FOR EACH ROW "
+      "BEGIN "
+      "  IF NEW.pvp <> OLD.pvp THEN "
+      "    INSERT INTO historico_precios (cod_articulo, tipo, precio_viejo, precio_nuevo, fecha_cambio) "
+      "    VALUES (NEW.cod, 'PVP', OLD.pvp, NEW.pvp, NOW()); "
+      "  END IF; "
+      "  IF NEW.precio_compra <> OLD.precio_compra THEN "
+      "    INSERT INTO historico_precios (cod_articulo, tipo, precio_viejo, precio_nuevo, fecha_cambio) "
+      "    VALUES (NEW.cod, 'COSTO', OLD.precio_compra, NEW.precio_compra, NOW()); "
+      "  END IF; "
+      "END;",
+      conf->getConexionLocal());
+
   // Asegurar que la tabla configuracion tiene el campo precios_locales
   base.ejecutarSentencia("ALTER TABLE `configuracion` ADD COLUMN IF NOT EXISTS "
                          "`precios_locales` TINYINT(1) DEFAULT '0';",
@@ -189,6 +220,20 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          conf->getConexionLocal());
   base.ejecutarSentencia("ALTER TABLE `configuracion` ADD COLUMN IF NOT EXISTS "
                          "`vendedor_f4` INT DEFAULT NULL;",
+                         conf->getConexionLocal());
+
+  // SEC-02: Añadir columna salt a la tabla usuarios para hashing de contraseñas
+  base.ejecutarSentencia("ALTER TABLE `usuarios` ADD COLUMN IF NOT EXISTS "
+                         "`salt` VARCHAR(64) DEFAULT NULL;",
+                         conf->getConexionLocal());
+
+  // SEC-02: Ampliar el tamaño de la columna clave a VARCHAR(64) para guardar hashes SHA-256 sin truncar
+  base.ejecutarSentencia("ALTER TABLE `usuarios` MODIFY COLUMN `clave` VARCHAR(64) NOT NULL;",
+                         conf->getConexionLocal());
+
+  // Asegurar que la tabla verifactu_logs tiene el campo estado_envio (por defecto 1 = Enviado para registros anteriores)
+  base.ejecutarSentencia("ALTER TABLE `verifactu_logs` ADD COLUMN IF NOT EXISTS "
+                         "`estado_envio` INT DEFAULT '1';",
                          conf->getConexionLocal());
 
   /******************************************************************************
@@ -316,9 +361,27 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
 
   notasWidget->refrescar();
 
+  // Configurar temporizador para reenvío automático de VeriFactu cada 1 hora
+  verifactuTimer = new QTimer(this);
+  connect(verifactuTimer, &QTimer::timeout, this, [this]() {
+    // Lanzamos el reenvío en un hilo secundario para no congelar la UI
+    QtConcurrent::run([conn = conf->getConexionLocal()]() {
+      verifactuClass::procesarEnviosPendientes(conn);
+    });
+  });
+  verifactuTimer->start(3600000); // 1 hora (3600000 ms)
+
+  // Realizar un primer reenvío automático al arrancar la aplicación (con un pequeño delay de 5 segundos)
+  QTimer::singleShot(5000, this, [this]() {
+    QtConcurrent::run([conn = conf->getConexionLocal()]() {
+      verifactuClass::procesarEnviosPendientes(conn);
+    });
+  });
+
   // Botones dinámicos para nuevas opciones de configuración
   btnEditorPermisos = new QPushButton(tr("Editor de Permisos"), this);
-  btnVerifactu = new QPushButton(tr("Logs Verifactu"), this);
+  btnVerifactu = new QPushButton(tr("VeriFactu"), this);
+  btnVisorLog = new QPushButton(tr("Visor de Logs"), this);
 
   QGridLayout *configLayout =
       qobject_cast<QGridLayout *>(ui->tabConfig->layout());
@@ -326,6 +389,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
     // Los añado a la segunda fila (row 1) del layout de configuración
     configLayout->addWidget(btnEditorPermisos, 1, 1);
     configLayout->addWidget(btnVerifactu, 1, 2);
+    configLayout->addWidget(btnVisorLog, 1, 3);
   }
 
   connect(btnEditorPermisos, &QPushButton::clicked, this, [this]() {
@@ -334,7 +398,12 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   });
 
   connect(btnVerifactu, &QPushButton::clicked, this, [this]() {
-    VerFacturas dial("verifactu_logs", this);
+    VerifactuDialog dial(this);
+    dial.exec();
+  });
+
+  connect(btnVisorLog, &QPushButton::clicked, this, [this]() {
+    VisorLog dial(this);
     dial.exec();
   });
 
@@ -355,6 +424,14 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
   conf->setNombreconexiones(conexiones->lista());
+  
+  // -- Monitor Inteligente de Caducidades --
+  m_recomendacionesActivas.clear();
+  btnMonitorCaducidades = new QPushButton("🔍 Analizar Caducidades Inteligente", this);
+  btnMonitorCaducidades->setStyleSheet("background-color: #f1c40f; color: black; font-weight: bold; border-radius: 5px; padding: 5px; margin-right: 10px;");
+  ui->statusBar->addPermanentWidget(btnMonitorCaducidades);
+  connect(btnMonitorCaducidades, &QPushButton::clicked, this, &Tienda::onBtnMonitorCaducidadesClicked);
+  
   login();
 }
 
@@ -386,9 +463,7 @@ Tienda::~Tienda() {
 }
 
 void Tienda::cerrarAplicacion() {
-  qDebug() << "Pasa por aquí";
   this->close();
-  // std::exit(0);
 }
 
 void Tienda::on_ventasButton_clicked() {
@@ -457,11 +532,13 @@ void Tienda::permisos(int rol) {
       {"copia_seguridad", ui->pushButtonCopia},
       {"conectar", ui->pushButtonConectar},
       {"config_base", this->findChild<QWidget *>("pushButtonConfigDB")},
+      {"config_local", ui->pushButtonConfigLocal},
       {"tab_config", ui->tabConfig},
       {"preparar", ui->pushButtonPreparar},
       {"notas", btnNotifNotas},
       {"editor_permisos", btnEditorPermisos},
       {"verifactu", btnVerifactu},
+      {"visor_log", btnVisorLog},
       {"encargos", btnEncargosMain},
   };
 
@@ -617,6 +694,12 @@ void Tienda::on_pushButtonConfigDB_clicked() {
   // Abre el diálogo de configuración del servidor MariaDB en la nube
   CBase = new ConfigBase(this);
   CBase->exec();
+}
+
+void Tienda::on_pushButtonConfigLocal_clicked() {
+  // Abre el diálogo de configuración de la base de datos local (tienda.ini)
+  CLocal = new ConfigLocal(this);
+  CLocal->exec();
 }
 
 void Tienda::on_pushButtonConfiguracion_clicked() {
@@ -792,19 +875,12 @@ void Tienda::on_pushButtonSesion_clicked() {
 
 void Tienda::login() {
   Login login;
-  int resultado;
-  if (login.exec() == QDialog::Accepted) {
-    resultado = 1;
-  } else {
-    resultado = 0;
-  }
-  if (resultado == 0) {
+  if (login.exec() != QDialog::Accepted) {
     this->close();
-    // cerrarAplicacion();
+    return;
   }
   usuario->setText(conf->getUsuario());
-  qDebug() << conf->getUsuario();
-  qDebug() << conf->getRol();
+  // SEC-07: No imprimir usuario/rol en la salida de debug
   permisos(conf->getRol());
 }
 
@@ -842,7 +918,8 @@ void Tienda::cargarLogo() {
     // Fallback to default logos if not configured or not found
     rutaLogo = QCoreApplication::applicationDirPath() + "/documentos/logo.png";
     if (!QFile::exists(rutaLogo)) {
-      rutaLogo = "/home/ladis/AndroidStudioProjects/tienda/documentos/logo.jpg";
+      // SEC-12: Usar ruta relativa al ejecutable, no ruta absoluta hardcodeada
+      rutaLogo = QCoreApplication::applicationDirPath() + "/documentos/logo.jpg";
     }
   }
 
@@ -925,4 +1002,72 @@ void Tienda::limpiarCopiasAntiguas(const QString &directorio) {
       qWarning() << "Rotación: no se pudo eliminar ->" << nombre;
     }
   }
+}
+
+void Tienda::onRecomendacionesListas(QList<RecomendacionCaducidad> recomendaciones)
+{
+    m_recomendacionesActivas = recomendaciones;
+    btnMonitorCaducidades->setEnabled(true);
+    
+    if (!m_recomendacionesActivas.isEmpty()) {
+        btnMonitorCaducidades->setText(QString("⚠ %1 Avisos (Re-Analizar)").arg(m_recomendacionesActivas.size()));
+        DialogRecomendaciones *dialog = new DialogRecomendaciones(nullptr);
+        dialog->setAttribute(Qt::WA_DeleteOnClose);
+        dialog->setWindowModality(Qt::NonModal);
+        dialog->cargarRecomendaciones(m_recomendacionesActivas);
+        dialog->show();
+    } else {
+        btnMonitorCaducidades->setText("✅ Todo OK (Re-Analizar)");
+        QMessageBox::information(this, "Monitor de Caducidades", "No se han encontrado lotes con riesgo de caducidad inminente o merma.");
+    }
+}
+
+void Tienda::onBtnMonitorCaducidadesClicked() {
+    if (!m_recomendacionesActivas.isEmpty()) {
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle("Monitor de Caducidades");
+        msgBox.setText("Ya hay resultados de un análisis anterior.");
+        msgBox.setInformativeText("¿Qué desea hacer?");
+        QPushButton *btnVer = msgBox.addButton("Ver Avisos", QMessageBox::ActionRole);
+        QPushButton *btnReanalizar = msgBox.addButton("Re-Analizar", QMessageBox::ActionRole);
+        msgBox.addButton("Cancelar", QMessageBox::RejectRole);
+        
+        msgBox.exec();
+        
+        if (msgBox.clickedButton() == btnVer) {
+            DialogRecomendaciones *dialog = new DialogRecomendaciones(nullptr);
+            dialog->setAttribute(Qt::WA_DeleteOnClose);
+            dialog->setWindowModality(Qt::NonModal);
+            dialog->cargarRecomendaciones(m_recomendacionesActivas);
+            dialog->show();
+            return;
+        } else if (msgBox.clickedButton() != btnReanalizar) {
+            return; // Cancelar
+        }
+    }
+
+    btnMonitorCaducidades->setEnabled(false);
+    btnMonitorCaducidades->setText("⏳ Analizando en 2º plano...");
+    
+    m_monitorCaducidades = new MonitorCaducidades(conf->getConexionLocal());
+    QThread *monitorThread = new QThread(this);
+    m_monitorCaducidades->moveToThread(monitorThread);
+    
+    // Al arrancar el hilo, lanza la función de análisis
+    connect(monitorThread, &QThread::started, m_monitorCaducidades, &MonitorCaducidades::iniciar);
+    connect(m_monitorCaducidades, &MonitorCaducidades::analisisCompletado, this, &Tienda::onRecomendacionesListas);
+    connect(m_monitorCaducidades, &MonitorCaducidades::errorOcurrido, this, &Tienda::onMonitorCaducidadesError);
+    
+    // Limpieza
+    connect(monitorThread, &QThread::finished, m_monitorCaducidades, &QObject::deleteLater);
+    connect(m_monitorCaducidades, &MonitorCaducidades::finished, monitorThread, &QThread::quit);
+    connect(monitorThread, &QThread::finished, monitorThread, &QObject::deleteLater);
+    
+    monitorThread->start();
+}
+
+void Tienda::onMonitorCaducidadesError(QString msg) {
+    btnMonitorCaducidades->setEnabled(true);
+    btnMonitorCaducidades->setText("🔍 Analizar Caducidades Inteligente");
+    QMessageBox::warning(this, "Monitor de Caducidades", msg);
 }

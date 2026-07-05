@@ -123,7 +123,7 @@ void Salidas::actualizarTabla()
 void Salidas::llenarComboTiendas()
 {
     ui->comboBoxDestino->clear();
-    QSqlQuery listaCombo = base.tiendas(QSqlDatabase::database("DB"));
+    QSqlQuery listaCombo = base.tiendas(QSqlDatabase::database(conf->getConexionLocal()));
     while (listaCombo.next()) {
         ui->comboBoxDestino->addItem(listaCombo.value("nombre").toString());
     }
@@ -157,9 +157,11 @@ void Salidas::on_pushButtonAgregar_clicked()
             break;
         }
     }
-    QSqlQuery datosLote;
-    datosLote = base.ejecutarSentencia("SELECT cantidad FROM lotes WHERE id ='" + idLote + "'",
-                                        conf->getConexionLocal());
+    // Se utiliza una consulta preparada para consultar las existencias del lote de forma segura
+    QSqlQuery datosLote(QSqlDatabase::database(conf->getConexionLocal()));
+    datosLote.prepare("SELECT cantidad FROM lotes WHERE id = ?");
+    datosLote.bindValue(0, idLote);
+    datosLote.exec();
     datosLote.first();
     int resto = datosLote.record().value("cantidad").toInt() - ui->lineEditCantidad->text().toInt();
     if (resto < 0) {
@@ -190,9 +192,9 @@ void Salidas::on_pushButtonAgregar_clicked()
     datos.append(ui->lineEditCantidad->text());
     datos.append(ui->dateEditFC->text());
     datos.append(ui->lineEditPrecio->text());
-    datos.append(QString::number(base.idTiendaDesdeNombre(QSqlDatabase::database("DB"),
+    datos.append(QString::number(base.idTiendaDesdeNombre(QSqlDatabase::database(conf->getConexionLocal()),
                                                            ui->comboBoxDestino->currentText())));
-    base.insertarEnTabla(QSqlDatabase::database("DB"), "salidaGenero_tmp", datos);
+    base.insertarEnTabla(QSqlDatabase::database(conf->getConexionLocal()), "salidaGenero_tmp", datos);
 
     //    mTablaSalidas->select();
     ui->lineEditCantidad->clear();
@@ -206,7 +208,7 @@ void Salidas::on_pushButtonAgregar_clicked()
 
 void Salidas::on_lineEditDesc_returnPressed()
 {
-    QSqlQuery consulta = base.buscarProducto(QSqlDatabase::database("DB"),
+    QSqlQuery consulta = base.buscarProducto(QSqlDatabase::database(conf->getConexionLocal()),
                                               "articulos",
                                               ui->lineEditDesc->text());
     consulta.first();
@@ -242,26 +244,28 @@ void Salidas::on_pushButtonEnviar_clicked()
 
         base.disminuirLote(cod, fechaCaducidad, uds);
         QString precioValidado = pvp.isEmpty() ? "0" : pvp;
-        QSqlQuery tmp = base.ejecutarSentencia("UPDATE articulos SET descripcion = '" + descripcion
-                                                    + "' , pvp = " + precioValidado + " WHERE cod = '" + cod
-                                                    + "'",
-                                                conf->getConexionLocal());
+        // Se parametriza la actualización del artículo para prevenir inyecciones SQL
+        QSqlQuery tmp(QSqlDatabase::database(conf->getConexionLocal()));
+        tmp.prepare("UPDATE articulos SET descripcion = ?, pvp = ? WHERE cod = ?");
+        tmp.bindValue(0, descripcion);
+        tmp.bindValue(1, precioValidado.toDouble());
+        tmp.bindValue(2, cod);
+        tmp.exec();
     }
-    QSqlQuery tmp = base.ejecutarSentencia(
-        "INSERT INTO salidaGenero (cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp , "
-        "idTienda) "
-        "SELECT salidaGenero_tmp.cod, salidaGenero_tmp.fechaEntrada, salidaGenero_tmp.descripcion, "
-        "salidaGenero_tmp.cantidad, salidaGenero_tmp.fechaCaducidad, salidaGenero_tmp.pvp , "
-        "salidaGenero_tmp.idTienda"
-        " FROM salidaGenero_tmp WHERE salidaGenero_tmp.idTienda = "
-            + QString::number(base.idTiendaDesdeNombre(QSqlDatabase::database("DB"),
-                                                        ui->comboBoxDestino->currentText())),
-        conf->getConexionLocal());
-    base.ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE idTienda = "
-                                + QString::number(
-                                    base.idTiendaDesdeNombre(QSqlDatabase::database("DB"),
-                                                              ui->comboBoxDestino->currentText())),
-                            conf->getConexionLocal());
+    int idTienda = base.idTiendaDesdeNombre(QSqlDatabase::database(conf->getConexionLocal()), ui->comboBoxDestino->currentText());
+    // Se parametriza el trasvase masivo de salida de género filtrando por idTienda
+    QSqlQuery tmp(QSqlDatabase::database(conf->getConexionLocal()));
+    tmp.prepare("INSERT INTO salidaGenero (cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp, idTienda) "
+                "SELECT cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp, idTienda "
+                "FROM salidaGenero_tmp WHERE idTienda = ?");
+    tmp.bindValue(0, idTienda);
+    tmp.exec();
+
+    // Se parametriza el vaciado de la tabla temporal filtrando por idTienda
+    QSqlQuery deleteTmpQuery(QSqlDatabase::database(conf->getConexionLocal()));
+    deleteTmpQuery.prepare("DELETE FROM salidaGenero_tmp WHERE idTienda = ?");
+    deleteTmpQuery.bindValue(0, idTienda);
+    deleteTmpQuery.exec();
     base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(), "Salida genero ");
 
     actualizarTabla();
@@ -278,9 +282,11 @@ void Salidas::on_pushButtonBorrar_clicked()
     QString id = mTablaSalidas->data(mTablaSalidas->index(index.row(), 0)).toString();
 
     if (!id.isEmpty()) {
-        QSqlQuery tmp = base.ejecutarSentencia("DELETE FROM salidaGenero_tmp WHERE id = '"
-                                                    + id + "'",
-                                                conf->getConexionLocal());
+        // Se parametriza la consulta de borrado de la línea temporal
+        QSqlQuery tmp(QSqlDatabase::database(conf->getConexionLocal()));
+        tmp.prepare("DELETE FROM salidaGenero_tmp WHERE id = ?");
+        tmp.bindValue(0, id);
+        tmp.exec();
         qDebug() << tmp.lastError();
     }
     actualizarTabla();

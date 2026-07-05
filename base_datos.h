@@ -98,6 +98,9 @@ public:
     QSqlQuery datosTicket(QString base, QString nTicket);
     QSqlQuery consultarLineasTicket(QString base, QString nTicket);
     double obtenerNumeroUltimoTicket(QSqlDatabase db);
+    /// @brief Obtiene el siguiente número de ticket de forma atómica (FOR UPDATE).
+    /// DEBE llamarse dentro de una transacción activa para garantizar exclusión mutua.
+    int obtenerSiguienteTicketAtomico(QSqlDatabase db);
     QSqlQuery tcketsPendientes(QSqlDatabase db);
     int maxTicketPendiente(QSqlDatabase db);
     bool nuevoTicketTmp(int orden, int cliente, int vendedor);
@@ -223,6 +226,9 @@ public:
 
     //Funciones VERIFACTU
     QString obtenerUltimoHash(const QString db);
+    /// @brief Obtiene el último hash VeriFactu con bloqueo FOR UPDATE.
+    /// DEBE llamarse dentro de una transacción activa para garantizar exclusión mutua.
+    QString obtenerUltimoHashAtomico(QSqlDatabase db);
     QString registrarTickeckVerifactu(const QString db,
                                       const int ticket,
                                       const QString fecha,
@@ -230,7 +236,8 @@ public:
                                       const QString hashActual,
                                       const QString hashAnterior,
                                       const QString datosFactura,
-                                      const int ususario);
+                                      const int ususario,
+                                      const int estadoEnvio = 1);
 
     //Funciones NOTAS
     bool crearNota(const QString &db, const QString &titulo, const QString &descripcion,

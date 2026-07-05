@@ -1,6 +1,15 @@
 #include "verfacturas.h"
 #include <QMessageBox>
 #include <QStandardItemModel>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QTextEdit>
+#include <QDialogButtonBox>
+#include <QFont>
+#include <QSqlQuery>
+#include <QSqlDatabase>
+#include <QSqlError>
 #include "imprimirfacturaproveedor.h"
 #include "ui_verfacturas.h"
 
@@ -176,8 +185,53 @@ void VerFacturas::on_tableView_doubleClicked(const QModelIndex &index)
 {
     QModelIndex indice = modeloTabla->index(index.row(), 0);
     idFactura = modeloTabla->data(indice, Qt::EditRole).toString();
-    if (idFactura == "" || tipoDocumento == "verifactu_logs") {
-        // En logs no hay visor de PDF de momento, se puede añadir un dial de detalles
+    if (idFactura == "") {
+        return;
+    }
+
+    // Si es log de VeriFactu, mostramos el diálogo de detalles con el XML y los hashes
+    if (tipoDocumento == "verifactu_logs") {
+        QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
+        query.prepare("SELECT hash_actual, hash_anterior, cadena_firmada FROM verifactu_logs WHERE id_factura = :id_factura");
+        query.bindValue(":id_factura", idFactura.toInt());
+        
+        if (query.exec() && query.next()) {
+            QString hashActual = query.value("hash_actual").toString();
+            QString hashAnterior = query.value("hash_anterior").toString();
+            QString xmlContent = query.value("cadena_firmada").toString();
+
+            // Ventana de diálogo personalizada para mostrar el detalle del envío
+            QDialog *dial = new QDialog(this);
+            dial->setWindowTitle(tr("Detalles de Remisión VeriFactu - Ticket %1").arg(idFactura));
+            dial->resize(750, 550);
+
+            QVBoxLayout *layout = new QVBoxLayout(dial);
+            
+            QLabel *lblHashes = new QLabel(dial);
+            lblHashes->setText(tr("<b>Hash Actual (Huella):</b> <code style='color:#0055ff;'>%1</code><br>"
+                                  "<b>Hash Anterior (Encadenamiento):</b> <code>%2</code>")
+                               .arg(hashActual, hashAnterior));
+            lblHashes->setTextInteractionFlags(Qt::TextSelectableByMouse);
+            layout->addWidget(lblHashes);
+
+            QLabel *lblXml = new QLabel(tr("<b>Contenido XML enviado a la AEAT:</b>"), dial);
+            layout->addWidget(lblXml);
+
+            QTextEdit *txtXml = new QTextEdit(dial);
+            txtXml->setReadOnly(true);
+            txtXml->setPlainText(xmlContent);
+            txtXml->setFont(QFont("Monospace", 9));
+            layout->addWidget(txtXml);
+
+            QDialogButtonBox *btnBox = new QDialogButtonBox(QDialogButtonBox::Close, dial);
+            connect(btnBox, &QDialogButtonBox::rejected, dial, &QDialog::close);
+            layout->addWidget(btnBox);
+
+            dial->exec();
+            delete dial;
+        } else {
+            QMessageBox::warning(this, tr("Advertencia"), tr("No se encontraron registros de VeriFactu en la base de datos para el ticket %1.").arg(idFactura));
+        }
         return;
     }
 

@@ -17,7 +17,7 @@ Fabricantes::Fabricantes(QWidget *parent)
     ui->setupUi(this);
 
     // Configurar el modelo de datos vinculado a la tabla 'fabricantes'
-    modelo = new QSqlTableModel(this, QSqlDatabase::database("DB"));
+    modelo = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
     modelo->setTable("fabricantes");
     modelo->setEditStrategy(QSqlTableModel::OnManualSubmit);
     

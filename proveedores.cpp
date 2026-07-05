@@ -582,7 +582,7 @@ void Proveedores::on_pushButtonCerrar_clicked() { close(); }
 void Proveedores::on_pushButtonNuevo_clicked() {
   QString nif = ui->lineEditNIF->text().trimmed();
   if (!nif.isEmpty()) {
-      QSqlQuery q(QSqlDatabase::database("DB"));
+      QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
       q.prepare("SELECT idProveedor, nombre FROM proveedores WHERE nif = ?");
       q.addBindValue(nif);
       if (q.exec() && q.next()) {
@@ -595,13 +595,13 @@ void Proveedores::on_pushButtonNuevo_clicked() {
       }
   }
 
-  if (base.existeDatoEnTabla(QSqlDatabase::database("DB"), "proveedores",
+  if (base.existeDatoEnTabla(QSqlDatabase::database(conf->getConexionLocal()), "proveedores",
                              "idProveedor", ui->lineEditCod->text())) {
     QMessageBox::warning(this, "ATENCION", "El ID de proveedor ya existe");
     return;
   }
   QStringList datos = recogerDatosFormulario();
-  if (base.crearProveedor(QSqlDatabase::database("DB"), datos)) {
+  if (base.crearProveedor(QSqlDatabase::database(conf->getConexionLocal()), datos)) {
     QMessageBox::about(this, "Atención", "Proveedor creado con éxito");
   } else {
     QMessageBox::warning(this, "Error", "No se ha podido crear el proveedor.");
@@ -639,7 +639,7 @@ void Proveedores::on_pushButtonModificar_clicked() {
   QString nifNuevo = ui->lineEditNIF->text().trimmed();
 
   if (!nifNuevo.isEmpty()) {
-      QSqlQuery q(QSqlDatabase::database("DB"));
+      QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
       q.prepare("SELECT idProveedor, nombre FROM proveedores WHERE nif = ? AND idProveedor <> ?");
       q.addBindValue(nifNuevo);
       q.addBindValue(idActual);
@@ -662,7 +662,7 @@ void Proveedores::on_pushButtonModificar_clicked() {
   msgBox.setDefaultButton(QMessageBox::Ok);
   int resp = msgBox.exec();
   if (resp == QMessageBox::Ok) {
-    if (base.modificarProveedor(QSqlDatabase::database("DB"), datos,
+    if (base.modificarProveedor(QSqlDatabase::database(conf->getConexionLocal()), datos,
                                 ui->lineEditCod->text())) {
       msgBox.setText("Guardado con exito");
       msgBox.setInformativeText("El registro se ha modificado correctamente");
@@ -723,7 +723,7 @@ void Proveedores::on_pushButtonBorrar_clicked() {
   msgBox.setDefaultButton(QMessageBox::Ok);
   int resp = msgBox.exec();
   if (resp == QMessageBox::Ok) {
-    if (base.borrarProveedor(QSqlDatabase::database("DB"),
+    if (base.borrarProveedor(QSqlDatabase::database(conf->getConexionLocal()),
                              ui->lineEditCod->text())) {
       msgBox.setText("Borrado con exito");
       msgBox.setInformativeText("El registro se ha borrado correctamente");
