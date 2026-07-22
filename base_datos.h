@@ -37,6 +37,8 @@ public:
     //FUNCIONES ARTÍCULOS
     QSqlRecord consulta_producto(QString nombreConnexion, QString cod);
     QSqlQuery buscarProducto(QSqlDatabase db, QString tabla, QString nombre);
+    // Búsqueda inteligente de productos basada en el campo notas y descripción
+    QSqlQuery buscarPorNotas(QSqlDatabase db, QString texto);
     bool insertarUsuario(QSqlDatabase db, QStringList datos);
     bool modificarUsuaruio(QSqlDatabase db, QStringList datos, QString dato);
     bool modificarFotoUsusario(QString foto, int id);

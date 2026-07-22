@@ -236,6 +236,51 @@ QSqlQuery baseDatos::buscarProducto(QSqlDatabase db, QString tabla,
   return QSqlQuery();
 }
 
+// Realiza una búsqueda inteligente multitérmino priorizando el campo notas y la descripción del artículo
+// Optimizada para alto rendimiento en equipos de bajos recursos (elimina GROUP BY masivo y añade LIMIT)
+QSqlQuery baseDatos::buscarPorNotas(QSqlDatabase db, QString texto) {
+  if (db.isOpen()) {
+    QSqlQuery consulta(db);
+    QString pvpQuery = conf->getUsarPreciosLocales() 
+        ? "IF(pt.pvp IS NOT NULL, pt.pvp, articulos.pvp)" 
+        : "articulos.pvp";
+
+    // Dividir el texto introducido por el usuario en palabras clave separadas por espacios
+    QStringList palabras = texto.trimmed().split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
+    QStringList condiciones;
+
+    // Generar la cláusula WHERE requiriendo que cada palabra clave coincida en notas, descripción o código
+    for (QString palabra : palabras) {
+      // Escapar caracteres comilla y barra invertida para la seguridad del SQL
+      palabra.replace("'", "''");
+      palabra.replace("\\", "\\\\");
+      condiciones.append(QString("(articulos.notas LIKE '%%1%' OR articulos.descripcion LIKE '%%1%' OR articulos.cod LIKE '%%1%')").arg(palabra));
+    }
+
+    QString clFiltro = condiciones.isEmpty() ? "" : "WHERE " + condiciones.join(" AND ");
+
+    // Optimización SQL: Se reemplaza el LEFT JOIN + GROUP BY masivo por subconsultas directas indexadas sobre la tabla lotes,
+    // ejecutadas únicamente sobre las filas filtradas, y se limita el resultado a 150 registros para velocidad óptima.
+    QString sql = QString(
+        "SELECT articulos.cod, articulos.descripcion, %1 as pvp, articulos.iva, "
+        "0 as stock, articulos.min, articulos.max, 0 as pendientes_pedido, "
+        "0 as encargados, articulos.ultima_venta, articulos.ultimo_pedido, "
+        "articulos.familia, articulos.precio_compra, articulos.fabricante, articulos.foto, "
+        "articulos.notas, articulos.formato, articulos.cantformato, "
+        "(SELECT COALESCE(SUM(cantidad), 0) FROM lotes WHERE ean = articulos.cod) as stock_total, "
+        "(SELECT MIN(fecha) FROM lotes WHERE ean = articulos.cod) as fecha_caducidad "
+        "FROM articulos "
+        "LEFT JOIN precios_tienda pt ON articulos.cod = pt.cod_articulo "
+        "%2 "
+        "ORDER BY articulos.descripcion "
+        "LIMIT 150").arg(pvpQuery, clFiltro);
+
+    consulta.exec(sql);
+    return consulta;
+  }
+  return QSqlQuery();
+}
+
 bool baseDatos::insertarUsuario(QSqlDatabase db, QStringList datos) {
   QSqlQuery consulta(db);
 

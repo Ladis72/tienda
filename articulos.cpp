@@ -5,6 +5,7 @@
 #include "historialprecios.h"
 #include "imprimirfacturaproveedor.h"
 #include "ui_articulos.h"
+#include "buscarpornotas.h"
 
 #include "dialoganadirapedido.h"
 #include "dialogcambiocodigo.h"
@@ -935,6 +936,27 @@ void Articulos::on_lineEditDesc_returnPressed() {
     }
   }
   delete buscar;
+}
+
+// Slot para realizar una búsqueda inteligente en el campo notas del artículo
+void Articulos::on_pushButtonBuscarNotas_clicked() {
+  // Ejecutar la consulta inteligente en la base de datos con el texto ingresado en lineEditDesc
+  QSqlQuery consulta =
+      base.buscarPorNotas(QSqlDatabase::database(conf->getConexionLocal()),
+                          ui->lineEditDesc->text());
+  consulta.first();
+  BuscarPorNotas *buscarNotas = new BuscarPorNotas(this, consulta);
+  if (buscarNotas->exec() == QDialog::Accepted) {
+    // Si el usuario selecciona un artículo, actualizar la posición del mapper al código retornado
+    for (int i = 0; i < modeloTabla->rowCount(); i++) {
+      if (modeloTabla->record(i).value("cod").toString() == buscarNotas->resultado) {
+        mapper.setCurrentIndex(i);
+        refrescarBotones(i);
+        break;
+      }
+    }
+  }
+  delete buscarNotas;
 }
 
 void Articulos::on_lineEditCod_returnPressed() {

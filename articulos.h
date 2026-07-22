@@ -63,6 +63,8 @@ private slots:
 
     void on_lineEditDesc_returnPressed();
 
+    void on_pushButtonBuscarNotas_clicked();
+
     void on_lineEditCod_returnPressed();
 
     void on_pushButtonBuscarFamilia_clicked();
