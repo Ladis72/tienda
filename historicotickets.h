@@ -29,6 +29,7 @@ private slots:
     void on_pushButtonImprimir_clicked();
 
     void on_pushButtonFormaPago_clicked();
+    void on_pushButtonCliente_clicked();
 
     void on_pushButtonImprimirFactura_clicked();
     void on_pushButtonCerrar_clicked();

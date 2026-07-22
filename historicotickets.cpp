@@ -2,6 +2,7 @@
 #include <QMessageBox>
 #include <QStandardItemModel>
 #include "formaspago.h"
+#include "buscarcliente.h"
 #include "ui_historicotickets.h"
 
 HistoricoTickets::HistoricoTickets(QWidget *parent)
@@ -31,11 +32,11 @@ void HistoricoTickets::mostrarTickets()
     horaI = ui->dateTimeEditDesde->time().toString("HH:mm:ss");
     horaF = ui->dateTimeEditHasta->time().toString("HH:mm:ss");
     QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
-    query.prepare("SELECT * FROM tickets WHERE concat_ws('/',fecha,hora) >= ? AND concat_ws('/',fecha,hora) <= ?");
-    query.bindValue(0, fechaI + "/" + horaI);
-    query.bindValue(1, fechaF + "/" + horaF);
-    query.exec();
-    listaTickets->setQuery(query);
+    // Construimos la consulta directamente para evitar el bug de QMYSQL con sentencias preparadas (prepared statements) que devuelve QDate(0,0,0)
+    QString sql = QString("SELECT * FROM tickets WHERE concat_ws('/',fecha,hora) >= '%1/%2' AND concat_ws('/',fecha,hora) <= '%3/%4'")
+                  .arg(fechaI).arg(horaI).arg(fechaF).arg(horaF);
+    query.exec(sql);
+    listaTickets->setQuery(std::move(query));
     QStandardItemModel *vistaTickets = new QStandardItemModel(listaTickets->rowCount(),
                                                               listaTickets->columnCount() - 3, this);
     for (int i = 0; i < listaTickets->rowCount(); ++i) {
@@ -48,8 +49,10 @@ void HistoricoTickets::mostrarTickets()
         QStandardItem *itemCliente = new QStandardItem(
             base.nombreCliente(listaTickets->record(i).value(2).toString()));
         vistaTickets->setItem(i, 2, itemCliente);
-        QStandardItem *itemFecha = new QStandardItem(listaTickets->record(i).value(3).toString());
-        QStandardItem *itemHora = new QStandardItem(listaTickets->record(i).value(4).toString());
+
+        // Convertimos a QDate/QTime y aplicamos el formato correspondiente
+        QStandardItem *itemFecha = new QStandardItem(listaTickets->record(i).value(3).toDate().toString("yyyy-MM-dd"));
+        QStandardItem *itemHora = new QStandardItem(listaTickets->record(i).value(4).toTime().toString("HH:mm:ss"));
         vistaTickets->setItem(i, 3, itemFecha);
         vistaTickets->setItem(i, 4, itemHora);
         QStandardItem *itemDescuento = new QStandardItem(
@@ -145,6 +148,39 @@ void HistoricoTickets::on_pushButtonFormaPago_clicked()
         qDebug() << consulta.lastError();
         mostrarTickets();
     }
+}
+
+void HistoricoTickets::on_pushButtonCliente_clicked()
+{
+    // Si no se ha seleccionado ningún ticket en la lista, mostramos un aviso
+    if (nTicket == "") {
+        QMessageBox::information(this, "Error", "Primero debe seleccionar un ticket");
+        return;
+    }
+
+    // Obtenemos todos los clientes de la base de datos para realizar la búsqueda
+    QSqlQuery query = base.buscarEnTabla(QSqlDatabase::database(conf->getConexionLocal()), "clientes", "nombre", "");
+
+    // Mostramos el diálogo de búsqueda para que el usuario elija el nuevo cliente
+    BuscarCliente *buscar = new BuscarCliente(this, std::move(query));
+    if (buscar->exec() == QDialog::Accepted) {
+        QString idCliente = buscar->resultado;
+        if (idCliente != "") {
+            // Actualizamos el campo cliente del ticket en la tabla tickets de la base de datos local
+            QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
+            consulta.prepare("UPDATE tickets SET cliente = ? WHERE ticket = ?");
+            consulta.bindValue(0, idCliente);
+            consulta.bindValue(1, nTicket);
+            consulta.exec();
+            qDebug() << consulta.lastError();
+
+            // Volvemos a cargar y mostrar la lista de tickets para ver reflejado el cambio
+            mostrarTickets();
+        }
+    }
+
+    // Liberamos la memoria utilizada por el diálogo de búsqueda
+    delete buscar;
 }
 
 void HistoricoTickets::on_pushButtonImprimirFactura_clicked()

@@ -304,11 +304,18 @@ void Tpv::datosProducto(QString IdProducto)
 {
     ui->labelStock->setText(base.sumarStockArticulo(IdProducto, conf->getConexionLocal()));
     QSqlQuery tmp(QSqlDatabase::database(conf->getConexionLocal()));
-    tmp.prepare("SELECT fecha FROM lotes WHERE ean = ? ORDER BY fecha asc");
+    // Buscamos la fecha de caducidad más cercana con stock disponible (cantidad > 0)
+    // y descartamos la fecha comodín "2000-01-01" de lotes genéricos.
+    // Usamos DATE_FORMAT para asegurar el formato de fecha "yyyy-MM-dd".
+    tmp.prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') FROM lotes "
+                "WHERE ean = ? AND fecha != '2000-01-01' AND cantidad > 0 "
+                "ORDER BY fecha ASC");
     tmp.bindValue(0, IdProducto);
-    tmp.exec();
-    tmp.first();
-    ui->labelFecha->setText(tmp.value(0).toString());
+    if (tmp.exec() && tmp.first()) {
+        ui->labelFecha->setText(tmp.value(0).toString());
+    } else {
+        ui->labelFecha->setText("");
+    }
     QSqlRecord registro = base.consulta_producto(conf->getConexionLocal(), IdProducto);
     
     currentFotoPath = registro.value("foto").toString();
