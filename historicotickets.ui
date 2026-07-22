@@ -112,7 +112,7 @@
          </size>
         </property>
         <property name="displayFormat">
-         <string>yyyy/MM/dd HH:mm</string>
+         <string>yyyy-MM-dd HH:mm</string>
         </property>
         <property name="calendarPopup">
          <bool>true</bool>
@@ -135,7 +135,7 @@
          </size>
         </property>
         <property name="displayFormat">
-         <string>yyyy/MM/dd HH:mm</string>
+         <string>yyyy-MM-dd HH:mm</string>
         </property>
         <property name="calendarPopup">
          <bool>true</bool>
@@ -227,6 +227,19 @@ QPushButton:hover { background-color: #1b5e20; }</string>
        </property>
        <property name="text">
         <string>Cambiar F. Pago</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonCliente">
+       <property name="minimumSize">
+        <size>
+         <width>150</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Cambiar Cliente</string>
        </property>
       </widget>
      </item>
