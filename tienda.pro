@@ -35,6 +35,7 @@ SOURCES += main.cpp\
     tpv.cpp \
     base_datos.cpp \
     buscarproducto.cpp \
+    buscarpornotas.cpp \
     buscarcliente.cpp \
     tabwidget.cpp \
     articulos.cpp \
@@ -119,6 +120,7 @@ HEADERS  += tienda.h \
     base_datos.h \
     conexion.h \
     buscarproducto.h \
+    buscarpornotas.h \
     buscarcliente.h \
     tabwidget.h \
     articulos.h \
@@ -195,6 +197,7 @@ FORMS    += tienda.ui \
     login.ui \
     tpv.ui \
     buscarproducto.ui \
+    buscarpornotas.ui \
     buscarcliente.ui \
     tabwidget.ui \
     articulos.ui \

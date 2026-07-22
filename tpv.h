@@ -48,6 +48,8 @@ private slots:
 
     void on_lineEdit_desc_returnPressed();
 
+    void on_btn_buscar_notas_clicked();
+
     void on_btn_cobrar_clicked();
 
     void on_tableViewTicketsPendientes_clicked(const QModelIndex &index);

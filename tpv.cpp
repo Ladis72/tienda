@@ -14,6 +14,7 @@
 #include <QCursor>
 #include "visorimagenes.h"
 #include "buscarcliente.h"
+#include "buscarpornotas.h"
 #include "encargosdialog.h"
 #include "gestorencargosdialog.h"
 #include <QTextDocument>
@@ -600,6 +601,22 @@ void Tpv::on_lineEdit_desc_returnPressed()
     buscar->exec();
     ui->lineEdit_cod->setText(buscar->resultado);
     emit on_lineEdit_cod_returnPressed();
+}
+
+// Slot para el botón Buscar por Notas en el TPV
+void Tpv::on_btn_buscar_notas_clicked()
+{
+    // Realizar la búsqueda inteligente multitérmino por notas a partir del texto ingresado en lineEdit_desc
+    consulta = base.buscarPorNotas(QSqlDatabase::database(conf->getConexionLocal()),
+                                   ui->lineEdit_desc->text());
+    consulta.first();
+    BuscarPorNotas *buscarNotas = new BuscarPorNotas(this, consulta);
+    if (buscarNotas->exec() == QDialog::Accepted) {
+        // Establecer el código del artículo seleccionado y simular Enter para agregarlo al ticket
+        ui->lineEdit_cod->setText(buscarNotas->resultado);
+        emit on_lineEdit_cod_returnPressed();
+    }
+    delete buscarNotas;
 }
 
 void Tpv::on_btn_cobrar_clicked()

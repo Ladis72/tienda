@@ -487,8 +487,21 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1" colspan="6">
+          <item row="1" column="1" colspan="5">
            <widget class="QLineEdit" name="lineEditDesc"/>
+          </item>
+          <item row="1" column="6">
+           <widget class="QPushButton" name="pushButtonBuscarNotas">
+            <property name="text">
+             <string>Buscar por Notas</string>
+            </property>
+            <property name="toolTip">
+             <string>Búsqueda inteligente multitérmino en las notas y detalles del artículo</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+           </widget>
           </item>
           <item row="7" column="6">
            <widget class="QPushButton" name="pushButtonPonerFoto">
