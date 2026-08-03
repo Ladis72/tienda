@@ -362,6 +362,7 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
       // ── Configuración Avanzada ──
       {"editor_permisos",           {0}},
       {"verifactu",                 {0}},
+      {"verificar_bd",              {0}},
 
       // ── TPV (Acciones granulares) ──
       {"tpv.anadir",                {0, 1, 2, 3}},

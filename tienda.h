@@ -52,6 +52,7 @@
 #include "syncmanager.h"
 #include "monitorcaducidades.h"
 #include "dialogrecomendaciones.h"
+#include "verificadorbasedatos.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -196,6 +197,7 @@ private:
     QPushButton *btnEditorPermisos;
     QPushButton *btnVerifactu;
     QPushButton *btnVisorLog;
+    QPushButton *btnVerificarBD;
     QPushButton *btnEncargosMain = nullptr;
     QSplitter   *mainSplitter;
     QTimer      *verifactuTimer;

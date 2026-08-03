@@ -268,4 +268,140 @@ bool ImprimirTicket::imprimirLogo()
     return true;
 }
 
+/**
+ * @brief Imprime un comprobante de encargo en la impresora térmica de tickets.
+ * 
+ * Genera y envía el ticket de comprobante de encargo a la impresora térmica configurada,
+ * incluyendo información sobre la empresa, datos del cliente, producto encargados, anticipo y notas.
+ */
+bool ImprimirTicket::imprimirComprobanteEncargo(int idEncargo,
+                                               const QString &codCliente,
+                                               const QString &codArticulo,
+                                               const QString &descArticulo,
+                                               int cantidad,
+                                               double anticipo,
+                                               const QString &formaPago,
+                                               const QString &notas,
+                                               const QString &empleado,
+                                               const QString &fechaStr)
+{
+    baseDatos base;
+    PrinterManager printer;
+
+    // Recuperar configuración de la impresora y del ticket desde la base de datos
+    QStringList confTicket = base.recuperarConfigTicket(conf->getConexionLocal());
+    if (confTicket.size() > 3 && !confTicket.at(3).isEmpty()) {
+        printer.setDevicePath(confTicket.at(3));
+    }
+
+    if (!printer.abrirImpresora()) {
+        qDebug() << "ImprimirTicket::imprimirComprobanteEncargo: No se pudo abrir la impresora:" << printer.devicePath();
+        return false;
+    }
+
+    // 1. Imprimir logo de la empresa si está configurado y existe el archivo
+    if (confTicket.size() > 2 && !confTicket.at(2).isEmpty() && QFile::exists(confTicket.at(2))) {
+        printer.imprimirLogoEmpresa(confTicket.at(2));
+    }
+
+    // 2. Cabecera (Nombre de la empresa)
+    if (confTicket.size() > 0 && !confTicket.at(0).isEmpty()) {
+        printer.setTamanio(2, 1);
+        printer.imprimirLineaCentrada(confTicket.at(0));
+        printer.setTamanio(1, 1);
+    }
+    printer.alimentarLineas(1);
+
+    // 3. Título del comprobante en negrita y tamaño destacado
+    printer.setNegrita(true);
+    printer.setTamanio(1, 2);
+    printer.imprimirLineaCentrada("*** COMPROBANTE DE ENCARGO ***");
+    printer.setTamanio(1, 1);
+    printer.setNegrita(false);
+    printer.alimentarLineas(1);
+
+    // 4. Datos del encargo: ID de encargo, Fecha y Hora
+    if (idEncargo > 0) {
+        printer.imprimirLinea(QString("No Encargo: #%1").arg(idEncargo));
+    }
+
+    // Formato estricto de fecha "yyyy-MM-dd" según las normas globales del sistema
+    QString fechaFinal = fechaStr;
+    if (fechaFinal.isEmpty()) {
+        fechaFinal = QDate::currentDate().toString("yyyy-MM-dd");
+    } else {
+        QDate f = QDate::fromString(fechaStr, "yyyy-MM-dd");
+        if (!f.isValid()) {
+            f = QDate::fromString(fechaStr, Qt::ISODate);
+        }
+        if (f.isValid()) {
+            fechaFinal = f.toString("yyyy-MM-dd");
+        }
+    }
+    QString horaFinal = QTime::currentTime().toString("hh:mm:ss");
+    printer.imprimirLinea(QString("Fecha: %1  Hora: %2").arg(fechaFinal, horaFinal));
+
+    // Obtener nombre completo del cliente si está registrado
+    QString clienteInfo = codCliente;
+    if (!codCliente.isEmpty() && codCliente != "0") {
+        QSqlQuery qCli(QSqlDatabase::database(conf->getConexionLocal()));
+        qCli.prepare("SELECT nombre FROM clientes WHERE id = ?");
+        qCli.bindValue(0, codCliente.toInt());
+        if (qCli.exec() && qCli.next() && !qCli.value(0).toString().isEmpty()) {
+            clienteInfo += " - " + qCli.value(0).toString();
+        }
+    } else {
+        clienteInfo = "Cliente de Contado";
+    }
+    printer.imprimirLinea("Cliente: " + clienteInfo);
+
+    if (!empleado.isEmpty()) {
+        printer.imprimirLinea("Atendido por: " + empleado);
+    }
+
+    printer.imprimirLineaSeparadora('-', 48);
+
+    // 5. Detalles del artículo encargado y anticipo a cuenta
+    printer.setNegrita(true);
+    printer.imprimirLinea("CODIGO: " + codArticulo);
+    printer.imprimirLinea("ARTICULO: " + descArticulo);
+    printer.setNegrita(false);
+    printer.imprimirLinea("CANTIDAD ENCARGADA: " + QString::number(cantidad));
+    printer.imprimirLinea(QString("ANTICIPO A CUENTA: %1 EUR").arg(QString::number(anticipo, 'f', 2)));
+    printer.imprimirLinea("FORMA PAGO ANTICIPO: " + formaPago);
+
+    printer.imprimirLineaSeparadora('-', 48);
+
+    // 6. Observaciones / Notas si no están vacías
+    if (!notas.trimmed().isEmpty()) {
+        printer.imprimirLinea("NOTAS / OBSERVACIONES:");
+        printer.imprimirLinea(notas);
+        printer.imprimirLineaSeparadora('-', 48);
+    }
+
+    // 7. Pie del ticket configurado
+    if (confTicket.size() > 1 && !confTicket.at(1).isEmpty()) {
+        printer.imprimirLineaCentrada(confTicket.at(1));
+    }
+
+    // 8. Alimentar líneas y cortar el papel
+    printer.alimentarLineas(3);
+
+    if (confTicket.size() > 5 && !confTicket.at(5).isEmpty()) {
+        QString codCorte = confTicket.at(5);
+        QStringList cadaCodCorte = codCorte.split(",");
+        QByteArray comandoCorte;
+        for (int i = 0; i < cadaCodCorte.size(); ++i) {
+            comandoCorte.append(static_cast<char>(cadaCodCorte.at(i).toInt()));
+        }
+        printer.enviarComando(comandoCorte);
+    } else {
+        printer.cortarPapel(true);
+    }
+
+    printer.cerrarImpresora();
+    qDebug() << "ImprimirTicket::imprimirComprobanteEncargo: Comprobante impreso correctamente.";
+    return true;
+}
+
 

@@ -1,6 +1,7 @@
 #include "gestorencargosdialog.h"
 #include "ui_gestorencargosdialog.h"
 #include "encargosdialog.h"
+#include "imprimirticket.h"
 #include <QMessageBox>
 #include <QDate>
 #include <QTime>
@@ -120,7 +121,7 @@ void GestorEncargosDialog::ajustarFiltro()
     QString estado = ui->comboBoxEstado->currentText();
     QString cliente = ui->lineEditFiltroCliente->text();
 
-    QString queryStr = "SELECT e.id_encargo, e.id_cliente, e.cod_articulo, a.descripcion, e.cantidad, e.fecha_encargo, e.notas, e.empleado, e.anticipo, e.estado "
+    QString queryStr = "SELECT e.id_encargo, e.id_cliente, e.cod_articulo, a.descripcion, e.cantidad, e.fecha_encargo, e.notas, e.empleado, e.anticipo, e.forma_pago, e.estado "
                        "FROM encargos e LEFT JOIN articulos a ON e.cod_articulo = a.cod";
     
     QString where;
@@ -152,7 +153,7 @@ void GestorEncargosDialog::ajustarFiltro()
 
     modelEncargos->setQuery(queryStr, QSqlDatabase::database(connLocal));
     
-    // Cabeceras
+    // Configuración de las cabeceras de la tabla
     modelEncargos->setHeaderData(0, Qt::Horizontal, tr("ID"));
     modelEncargos->setHeaderData(1, Qt::Horizontal, tr("ID Cliente"));
     modelEncargos->setHeaderData(2, Qt::Horizontal, tr("Código"));
@@ -162,7 +163,8 @@ void GestorEncargosDialog::ajustarFiltro()
     modelEncargos->setHeaderData(6, Qt::Horizontal, tr("Notas"));
     modelEncargos->setHeaderData(7, Qt::Horizontal, tr("Empleado"));
     modelEncargos->setHeaderData(8, Qt::Horizontal, tr("Anticipo"));
-    modelEncargos->setHeaderData(9, Qt::Horizontal, tr("Estado"));
+    modelEncargos->setHeaderData(9, Qt::Horizontal, tr("Forma Pago"));
+    modelEncargos->setHeaderData(10, Qt::Horizontal, tr("Estado"));
 
     ui->tableViewEncargos->resizeColumnsToContents();
     ui->tableViewEncargos->hideColumn(0);
@@ -267,26 +269,90 @@ void GestorEncargosDialog::on_btnNuevoEncargo_clicked()
 
         baseDatos base;
         QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
-        q.prepare("INSERT INTO encargos (id_cliente, cod_articulo, cantidad, notas, empleado, anticipo, estado) "
-                  "VALUES (?, ?, ?, ?, ?, ?, 'Pendiente')");
+        q.prepare("INSERT INTO encargos (id_cliente, cod_articulo, cantidad, notas, empleado, anticipo, forma_pago, estado) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, 'Pendiente')");
         q.bindValue(0, enc.getCodCliente().toInt());
         q.bindValue(1, enc.getCodArticulo());
         q.bindValue(2, enc.getCantidad());
         q.bindValue(3, enc.getNotas());
         q.bindValue(4, usuario);
         q.bindValue(5, enc.getAnticipo());
+        q.bindValue(6, enc.getFormaPago());
 
         if (q.exec()) {
+            int idNuevoEncargo = q.lastInsertId().toInt();
             ajustarFiltro();
             base.crearNota(conf->getConexionLocal(),
                            "Encargo: " + enc.getDescArticulo() + "(" + enc.getCodArticulo() +")",
-                           "Cliente ID: " + enc.getCodCliente() + "\nCantidad: " + QString::number(enc.getCantidad()) + "\nNotas: " + enc.getNotas(),
+                           "Cliente ID: " + enc.getCodCliente() + "\nCantidad: " + QString::number(enc.getCantidad()) + "\nForma Pago Anticipo: " + enc.getFormaPago() + "\nNotas: " + enc.getNotas(),
                            usuario,
                            "",
                            "Alta");
+
+            // Si se introdujo un anticipo mayor a 0, registrar el movimiento en caja
+            if (enc.getAnticipo() > 0) {
+                QStringList datosES;
+                datosES.append(QDate::currentDate().toString("yyyy-MM-dd"));
+                datosES.append(QTime::currentTime().toString("hh:mm:ss"));
+                datosES.append(QString::number(enc.getAnticipo()));
+                datosES.append("1");
+                datosES.append(QString("Anticipo Encargo [%1] (Cliente %2) - %3").arg(enc.getFormaPago(), enc.getCodCliente(), enc.getCodArticulo()));
+                base.insertarES(datosES, conf->getConexionLocal(), usuario);
+            }
+
+            // Si el usuario marcó la opción de imprimir comprobante por la impresora de tickets
+            if (enc.getImprimirTicket()) {
+                ImprimirTicket::imprimirComprobanteEncargo(idNuevoEncargo,
+                                                          enc.getCodCliente(),
+                                                          enc.getCodArticulo(),
+                                                          enc.getDescArticulo(),
+                                                          enc.getCantidad(),
+                                                          enc.getAnticipo(),
+                                                          enc.getFormaPago(),
+                                                          enc.getNotas(),
+                                                          usuario);
+            }
         } else {
             QMessageBox::critical(this, "Error", "No se pudo guardar el encargo:\n" + q.lastError().text());
         }
+    }
+}
+
+/**
+ * @brief Slot para reimprimir el comprobante del encargo seleccionado en la tabla.
+ */
+void GestorEncargosDialog::on_btnImprimirTicket_clicked()
+{
+    QModelIndex index = ui->tableViewEncargos->currentIndex();
+    if (!index.isValid()) {
+        QMessageBox::warning(this, "Aviso", "Seleccione un encargo de la lista primero.");
+        return;
+    }
+
+    int row = index.row();
+    int idEncargo = modelEncargos->data(modelEncargos->index(row, 0)).toInt();
+    QString codCliente = modelEncargos->data(modelEncargos->index(row, 1)).toString();
+    QString codArticulo = modelEncargos->data(modelEncargos->index(row, 2)).toString();
+    QString descArticulo = modelEncargos->data(modelEncargos->index(row, 3)).toString();
+    int cantidad = modelEncargos->data(modelEncargos->index(row, 4)).toInt();
+    QString fechaEncargo = modelEncargos->data(modelEncargos->index(row, 5)).toString();
+    QString notas = modelEncargos->data(modelEncargos->index(row, 6)).toString();
+    QString empleado = modelEncargos->data(modelEncargos->index(row, 7)).toString();
+    double anticipo = modelEncargos->data(modelEncargos->index(row, 8)).toDouble();
+    QString formaPago = modelEncargos->data(modelEncargos->index(row, 9)).toString();
+
+    bool ok = ImprimirTicket::imprimirComprobanteEncargo(idEncargo,
+                                                       codCliente,
+                                                       codArticulo,
+                                                       descArticulo,
+                                                       cantidad,
+                                                       anticipo,
+                                                       formaPago,
+                                                       notas,
+                                                       empleado,
+                                                       fechaEncargo);
+    if (!ok) {
+        QMessageBox::warning(this, "Error de Impresión", "No se pudo imprimir el comprobante del encargo. Verifique la conexión con la impresora.");
     }
 }
 
@@ -299,7 +365,8 @@ void GestorEncargosDialog::on_btnCobrarTPV_clicked()
     }
 
     int row = index.row();
-    QString estado = modelEncargos->data(modelEncargos->index(row, 9)).toString();
+    // El campo 'estado' se encuentra ahora en el índice 10
+    QString estado = modelEncargos->data(modelEncargos->index(row, 10)).toString();
 
     if (estado == "Entregado" || estado == "Cancelado") {
         QMessageBox::warning(this, "Aviso", "Este encargo ya ha sido procesado o cancelado.");

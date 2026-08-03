@@ -19,6 +19,22 @@ public:
     int getCantidad() const;
     double getAnticipo() const;
     QString getNotas() const;
+
+    /**
+     * @brief Devuelve la forma de pago seleccionada para el adelanto (ej. Efectivo, Tarjeta, etc.)
+     */
+    QString getFormaPago() const;
+
+    /**
+     * @brief Devuelve el ID de la forma de pago seleccionada según la tabla fpago
+     */
+    int getFormaPagoId() const;
+
+    /**
+     * @brief Indica si el usuario ha seleccionado imprimir el comprobante del encargo por la impresora de tickets.
+     */
+    bool getImprimirTicket() const;
+
     QString getCodArticulo() const { return m_codArticulo; }
     QString getDescArticulo() const { return m_descArticulo; }
     QString getCodCliente() const { return m_codCliente; }

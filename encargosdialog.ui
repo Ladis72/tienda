@@ -76,24 +76,42 @@
     </widget>
    </item>
    <item row="4" column="0">
+    <widget class="QLabel" name="labelFormaPago">
+     <property name="text"><string>Forma de Pago (Anticipo):</string></property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QComboBox" name="comboBoxFormaPago"/>
+   </item>
+   <item row="5" column="0">
     <widget class="QLabel" name="labelEmpleado">
      <property name="text"><string>Empleado:</string></property>
     </widget>
    </item>
-   <item row="4" column="1">
+   <item row="5" column="1">
     <widget class="QLineEdit" name="lineEditEmpleado">
      <property name="readOnly"><bool>true</bool></property>
     </widget>
    </item>
-   <item row="5" column="0">
+   <item row="6" column="0">
     <widget class="QLabel" name="labelNotas">
      <property name="text"><string>Notas:</string></property>
     </widget>
    </item>
-   <item row="5" column="1">
+   <item row="6" column="1">
     <widget class="QTextEdit" name="textEditNotas"/>
    </item>
-   <item row="6" column="0" colspan="2">
+   <item row="7" column="0" colspan="2">
+    <widget class="QCheckBox" name="checkBoxImprimirTicket">
+     <property name="text">
+      <string>Imprimir comprobante en impresora de tickets</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0" colspan="2">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>

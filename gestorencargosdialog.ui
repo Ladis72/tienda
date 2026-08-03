@@ -121,6 +121,13 @@ font: 75 10pt &quot;MS Shell Dlg 2&quot;;</string>
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="btnImprimirTicket">
+       <property name="text">
+        <string>Imprimir Comprobante</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btnBorrar">
        <property name="text">
         <string>Borrar Encargo</string>
