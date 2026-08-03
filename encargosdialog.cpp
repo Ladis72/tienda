@@ -30,6 +30,23 @@ EncargosDialog::EncargosDialog(QString codCliente, QString nombreCliente, QStrin
     }
     
     ui->lineEditEmpleado->setText(empleado);
+
+    // Cargar las formas de pago disponibles en la base de datos
+    baseDatos base;
+    QSqlQuery qFp = base.fpago(QSqlDatabase::database(conf->getConexionLocal()));
+    while (qFp.next()) {
+        QString nombreForma = qFp.value("tipo").toString();
+        int idForma = qFp.value("id").toInt();
+        ui->comboBoxFormaPago->addItem(nombreForma, idForma);
+    }
+
+    // Si no existen formas de pago configuradas en la BD, añadir las opciones habituales por defecto
+    if (ui->comboBoxFormaPago->count() == 0) {
+        ui->comboBoxFormaPago->addItem("Efectivo", 1);
+        ui->comboBoxFormaPago->addItem("Tarjeta", 2);
+        ui->comboBoxFormaPago->addItem("Bizum", 3);
+        ui->comboBoxFormaPago->addItem("Transferencia", 4);
+    }
 }
 
 EncargosDialog::~EncargosDialog()
@@ -50,6 +67,24 @@ double EncargosDialog::getAnticipo() const
 QString EncargosDialog::getNotas() const
 {
     return ui->textEditNotas->toPlainText();
+}
+
+// Obtener el nombre textual de la forma de pago seleccionada
+QString EncargosDialog::getFormaPago() const
+{
+    return ui->comboBoxFormaPago->currentText();
+}
+
+// Obtener el ID de la forma de pago seleccionada
+int EncargosDialog::getFormaPagoId() const
+{
+    return ui->comboBoxFormaPago->currentData().toInt();
+}
+
+// Devuelve si se debe imprimir el comprobante en la impresora de tickets
+bool EncargosDialog::getImprimirTicket() const
+{
+    return ui->checkBoxImprimirTicket->isChecked();
 }
 
 void EncargosDialog::on_btnBuscarArticulo_clicked()

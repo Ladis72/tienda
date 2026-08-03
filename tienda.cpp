@@ -108,9 +108,14 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          "  `notas` VARCHAR(255) DEFAULT NULL,"
                          "  `empleado` VARCHAR(100) DEFAULT NULL,"
                          "  `anticipo` DOUBLE(10,2) DEFAULT '0.00',"
+                         "  `forma_pago` VARCHAR(50) DEFAULT 'Efectivo',"
                          "  `estado` ENUM('Pendiente', 'Recibido', "
                          "'Entregado', 'Cancelado') DEFAULT 'Pendiente'"
                          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+                         conf->getConexionLocal());
+
+  // Añadimos el campo forma_pago si la tabla ya existía anteriormente
+  base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN `forma_pago` VARCHAR(50) DEFAULT 'Efectivo';",
                          conf->getConexionLocal());
 
   base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `historico_stock` ("
@@ -382,6 +387,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   btnEditorPermisos = new QPushButton(tr("Editor de Permisos"), this);
   btnVerifactu = new QPushButton(tr("VeriFactu"), this);
   btnVisorLog = new QPushButton(tr("Visor de Logs"), this);
+  btnVerificarBD = new QPushButton(tr("Verificar BD"), this);
 
   QGridLayout *configLayout =
       qobject_cast<QGridLayout *>(ui->tabConfig->layout());
@@ -390,6 +396,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
     configLayout->addWidget(btnEditorPermisos, 1, 1);
     configLayout->addWidget(btnVerifactu, 1, 2);
     configLayout->addWidget(btnVisorLog, 1, 3);
+    configLayout->addWidget(btnVerificarBD, 1, 4);
   }
 
   connect(btnEditorPermisos, &QPushButton::clicked, this, [this]() {
@@ -404,6 +411,11 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
 
   connect(btnVisorLog, &QPushButton::clicked, this, [this]() {
     VisorLog dial(this);
+    dial.exec();
+  });
+
+  connect(btnVerificarBD, &QPushButton::clicked, this, [this]() {
+    VerificadorBaseDatos dial(this);
     dial.exec();
   });
 
@@ -539,6 +551,7 @@ void Tienda::permisos(int rol) {
       {"editor_permisos", btnEditorPermisos},
       {"verifactu", btnVerifactu},
       {"visor_log", btnVisorLog},
+      {"verificar_bd", btnVerificarBD},
       {"encargos", btnEncargosMain},
   };
 

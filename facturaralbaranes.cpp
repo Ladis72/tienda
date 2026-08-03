@@ -118,24 +118,49 @@ void FacturarAlbaranes::loadAlbaranes(QString proveedor)
         q.bindValue(0, idProveedor);
         if (q.exec()) {
             qDebug() << "Consulta ejecutada:" << q.lastQuery();
+            qDebug() << "Campos del registro:" << q.record();
             int count = 0;
             while (q.next()) {
                 count++;
-                qDebug() << "Cargando albarán ID:" << q.value(0).toString();
+                
+                // Obtener fecha probando tanto por nombre de columna como por índice y cualquier formato
+                QVariant valFecha = q.value("fechaFactura");
+                if (!valFecha.isValid() || valFecha.toString().isEmpty()) {
+                    valFecha = q.value(2); // Indice 2 de SELECT *
+                }
+
+                QString fechaStr;
+                if (valFecha.typeId() == QMetaType::QDate) {
+                    fechaStr = valFecha.toDate().toString("yyyy-MM-dd");
+                } else if (valFecha.typeId() == QMetaType::QDateTime) {
+                    fechaStr = valFecha.toDateTime().toString("yyyy-MM-dd");
+                } else {
+                    QString raw = valFecha.toString();
+                    QDate d = QDate::fromString(raw, "yyyy-MM-dd");
+                    if (!d.isValid()) {
+                        d = QDate::fromString(raw, Qt::ISODate);
+                    }
+                    fechaStr = d.isValid() ? d.toString("yyyy-MM-dd") : raw;
+                }
+
+                qDebug() << "Cargando albarán ID:" << q.value("id").toString() << "Fecha extraída:" << fechaStr << "Raw:" << valFecha;
+
                 QList<QStandardItem*> row;
                 
+                // Checkbox para selección de albarán
                 QStandardItem *chk = new QStandardItem("");
                 chk->setCheckable(true);
                 chk->setCheckState(Qt::Unchecked);
-                
+
+                // Construcción de la fila con los nombres de campos explícitos de la tabla albaranes
                 row << chk
-                    << new QStandardItem(q.value(0).toString()) // ID 
-                    << new QStandardItem(q.value(1).toString()) // nAlbaran
-                    << new QStandardItem(q.value(2).toString()) // fecha
-                    << new QStandardItem(q.value(4).toString()) // base
-                    << new QStandardItem(q.value(5).toString()) // iva
-                    << new QStandardItem(q.value(6).toString()) // re
-                    << new QStandardItem(q.value(7).toString()); // total 
+                    << new QStandardItem(q.value("id").toString())         // ID del albarán (Columna 1)
+                    << new QStandardItem(q.value("nFactura").toString())    // Número de albarán (Columna 2)
+                    << new QStandardItem(fechaStr)                          // Fecha del albarán (Columna 3, yyyy-MM-dd)
+                    << new QStandardItem(q.value("totalBase").toString())   // Base imponible (Columna 4)
+                    << new QStandardItem(q.value("totalIva").toString())    // IVA (Columna 5)
+                    << new QStandardItem(q.value("totalRe").toString())     // Recargo de equivalencia (Columna 6)
+                    << new QStandardItem(q.value("total").toString());      // Total del albarán (Columna 7)
                     
                 modeloAlbaranes->appendRow(row);
             }

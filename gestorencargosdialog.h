@@ -29,6 +29,7 @@ private slots:
     void on_btnCerrar_clicked();
     void on_btnNuevoEncargo_clicked();
     void on_btnCobrarTPV_clicked();
+    void on_btnImprimirTicket_clicked();
 
 private:
     Ui::GestorEncargosDialog *ui;

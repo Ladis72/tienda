@@ -1245,6 +1245,7 @@ void Tpv::on_btn_encargo_clicked()
         QString finalCodCliente = dialog.getCodCliente();
         int cantidad = dialog.getCantidad();
         double anticipo = dialog.getAnticipo();
+        QString formaPago = dialog.getFormaPago();
         QString notas = dialog.getNotas();
 
         if (finalCodArticulo.isEmpty() || finalCodCliente.isEmpty()) {
@@ -1252,43 +1253,59 @@ void Tpv::on_btn_encargo_clicked()
             return;
         }
 
-        // Insertar en la tabla encargos
+        // Insertar en la tabla encargos (incluyendo la forma de pago seleccionada)
         QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
-        query.prepare("INSERT INTO encargos (id_cliente, cod_articulo, cantidad, notas, empleado, anticipo, estado) "
-                      "VALUES (?, ?, ?, ?, ?, ?, 'Pendiente')");
+        query.prepare("INSERT INTO encargos (id_cliente, cod_articulo, cantidad, notas, empleado, anticipo, forma_pago, estado) "
+                      "VALUES (?, ?, ?, ?, ?, ?, ?, 'Pendiente')");
         query.bindValue(0, finalCodCliente.toInt());
         query.bindValue(1, finalCodArticulo);
         query.bindValue(2, cantidad);
         query.bindValue(3, notas);
         query.bindValue(4, usuarioSistema);
         query.bindValue(5, anticipo);
+        query.bindValue(6, formaPago);
         
         if (!query.exec()) {
             QMessageBox::critical(this, "Error", "No se pudo guardar el encargo:\n" + query.lastError().text());
         } else {
+            int idNuevoEncargo = query.lastInsertId().toInt();
             baseDatos base;
             base.crearNota(conf->getConexionLocal(),
                            "Nuevo Encargo: " + finalCodArticulo,
-                           "Cliente ID: " + finalCodCliente + "\nCantidad: " + QString::number(cantidad) + "\nNotas: " + notas,
+                           "Cliente ID: " + finalCodCliente + "\nCantidad: " + QString::number(cantidad) + "\nForma Pago Anticipo: " + formaPago + "\nNotas: " + notas,
                            usuarioSistema,
                            "",
                            "Alta");
             
             QMessageBox::information(this, "Éxito", "Encargo creado y guardado.");
+
+            // Si el usuario indicó que se imprima comprobante por la impresora de tickets
+            if (dialog.getImprimirTicket()) {
+                ImprimirTicket::imprimirComprobanteEncargo(idNuevoEncargo,
+                                                          finalCodCliente,
+                                                          finalCodArticulo,
+                                                          dialog.getDescArticulo(),
+                                                          cantidad,
+                                                          anticipo,
+                                                          formaPago,
+                                                          notas,
+                                                          usuarioSistema);
+            }
         }
         
-        // Si hay un anticipo, registrarlo en movimientos (entradasSalidas)
+        // Si hay un anticipo, registrarlo en movimientos de caja (entradasSalidas) especificando la forma de pago
         if (anticipo > 0) {
             QStringList datosES;
             datosES.append(QDate::currentDate().toString("yyyy-MM-dd"));
             datosES.append(QTime::currentTime().toString("hh:mm:ss"));
             datosES.append(QString::number(anticipo));
-            // Suponemos ID 1 como ingreso por defecto, se puede crear un motivo específico
+            // Suponemos ID 1 como ingreso por defecto
             datosES.append("1"); 
-            datosES.append(QString("Anticipo Encargo (Cliente %1) - %2").arg(codCliente).arg(codArticulo));
+            datosES.append(QString("Anticipo Encargo [%1] (Cliente %2) - %3").arg(formaPago, codCliente, codArticulo));
             
+            baseDatos base;
             if (!base.insertarES(datosES, conf->getConexionLocal(), conf->getUsuario())) {
-                QMessageBox::warning(this, "Aviso", "El encargo se guardó, pero no se pudo registrar el anticipo en la caja fuerte.");
+                QMessageBox::warning(this, "Aviso", "El encargo se guardó, pero no se pudo registrar el anticipo en la caja.");
             } else {
                 QMessageBox::information(this, "Éxito", "Encargo creado y anticipo registrado en caja correctamente.");
             }

@@ -316,7 +316,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     datosFactura.append(ui->leTotal->text());
 
     if (ui->comboBox->currentText() == "Factura") {
-        datosFactura.append(ui->dateEditVencimiento->text());
+        datosFactura.append(ui->dateEditVencimiento->date().toString("yyyy-MM-dd"));
         datosFactura.append("0");
         datosFactura.append(notasPedido); // Guardar notas en factura
         if (!base.grabarFactura(conf->getConexionLocal(), datosFactura)) {
@@ -329,7 +329,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         }
     } else {
         datosFactura.append("0");
-        datosFactura.append(NULL);
+        datosFactura.append("0");
         datosFactura.append(notasPedido); // Guardar notas en albarán
         if (!base.grabarAlbaran(conf->getConexionLocal(), datosFactura)) {
             base.insertarLog(conf->getConexionLocal(),
