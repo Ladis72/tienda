@@ -76,6 +76,13 @@ QString verifactuClass::calcularHuellaAlta(const QString &nifEmisor,
                                           const QString &huellaAnterior,
                                           const QString &fechaHoraGen)
 {
+    // Para el primer registro de la serie no existe huella anterior: la AEAT
+    // exige el campo Huella vacío en la cadena (no 64 ceros). Se normalizan
+    // tanto la cadena vacía como el antiguo sentinela de 64 ceros.
+    QString huellaPrevia = huellaAnterior.trimmed();
+    if (huellaPrevia == QString(64, '0'))
+        huellaPrevia.clear();
+
     // Construir la cadena de concatenación ordenada según exige la AEAT
     QString cadena = QString("IDEmisorFactura=%1&NumSerieFactura=%2&FechaExpedicionFactura=%3&TipoFactura=%4&CuotaTotal=%5&ImporteTotal=%6&Huella=%7&FechaHoraHusoGenRegistro=%8")
         .arg(nifEmisor.trimmed().toUpper())
@@ -84,7 +91,7 @@ QString verifactuClass::calcularHuellaAlta(const QString &nifEmisor,
         .arg(tipoFactura.trimmed())      // "F1" (Ordinaria) o "F2" (Simplificada/Ticket)
         .arg(cuotaTotal)                 // Ya formateado sin ceros a la derecha
         .arg(importeTotal)               // Ya formateado sin ceros a la derecha
-        .arg(huellaAnterior.trimmed())   // Huella del registro anterior
+        .arg(huellaPrevia)               // Huella del registro anterior (vacía en el primero)
         .arg(fechaHoraGen.trimmed());    // ISO-8601 (ej: "2026-06-06T21:45:00+02:00")
 
     // Calcular hash SHA-256
@@ -106,7 +113,9 @@ QString verifactuClass::generarXmlAlta(const VeriFactuConfig &config,
                                       const QString &tipoFactura,
                                       const QString &huellaAnterior,
                                       const QString &hashActual,
-                                      const QString &fechaHoraGen)
+                                      const QString &fechaHoraGen,
+                                      const QString &numSerieAnterior,
+                                      const QString &fechaExpedicionAnterior)
 {
     QString xmlOutput;
     QXmlStreamWriter writer(&xmlOutput);
@@ -176,14 +185,17 @@ QString verifactuClass::generarXmlAlta(const VeriFactuConfig &config,
 
     // Criterio de Encadenamiento criptográfico
     writer.writeStartElement("sum1:Encadenamiento");
-    // Si la huella anterior está vacía o es todo ceros (es el primer registro de la serie)
-    if (huellaAnterior.isEmpty() || huellaAnterior == QString(64, '0')) {
+    // Si la huella anterior está vacía, es el primer registro de la serie.
+    // (obtenerUltimoHash* devuelve cadena vacía cuando no hay registros).
+    if (huellaAnterior.isEmpty()) {
         writer.writeTextElement("sum1:PrimerRegistro", "S");
     } else {
         writer.writeStartElement("sum1:RegistroAnterior");
         writer.writeTextElement("sum1:IDEmisorFactura", config.emisorNif);
-        writer.writeTextElement("sum1:NumSerieFactura", numSerieFactura);
-        writer.writeTextElement("sum1:FechaExpedicionFactura", fechaExpedicion);
+        // F1.4: RegistroAnterior debe referenciar la serie y fecha del registro
+        // PREVIO, no las del registro actual.
+        writer.writeTextElement("sum1:NumSerieFactura", numSerieAnterior);
+        writer.writeTextElement("sum1:FechaExpedicionFactura", fechaExpedicionAnterior);
         writer.writeTextElement("sum1:Huella", huellaAnterior);
         writer.writeEndElement(); // sum1:RegistroAnterior
     }

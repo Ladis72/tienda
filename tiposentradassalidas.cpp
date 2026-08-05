@@ -3,6 +3,15 @@
 #include "saneadorglobal.h"
 #include <QStyle>
 
+// Escapa un literal de cadena MySQL para usarlo dentro de un setFilter
+// de QSqlTableModel (que no admite parámetros enlazados).
+static QString escSQL(const QString &s) {
+  QString r = s;
+  r.replace("\\", "\\\\");
+  r.replace("'", "''");
+  return r;
+}
+
 TiposEntradasSalidas::TiposEntradasSalidas(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::TiposEntradasSalidas)
@@ -45,7 +54,7 @@ void TiposEntradasSalidas::guardarCambios()
 
 void TiposEntradasSalidas::on_lineEdit_textChanged(const QString &arg1)
 {
-    modelo->setFilter("descripcion LIKE '%" + arg1 + "%'");
+    modelo->setFilter("descripcion LIKE '%" + escSQL(arg1) + "%'");
 }
 
 void TiposEntradasSalidas::on_pushButtonUnificar_clicked()

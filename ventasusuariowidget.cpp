@@ -339,13 +339,14 @@ void ventasUsuarioWidget::actualizarSemana(const QDate &desde, const QDate &hast
 
 void ventasUsuarioWidget::actualizarTickets(const QDate &desde, const QDate &hasta, QString &usuario)
 {
+    // Se usa DATE_FORMAT para asegurar que la fecha se devuelva como string 'yyyy-MM-dd'
     QString consulta = R"(
-        SELECT ticket, fecha, hora, total FROM tickets 
+        SELECT ticket, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha_str, hora, total FROM tickets 
         WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta
         UNION ALL
-        SELECT ticket, fecha, hora, total FROM ticketss 
+        SELECT ticket, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha_str, hora, total FROM ticketss 
         WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta
-        ORDER BY fecha DESC, hora DESC LIMIT 200
+        ORDER BY fecha_str DESC, hora DESC LIMIT 200
     )";
     QStringList conexiones = getListaConexiones();
 
@@ -367,7 +368,13 @@ void ventasUsuarioWidget::actualizarTickets(const QDate &desde, const QDate &has
                 itemTicket->setData(query.value(0).toInt(), Qt::EditRole);
                 modelo->setItem(row, 1, itemTicket);
                 
-                modelo->setItem(row, 2, new QStandardItem(query.value(1).toDate().toString("yyyy-MM-dd")));
+                // Extraer la fecha formateada desde SQL (yyyy-MM-dd)
+                QString fechaStr = query.value("fecha_str").toString();
+                if (fechaStr.isEmpty()) {
+                    QDate d = query.value(1).toDate();
+                    fechaStr = d.isValid() ? d.toString("yyyy-MM-dd") : query.value(1).toString();
+                }
+                modelo->setItem(row, 2, new QStandardItem(fechaStr));
                 modelo->setItem(row, 3, new QStandardItem(query.value(2).toTime().toString("HH:mm")));
                 
                 QStandardItem *itemTotal = new QStandardItem();

@@ -13,7 +13,7 @@ extern Configuracion *conf;
 class ImprimirTicket : public QObject
 {
 public:
-    explicit ImprimirTicket(QString nTicket, QString formato, bool noTicketRegalo = false, QObject *parent = nullptr);
+    explicit ImprimirTicket(QString nTicket, QString formato, bool noTicketRegalo = false, bool esSerieB = false, QObject *parent = nullptr);
     ~ImprimirTicket();
 
     /**
@@ -50,6 +50,7 @@ private:
     QString uds, producto, precio, dto, totalLinea, entrega, cambio;
     QString formatearCadena(QString cadena, int tamano);
     QStringList confTicket;
+    bool esSerieB;
 
     PrinterManager *printer;
 

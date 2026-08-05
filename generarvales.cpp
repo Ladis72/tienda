@@ -55,21 +55,27 @@ double GenerarVales::ventasTotalesCliente(int idCliente,
         if (!db.isOpen()) continue;
 
         // Construimos la consulta unificando tickets y ticketss si existe
-        QString sql;
-        if (db.tables().contains("ticketss")) {
-            sql = QString("SELECT COALESCE(SUM(total),0) FROM ("
-                          "  SELECT total FROM tickets  WHERE cliente=%1 AND fecha BETWEEN '%2' AND '%3' "
-                          "  UNION ALL "
-                          "  SELECT total FROM ticketss WHERE cliente=%1 AND fecha BETWEEN '%2' AND '%3'"
-                          ") AS todas").arg(idCliente).arg(desde).arg(hasta);
-        } else {
-            sql = QString("SELECT COALESCE(SUM(total),0) FROM tickets "
-                          "WHERE cliente=%1 AND fecha BETWEEN '%2' AND '%3'")
-                      .arg(idCliente).arg(desde).arg(hasta);
-        }
-
         QSqlQuery q(db);
-        if (q.exec(sql) && q.first()) {
+        if (db.tables().contains("ticketss")) {
+            q.prepare("SELECT COALESCE(SUM(total),0) FROM ("
+                      "  SELECT total FROM tickets  WHERE cliente=? AND fecha BETWEEN ? AND ? "
+                      "  UNION ALL "
+                      "  SELECT total FROM ticketss WHERE cliente=? AND fecha BETWEEN ? AND ?"
+                      ") AS todas");
+            q.bindValue(0, idCliente);
+            q.bindValue(1, desde);
+            q.bindValue(2, hasta);
+            q.bindValue(3, idCliente);
+            q.bindValue(4, desde);
+            q.bindValue(5, hasta);
+        } else {
+            q.prepare("SELECT COALESCE(SUM(total),0) FROM tickets "
+                      "WHERE cliente=? AND fecha BETWEEN ? AND ?");
+            q.bindValue(0, idCliente);
+            q.bindValue(1, desde);
+            q.bindValue(2, hasta);
+        }
+        if (q.exec() && q.first()) {
             total += q.value(0).toDouble();
         } else {
             qWarning() << "Error consultando ventas en" << conexion << ":" << q.lastError().text();

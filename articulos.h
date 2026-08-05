@@ -8,6 +8,7 @@
 
 #include "ClickableLabel.h"
 #include "comprasventasremoto.h"
+#include "dialogtrazabilidad.h"
 #include "fabricantes.h"
 #include "familias.h"
 #include "graficoventaswidget.h"
@@ -91,6 +92,8 @@ private slots:
     void on_pushButtonAnadir_clicked();
     
     void on_pushButtonAnadirAPedido_clicked();
+
+    void on_pushButtonTrazabilidad_clicked();
 
     void on_pushButtonEliminar_clicked();
 

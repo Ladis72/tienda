@@ -711,10 +711,18 @@ void Tpv::on_btn_cobrar_clicked()
         // no procesamos VeriFactu para ventas que no vayan a la tabla oficial 'tickets'.
         VeriFactuConfig vfConfig = verifactuClass::cargarConfiguracion();
         if (vfConfig.modo != 0 && tabla == "tickets") { // 1 = VeriFactu (remisión), 2 = No VeriFactu (local)
-            // Obtener el último hash de forma atómica (FOR UPDATE) dentro
-            // de la transacción para que otro puesto espere si está cobrando
-            // simultáneamente, evitando romper la cadena de hashes.
-            QString ultimoHash = base.obtenerUltimoHashAtomico(db);
+            // Obtener los datos del último registro VeriFactu de forma atómica
+            // (FOR UPDATE) dentro de la transacción para que otro puesto espere
+            // si está cobrando simultáneamente, evitando romper la cadena de hashes.
+            QStringList ultimoRegistro = base.obtenerUltimoRegistroVerifactuAtomico(db);
+            QString ultimoHash = ultimoRegistro.value(0);
+            QString numSerieAnterior = ultimoRegistro.value(1);
+            QString fechaAnteriorAEAT;
+            if (!ultimoRegistro.value(2).isEmpty()) {
+                QDate fechaAnterior = QDate::fromString(ultimoRegistro.value(2).left(10), "yyyy-MM-dd");
+                if (fechaAnterior.isValid())
+                    fechaAnteriorAEAT = fechaAnterior.toString("dd-MM-yyyy");
+            }
             QString fechaHoraGen = verifactuClass::obtenerFechaHoraHusoActual();
             
             // Serie y número de factura
@@ -756,7 +764,9 @@ void Tpv::on_btn_cobrar_clicked()
                 tipoFacturaAEAT,
                 ultimoHash,
                 hashFactura,
-                fechaHoraGen
+                fechaHoraGen,
+                numSerieAnterior,
+                fechaAnteriorAEAT
             );
             
             // Si el modo es VERI*FACTU, remitimos telemáticamente a la AEAT
@@ -889,10 +899,10 @@ void Tpv::on_btn_cobrar_clicked()
     emit on_pushButtonBorrarTodo_clicked();
     //        impresora.close();
     if (totalizacion->ticket == true && totalizacion->factura == false) {
-        //            system("less ./ticket.txt >> /dev/lp0");
-        ImprimirTicket(ticketImpresion, "ticket", totalizacion->noTicketRegalo);
+        //        system("less ./ticket.txt >> /dev/lp0");
+        ImprimirTicket(ticketImpresion, "ticket", totalizacion->noTicketRegalo, tabla == "ticketss");
     } else if (totalizacion->factura == true) {
-        ImprimirFactura(ticketImpresion, this);
+        ImprimirFactura(ticketImpresion, tabla == "ticketss", this);
     }
 }
 
@@ -1092,9 +1102,24 @@ void Tpv::on_btn_preTicket_clicked()
         }
         texto << "\n\n";
         impresora.close();
-        QString imprimir = "cat ./ticket.txt >> " + confTicket.at(3);
-        const char *ch = imprimir.toLocal8Bit().constData();
-        system(ch);
+
+        // SEC: imprimir copiando los bytes del ticket al dispositivo de impresión
+        // sin pasar por un shell (evita inyección de comandos vía la ruta configurada).
+        QFile ficheroTicket("ticket.txt");
+        if (!ficheroTicket.open(QIODevice::ReadOnly)) {
+            qWarning() << "Tpv::imprimirPreticket: no se pudo abrir ticket.txt:"
+                       << ficheroTicket.errorString();
+        } else {
+            QFile impresoraDevice(confTicket.at(3));
+            if (!impresoraDevice.open(QIODevice::WriteOnly | QIODevice::Append)) {
+                qWarning() << "Tpv::imprimirPreticket: no se pudo abrir la impresora"
+                           << confTicket.at(3) << ":" << impresoraDevice.errorString();
+            } else {
+                impresoraDevice.write(ficheroTicket.readAll());
+                impresoraDevice.close();
+            }
+            ficheroTicket.close();
+        }
     } else if (msgBox.clickedButton() == btnPresupuesto) {
         QTextDocument documento;
         QString html = R"(

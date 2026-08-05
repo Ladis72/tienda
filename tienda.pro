@@ -103,7 +103,8 @@ SOURCES += main.cpp\
     dialogdetallearqueo.cpp \
     monitorcaducidades.cpp \
     dialogrecomendaciones.cpp \
-    verificadorbasedatos.cpp
+    verificadorbasedatos.cpp \
+    dialogtrazabilidad.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -190,7 +191,8 @@ HEADERS  += tienda.h \
     dialogdetallearqueo.h \
     monitorcaducidades.h \
     dialogrecomendaciones.h \
-    verificadorbasedatos.h
+    verificadorbasedatos.h \
+    dialogtrazabilidad.h
 
 FORMS    += tienda.ui \
     copiaseguridad.ui \
@@ -258,7 +260,8 @@ FORMS    += tienda.ui \
     dialogdetallearqueo.ui \
     dialogrecomendaciones.ui \
     visorlog.ui \
-    verificadorbasedatos.ui
+    verificadorbasedatos.ui \
+    dialogtrazabilidad.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 

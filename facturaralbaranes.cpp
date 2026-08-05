@@ -108,65 +108,62 @@ void FacturarAlbaranes::onProveedorChanged(int index)
 
 void FacturarAlbaranes::loadAlbaranes(QString proveedor)
 {
+    // Obtener el ID del proveedor seleccionado desde la base de datos local
     int idProveedor = base.idProveedor(proveedor, conf->getConexionLocal()).toInt();
-    qDebug() << idProveedor;
+    qDebug() << "Cargando albaranes para proveedor ID:" << idProveedor;
+    
+    // Limpiar filas anteriores en el modelo de tabla
     modeloAlbaranes->removeRows(0, modeloAlbaranes->rowCount());
+    
     if (idProveedor > 0) {
         QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
         QSqlQuery q(db);
-        q.prepare("SELECT * FROM albaranes WHERE idProveedor = ? AND (idFactura IS NULL OR idFactura = '0' OR idFactura = '')");
-        q.bindValue(0, idProveedor);
-        if (q.exec()) {
-            qDebug() << "Consulta ejecutada:" << q.lastQuery();
-            qDebug() << "Campos del registro:" << q.record();
+        
+        // Usar consulta directa con DATE_FORMAT para obtener la fecha formateada como 'yyyy-MM-dd'
+        // desde la base de datos, evitando los fallos del protocolo binario de MariaDB/Qt 6
+        // que retornan fechas inválidas con prepared statements.
+        QString sql = QString("SELECT id, nFactura, DATE_FORMAT(fechaFactura, '%%Y-%%m-%%d') AS fecha_str, "
+                              "totalBase, totalIva, totalRe, total "
+                              "FROM albaranes "
+                              "WHERE idProveedor = %1 AND (idFactura IS NULL OR idFactura = '0' OR idFactura = '') "
+                              "ORDER BY fechaFactura DESC")
+                      .arg(idProveedor);
+                      
+        if (q.exec(sql)) {
             int count = 0;
             while (q.next()) {
                 count++;
                 
-                // Obtener fecha probando tanto por nombre de columna como por índice y cualquier formato
-                QVariant valFecha = q.value("fechaFactura");
-                if (!valFecha.isValid() || valFecha.toString().isEmpty()) {
-                    valFecha = q.value(2); // Indice 2 de SELECT *
+                // Extraer la fecha ya formateada como yyyy-MM-dd
+                QString fechaStr = q.value("fecha_str").toString();
+                
+                // Si viniese vacía por algún registro nulo, fallback a la fecha actual en yyyy-MM-dd
+                if (fechaStr.isEmpty()) {
+                    fechaStr = QDate::currentDate().toString("yyyy-MM-dd");
                 }
-
-                QString fechaStr;
-                if (valFecha.typeId() == QMetaType::QDate) {
-                    fechaStr = valFecha.toDate().toString("yyyy-MM-dd");
-                } else if (valFecha.typeId() == QMetaType::QDateTime) {
-                    fechaStr = valFecha.toDateTime().toString("yyyy-MM-dd");
-                } else {
-                    QString raw = valFecha.toString();
-                    QDate d = QDate::fromString(raw, "yyyy-MM-dd");
-                    if (!d.isValid()) {
-                        d = QDate::fromString(raw, Qt::ISODate);
-                    }
-                    fechaStr = d.isValid() ? d.toString("yyyy-MM-dd") : raw;
-                }
-
-                qDebug() << "Cargando albarán ID:" << q.value("id").toString() << "Fecha extraída:" << fechaStr << "Raw:" << valFecha;
 
                 QList<QStandardItem*> row;
                 
-                // Checkbox para selección de albarán
+                // Casilla de verificación para seleccionar el albarán
                 QStandardItem *chk = new QStandardItem("");
                 chk->setCheckable(true);
                 chk->setCheckState(Qt::Unchecked);
 
-                // Construcción de la fila con los nombres de campos explícitos de la tabla albaranes
+                // Construcción de la fila de datos para la tabla
                 row << chk
-                    << new QStandardItem(q.value("id").toString())         // ID del albarán (Columna 1)
-                    << new QStandardItem(q.value("nFactura").toString())    // Número de albarán (Columna 2)
-                    << new QStandardItem(fechaStr)                          // Fecha del albarán (Columna 3, yyyy-MM-dd)
-                    << new QStandardItem(q.value("totalBase").toString())   // Base imponible (Columna 4)
-                    << new QStandardItem(q.value("totalIva").toString())    // IVA (Columna 5)
-                    << new QStandardItem(q.value("totalRe").toString())     // Recargo de equivalencia (Columna 6)
-                    << new QStandardItem(q.value("total").toString());      // Total del albarán (Columna 7)
+                    << new QStandardItem(q.value("id").toString())         // Columna 1: ID del albarán
+                    << new QStandardItem(q.value("nFactura").toString())    // Columna 2: Número de albarán
+                    << new QStandardItem(fechaStr)                          // Columna 3: Fecha (formato yyyy-MM-dd)
+                    << new QStandardItem(q.value("totalBase").toString())   // Columna 4: Base imponible
+                    << new QStandardItem(q.value("totalIva").toString())    // Columna 5: IVA
+                    << new QStandardItem(q.value("totalRe").toString())     // Columna 6: RE
+                    << new QStandardItem(q.value("total").toString());      // Columna 7: Total
                     
                 modeloAlbaranes->appendRow(row);
             }
-            qDebug() << "Total registros añadidos al modelo:" << count;
+            qDebug() << "Total albaranes cargados correctamente:" << count;
         } else {
-            qDebug() << "Error en loadAlbaranes:" << q.lastError().text();
+            qDebug() << "Error en consulta de albaranes:" << q.lastError().text();
         }
     }
     calcTotals();

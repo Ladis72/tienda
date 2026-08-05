@@ -5,6 +5,15 @@
 #include <QSqlError>
 #include <QVBoxLayout>
 
+// Escapa un literal de cadena MySQL para usarlo dentro de un setFilter
+// de QSqlTableModel (que no admite parámetros enlazados).
+static QString escSQL(const QString &s) {
+  QString r = s;
+  r.replace("\\", "\\\\");
+  r.replace("'", "''");
+  return r;
+}
+
 Stock::Stock(QString cod, baseDatos *db, QWidget *parent)
     : QDialog(parent), ui(new Ui::Stock), base(db) {
   ui->setupUi(this);
@@ -24,7 +33,7 @@ Stock::Stock(QString cod, baseDatos *db, QWidget *parent)
   modeloLotes = new QSqlTableModel(
       this, QSqlDatabase::database(conf->getConexionLocal()));
   modeloLotes->setTable("lotes");
-  modeloLotes->setFilter("ean = '" + codProducto + "'");
+  modeloLotes->setFilter("ean = '" + escSQL(codProducto) + "'");
   refrescarLotes();
 
   ui->tableView->setModel(modeloLotes);
@@ -186,16 +195,16 @@ void Stock::on_pushButtonHistory_clicked() {
   QTableView *view = new QTableView(historyDlg);
 
   QSqlQueryModel *model = new QSqlQueryModel(historyDlg);
-  QString query =
-      QString("SELECT fecha_hora as 'Fecha/Hora', usuario as 'Usuario', lote "
-              "as 'Lote', "
-              "stock_ant as 'Cant. Ant.', stock_new as 'Cant. New', motivo as "
-              "'Motivo', notas as 'Notas', "
-              "fecha_caducidad_ant as 'Cad. Ant.', fecha_caducidad_new as "
-              "'Cad. New' "
-              "FROM historico_stock WHERE ean = '%1' ORDER BY fecha_hora DESC")
-          .arg(codProducto);
-  model->setQuery(query, QSqlDatabase::database(conf->getConexionLocal()));
+  QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
+  q.prepare("SELECT fecha_hora as 'Fecha/Hora', usuario as 'Usuario', lote as 'Lote', "
+            "stock_ant as 'Cant. Ant.', stock_new as 'Cant. New', motivo as 'Motivo', notas as 'Notas', "
+            "fecha_caducidad_ant as 'Cad. Ant.', fecha_caducidad_new as 'Cad. New' "
+            "FROM historico_stock WHERE ean = ? ORDER BY fecha_hora DESC");
+  q.bindValue(0, codProducto);
+  if (!q.exec()) {
+    qDebug() << "Stock::verHistorial:" << q.lastError().text();
+  }
+  model->setQuery(q);
 
   view->setModel(model);
   view->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);

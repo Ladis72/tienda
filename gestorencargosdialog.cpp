@@ -124,23 +124,26 @@ void GestorEncargosDialog::ajustarFiltro()
     QString queryStr = "SELECT e.id_encargo, e.id_cliente, e.cod_articulo, a.descripcion, e.cantidad, e.fecha_encargo, e.notas, e.empleado, e.anticipo, e.forma_pago, e.estado "
                        "FROM encargos e LEFT JOIN articulos a ON e.cod_articulo = a.cod";
     
-    QString where;
+    QStringList where;
+    QStringList binds;
     if (estado == "Pendientes (Todos)") {
-        where = "e.estado != 'Entregado'";
+        where << "e.estado != 'Entregado'";
     } else if (estado != "Todos") {
-        where = "e.estado = '" + estado + "'";
+        where << "e.estado = ?";
+        binds << estado;
     }
 
     if (!cliente.isEmpty()) {
-        if (!where.isEmpty()) where += " AND ";
-        where += "(e.id_cliente LIKE '%" + cliente + "%' "
-                  "OR e.id_cliente IN (SELECT idCliente FROM clientes WHERE nombre LIKE '%" + cliente + "%' OR apellidos LIKE '%" + cliente + "%') "
-                  "OR e.cod_articulo LIKE '%" + cliente + "%' "
-                  "OR a.descripcion LIKE '%" + cliente + "%')";
+        where << "(e.id_cliente LIKE ? "
+                 "OR e.id_cliente IN (SELECT idCliente FROM clientes WHERE nombre LIKE ? OR apellidos LIKE ?) "
+                 "OR e.cod_articulo LIKE ? "
+                 "OR a.descripcion LIKE ?)";
+        QString patron = "%" + cliente + "%";
+        for (int i = 0; i < 5; ++i) binds << patron;
     }
 
     if (!where.isEmpty()) {
-        queryStr += " WHERE " + where;
+        queryStr += " WHERE " + where.join(" AND ");
     }
     
     queryStr += " ORDER BY e.fecha_encargo DESC";
@@ -151,7 +154,15 @@ void GestorEncargosDialog::ajustarFiltro()
         return;
     }
 
-    modelEncargos->setQuery(queryStr, QSqlDatabase::database(connLocal));
+    QSqlQuery q(QSqlDatabase::database(connLocal));
+    q.prepare(queryStr);
+    for (int i = 0; i < binds.size(); ++i) {
+        q.bindValue(i, binds.at(i));
+    }
+    if (!q.exec()) {
+        qWarning() << "GestorEncargosDialog::ajustarFiltro:" << q.lastError().text();
+    }
+    modelEncargos->setQuery(q);
     
     // Configuración de las cabeceras de la tabla
     modelEncargos->setHeaderData(0, Qt::Horizontal, tr("ID"));

@@ -55,7 +55,6 @@ void VerFacturas::llenarProveedores()
 
 void VerFacturas::llenarTabla()
 {
-    QString sentenciaSql;
     fechaInicial = ui->dateEditDesde->text();
     fechaFinal = ui->dateEditHasta->text();
 
@@ -67,55 +66,62 @@ void VerFacturas::llenarTabla()
         return;
     }
 
-    // Construcción de la sentencia SQL según el tipo de documento
+    QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
+    QSqlQuery consulta(db);
+
+    // Construcción de la sentencia SQL según el tipo de documento.
+    // Se usa DATE_FORMAT para garantizar el formato 'yyyy-MM-dd' e impedir errores del protocolo binario en Qt 6.
     if (tipoDocumento == "verifactu_logs") {
-        sentenciaSql = QString("SELECT id, id_factura, fecha_hora, hash_actual, usuario "
-                               "FROM verifactu_logs "
-                               "WHERE fecha_hora >= '%1 00:00:00' AND fecha_hora <= '%2 23:59:59' "
-                               "ORDER BY id DESC")
-                           .arg(fechaInicial)
-                           .arg(fechaFinal);
+        consulta.prepare("SELECT id, id_factura, DATE_FORMAT(fecha_hora, '%Y-%m-%d %H:%i:%s') AS fecha_hora_str, "
+                         "hash_actual, usuario "
+                         "FROM verifactu_logs "
+                         "WHERE fecha_hora >= ? AND fecha_hora <= ? "
+                         "ORDER BY id DESC");
+        consulta.bindValue(0, fechaInicial + " 00:00:00");
+        consulta.bindValue(1, fechaFinal + " 23:59:59");
     } else if (ui->checkBoxTodosProveedores->isChecked()) {
         if (tipoDocumento == "facturas") {
-            sentenciaSql = QString("SELECT * FROM facturas WHERE fechaFactura >= '%1' "
-                                   "AND fechaFactura <= '%2'")
-                               .arg(fechaInicial)
-                               .arg(fechaFinal);
+            consulta.prepare("SELECT *, DATE_FORMAT(fechaFactura, '%Y-%m-%d') AS fecha_str, "
+                             "DATE_FORMAT(vencimiento, '%Y-%m-%d') AS vencimiento_str "
+                             "FROM facturas WHERE fechaFactura >= ? AND fechaFactura <= ?");
         } else {
-            sentenciaSql = QString("SELECT * FROM albaranes WHERE fechaFactura >= '%1' "
-                                   "AND fechaFactura <= '%2'")
-                               .arg(fechaInicial)
-                               .arg(fechaFinal);
+            consulta.prepare("SELECT *, DATE_FORMAT(fechaFactura, '%Y-%m-%d') AS fecha_str "
+                             "FROM albaranes WHERE fechaFactura >= ? AND fechaFactura <= ?");
         }
+        consulta.bindValue(0, fechaInicial);
+        consulta.bindValue(1, fechaFinal);
     } else {
         idProveedor = base->idProveedor(ui->comboBoxProceedores->currentText(),
                                         conf->getConexionLocal());
         if (tipoDocumento == "facturas") {
-            sentenciaSql = QString("SELECT * FROM facturas WHERE idProveedor = '%1' "
-                                   "AND fechaFactura >= '%2' AND fechaFactura <= '%3'")
-                               .arg(idProveedor)
-                               .arg(fechaInicial)
-                               .arg(fechaFinal);
+            consulta.prepare("SELECT *, DATE_FORMAT(fechaFactura, '%Y-%m-%d') AS fecha_str, "
+                             "DATE_FORMAT(vencimiento, '%Y-%m-%d') AS vencimiento_str "
+                             "FROM facturas WHERE idProveedor = ? "
+                             "AND fechaFactura >= ? AND fechaFactura <= ?");
         } else {
-            sentenciaSql = QString("SELECT * FROM albaranes WHERE idProveedor = '%1' "
-                                   "AND fechaFactura >= '%2' AND fechaFactura <= '%3'")
-                               .arg(idProveedor)
-                               .arg(fechaInicial)
-                               .arg(fechaFinal);
+            consulta.prepare("SELECT *, DATE_FORMAT(fechaFactura, '%Y-%m-%d') AS fecha_str "
+                             "FROM albaranes WHERE idProveedor = ? "
+                             "AND fechaFactura >= ? AND fechaFactura <= ?");
         }
+        consulta.bindValue(0, idProveedor);
+        consulta.bindValue(1, fechaInicial);
+        consulta.bindValue(2, fechaFinal);
+    }
+
+    if (!consulta.exec()) {
+        qDebug() << "VerFacturas SQL error:" << consulta.lastError().text();
     }
 
     modeloTabla = new QStandardItemModel(this);
-    QSqlQuery resultado = base->ejecutarSentencia(sentenciaSql, conf->getConexionLocal());
-    qDebug() << "VerFacturas SQL:" << sentenciaSql;
+    QSqlQuery resultado = std::move(consulta);
     qDebug() << "Registros encontrados:" << resultado.numRowsAffected();
 
     if (tipoDocumento == "verifactu_logs") {
-        // Llenado específico para logs de Verifactu
+        // Llenado específico para logs de Verifactu (usando fecha_hora_str)
         int row = 0;
         while (resultado.next()) {
             modeloTabla->setItem(row, 0, new QStandardItem(resultado.value("id_factura").toString()));
-            modeloTabla->setItem(row, 1, new QStandardItem(resultado.value("fecha_hora").toString()));
+            modeloTabla->setItem(row, 1, new QStandardItem(resultado.value("fecha_hora_str").toString()));
             modeloTabla->setItem(row, 2, new QStandardItem(resultado.value("hash_actual").toString()));
             
             QString nombreUsuario = base->nombreUsusario(resultado.value("usuario").toString(), 
@@ -126,11 +132,17 @@ void VerFacturas::llenarTabla()
 
         modeloTabla->setHorizontalHeaderLabels({"Nº Ticket", "Fecha / Hora", "Hash Encadenamiento", "Vendedor"});
     } else {
-        // Llenado para facturas y albaranes de proveedores
+        // Llenado para facturas y albaranes de proveedores (usando fecha_str en yyyy-MM-dd)
         int row = 0;
         while (resultado.next()) {
             modeloTabla->setItem(row, 0, new QStandardItem(resultado.value("nFactura").toString()));
-            modeloTabla->setItem(row, 1, new QStandardItem(resultado.value("fechaFactura").toString()));
+            
+            // Extraer la fecha ya formateada como yyyy-MM-dd
+            QString fechaFormateada = resultado.value("fecha_str").toString();
+            if (fechaFormateada.isEmpty()) {
+                fechaFormateada = resultado.value("fechaFactura").toString();
+            }
+            modeloTabla->setItem(row, 1, new QStandardItem(fechaFormateada));
             
             QString nombreProv = base->nombreProveedor(resultado.value("idProveedor").toString(),
                                                        conf->getConexionLocal());
@@ -142,7 +154,11 @@ void VerFacturas::llenarTabla()
             modeloTabla->setItem(row, 6, new QStandardItem(resultado.value("total").toString()));
 
             if (tipoDocumento == "facturas") {
-                modeloTabla->setItem(row, 7, new QStandardItem(resultado.value("vencimiento").toString()));
+                QString vencFormateado = resultado.value("vencimiento_str").toString();
+                if (vencFormateado.isEmpty()) {
+                    vencFormateado = resultado.value("vencimiento").toString();
+                }
+                modeloTabla->setItem(row, 7, new QStandardItem(vencFormateado));
                 modeloTabla->setItem(row, 8, new QStandardItem(resultado.value("pagada").toString()));
             } else {
                 modeloTabla->setItem(row, 7, new QStandardItem(resultado.value("facturada").toString()));

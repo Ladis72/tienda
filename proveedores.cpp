@@ -279,23 +279,29 @@ void Proveedores::cargarCompras() {
     if (idLocal.isEmpty())
       continue;
 
-    QString query =
-        QString(
-            "SELECT * FROM facturas "
-            "WHERE idProveedor = '%1' AND fechaFactura BETWEEN '%2' AND '%3' "
-            "ORDER BY fechaFactura DESC")
-            .arg(idLocal, desde, hasta);
-
     QSqlQuery q(db);
-    if (q.exec(query)) {
+    // Se usa DATE_FORMAT para garantizar la lectura de la fecha en formato yyyy-MM-dd
+    q.prepare("SELECT *, DATE_FORMAT(fechaFactura, '%Y-%m-%d') AS fecha_str FROM facturas "
+              "WHERE idProveedor = ? AND fechaFactura BETWEEN ? AND ? "
+              "ORDER BY fechaFactura DESC");
+    q.bindValue(0, idLocal);
+    q.bindValue(1, desde);
+    q.bindValue(2, hasta);
+    if (q.exec()) {
       int count = 0;
       while (q.next()) {
         count++;
+        // Extraer la fecha ya formateada como yyyy-MM-dd
+        QString fStr = q.value("fecha_str").toString();
+        if (fStr.isEmpty()) {
+          QDate fObj = q.value(2).toDate();
+          fStr = fObj.isValid() ? fObj.toString("yyyy-MM-dd") : q.value(2).toString();
+        }
+
         if (ui->radioButtonComprasFacturas->isChecked()) {
           QList<QStandardItem *> row;
           row << new QStandardItem(q.value(1).toString()); // nFactura
-          row << new QStandardItem(
-              q.value(2).toDate().toString("yyyy-MM-dd")); // fecha
+          row << new QStandardItem(fStr);                   // fecha (yyyy-MM-dd)
           row << new QStandardItem(
               QString::number(q.value(4).toDouble(), 'f', 2)); // base
           row << new QStandardItem(q.value(5).toString());     // iva
@@ -304,7 +310,8 @@ void Proveedores::cargarCompras() {
           row << new QStandardItem(conn);
           modeloComprasGlobal.appendRow(row);
         } else {
-          QDate f = q.value(2).toDate();
+          QDate f = QDate::fromString(fStr, "yyyy-MM-dd");
+          if (!f.isValid()) f = q.value(2).toDate();
           QString clave = ui->radioButtonComprasMeses->isChecked()
                               ? QString("%1-%2").arg(f.year()).arg(
                                     f.month(), 2, 10, QChar('0'))
@@ -401,7 +408,9 @@ void Proveedores::cargarVentas() {
     if (!db.isOpen()) continue;
     
     QSqlQuery qCod(db);
-    qCod.exec(QString("SELECT DISTINCT cod FROM lineaspedido WHERE idProveedor = '%1'").arg(idProv));
+    qCod.prepare("SELECT DISTINCT cod FROM lineaspedido WHERE idProveedor = ?");
+    qCod.bindValue(0, idProv);
+    qCod.exec();
     while(qCod.next()) {
         codigosProveedor.insert(qCod.value(0).toString());
     }
@@ -414,8 +423,11 @@ void Proveedores::cargarVentas() {
       return;
   }
 
-  // Convertir a lista para SQL
-  QString listadoCodigos = "'" + QStringList(codigosProveedor.values()).join("','") + "'";
+  // Convertir a lista para SQL (con marcadores de posición enlazados)
+  QStringList listaCodigos(codigosProveedor.values());
+  QStringList placeholders;
+  for (int i = 0; i < listaCodigos.size(); ++i)
+    placeholders << "?";
 
   // 2. Consultar ventas en cada tienda para esos códigos
   foreach (QString conn, conexiones) {
@@ -436,13 +448,19 @@ void Proveedores::cargarVentas() {
                 "SUM(CASE WHEN lt.tipo = 'A' THEN lt.totallinea ELSE 0 END) as Total_A, "
                 "SUM(CASE WHEN lt.tipo = 'B' THEN lt.totallinea ELSE 0 END) as Total_B "
                 "FROM (%1) lt "
-                "WHERE lt.fecha BETWEEN '%2' AND '%3' "
-                "AND lt.cod IN (%4) "
+                "WHERE lt.fecha BETWEEN ? AND ? "
+                "AND lt.cod IN (%2) "
                 "GROUP BY lt.cod, lt.descripcion")
-            .arg(subQuery, desde, hasta, listadoCodigos);
+            .arg(subQuery, placeholders.join(","));
 
     QSqlQuery q(db);
-    if (q.exec(query)) {
+    q.prepare(query);
+    q.bindValue(0, desde);
+    q.bindValue(1, hasta);
+    for (int i = 0; i < listaCodigos.size(); ++i) {
+      q.bindValue(2 + i, listaCodigos.at(i));
+    }
+    if (q.exec()) {
       while (q.next()) {
         QString cod = q.value(0).toString();
         VentasProd &d = desglose[cod][conn];
