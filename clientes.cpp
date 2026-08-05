@@ -91,7 +91,6 @@ void Clientes::inicializarComponentes() {
 
   recargarTabla();
 
-  mapper.setCurrentIndex(0);
   mapper.addMapping(ui->lineEditCod, 0);
   mapper.addMapping(ui->lineEditNombre, 1);
   mapper.addMapping(ui->lineEditApellidos, 2);
@@ -106,7 +105,7 @@ void Clientes::inicializarComponentes() {
   mapper.addMapping(ui->lineEditDescuento, 11);
   mapper.addMapping(ui->dateEdit, 12);
   mapper.addMapping(ui->plainTextEdit, 13);
-  mapper.toFirst();
+  mapper.setCurrentIndex(0);
   refrescarBotones(mapper.currentIndex());
 
   ui->lineEditCod->installEventFilter(this);
@@ -209,6 +208,41 @@ void Clientes::refrescarBotones(int i) {
     on_radioButtonFecha_clicked();
 }
 
+static QDate obtenerQDateValida(const QVariant &var) {
+  if (!var.isValid() || var.isNull())
+    return QDate();
+  if (var.typeId() == QMetaType::QDate)
+    return var.toDate();
+  if (var.typeId() == QMetaType::QDateTime)
+    return var.toDateTime().date();
+
+  QDate d = var.toDate();
+  if (d.isValid())
+    return d;
+
+  QDateTime dt = var.toDateTime();
+  if (dt.isValid())
+    return dt.date();
+
+  QString str = var.toString().trimmed();
+  if (str.isEmpty())
+    return QDate();
+
+  d = QDate::fromString(str.left(10), "yyyy-MM-dd");
+  if (d.isValid())
+    return d;
+
+  d = QDate::fromString(str.left(10), "dd/MM/yyyy");
+  if (d.isValid())
+    return d;
+
+  d = QDate::fromString(str.left(10), "yyyy/MM/dd");
+  if (d.isValid())
+    return d;
+
+  return QDate::fromString(str, Qt::ISODate);
+}
+
 void Clientes::cargarCompras() {
   vistaTickets->clear();
   listaTickets->clear();
@@ -224,8 +258,13 @@ void Clientes::cargarCompras() {
   }
   seriesVentas = nullptr;
 
-  QString codigoCliente =
-      ui->lineEditCod->text(); // Evitar ejecutar si no hay cliente válido
+  QString codigoCliente = ui->lineEditCod->text();
+  if (codigoCliente.isEmpty() && modeloTabla && modeloTabla->rowCount() > 0) {
+    int curIdx = mapper.currentIndex();
+    if (curIdx < 0) curIdx = 0;
+    codigoCliente = modeloTabla->record(curIdx).value("idCliente").toString();
+    ui->lineEditCod->setText(codigoCliente);
+  }
   if (codigoCliente.isEmpty())
     return;
 
@@ -248,8 +287,17 @@ void Clientes::cargarCompras() {
   QDate desde = ui->dateEditDesde->date();
   QDate hasta = ui->dateEditHasta->date();
   QString agrupacion = ui->comboBoxAgrupacion->currentData().toString();
-  if (agrupacion.isEmpty())
-    agrupacion = "mes"; // Fallback por seguridad
+  if (agrupacion.isEmpty()) {
+    int idx = ui->comboBoxAgrupacion->currentIndex();
+    if (idx == 1)
+      agrupacion = "ano";
+    else if (idx == 2)
+      agrupacion = "semana";
+    else if (idx == 3)
+      agrupacion = "dia";
+    else
+      agrupacion = "mes"; // Fallback por defecto a meses
+  }
 
   // Limpiar tablas y gráficos
   vistaTickets->clear();
@@ -260,24 +308,45 @@ void Clientes::cargarCompras() {
   for (int c = 0; c < conexionesConsultar.length(); c++) {
     QString connName = conexionesConsultar.at(c);
     QSqlDatabase db = QSqlDatabase::database(connName);
-    
-    QString queryStr;
-    if (mostrarVentasB && db.tables().contains("ticketss")) {
-        QString subQuery = QString("SELECT fecha, total FROM tickets WHERE cliente = %1 "
-                                   "UNION ALL "
-                                   "SELECT fecha, total FROM ticketss WHERE cliente = %1").arg(codigoCliente);
-        queryStr = "SELECT fecha, total FROM (" + subQuery + ") as sub "
-                   "WHERE fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" + hasta.toString("yyyy-MM-dd") + "'";
-    } else {
-        queryStr = "SELECT fecha, total FROM tickets WHERE cliente = " + codigoCliente +
-                   " AND fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" + hasta.toString("yyyy-MM-dd") + "'";
+    if (!db.isOpen()) {
+      if (!db.open()) {
+        qDebug() << "Clientes::cargarCompras error abriendo BD:" << connName;
+        continue;
+      }
     }
-        
-    listaTickets->setQuery(queryStr, db);
+    
+    QSqlQuery q(db);
+    // Se usa DATE_FORMAT para obtener la fecha como string, ya que el driver
+    // QMYSQL de Qt 6 puede devolver QDate(Invalid) para fechas válidas en MariaDB.
+    if (mostrarVentasB && db.tables().contains("ticketss")) {
+        QString subQuery = "SELECT DATE_FORMAT(fecha, '%Y-%m-%d') as fecha_str, total FROM tickets WHERE cliente = ? "
+                           "UNION ALL "
+                           "SELECT DATE_FORMAT(fecha, '%Y-%m-%d') as fecha_str, total FROM ticketss WHERE cliente = ?";
+        q.prepare("SELECT fecha_str, total FROM (" + subQuery + ") as sub "
+                  "WHERE fecha_str BETWEEN ? AND ?");
+        q.bindValue(0, codigoCliente);
+        q.bindValue(1, codigoCliente);
+        q.bindValue(2, desde.toString("yyyy-MM-dd"));
+        q.bindValue(3, hasta.toString("yyyy-MM-dd"));
+    } else {
+        q.prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') as fecha_str, total FROM tickets WHERE cliente = ? "
+                  "AND fecha BETWEEN ? AND ?");
+        q.bindValue(0, codigoCliente);
+        q.bindValue(1, desde.toString("yyyy-MM-dd"));
+        q.bindValue(2, hasta.toString("yyyy-MM-dd"));
+    }
+    if (!q.exec()) {
+        qDebug() << "Clientes::cargarTickets error:" << q.lastError().text();
+        continue;
+    }
 
-    for (int i = 0; i < listaTickets->rowCount(); i++) {
-      QDate fecha = listaTickets->record(i).value("fecha").toDate();
-      double totalTicket = listaTickets->record(i).value("total").toDouble();
+    while (q.next()) {
+      // Parseamos la fecha desde el string devuelto por DATE_FORMAT
+      QDate fecha = QDate::fromString(q.value(0).toString(), "yyyy-MM-dd");
+      if (!fecha.isValid())
+        continue;
+
+      double totalTicket = q.value(1).toString().toDouble();
 
       // Sumar a KPIs
       gastoTotal += totalTicket;
@@ -285,17 +354,21 @@ void Clientes::cargarCompras() {
       if (fecha > ultimaVisita)
         ultimaVisita = fecha;
 
-      // Sumar al gráfico según agrupación
+      // Sumar al gráfico según agrupación (año, mes, semana, día)
       QString key;
-      if (agrupacion == "ano")
+      if (agrupacion == "ano") {
         key = fecha.toString("yyyy");
-      else if (agrupacion == "mes")
+      } else if (agrupacion == "mes") {
         key = fecha.toString("yyyy-MM");
-      else if (agrupacion == "semana")
-        key = QString::number(fecha.year()) + "-W" +
-              QString::number(fecha.weekNumber());
-      else
+      } else if (agrupacion == "semana") {
+        // Para semanas se usa el año ISO y el número de semana con 2 dígitos
+        // para garantizar la ordenación cronológica correcta de los datos en el gráfico.
+        int yearIso = fecha.year();
+        int weekNum = fecha.weekNumber(&yearIso);
+        key = QString::asprintf("%04d-W%02d", yearIso, weekNum);
+      } else {
         key = fecha.toString("yyyy-MM-dd"); // dia
+      }
 
       ventasPorTiendaYPeriodo[connName][key] += totalTicket;
       todosLosPeriodos.insert(key);
@@ -311,7 +384,7 @@ void Clientes::cargarCompras() {
   ui->labelKpiTotalGasto->setText(QString::number(gastoTotal, 'f', 2) + " €");
   ui->labelKpiTotalTickets->setText(QString::number(cantidadTickets));
   if (cantidadTickets > 0) {
-    ui->labelKpiFechaUltima->setText(ultimaVisita.toString("dd/MM/yyyy"));
+    ui->labelKpiFechaUltima->setText(ultimaVisita.toString("yyyy-MM-dd"));
   } else {
     ui->labelKpiFechaUltima->setText("-");
   }
@@ -365,12 +438,21 @@ void Clientes::cargarCompras() {
             << "F. Pago" << "Pagado" << "Entrega" << "Cambio" << "Tienda";
   vistaTickets->setHorizontalHeaderLabels(etiquetas);
   ui->tableView2->setModel(vistaTickets);
-  ui->tableView2->setSortingEnabled(true);
+
+  // Cargar automáticamente todos los tickets del período en la tabla
+  // (el ordenamiento se gestiona dentro de cargarTicketsPorRango)
+  cargarTicketsPorRango("");
 }
 
 void Clientes::cargarTicketsPorRango(const QString &rangoMapeado) {
   vistaTickets->removeRows(0, vistaTickets->rowCount());
   QString codigoCliente = ui->lineEditCod->text();
+  if (codigoCliente.isEmpty() && modeloTabla && modeloTabla->rowCount() > 0) {
+    int curIdx = mapper.currentIndex();
+    if (curIdx < 0) curIdx = 0;
+    codigoCliente = modeloTabla->record(curIdx).value("idCliente").toString();
+    ui->lineEditCod->setText(codigoCliente);
+  }
   if (codigoCliente.isEmpty())
     return;
 
@@ -382,78 +464,119 @@ void Clientes::cargarTicketsPorRango(const QString &rangoMapeado) {
   }
 
   QString agrupacion = ui->comboBoxAgrupacion->currentData().toString();
-  if (agrupacion.isEmpty())
-    agrupacion = "mes";
+  if (agrupacion.isEmpty()) {
+    int idx = ui->comboBoxAgrupacion->currentIndex();
+    if (idx == 1)
+      agrupacion = "ano";
+    else if (idx == 2)
+      agrupacion = "semana";
+    else if (idx == 3)
+      agrupacion = "dia";
+    else
+      agrupacion = "mes"; // Fallback por defecto a meses
+  }
   QDate desde = ui->dateEditDesde->date();
   QDate hasta = ui->dateEditHasta->date();
+
+  // Desactivar el ordenamiento mientras se insertan filas para evitar
+  // que Qt reordene el modelo tras cada appendRow (rendimiento O(n²)).
+  ui->tableView2->setSortingEnabled(false);
+
+  // Límite máximo de tickets a mostrar en la tabla para evitar congelar la UI.
+  // El gráfico ya muestra la totalidad agregada, la tabla es para detalle.
+  const int LIMITE_FILAS = 500;
+  int filasInsertadas = 0;
 
   for (int c = 0; c < conexionesConsultar.length(); c++) {
     QString connName = conexionesConsultar.at(c);
     QSqlDatabase db = QSqlDatabase::database(connName);
-    
-    QString queryStr;
-    if (mostrarVentasB && db.tables().contains("ticketss")) {
-        QString subQuery = QString("SELECT *, 'A' as tipo_sector FROM tickets WHERE cliente = %1 "
-                                   "UNION ALL "
-                                   "SELECT *, 'B' as tipo_sector FROM ticketss WHERE cliente = %1").arg(codigoCliente);
-        queryStr = "SELECT * FROM (" + subQuery + ") as t "
-                   "WHERE fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" + hasta.toString("yyyy-MM-dd") + "'";
-    } else {
-        queryStr = "SELECT *, 'A' as tipo_sector FROM tickets WHERE cliente = " + codigoCliente +
-                   " AND fecha >= '" + desde.toString("yyyy-MM-dd") + "' AND fecha <= '" + hasta.toString("yyyy-MM-dd") + "'";
+    if (!db.isOpen()) {
+      if (!db.open()) {
+        qDebug() << "Clientes::cargarTicketsPorRango error abriendo BD:" << connName;
+        continue;
+      }
     }
-        
-    listaTickets->setQuery(queryStr, db);
+    
+    QSqlQuery q(db);
+    // Se usa DATE_FORMAT para obtener la fecha como string (workaround Qt6/MariaDB)
+    if (mostrarVentasB && db.tables().contains("ticketss")) {
+        QString cols = "ticket, usuario, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha_str, hora, descuento, total, fpago, cobrado, entrega, cambio";
+        QString subQuery = "SELECT " + cols + ", 'A' as tipo_sector FROM tickets WHERE cliente = ? "
+                           "UNION ALL "
+                           "SELECT " + cols + ", 'B' as tipo_sector FROM ticketss WHERE cliente = ?";
+        q.prepare("SELECT * FROM (" + subQuery + ") as t "
+                  "WHERE fecha_str BETWEEN ? AND ?");
+        q.bindValue(0, codigoCliente);
+        q.bindValue(1, codigoCliente);
+        q.bindValue(2, desde.toString("yyyy-MM-dd"));
+        q.bindValue(3, hasta.toString("yyyy-MM-dd"));
+    } else {
+        q.prepare("SELECT ticket, usuario, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha_str, hora, descuento, total, fpago, cobrado, entrega, cambio, 'A' as tipo_sector "
+                  "FROM tickets WHERE cliente = ? AND fecha BETWEEN ? AND ?");
+        q.bindValue(0, codigoCliente);
+        q.bindValue(1, desde.toString("yyyy-MM-dd"));
+        q.bindValue(2, hasta.toString("yyyy-MM-dd"));
+    }
+    if (!q.exec()) {
+        qDebug() << "Clientes::cargarTicketsPorRango error:" << q.lastError().text();
+        continue;
+    }
 
-    for (int i = 0; i < listaTickets->rowCount(); i++) {
-      QDate fecha = listaTickets->record(i).value("fecha").toDate();
+    while (q.next()) {
+      // Respetar el límite global de filas insertadas
+      if (filasInsertadas >= LIMITE_FILAS)
+        break;
+
+      // Parseamos la fecha desde el string devuelto por DATE_FORMAT
+      QDate fecha = QDate::fromString(q.value(2).toString(), "yyyy-MM-dd");
+      if (!fecha.isValid())
+        continue;
 
       QString key;
-      if (agrupacion == "ano")
+      if (agrupacion == "ano") {
         key = fecha.toString("yyyy");
-      else if (agrupacion == "mes")
+      } else if (agrupacion == "mes") {
         key = fecha.toString("yyyy-MM");
-      else if (agrupacion == "semana")
-        key = QString::number(fecha.year()) + "-W" +
-              QString::number(fecha.weekNumber());
-      else
+      } else if (agrupacion == "semana") {
+        // Mismo formato de clave semanal que en el gráfico para que coincida en el filtrado por clic
+        int yearIso = fecha.year();
+        int weekNum = fecha.weekNumber(&yearIso);
+        key = QString::asprintf("%04d-W%02d", yearIso, weekNum);
+      } else {
         key = fecha.toString("yyyy-MM-dd");
+      }
 
-      if (key != rangoMapeado)
+      if (!rangoMapeado.isEmpty() && key != rangoMapeado)
         continue;
 
       listaItems.clear();
-      listaItems << new QStandardItem(
-          listaTickets->record(i).value("ticket").toString());
+      listaItems << new QStandardItem(q.value(0).toString());
       listaItems << new QStandardItem(base.nombreUsusario(
-          listaTickets->record(i).value("usuario").toString(), connName));
-      listaItems << new QStandardItem(fecha.toString("dd-MM-yyyy"));
-      listaItems << new QStandardItem(
-          listaTickets->record(i).value("hora").toString());
-      listaItems << new QStandardItem(
-          listaTickets->record(i).value("descuento").toString());
+          q.value(1).toString(), connName));
+      listaItems << new QStandardItem(fecha.toString("yyyy-MM-dd"));
+      listaItems << new QStandardItem(q.value(3).toString());
+      listaItems << new QStandardItem(q.value(4).toString());
       listaItems << new QStandardItem(QString::number(
-          listaTickets->record(i).value("total").toDouble(), 'f', 2));
+          q.value(5).toString().toDouble(), 'f', 2));
       listaItems << new QStandardItem(base.nombreFormaPago(
-          listaTickets->record(i).value("fpago").toString(), connName));
+          q.value(6).toString(), connName));
       QString pagado =
-          (listaTickets->record(i).value("cobrado").toString() == "1") ? "Sí"
-                                                                       : "No";
+          (q.value(7).toString() == "1") ? "Sí"
+                                         : "No";
       listaItems << new QStandardItem(pagado);
-      listaItems << new QStandardItem(
-          listaTickets->record(i).value("entrega").toString());
-      listaItems << new QStandardItem(
-          listaTickets->record(i).value("cambio").toString());
+      listaItems << new QStandardItem(q.value(8).toString());
+      listaItems << new QStandardItem(q.value(9).toString());
       listaItems << new QStandardItem(connName);
       
       // Columna oculta para el tipo de sector (A o B)
-      QStandardItem *itemTipo = new QStandardItem(listaTickets->record(i).value("tipo_sector").toString());
+      QStandardItem *itemTipo = new QStandardItem(q.value(10).toString());
       listaItems << itemTipo;
       
       vistaTickets->appendRow(listaItems);
+      filasInsertadas++;
       
       // Resaltar en rojo claro si es del sector B
-      if (listaTickets->record(i).value("tipo_sector").toString() == "B") {
+      if (q.value(10).toString() == "B") {
           for (int col = 0; col < listaItems.count(); ++col) {
               listaItems.at(col)->setBackground(QBrush(QColor(255, 235, 238)));
               listaItems.at(col)->setForeground(QBrush(QColor(183, 28, 28)));
@@ -461,6 +584,9 @@ void Clientes::cargarTicketsPorRango(const QString &rangoMapeado) {
       }
     }
   }
+
+  // Reactivar ordenamiento y ajustar columnas una vez insertadas todas las filas
+  ui->tableView2->setSortingEnabled(true);
   ui->tableView2->resizeColumnsToContents();
   ui->tableView2->hideColumn(11); // Ocultar el tipo_sector
   ui->tableView2->sortByColumn(2, Qt::DescendingOrder);
@@ -614,6 +740,11 @@ void Clientes::on_pushButtonBorrar_clicked() {
   refrescarBotones(idCliente);
 }
 
+void Clientes::on_pushButtonRefrescar_clicked() {
+  recargarTabla();
+  refrescarBotones(mapper.currentIndex());
+}
+
 void Clientes::on_lineEditNombre_returnPressed() {
   consulta =
       base.buscarEnTabla(QSqlDatabase::database(nombreConexionLocal),
@@ -716,7 +847,7 @@ void Clientes::on_radioButtonCantidad_clicked() {
     while (q.next()) {
       QString cod = q.value(0).toString();
       QString desc = q.value(1).toString();
-      double cant = q.value(2).toDouble();
+      double cant = q.value(2).toString().toDouble();
 
       if (!filtro.isEmpty() && !cod.toLower().contains(filtro) &&
           !desc.toLower().contains(filtro)) {
@@ -799,7 +930,7 @@ void Clientes::on_radioButtonFecha_clicked() {
       items << itemDesc;
 
       QStandardItem *itemCant = new QStandardItem();
-      itemCant->setData(QVariant::fromValue(q.value(2).toDouble()),
+      itemCant->setData(QVariant::fromValue(q.value(2).toString().toDouble()),
                         Qt::UserRole);
       itemCant->setData(q.value(2).toString(), Qt::DisplayRole);
       items << itemCant;
@@ -807,7 +938,7 @@ void Clientes::on_radioButtonFecha_clicked() {
       QStandardItem *itemFecha = new QStandardItem();
       QDate fecha = q.value(3).toDate();
       itemFecha->setData(QVariant::fromValue(fecha), Qt::UserRole);
-      itemFecha->setData(fecha.toString("dd/MM/yyyy"), Qt::DisplayRole);
+      itemFecha->setData(fecha.toString("yyyy-MM-dd"), Qt::DisplayRole);
       items << itemFecha;
 
       modeloProductos->appendRow(items);
