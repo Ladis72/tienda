@@ -231,6 +231,10 @@ public:
     /// @brief Obtiene el último hash VeriFactu con bloqueo FOR UPDATE.
     /// DEBE llamarse dentro de una transacción activa para garantizar exclusión mutua.
     QString obtenerUltimoHashAtomico(QSqlDatabase db);
+    /// @brief Obtiene los datos del último registro VeriFactu con bloqueo FOR UPDATE.
+    /// Devuelve [hash_actual, id_factura, fecha_hora] o lista vacía si no hay
+    /// registros. DEBE llamarse dentro de una transacción activa.
+    QStringList obtenerUltimoRegistroVerifactuAtomico(QSqlDatabase db);
     QString registrarTickeckVerifactu(const QString db,
                                       const int ticket,
                                       const QString fecha,

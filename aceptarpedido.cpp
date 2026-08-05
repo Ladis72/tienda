@@ -20,8 +20,11 @@ AceptarPedido::AceptarPedido(
     ui->lineEditNDoc->setText(nDoc);
     ui->dateEditDocumento->setDate(QDate::fromString(fecha, "yyyy-MM-dd"));
     modeloPedido = new QSqlQueryModel(this);
-    modeloPedido->setQuery(QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = %1").arg(idPedido),
-                   QSqlDatabase::database(conf->getConexionLocal()));
+    QSqlQuery qPedido(QSqlDatabase::database(conf->getConexionLocal()));
+    qPedido.prepare("SELECT * FROM lineaspedido_tmp WHERE idPedido = ?");
+    qPedido.bindValue(0, idPedido);
+    qPedido.exec();
+    modeloPedido->setQuery(qPedido);
     llenarTabla(idPedido, descuento);
 }
 
@@ -35,18 +38,17 @@ void AceptarPedido::llenarTabla(QString idPedido, double desc)
     double totalBase = 0, totalIva = 0, totalRe = 0, totalGeneral = 0;
 
     // Consulta para agrupar por tipo de IVA
-    QString queryStr = QString("SELECT tipoIva, "
-                               "SUM(totalbase) AS totalBase, "
-                               "SUM(iva) AS totalIva, "
-                               "SUM(re) AS totalRe, "
-                               "(SUM(totalbase) + SUM(iva) + SUM(re)) AS totalGeneral "
-                               "FROM lineaspedido_tmp "
-                               "WHERE idPedido = '%1' "
-                               "GROUP BY tipoIva")
-                           .arg(idPedido);
-
     QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
-    if (!query.exec(queryStr)) {
+    query.prepare("SELECT tipoIva, "
+                  "SUM(totalbase) AS totalBase, "
+                  "SUM(iva) AS totalIva, "
+                  "SUM(re) AS totalRe, "
+                  "(SUM(totalbase) + SUM(iva) + SUM(re)) AS totalGeneral "
+                  "FROM lineaspedido_tmp "
+                  "WHERE idPedido = ? "
+                  "GROUP BY tipoIva");
+    query.bindValue(0, idPedido);
+    if (!query.exec()) {
         QMessageBox::critical(this, "Error", "Error al consultar los datos agrupados por IVA");
         return;
     }
