@@ -94,8 +94,14 @@ private:
     /// Sube los registros de sync_cola pendientes (subido=0) a la nube
     int subirCambios();
 
+    /// Sube las unificaciones de maestros pendientes (sync_unificaciones) a la nube
+    int subirUnificaciones();
+
     /// Baja los cambios de la nube más recientes que ultima_sync para cada tabla
     int bajarCambios();
+
+    /// Baja los borrados (tombstones) de la nube y los aplica localmente
+    int bajarBorrados();
 
     /// Actualiza el campo ultima_sync de sync_control para una tabla
     void actualizarUltimaSync(const QString &tabla, const QDateTime &momento);

@@ -1,6 +1,7 @@
 #include "base_datos.h"
 #include "hashutil.h"
 #include "qprocess.h"
+#include "skip_sync_guard.h"
 #include <QDate>
 #include <QDebug>
 #include <QDir>
@@ -554,7 +555,8 @@ bool baseDatos::descontarArticulo(QString db, QString cod, int uds) {
   QSqlQuery consulta(QSqlDatabase::database(db));
 
   // No sincronizar cambios realizados desde el proceso de venta (TPV)
-  consulta.exec("SET @skip_sync = 1");
+  // El guard RAII garantiza el reset de @skip_sync en todos los caminos.
+  SkipSyncGuard guard(db);
 
   consulta.prepare("SELECT id , cantidad FROM lotes WHERE ean = ? "
                    "ORDER BY fecha ASC");
@@ -568,11 +570,9 @@ bool baseDatos::descontarArticulo(QString db, QString cod, int uds) {
       consulta.bindValue(0, uds);
       consulta.bindValue(1, registro);
       if (consulta.exec()) {
-        consulta.exec("SET @skip_sync = 0");
         return true;
       } else {
         qDebug() << consulta.lastError().text();
-        consulta.exec("SET @skip_sync = 0");
         return false;
       }
     } else if (consulta.value("cantidad").toInt() <= uds) {
@@ -583,11 +583,9 @@ bool baseDatos::descontarArticulo(QString db, QString cod, int uds) {
       if (resta == 0) {
         consulta.exec();
         qDebug() << consulta.lastError().text();
-        consulta.exec("SET @skip_sync = 0");
         return true;
       } else {
         consulta.exec();
-        consulta.exec("SET @skip_sync = 0");
         descontarArticulo(db, cod, resta);
         qDebug() << consulta.lastError().text();
         return true;
@@ -595,22 +593,20 @@ bool baseDatos::descontarArticulo(QString db, QString cod, int uds) {
     }
   } else {
     qDebug() << "No hay lotes de ese artículo";
-    consulta.exec("SET @skip_sync = 0");
     crearLote(conf->getConexionLocal(), cod, "", "2000-01-01",
               QString::number(0 - uds));
   }
   
-  consulta.exec("SET @skip_sync = 0");
   return true;
 }
 
 bool baseDatos::actualizarFechaVentaArticulo(QString nombreConexion,
-                                             QString cod, QString fecha) {
+                                              QString cod, QString fecha) {
   QSqlDatabase db = QSqlDatabase::database(nombreConexion);
 
   // No sincronizar cambios realizados desde el proceso de venta (TPV)
-  QSqlQuery qSkip(db);
-  qSkip.exec("SET @skip_sync = 1");
+  // El guard RAII garantiza el reset de @skip_sync en todos los caminos.
+  SkipSyncGuard guard(nombreConexion);
 
   // 2. Iniciar la transacción
   if (!db.transaction()) {
@@ -626,7 +622,6 @@ bool baseDatos::actualizarFechaVentaArticulo(QString nombreConexion,
   if (consulta.exec()) {
     // 3. Si la consulta fue exitosa, confirmar los cambios
     if (db.commit()) {
-      qSkip.exec("SET @skip_sync = 0");
       return true;
     } else {
       // Error al confirmar (ej. problemas de red, disco lleno, etc.)
@@ -2176,7 +2171,8 @@ void baseDatos::aumentarLote(QString base, QString idLote, int uds) {
   QSqlQuery consulta(QSqlDatabase::database(base));
   
   // No sincronizar cambios realizados desde el proceso de venta (TPV)
-  consulta.exec("SET @skip_sync = 1");
+  // El guard RAII garantiza el reset de @skip_sync en todos los caminos.
+  SkipSyncGuard guard(base);
 
   consulta.prepare("UPDATE lotes SET cantidad = cantidad + ? WHERE id = ?");
   consulta.bindValue(0, uds);
@@ -2188,15 +2184,15 @@ void baseDatos::aumentarLote(QString base, QString idLote, int uds) {
   } else {
     qDebug() << consulta.lastError();
   }
-  
-  consulta.exec("SET @skip_sync = 0");
 }
 
 void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
   QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   
   // No sincronizar cambios realizados desde el proceso de venta (TPV)
-  consulta.exec("SET @skip_sync = 1");
+  // El guard RAII garantiza el reset de @skip_sync en todos los caminos,
+  // incluidas las llamadas recursivas y los early returns.
+  SkipSyncGuard guard(conf->getConexionLocal());
 
   consulta.prepare("SELECT id , cantidad FROM lotes WHERE ean = ? "
                    "AND fecha = ?");
@@ -2214,7 +2210,6 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
     consulta.bindValue(2, "-" + udsString);
     consulta.exec();
     qDebug() << consulta.lastError() << "Sin lotes";
-    consulta.exec("SET @skip_sync = 0");
     return;
   }
 
@@ -2226,7 +2221,6 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
     consulta.bindValue(0, id);
     consulta.exec();
     qDebug() << consulta.lastError() << "== borrando";
-    consulta.exec("SET @skip_sync = 0");
     return;
   }
   if (consulta.record().value(1).toInt() < uds) {
@@ -2237,7 +2231,6 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
     qDebug() << consulta.lastError() << "1<";
 
     disminuirLote(cod, fecha, resto);
-    consulta.exec("SET @skip_sync = 0");
     return;
   }
   int descontarUds = consulta.record().value(1).toInt();
@@ -2246,8 +2239,6 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
   consulta.bindValue(0, resto);
   consulta.bindValue(1, id);
   consulta.exec();
-  
-  consulta.exec("SET @skip_sync = 0");
   return;
 }
 
