@@ -6,6 +6,15 @@
 #include <QStyle>
 #include "ui_fabricantes.h"
 
+// Escapa un literal de cadena MySQL para usarlo dentro de un setFilter
+// de QSqlTableModel (que no admite parámetros enlazados).
+static QString escSQL(const QString &s) {
+  QString r = s;
+  r.replace("\\", "\\\\");
+  r.replace("'", "''");
+  return r;
+}
+
 /**
  * @brief Constructor de la ventana de Fabricantes.
  * Configura el modelo de datos, la interfaz y los iconos estándar.
@@ -147,7 +156,7 @@ void Fabricantes::on_tableView_clicked(const QModelIndex &index)
  */
 void Fabricantes::on_lineEdit_textChanged(const QString &arg1)
 {
-    modelo->setFilter(QString("nombre LIKE '%%1%'").arg(arg1));
+    modelo->setFilter("nombre LIKE '%" + escSQL(arg1) + "%'");
 }
 
 void Fabricantes::on_pushButtonUnificar_clicked()

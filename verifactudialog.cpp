@@ -83,16 +83,21 @@ void VerifactuDialog::llenarTabla()
         return;
     }
 
-    // Consulta SQL para obtener los logs dentro del rango (incluyendo hora completa de inicio y fin de día)
-    QString sentenciaSql = QString("SELECT id, id_factura, fecha_hora, hash_actual, usuario, estado_envio "
-                                   "FROM verifactu_logs "
-                                   "WHERE fecha_hora >= '%1 00:00:00' AND fecha_hora <= '%2 23:59:59' "
-                                   "ORDER BY id DESC")
-                               .arg(fechaInicial)
-                               .arg(fechaFinal);
+    // Consulta SQL para obtener los logs dentro del rango usando DATE_FORMAT para evitar problemas con Qt 6 y MariaDB
+    QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
+    QSqlQuery consulta(db);
+    consulta.prepare("SELECT id, id_factura, DATE_FORMAT(fecha_hora, '%Y-%m-%d %H:%i:%s') AS fecha_hora_str, "
+                     "hash_actual, usuario, estado_envio "
+                     "FROM verifactu_logs "
+                     "WHERE fecha_hora >= ? AND fecha_hora <= ? "
+                     "ORDER BY id DESC");
+    consulta.bindValue(0, fechaInicial + " 00:00:00");
+    consulta.bindValue(1, fechaFinal + " 23:59:59");
 
-    QSqlQuery resultado = base.ejecutarSentencia(sentenciaSql, conf->getConexionLocal());
-    qDebug() << "VerifactuDialog SQL:" << sentenciaSql;
+    if (!consulta.exec()) {
+        qDebug() << "VerifactuDialog SQL error:" << consulta.lastError().text();
+    }
+    QSqlQuery resultado = std::move(consulta);
 
     int row = 0;
     while (resultado.next()) {
@@ -101,7 +106,12 @@ void VerifactuDialog::llenarTabla()
         itemFactura->setData(resultado.value("id"), Qt::UserRole);
         modeloTabla->setItem(row, 0, itemFactura);
 
-        modeloTabla->setItem(row, 1, new QStandardItem(resultado.value("fecha_hora").toString()));
+        // Extraer fecha_hora_str ya formateada (yyyy-MM-dd HH:mm:ss)
+        QString fechaHoraStr = resultado.value("fecha_hora_str").toString();
+        if (fechaHoraStr.isEmpty()) {
+            fechaHoraStr = resultado.value("fecha_hora").toString();
+        }
+        modeloTabla->setItem(row, 1, new QStandardItem(fechaHoraStr));
         modeloTabla->setItem(row, 2, new QStandardItem(resultado.value("hash_actual").toString()));
         
         // Convertimos el id de usuario a su nombre legible

@@ -1277,6 +1277,19 @@ void Articulos::on_pushButtonAnadirAPedido_clicked() {
   delete dialogo;
 }
 
+// Slot para consultar la trazabilidad completa del producto seleccionado (compras, entradas y salidas)
+void Articulos::on_pushButtonTrazabilidad_clicked() {
+  QString cod = ui->lineEditCod->text();
+  if (cod.isEmpty()) {
+    QMessageBox::warning(this, tr("Atención"),
+                         tr("Debe seleccionar un artículo para consultar su trazabilidad."));
+    return;
+  }
+  QString desc = ui->lineEditDesc->text();
+  DialogTrazabilidad dialog(cod, desc, this);
+  dialog.exec();
+}
+
 void Articulos::on_pushButtonEliminar_clicked() {
   modeloAux->removeRow(ui->tableViewAux->currentIndex().row());
 }

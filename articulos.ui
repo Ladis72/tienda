@@ -12,8 +12,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1209</width>
-    <height>629</height>
+    <width>1266</width>
+    <height>696</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -103,6 +103,12 @@
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
         </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
        </spacer>
       </item>
       <item>
@@ -173,217 +179,6 @@
           <property name="spacing">
            <number>4</number>
           </property>
-          <item row="5" column="3">
-           <widget class="QDateEdit" name="dateEditUltimoPedido">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="focusPolicy">
-             <enum>Qt::FocusPolicy::NoFocus</enum>
-            </property>
-            <property name="displayFormat">
-             <string>yyyy-MM-dd</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="6">
-           <layout class="QHBoxLayout" name="horizontalLayoutPvp">
-            <item>
-             <widget class="QLineEdit" name="lineEditPvp"/>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButtonHistorialPrecios">
-              <property name="text">
-               <string>Historial Precios</string>
-              </property>
-              <property name="toolTip">
-               <string>Ver historial de cambios de precio</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="7" column="4">
-           <widget class="QLabel" name="label_12">
-            <property name="text">
-             <string>Foto</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="5" rowspan="3">
-           <widget class="QLabel" name="labelFoto">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Sin foto</string>
-            </property>
-            <property name="scaledContents">
-             <bool>false</bool>
-            </property>
-            <property name="openExternalLinks">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="2">
-           <widget class="QLabel" name="label_11">
-            <property name="text">
-             <string>Ultimo pedido</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="7">
-           <widget class="QPushButton" name="pushButtonBorrarFoto">
-            <property name="text">
-             <string>Borrar foto</string>
-            </property>
-            <property name="autoDefault">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>Codigo</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLineEdit" name="lineEditCod">
-            <property name="maxLength">
-             <number>13</number>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QPushButton" name="pushButtonEtiqueta">
-            <property name="text">
-             <string>Crear etiqueta</string>
-            </property>
-            <property name="autoDefault">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QPushButton" name="pushButtonCambiarCodigo">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Cambiar código</string>
-            </property>
-            <property name="autoDefault">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_2">
-            <property name="text">
-             <string>Descripcion</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_4">
-            <property name="text">
-             <string>IVA</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLineEdit" name="lineEditIva"/>
-          </item>
-          <item row="2" column="3">
-           <widget class="QLabel" name="label_14">
-            <property name="text">
-             <string>Costo</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="4">
-           <widget class="QLineEdit" name="lineEditCosto">
-            <property name="layoutDirection">
-             <enum>Qt::LayoutDirection::LeftToRight</enum>
-            </property>
-            <property name="inputMask">
-             <string/>
-            </property>
-            <property name="maxLength">
-             <number>32767</number>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="5">
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>P.V.P.</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_5">
-            <property name="text">
-             <string>Stock</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QLineEdit" name="lineEditStock">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="focusPolicy">
-             <enum>Qt::FocusPolicy::NoFocus</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="2">
-           <widget class="QPushButton" name="pushButtonVer">
-            <property name="text">
-             <string>Ver/Actualizar</string>
-            </property>
-            <property name="autoDefault">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="3">
-           <widget class="QLabel" name="label_6">
-            <property name="text">
-             <string>Minimo</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="4">
-           <widget class="QLineEdit" name="lineEditMinimo"/>
-          </item>
-          <item row="3" column="5">
-           <widget class="QLabel" name="label_7">
-            <property name="text">
-             <string>Maximo</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="6">
-           <widget class="QLineEdit" name="lineEditMaximo"/>
-          </item>
-          <item row="4" column="0">
-           <widget class="QLabel" name="label_8">
-            <property name="text">
-             <string>Pendientes pedido</string>
-            </property>
-           </widget>
-          </item>
           <item row="4" column="1">
            <widget class="QLineEdit" name="lineEditPendientes">
             <property name="enabled">
@@ -394,10 +189,13 @@
             </property>
            </widget>
           </item>
-          <item row="5" column="0">
-           <widget class="QLabel" name="label_10">
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_16">
             <property name="text">
-             <string>Ultima venta</string>
+             <string>Fabricante</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
            </widget>
           </item>
@@ -417,34 +215,43 @@
             </property>
            </widget>
           </item>
-          <item row="6" column="0">
-           <widget class="QLabel" name="label_15">
+          <item row="8" column="1">
+           <widget class="QComboBox" name="comboBoxFormato"/>
+          </item>
+          <item row="4" column="2">
+           <widget class="QLabel" name="label_9">
             <property name="text">
-             <string>Familia</string>
+             <string>Encargados</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
            </widget>
           </item>
-          <item row="6" column="1">
-           <widget class="QLineEdit" name="lineEditCodFamila">
-            <property name="maximumSize">
-             <size>
-              <width>40</width>
-              <height>16777215</height>
-             </size>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>Descripcion</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
            </widget>
           </item>
-          <item row="6" column="2">
-           <widget class="QLabel" name="labelFamilia">
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_5">
             <property name="text">
-             <string>Sin famila asignada</string>
+             <string>Stock</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
            </widget>
           </item>
-          <item row="7" column="0">
-           <widget class="QLabel" name="label_16">
-            <property name="text">
-             <string>Fabricante</string>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="lineEditCod">
+            <property name="maxLength">
+             <number>13</number>
             </property>
            </widget>
           </item>
@@ -458,14 +265,143 @@
             </property>
            </widget>
           </item>
+          <item row="8" column="0">
+           <widget class="QLabel" name="label_13">
+            <property name="text">
+             <string>Presentación</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="6">
+           <widget class="QLabel" name="label_7">
+            <property name="text">
+             <string>Maximo</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="2">
+           <widget class="QLabel" name="label_17">
+            <property name="text">
+             <string>Cantidad</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
           <item row="7" column="2">
            <widget class="QLabel" name="labelFabricante">
             <property name="text">
              <string>Fabricante desconocido</string>
             </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
            </widget>
           </item>
-          <item row="9" column="0" colspan="10">
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_4">
+            <property name="text">
+             <string>IVA</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="8">
+           <widget class="QCheckBox" name="checkBoxRemoto">
+            <property name="text">
+             <string>Cargar remoto</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>Codigo</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QPushButton" name="pushButtonVer">
+            <property name="text">
+             <string>Ver/Actualizar</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="7">
+           <widget class="QLineEdit" name="lineEditMaximo"/>
+          </item>
+          <item row="0" column="4">
+           <widget class="QPushButton" name="pushButtonCambiarCodigo">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Cambiar código</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLineEdit" name="lineEditStock">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::FocusPolicy::NoFocus</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_10">
+            <property name="text">
+             <string>Ultima venta</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="2">
+           <widget class="QLabel" name="labelFamilia">
+            <property name="text">
+             <string>Sin famila asignada</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="2">
+           <widget class="QLabel" name="label_11">
+            <property name="text">
+             <string>Ultimo pedido</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1" colspan="6">
+           <widget class="QLineEdit" name="lineEditDesc"/>
+          </item>
+          <item row="9" column="0" colspan="11">
            <widget class="QTextEdit" name="textEditNotas">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -487,26 +423,184 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1" colspan="5">
-           <widget class="QLineEdit" name="lineEditDesc"/>
-          </item>
-          <item row="1" column="6">
-           <widget class="QPushButton" name="pushButtonBuscarNotas">
+          <item row="0" column="2">
+           <widget class="QPushButton" name="pushButtonEtiqueta">
             <property name="text">
-             <string>Buscar por Notas</string>
-            </property>
-            <property name="toolTip">
-             <string>Búsqueda inteligente multitérmino en las notas y detalles del artículo</string>
+             <string>Crear etiqueta</string>
             </property>
             <property name="autoDefault">
              <bool>false</bool>
             </property>
            </widget>
           </item>
-          <item row="7" column="6">
-           <widget class="QPushButton" name="pushButtonPonerFoto">
+          <item row="1" column="8" rowspan="5">
+           <widget class="QTreeWidget" name="treeWidgetStockTiendas">
+            <property name="minimumSize">
+             <size>
+              <width>400</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="contextMenuPolicy">
+             <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
+            </property>
+            <property name="alternatingRowColors">
+             <bool>true</bool>
+            </property>
+            <property name="sortingEnabled">
+             <bool>true</bool>
+            </property>
+            <column>
+             <property name="text">
+              <string notr="true">1</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+          <item row="1" column="7">
+           <widget class="QPushButton" name="pushButtonBuscarNotas">
+            <property name="toolTip">
+             <string>Búsqueda inteligente multitérmino en las notas y detalles del artículo</string>
+            </property>
             <property name="text">
-             <string>Añadir Foto</string>
+             <string>Buscar por Notas</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_8">
+            <property name="text">
+             <string>Pendientes pedido</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="4">
+           <widget class="QLabel" name="label_6">
+            <property name="text">
+             <string>Minimo</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="label_15">
+            <property name="text">
+             <string>Familia</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="5">
+           <widget class="QLineEdit" name="lineEditMinimo"/>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="lineEditIva"/>
+          </item>
+          <item row="6" column="1">
+           <widget class="QLineEdit" name="lineEditCodFamila">
+            <property name="maximumSize">
+             <size>
+              <width>40</width>
+              <height>16777215</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="3">
+           <widget class="QPushButton" name="pushButtonTrazabilidad">
+            <property name="toolTip">
+             <string>Ver trazabilidad del producto (compras, entradas y salidas)</string>
+            </property>
+            <property name="text">
+             <string>Trazabilidad</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QLabel" name="label_14">
+            <property name="text">
+             <string>Costo</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QLineEdit" name="lineEditCosto">
+            <property name="layoutDirection">
+             <enum>Qt::LayoutDirection::LeftToRight</enum>
+            </property>
+            <property name="inputMask">
+             <string/>
+            </property>
+            <property name="maxLength">
+             <number>32767</number>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="4">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>P.V.P.</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="5">
+           <widget class="QLineEdit" name="lineEditPvp"/>
+          </item>
+          <item row="4" column="3">
+           <widget class="QLineEdit" name="lineEditEncargados">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>0</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="3">
+           <widget class="QDateEdit" name="dateEditUltimoPedido">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::FocusPolicy::NoFocus</enum>
+            </property>
+            <property name="displayFormat">
+             <string>yyyy-MM-dd</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="3">
+           <widget class="QPushButton" name="pushButtonBuscarFamilia">
+            <property name="maximumSize">
+             <size>
+              <width>40</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string/>
             </property>
             <property name="autoDefault">
              <bool>false</bool>
@@ -529,37 +623,72 @@
             </property>
            </widget>
           </item>
-          <item row="6" column="3">
-           <widget class="QPushButton" name="pushButtonBuscarFamilia">
-            <property name="maximumSize">
-             <size>
-              <width>40</width>
-              <height>16777215</height>
-             </size>
+          <item row="8" column="3">
+           <widget class="QLineEdit" name="lineEditCantidad"/>
+          </item>
+          <item row="2" column="6" colspan="2">
+           <widget class="QPushButton" name="pushButtonHistorialPrecios">
+            <property name="toolTip">
+             <string>Ver historial de cambios de precio</string>
             </property>
             <property name="text">
-             <string/>
+             <string>Historial Precios</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="4">
+           <widget class="QLabel" name="label_12">
+            <property name="text">
+             <string>Foto</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="5" rowspan="4" colspan="3">
+           <widget class="QLabel" name="labelFoto">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>Sin foto</string>
+            </property>
+            <property name="scaledContents">
+             <bool>false</bool>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+            <property name="openExternalLinks">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="8">
+           <widget class="QPushButton" name="pushButtonBorrarFoto">
+            <property name="text">
+             <string>Borrar foto</string>
             </property>
             <property name="autoDefault">
              <bool>false</bool>
             </property>
            </widget>
           </item>
-          <item row="8" column="0">
-           <widget class="QLabel" name="label_13">
+          <item row="8" column="7">
+           <widget class="QPushButton" name="pushButtonPonerFoto">
             <property name="text">
-             <string>Presentación</string>
+             <string>Añadir Foto</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
             </property>
            </widget>
           </item>
-          <item row="4" column="2">
-           <widget class="QLabel" name="label_9">
-            <property name="text">
-             <string>Encargados</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="5">
+          <item row="8" column="5" colspan="2">
            <widget class="QLineEdit" name="lineEditFoto">
             <property name="enabled">
              <bool>false</bool>
@@ -572,56 +701,6 @@
             </property>
             <property name="focusPolicy">
              <enum>Qt::FocusPolicy::NoFocus</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="3">
-           <widget class="QLineEdit" name="lineEditEncargados">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>0</string>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="2">
-           <widget class="QLabel" name="label_17">
-            <property name="text">
-             <string>Cantidad</string>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="1">
-           <widget class="QComboBox" name="comboBoxFormato"/>
-          </item>
-          <item row="8" column="3">
-           <widget class="QLineEdit" name="lineEditCantidad"/>
-          </item>
-          <item row="1" column="7" rowspan="5">
-           <widget class="QTreeWidget" name="treeWidgetStockTiendas">
-            <property name="minimumSize">
-             <size>
-              <width>400</width>
-              <height>0</height>
-             </size>
-            </property>
-             <property name="alternatingRowColors"><bool>true</bool></property>
-             <property name="sortingEnabled"><bool>true</bool></property>
-            <property name="contextMenuPolicy">
-             <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
-            </property>
-            <column>
-             <property name="text">
-              <string notr="true">1</string>
-             </property>
-            </column>
-           </widget>
-          </item>
-          <item row="0" column="7">
-           <widget class="QCheckBox" name="checkBoxRemoto">
-            <property name="text">
-             <string>Cargar remoto</string>
             </property>
            </widget>
           </item>
@@ -884,16 +963,11 @@
   <tabstop>lineEditCod</tabstop>
   <tabstop>lineEditDesc</tabstop>
   <tabstop>lineEditIva</tabstop>
-  <tabstop>lineEditCosto</tabstop>
-  <tabstop>lineEditPvp</tabstop>
   <tabstop>lineEditMinimo</tabstop>
   <tabstop>lineEditMaximo</tabstop>
   <tabstop>lineEditCodFamila</tabstop>
-  <tabstop>pushButtonBuscarFamilia</tabstop>
   <tabstop>lineEditCodFabricante</tabstop>
-  <tabstop>pushButtonBuscarFabricante</tabstop>
   <tabstop>comboBoxFormato</tabstop>
-  <tabstop>lineEditCantidad</tabstop>
   <tabstop>pushButtonEtiqueta</tabstop>
   <tabstop>pushButtonNuevo</tabstop>
   <tabstop>pushButtonBorrar</tabstop>
@@ -903,10 +977,8 @@
   <tabstop>pushButtonSiguiente</tabstop>
   <tabstop>pushButtonCerrar</tabstop>
   <tabstop>pushButtonVer</tabstop>
-  <tabstop>pushButtonPonerFoto</tabstop>
   <tabstop>textEditNotas</tabstop>
   <tabstop>treeWidgetStockTiendas</tabstop>
-  <tabstop>lineEditEncargados</tabstop>
   <tabstop>lineEditPendientes</tabstop>
   <tabstop>tabWidget</tabstop>
   <tabstop>tableViewAux</tabstop>
@@ -922,7 +994,6 @@
   <tabstop>radioButtonMeses</tabstop>
   <tabstop>radioButtonAnos</tabstop>
   <tabstop>pushButtonVerFactura</tabstop>
-  <tabstop>pushButtonBorrarFoto</tabstop>
  </tabstops>
  <resources/>
  <connections>
@@ -931,6 +1002,16 @@
    <signal>clicked()</signal>
    <receiver>Articulos</receiver>
    <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
   </connection>
  </connections>
 </ui>

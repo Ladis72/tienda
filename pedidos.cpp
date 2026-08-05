@@ -148,10 +148,11 @@ QString pedidos::calcularTotalLinea()
  */
 void pedidos::llenarTablaPedido(QString idPedido) {
   // Configuración del modelo principal
-  modeloPedido->setQuery(
-      QString("SELECT * FROM lineaspedido_tmp WHERE idPedido = '%1'")
-          .arg(idPedido),
-      QSqlDatabase::database(conf->getConexionLocal()));
+  QSqlQuery qPedido(QSqlDatabase::database(conf->getConexionLocal()));
+  qPedido.prepare("SELECT * FROM lineaspedido_tmp WHERE idPedido = ?");
+  qPedido.bindValue(0, idPedido);
+  qPedido.exec();
+  modeloPedido->setQuery(qPedido);
   ui->tableView->setModel(modeloPedido);
   
   // Ocultar columnas internas
@@ -163,19 +164,17 @@ void pedidos::llenarTablaPedido(QString idPedido) {
   ui->tableView->resizeColumnsToContents();
 
   // Consulta para agrupar por tipo de IVA y mostrar el resumen inferior
-  QString queryStr =
-      QString("SELECT tipoIva, "
-              "SUM(totalbase) AS totalBase, "
-              "SUM(iva) AS totalIva, "
-              "SUM(re) AS totalRe, "
-              "(SUM(totalbase) + SUM(iva) + SUM(re)) AS totalGeneral "
-              "FROM lineaspedido_tmp "
-              "WHERE idPedido = '%1' "
-              "GROUP BY tipoIva")
-          .arg(idPedido);
-
   QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
-  if (!query.exec(queryStr)) {
+  query.prepare("SELECT tipoIva, "
+                "SUM(totalbase) AS totalBase, "
+                "SUM(iva) AS totalIva, "
+                "SUM(re) AS totalRe, "
+                "(SUM(totalbase) + SUM(iva) + SUM(re)) AS totalGeneral "
+                "FROM lineaspedido_tmp "
+                "WHERE idPedido = ? "
+                "GROUP BY tipoIva");
+  query.bindValue(0, idPedido);
+  if (!query.exec()) {
     QMessageBox::critical(this, "Error", "Error al consultar los totales por IVA");
     return;
   }

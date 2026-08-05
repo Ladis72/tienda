@@ -3,8 +3,9 @@
 #include <QFile>
 #include "verifactuclass.h"
 
-ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, bool noTicketRegalo, QObject *parent)
+ImprimirTicket::ImprimirTicket(QString nTicket, QString formato, bool noTicketRegalo, bool esSerieB, QObject *parent)
     : QObject(parent)
+    , esSerieB(esSerieB)
     , printer(new PrinterManager(this))
 {
     consulta = base.datosTicket(conf->getConexionLocal(), nTicket);
@@ -184,8 +185,10 @@ bool ImprimirTicket::imprimirPie()
     }
 
     // --- Código QR Tributario y Leyendas de VeriFactu ---
+    // SEC/F1.4: los tickets serie B (ventas especiales, tabla 'ticketss') no se
+    // registran en VeriFactu, así que no deben imprimir el QR tributario.
     VeriFactuConfig vfConfig = verifactuClass::cargarConfiguracion();
-    if (vfConfig.modo != 0) { // Si VeriFactu o Firma Local están habilitados
+    if (vfConfig.modo != 0 && !esSerieB) { // Si VeriFactu o Firma Local están habilitados
         printer->alimentarLineas(1);
         
         // 1. Leyenda superior del QR

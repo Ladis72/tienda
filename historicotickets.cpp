@@ -32,10 +32,12 @@ void HistoricoTickets::mostrarTickets()
     horaI = ui->dateTimeEditDesde->time().toString("HH:mm:ss");
     horaF = ui->dateTimeEditHasta->time().toString("HH:mm:ss");
     QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
-    // Construimos la consulta directamente para evitar el bug de QMYSQL con sentencias preparadas (prepared statements) que devuelve QDate(0,0,0)
-    QString sql = QString("SELECT * FROM tickets WHERE concat_ws('/',fecha,hora) >= '%1/%2' AND concat_ws('/',fecha,hora) <= '%3/%4'")
-                  .arg(fechaI).arg(horaI).arg(fechaF).arg(horaF);
-    query.exec(sql);
+    // Se usa DATE_FORMAT para garantizar el formato 'yyyy-MM-dd' e impedir fallos con Qt 6 y MariaDB.
+    query.prepare("SELECT *, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha_str FROM tickets WHERE concat_ws('/',fecha,hora) >= ? "
+                  "AND concat_ws('/',fecha,hora) <= ?");
+    query.bindValue(0, fechaI + "/" + horaI);
+    query.bindValue(1, fechaF + "/" + horaF);
+    query.exec();
     listaTickets->setQuery(std::move(query));
     QStandardItemModel *vistaTickets = new QStandardItemModel(listaTickets->rowCount(),
                                                               listaTickets->columnCount() - 3, this);
@@ -50,8 +52,13 @@ void HistoricoTickets::mostrarTickets()
             base.nombreCliente(listaTickets->record(i).value(2).toString()));
         vistaTickets->setItem(i, 2, itemCliente);
 
-        // Convertimos a QDate/QTime y aplicamos el formato correspondiente
-        QStandardItem *itemFecha = new QStandardItem(listaTickets->record(i).value(3).toDate().toString("yyyy-MM-dd"));
+        // Extraer la fecha ya formateada como yyyy-MM-dd desde el alias fecha_str o fallback a QDate
+        QString strFecha = listaTickets->record(i).value("fecha_str").toString();
+        if (strFecha.isEmpty()) {
+            QDate d = listaTickets->record(i).value(3).toDate();
+            strFecha = d.isValid() ? d.toString("yyyy-MM-dd") : listaTickets->record(i).value(3).toString();
+        }
+        QStandardItem *itemFecha = new QStandardItem(strFecha);
         QStandardItem *itemHora = new QStandardItem(listaTickets->record(i).value(4).toTime().toString("HH:mm:ss"));
         vistaTickets->setItem(i, 3, itemFecha);
         vistaTickets->setItem(i, 4, itemHora);

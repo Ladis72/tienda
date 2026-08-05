@@ -59,7 +59,9 @@ public:
                                   const QString &tipoFactura,
                                   const QString &huellaAnterior,
                                   const QString &hashActual,
-                                  const QString &fechaHoraGen);
+                                  const QString &fechaHoraGen,
+                                  const QString &numSerieAnterior = QString(),
+                                  const QString &fechaExpedicionAnterior = QString());
 
     /// Envía el XML al web service SOAP de la AEAT mediante HTTPS y cliente certificado
     static bool enviarAEAT(const QString &xmlContent, const VeriFactuConfig &config, QString &errStr);

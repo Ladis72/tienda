@@ -6,8 +6,9 @@
 #include <QTextDocument>
 #include "verifactuclass.h"
 
-ImprimirFactura::ImprimirFactura(QString nTicket, QObject *parent)
+ImprimirFactura::ImprimirFactura(QString nTicket, bool esSerieB, QObject *parent)
     : QObject(parent)
+    , esSerieB(esSerieB)
 {
     consultaTicket = base.datosTicket(conf->getConexionLocal(), nTicket);
     ticket = consultaTicket.value(0).toString();
@@ -149,9 +150,11 @@ void ImprimirFactura::facturaPDF()
     html.replace("%TOTAL%", QString::number(totalBase + totalIva, 'f', 2));
 
     // --- Integración QR de VeriFactu en el PDF ---
+    // SEC/F1.4: las facturas serie B (ventas especiales, tabla 'ticketss') no se
+    // registran en VeriFactu, así que no deben imprimir el QR tributario.
     VeriFactuConfig vfConfig = verifactuClass::cargarConfiguracion();
     QString qrHtml = "";
-    if (vfConfig.modo != 0) {
+    if (vfConfig.modo != 0 && !esSerieB) {
         QDate dateExp = QDate::fromString(fecha, "yyyy-MM-dd");
         QString fechaExpAEAT = dateExp.isValid() ? dateExp.toString("dd-MM-yyyy") : QDate::currentDate().toString("dd-MM-yyyy");
         QString urlCotejo = verifactuClass::generarUrlQR(vfConfig.emisorNif, ticket, fechaExpAEAT, total.toDouble(), vfConfig.entorno);
