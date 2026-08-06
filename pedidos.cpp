@@ -147,12 +147,28 @@ QString pedidos::calcularTotalLinea()
  * @param idPedido ID del pedido a mostrar.
  */
 void pedidos::llenarTablaPedido(QString idPedido) {
-  // Configuración del modelo principal
+  // Configuración del modelo principal formateando explícitamente la fecha de caducidad como texto yyyy-MM-dd
   QSqlQuery qPedido(QSqlDatabase::database(conf->getConexionLocal()));
-  qPedido.prepare("SELECT * FROM lineaspedido_tmp WHERE idPedido = ?");
+  qPedido.prepare("SELECT id, idPedido, cod, descripcion, cantidad, bonificacion, lote, "
+                  "DATE_FORMAT(fc, '%Y-%m-%d') AS fc, costo, descuento1, base, tipoIva, "
+                  "totalbase, iva, re, pvp FROM lineaspedido_tmp WHERE idPedido = ?");
   qPedido.bindValue(0, idPedido);
   qPedido.exec();
   modeloPedido->setQuery(qPedido);
+
+  // Configurar nombres descriptivos y legibles para las cabeceras de la tabla
+  modeloPedido->setHeaderData(2, Qt::Horizontal, "CÓDIGO");
+  modeloPedido->setHeaderData(3, Qt::Horizontal, "DESCRIPCIÓN");
+  modeloPedido->setHeaderData(4, Qt::Horizontal, "CANTIDAD");
+  modeloPedido->setHeaderData(5, Qt::Horizontal, "BONIF.");
+  modeloPedido->setHeaderData(6, Qt::Horizontal, "LOTE");
+  modeloPedido->setHeaderData(7, Qt::Horizontal, "FECHA CADUCIDAD");
+  modeloPedido->setHeaderData(8, Qt::Horizontal, "COSTO");
+  modeloPedido->setHeaderData(9, Qt::Horizontal, "DESC %");
+  modeloPedido->setHeaderData(11, Qt::Horizontal, "IVA %");
+  modeloPedido->setHeaderData(12, Qt::Horizontal, "TOTAL BASE");
+  modeloPedido->setHeaderData(15, Qt::Horizontal, "PVP");
+
   ui->tableView->setModel(modeloPedido);
   
   // Ocultar columnas internas
@@ -427,7 +443,21 @@ void pedidos::on_tableView_doubleClicked(const QModelIndex &index) {
   ui->leUds->setText(modeloPedido->data(modeloPedido->index(fila, 4)).toString());
   ui->leBon->setText(modeloPedido->data(modeloPedido->index(fila, 5)).toString());
   ui->leLote->setText(modeloPedido->data(modeloPedido->index(fila, 6)).toString());
-  ui->dateEdit->setDate(QDate::fromString(modeloPedido->data(modeloPedido->index(fila, 7)).toString(), "yyyy-MM-dd"));
+  // Obtener y asignar correctamente la fecha de caducidad a dateEdit
+  QVariant varFecha = modeloPedido->data(modeloPedido->index(fila, 7));
+  if (varFecha.typeId() == QMetaType::QDate) {
+      ui->dateEdit->setDate(varFecha.toDate());
+  } else {
+      QDate d = QDate::fromString(varFecha.toString(), "yyyy-MM-dd");
+      if (!d.isValid()) {
+          d = QDate::fromString(varFecha.toString(), Qt::ISODate);
+      }
+      if (d.isValid()) {
+          ui->dateEdit->setDate(d);
+      } else {
+          ui->dateEdit->setDate(QDate::currentDate());
+      }
+  }
   ui->lePvt->setText(modeloPedido->data(modeloPedido->index(fila, 8)).toString());
   ui->leDescuento->setText(modeloPedido->data(modeloPedido->index(fila, 9)).toString());
   ui->leIva->setText(modeloPedido->data(modeloPedido->index(fila, 11)).toString());
