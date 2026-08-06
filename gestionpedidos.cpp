@@ -27,9 +27,8 @@ void GestionPedidos::llenarTablaPedidos()
 {
     listaPedidos.clear();
     QSqlQuery consultaPedidos = base->recuperarPedidos(conf->getConexionLocal());
-    consultaPedidos.first();
     QList<QStandardItem *> listaItems;
-    for (int i = 0; i < consultaPedidos.numRowsAffected(); i++) {
+    while (consultaPedidos.next()) {
         listaItems.clear();
         QString idPedido = consultaPedidos.value(0).toString();
         //qDebug() << idPedido;
@@ -81,7 +80,6 @@ void GestionPedidos::llenarTablaPedidos()
         QStandardItem *itemTotal = new QStandardItem(QString::number(baseArticulos + iva + re));
         listaItems.append(itemTotal);
         listaPedidos.appendRow(listaItems);
-        consultaPedidos.next();
     }
     QStringList cabeceras;
     cabeceras << "ID" << "PROVEEDOR" << "PEDIDO" << "FECHA" << "LINEAS" << "ARICULOS" << "BASE"

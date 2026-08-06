@@ -194,21 +194,28 @@ bool UnificarMaestros::ejecutarFusion(int idGanador, const QList<int> &idsPerded
         return false;
     }
 
-    if (db.commit()) {
-        // C) Registrar la unificación para propagar a otras tiendas
-        QSqlQuery qSync(db);
-        qSync.prepare("INSERT INTO sync_unificaciones (tabla, id_perdedor, id_ganador) VALUES (?, ?, ?)");
-        qSync.addBindValue(m_config.tablaMaestra);
-        for (int idPerdedor : idsPerdedores) {
-            qSync.bindValue(1, QString::number(idPerdedor));
-            qSync.bindValue(2, QString::number(idGanador));
-            qSync.exec();
+    // C) Registrar la unificación para propagar a otras tiendas. Se hace dentro
+    // de la misma transacción: si falla el registro, la fusión se revierte y
+    // nunca queda aplicada localmente sin estar propagada a la nube.
+    QSqlQuery qSync(db);
+    qSync.prepare("INSERT INTO sync_unificaciones (tabla, id_perdedor, id_ganador) VALUES (?, ?, ?)");
+    qSync.addBindValue(m_config.tablaMaestra);
+    for (int idPerdedor : idsPerdedores) {
+        qSync.bindValue(1, QString::number(idPerdedor));
+        qSync.bindValue(2, QString::number(idGanador));
+        if (!qSync.exec()) {
+            db.rollback();
+            QMessageBox::critical(this, tr("Error SQL"),
+                                  tr("No se pudo registrar la unificación en sync_unificaciones:\n") + qSync.lastError().text());
+            return false;
         }
-        return true;
-    } else {
+    }
+
+    if (!db.commit()) {
         QMessageBox::critical(this, tr("Error"), tr("No se pudo confirmar (commit) la transacción."));
         return false;
     }
+    return true;
 }
 
 void UnificarMaestros::on_pushButtonRenombrar_clicked()

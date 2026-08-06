@@ -2,11 +2,13 @@
 #include "hashutil.h"
 #include "qprocess.h"
 #include "skip_sync_guard.h"
+#include <QApplication>
 #include <QDate>
 #include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QInputDialog>
 #include <QMessageBox>
 
 
@@ -33,6 +35,13 @@ bool baseDatos::conectar(QString host, QString puerto, QString baseDatos,
     mensaje.exec();
     return false;
   }
+
+  // Forzar zona horaria UTC para que updated_at (TIMESTAMP) se interprete de
+  // forma consistente con la nube en la resolución de conflictos de sync.
+  // Solo afecta a columnas TIMESTAMP (updated_at es interna de sync); las
+  // columnas DATETIME/DATE del resto de la aplicación no se ven alteradas.
+  QSqlQuery qUtc(db);
+  qUtc.exec("SET time_zone = '+00:00'");
 
   // Asegurar de forma eficiente que las columnas de notas existen en albaranes_tmp y pedidos
   QSqlQuery checkQuery(db);
@@ -1665,15 +1674,15 @@ double baseDatos::sumarColumna(QString base, QString tabla, QString campo,
 
 int baseDatos::contarLineas(QString tabla, QString base, QString campoCondicion,
                             QString condicion) {
+  // Se realiza una consulta SELECT COUNT(*) para contar las filas reales asociadas a la condición
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.prepare("SELECT * FROM " + tabla + " WHERE " + campoCondicion +
+  consulta.prepare("SELECT COUNT(*) FROM " + tabla + " WHERE " + campoCondicion +
                    " = ?");
   consulta.bindValue(0, condicion);
-  if (!consulta.exec()) {
-    qDebug() << "contarLineas:" << consulta.lastError().text();
+  if (consulta.exec() && consulta.first()) {
+    return consulta.value(0).toInt();
   }
-  consulta.first();
-  return consulta.numRowsAffected();
+  return 0;
 }
 
 bool baseDatos::insertarES(QStringList datos, QString base, QString usuario) {
@@ -1784,12 +1793,12 @@ bool baseDatos::crearPedido(QString proveedor, QString nPedido, QString fecha,
 }
 
 bool baseDatos::borrarPedido(QString base, QString numeroPedido) {
+  // Se utiliza una consulta preparada para buscar y eliminar el pedido temporal y sus líneas asociadas
   QSqlQuery consulta(QSqlDatabase::database(base));
   consulta.prepare("SELECT id FROM albaranes_tmp WHERE id = ?");
   consulta.bindValue(0, numeroPedido);
   consulta.exec();
-  consulta.first();
-  if (consulta.numRowsAffected() == 1) {
+  if (consulta.next()) {
     consulta.prepare("DELETE FROM lineaspedido_tmp WHERE idPedido = ?");
     consulta.bindValue(0, numeroPedido);
     consulta.exec();
@@ -1799,7 +1808,6 @@ bool baseDatos::borrarPedido(QString base, QString numeroPedido) {
 
     return true;
   } else {
-    // Buscar los pedidos que coincidan y mostrarlos
     return false;
   }
 }
@@ -2199,9 +2207,37 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
   consulta.bindValue(0, cod);
   consulta.bindValue(1, fecha);
   consulta.exec();
-  qDebug() << consulta.numRowsAffected();
-  if (consulta.numRowsAffected() == 0) {
-    qDebug() << "Pasa por filas = 0";
+  
+  if (!consulta.first()) {
+    // La fecha a descontar no coincide con ningún lote existente de este producto.
+    // Consultar las fechas registradas con existencias para dar opción de elegir al usuario.
+    QSqlQuery qFechas(QSqlDatabase::database(conf->getConexionLocal()));
+    qFechas.prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS f, sum(cantidad) AS cant "
+                    "FROM lotes WHERE ean = ? GROUP BY fecha HAVING cant > 0 ORDER BY f ASC");
+    qFechas.bindValue(0, cod);
+    QStringList opciones;
+    if (qFechas.exec()) {
+      while (qFechas.next()) {
+        opciones << QString("%1 (Stock: %2)").arg(qFechas.value("f").toString()).arg(qFechas.value("cant").toString());
+      }
+    }
+
+    if (!opciones.isEmpty() && QApplication::activeWindow()) {
+      bool ok = false;
+      QString selec = QInputDialog::getItem(
+          QApplication::activeWindow(),
+          "Seleccionar fecha a descontar",
+          "La fecha indicada no coincide con ninguna fecha registrada para este producto.\n"
+          "Seleccione la fecha de la que desea descontar:",
+          opciones, 0, false, &ok);
+      if (ok && !selec.isEmpty()) {
+        QString fechaElegida = selec.split(" ").first();
+        disminuirLote(cod, fechaElegida, uds);
+        return;
+      }
+    }
+
+    qDebug() << "Creando registro genérico negativo de lote para fecha:" << fecha;
     QString udsString = QString::number(uds);
     consulta.prepare("INSERT INTO lotes (ean , lote ,fecha , cantidad) "
                      "VALUES (?, '', ?, ?)");
@@ -2212,8 +2248,6 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
     qDebug() << consulta.lastError() << "Sin lotes";
     return;
   }
-
-  consulta.first();
   QString id = consulta.record().value(0).toString();
   qDebug() << id;
   if (consulta.record().value(1).toInt() == uds) {

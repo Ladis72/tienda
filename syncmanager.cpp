@@ -455,28 +455,56 @@ int SyncManager::bajarBorrados()
         return 0;
     }
 
-    struct Borrado { QString tabla; QString idReg; };
+    struct Borrado { QString tabla; QString idReg; qint64 ts; };
     QList<Borrado> borradosPendientes;
     qint64 maxTs = watermark.toUTC().toSecsSinceEpoch();
     while (qN.next()) {
         QString t = qN.value(0).toString();
         QString idReg = qN.value(1).toString();
-        if (getPkTabla(t).isEmpty()) continue;
-        borradosPendientes << Borrado{t, idReg};
         qint64 fTs = qN.value(2).toLongLong();
+        if (getPkTabla(t).isEmpty()) continue;
+        borradosPendientes << Borrado{t, idReg, fTs};
         if (fTs > maxTs) maxTs = fTs;
     }
 
     int borrados = 0;
+    int conservados = 0;
     if (!borradosPendientes.isEmpty()) {
         // SkipSyncGuard evita que el DELETE local re-encuele en sync_cola
         // (el borrado ya está registrado como tombstone en la nube).
         SkipSyncGuard guard(conf->getConexionLocal());
+
+        QSqlQuery qTsLocal(dbLocal);
         QSqlQuery qDel(dbLocal);
+        QSqlQuery qPurge(dbLocal);
+        qPurge.prepare("DELETE FROM sync_cola WHERE tabla = ? AND id_registro = ? AND subido = 0");
+
         for (const Borrado &b : borradosPendientes) {
-            qDel.prepare(QString("DELETE FROM `%1` WHERE `%2` = ?").arg(b.tabla, getPkTabla(b.tabla)));
+            QString pk = getPkTabla(b.tabla);
+
+            // ── Resolución de conflictos: edición local más nueva gana ──
+            // Si la fila local fue modificada después del borrado en la nube,
+            // se conserva: la edición local pendiente en sync_cola se re-subirá
+            // y recreará la fila en la nube (filosofía "lo más nuevo gana").
+            qTsLocal.prepare(QString("SELECT UNIX_TIMESTAMP(updated_at) FROM `%1` WHERE `%2` = ?").arg(b.tabla, pk));
+            qTsLocal.addBindValue(b.idReg);
+            bool localMasNuevo = false;
+            if (qTsLocal.exec() && qTsLocal.first() && !qTsLocal.value(0).isNull()) {
+                if (qTsLocal.value(0).toLongLong() > b.ts) localMasNuevo = true;
+            }
+            if (localMasNuevo) {
+                conservados++;
+                continue;
+            }
+
+            qDel.prepare(QString("DELETE FROM `%1` WHERE `%2` = ?").arg(b.tabla, pk));
             qDel.addBindValue(b.idReg);
             if (qDel.exec()) {
+                // Purga de pendientes obsoletos: evita que un INSERT/UPDATE que
+                // quedara sin subir re-cree la fila borrada en la nube.
+                qPurge.bindValue(0, b.tabla);
+                qPurge.bindValue(1, b.idReg);
+                qPurge.exec();
                 if (qDel.numRowsAffected() > 0) borrados++;
             } else {
                 qDebug() << "SyncManager: Error aplicando borrado en" << b.tabla
@@ -488,6 +516,8 @@ int SyncManager::bajarBorrados()
     actualizarUltimaSync("sync_borrados", QDateTime::fromSecsSinceEpoch(maxTs, Qt::UTC));
     if (borrados > 0)
         qDebug() << "SyncManager: Borrados aplicados localmente:" << borrados;
+    if (conservados > 0)
+        qDebug() << "SyncManager: Borrados conservados por edición local más nueva:" << conservados;
     return borrados;
 }
 

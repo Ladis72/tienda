@@ -1,5 +1,6 @@
 #include "salidas.h"
 #include <QMessageBox>
+#include <QInputDialog>
 #include "ui_salidas.h"
 
 Salidas::Salidas(QWidget *parent)
@@ -137,24 +138,51 @@ void Salidas::on_pushButtonAgregar_clicked()
         return;
     }
 
+    QString codProducto = ui->lineEditCod->text().trimmed();
+    QString fechaFC = ui->dateEditFC->text();
+
     QString idLote = base.idLote(conf->getConexionLocal(),
-                                  ui->lineEditCod->text(),
+                                  codProducto,
                                   "",
-                                  ui->dateEditFC->text());
+                                  fechaFC);
     if (idLote == "0") {
-        QMessageBox msgBox;
-        msgBox.setText("Parece que no hay en el almacen un producto con esos datos");
-        msgBox.setInformativeText(
-            "¿Deseas continual con la operación o Cancelar y volver a comprobarlo?");
-        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
-        int ret = msgBox.exec();
-        switch (ret) {
-        case QMessageBox::Cancel:
-            qDebug() << "cancelado";
-            return;
-            break;
-        default:
-            break;
+        // Consultar fechas/lotes existentes con stock para este producto
+        QSqlQuery qFechas(QSqlDatabase::database(conf->getConexionLocal()));
+        qFechas.prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS f, sum(cantidad) AS cant "
+                        "FROM lotes WHERE ean = ? GROUP BY fecha HAVING cant > 0 ORDER BY f ASC");
+        qFechas.bindValue(0, codProducto);
+        QStringList opcionesFechas;
+        if (qFechas.exec()) {
+            while (qFechas.next()) {
+                opcionesFechas << QString("%1 (Stock: %2)").arg(qFechas.value("f").toString()).arg(qFechas.value("cant").toString());
+            }
+        }
+
+        if (!opcionesFechas.isEmpty()) {
+            bool ok = false;
+            QString seleccion = QInputDialog::getItem(
+                this,
+                "Seleccionar fecha de caducidad",
+                "La fecha indicada no coincide con ninguna de las fechas registradas en almacén.\n"
+                "Seleccione de qué fecha desea descontar los artículos:",
+                opcionesFechas, 0, false, &ok);
+            if (ok && !seleccion.isEmpty()) {
+                fechaFC = seleccion.split(" ").first();
+                ui->dateEditFC->setDate(QDate::fromString(fechaFC, "yyyy-MM-dd"));
+                idLote = base.idLote(conf->getConexionLocal(), codProducto, "", fechaFC);
+            } else {
+                return; // Operación cancelada por el usuario
+            }
+        } else {
+            QMessageBox msgBox;
+            msgBox.setText("Parece que no hay en el almacén un producto con esos datos");
+            msgBox.setInformativeText(
+                "¿Desea continuar con la operación o cancelar y volver a comprobarlo?");
+            msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+            int ret = msgBox.exec();
+            if (ret == QMessageBox::Cancel) {
+                return;
+            }
         }
     }
     // Se utiliza una consulta preparada para consultar las existencias del lote de forma segura

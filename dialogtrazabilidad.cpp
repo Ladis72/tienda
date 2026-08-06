@@ -48,11 +48,11 @@ void DialogTrazabilidad::cargarCompras()
     QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
     QSqlQuery query(db);
 
-    // Consulta preparada formateando la fecha a "yyyy-MM-dd"
+    // Consulta preparada formateando la fecha a "yyyy-MM-dd" y utilizando CONVERT para evitar problemas de collation en MySQL
     query.prepare("SELECT "
                   "DATE_FORMAT(p.fechaPedido, '%Y-%m-%d') AS 'Fecha', "
                   "lp.nDocumento AS 'Nº Pedido', "
-                  "COALESCE(prov.nombre, CAST(lp.idProveedor AS CHAR)) AS 'Proveedor', "
+                  "COALESCE(CONVERT(prov.nombre USING utf8mb4), CAST(lp.idProveedor AS CHAR)) AS 'Proveedor', "
                   "lp.cantidad AS 'Cantidad', "
                   "lp.bonificacion AS 'Bonif.', "
                   "lp.costo AS 'Precio Coste (€)', "
@@ -96,7 +96,7 @@ void DialogTrazabilidad::cargarMovimientosTiendas()
     query.prepare("SELECT "
                   "'ENTRADA' AS 'Tipo Movimiento', "
                   "DATE_FORMAT(e.fechaEntrada, '%Y-%m-%d') AS 'Fecha', "
-                  "COALESCE(t.nombre, CAST(e.idTienda AS CHAR)) AS 'Tienda Origen / Destino', "
+                  "COALESCE(CONVERT(t.nombre USING utf8mb4), CAST(e.idTienda AS CHAR)) AS 'Tienda Origen / Destino', "
                   "e.cantidad AS 'Cantidad', "
                   "e.pvp AS 'PVP (€)', "
                   "DATE_FORMAT(e.fechaCaducidad, '%Y-%m-%d') AS 'Fecha Caducidad' "
@@ -107,7 +107,7 @@ void DialogTrazabilidad::cargarMovimientosTiendas()
                   "SELECT "
                   "'SALIDA' AS 'Tipo Movimiento', "
                   "DATE_FORMAT(s.fechaEntrada, '%Y-%m-%d') AS 'Fecha', "
-                  "COALESCE(t.nombre, CAST(s.idTienda AS CHAR)) AS 'Tienda Origen / Destino', "
+                  "COALESCE(CONVERT(t.nombre USING utf8mb4), CAST(s.idTienda AS CHAR)) AS 'Tienda Origen / Destino', "
                   "s.cantidad AS 'Cantidad', "
                   "s.pvp AS 'PVP (€)', "
                   "DATE_FORMAT(s.fechaCaducidad, '%Y-%m-%d') AS 'Fecha Caducidad' "
