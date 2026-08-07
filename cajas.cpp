@@ -15,11 +15,23 @@ Cajas::Cajas(QWidget *parent)
     ventas();
     ES();
     actualizarEfectivo();
+    aplicarPermisos();
 }
 
 Cajas::~Cajas()
 {
     delete ui;
+}
+
+/**
+ * @brief Aplica permisos a las acciones del módulo de Cajas.
+ */
+void Cajas::aplicarPermisos() {
+    if (!conf || !conf->permisos())
+        return;
+
+    ui->pushButtonAceptar->setEnabled(conf->permisos()->tiene("cajas.cerrar"));
+    ui->pushButtonRetirarDinero->setEnabled(conf->permisos()->tiene("cajas.retirar"));
 }
 
 void Cajas::on_spinBox20_valueChanged(int arg1)

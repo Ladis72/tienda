@@ -232,38 +232,44 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
       {"articulos.crear",           {0, 1}},
       {"articulos.modificar",       {0, 1}},
       {"articulos.borrar",          {0}},
+      {"articulos.cambiar_codigo",  {0, 1}},
+      {"articulos.historial_precios", {0, 1, 2, 4}},
+      {"articulos.trazabilidad",    {0, 1, 4}},
+      {"articulos.unificar",        {0, 1}},
 
       // ── Familias ──
       {"familias",                  {0, 1}},
       {"familias.crear",            {0, 1}},
       {"familias.modificar",        {0, 1}},
       {"familias.borrar",           {0}},
+      {"familias.unificar",         {0, 1}},
 
       // ── Fabricantes ──
       {"fabricantes",               {0, 1}},
       {"fabricantes.crear",         {0, 1}},
       {"fabricantes.modificar",     {0, 1}},
       {"fabricantes.borrar",        {0}},
+      {"fabricantes.unificar",      {0, 1}},
 
       // ── Clientes ──
       {"clientes",                  {0, 1, 2}},
       {"clientes.crear",            {0, 1}},
       {"clientes.modificar",        {0, 1}},
       {"clientes.borrar",           {0}},
+      {"clientes.unificar",         {0, 1}},
 
       // ── Proveedores ──
       {"proveedores",               {0, 1}},
       {"proveedores.crear",         {0, 1}},
       {"proveedores.modificar",     {0, 1}},
       {"proveedores.borrar",        {0}},
+      {"proveedores.unificar",      {0, 1}},
 
       // ── Formas de pago ──
       {"formas_pago",               {0, 1}},
       {"formas_pago.crear",         {0}},
       {"formas_pago.modificar",     {0}},
       {"formas_pago.borrar",        {0}},
-
-
 
       // ── Usuarios ──
       {"usuarios",                  {0}},
@@ -286,10 +292,12 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
       // ── Entrada de mercancía ──
       {"entradas",                  {0, 1, 4}},
       {"entradas.crear",            {0, 1, 4}},
+      {"entradas.borrar",           {0, 1}},
 
       // ── Salidas ──
       {"salidas",                   {0, 1, 4}},
       {"salidas.crear",             {0, 1, 4}},
+      {"salidas.borrar",            {0, 1}},
 
       // ── Venta por artículo (listado) ──
       {"venta_articulos",           {0, 1}},
@@ -305,6 +313,9 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
 
       // ── Tickets ──
       {"tickets",                   {0, 1}},
+      {"tickets.imprimir",          {0, 1, 2, 3}},
+      {"tickets.modificar",         {0, 1}},
+      {"tickets.facturar",          {0, 1}},
       {"tickets.borrar",            {0}},
 
       // ── Facturas ──
@@ -318,11 +329,20 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
 
       // ── Gestión de pedidos ──
       {"gestionar_pedidos",         {0, 1, 4}},
+      {"pedidos.crear",             {0, 1, 4}},
+      {"pedidos.modificar",         {0, 1, 4}},
+      {"pedidos.borrar",            {0, 1}},
+      {"pedidos.aceptar",           {0, 1, 4}},
+      {"pedidos.imprimir",          {0, 1, 4}},
 
       // ── Cajas ──
       {"cajas",                     {0, 1, 3}},
+      {"cajas.abrir",               {0, 1, 3}},
+      {"cajas.cerrar",              {0, 1, 3}},
+      {"cajas.retirar",             {0, 1}},
 
-
+      // ── Saneador / Alineación Global ──
+      {"saneador_global",           {0, 1}},
 
       // ── Generar vales ──
       {"generar_vales",             {0}},
@@ -355,9 +375,20 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
 
       // ── Notas y Avisos ──
       {"notas",                     {0, 1, 2, 3, 4}},
+      {"notas.crear",               {0, 1, 2, 3, 4}},
+      {"notas.modificar",           {0, 1, 2}},
+      {"notas.borrar",              {0, 1}},
 
       // ── Sistema de Encargos ──
       {"encargos",                  {0, 1, 2, 4}},
+      {"encargos.crear",            {0, 1, 2, 4}},
+      {"encargos.modificar",        {0, 1, 2, 4}},
+      {"encargos.borrar",           {0, 1}},
+      {"encargos.cobrar",           {0, 1, 2, 3}},
+      {"encargos.imprimir",         {0, 1, 2, 4}},
+
+      // ── Visor de logs ──
+      {"visor_log.limpiar",         {0}},
 
       // ── Configuración Avanzada ──
       {"editor_permisos",           {0}},

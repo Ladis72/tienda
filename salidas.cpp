@@ -38,11 +38,25 @@ Salidas::Salidas(QWidget *parent)
         ui->dateEditFC->setFocus();
     });
     connect(ui->lineEditPrecio, &QLineEdit::returnPressed, this, &Salidas::on_pushButtonAgregar_clicked);
+
+    aplicarPermisos();
 }
 
 Salidas::~Salidas()
 {
     delete ui;
+}
+
+/**
+ * @brief Aplica permisos a las acciones del módulo de salidas de mercancía.
+ */
+void Salidas::aplicarPermisos() {
+    if (!conf || !conf->permisos())
+        return;
+
+    ui->pushButtonAgregar->setEnabled(conf->permisos()->tiene("salidas.crear"));
+    ui->pushButtonEnviar->setEnabled(conf->permisos()->tiene("salidas.crear"));
+    ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("salidas.borrar"));
 }
 
 void Salidas::on_lineEditCod_returnPressed()

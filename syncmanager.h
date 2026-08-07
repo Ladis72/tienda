@@ -5,6 +5,8 @@
 #include <QTimer>
 #include <QStringList>
 #include <QDateTime>
+#include <QFuture>
+#include <atomic>
 
 /**
  * @brief Gestiona la sincronización bidireccional entre la BD local y el servidor en la nube.
@@ -58,6 +60,12 @@ private:
     QTimer *m_timerSync;   ///< Sincronización cada 5 minutos
     bool    m_hayConexion; ///< Estado actual de conexión a la nube
 
+    /// Tarea asíncrona del último ciclo de sincronización (hilo del pool)
+    QFuture<void> m_futuroSync;
+
+    /// Evita que dos ciclos de sincronización se solapen (timer + ping)
+    std::atomic<bool> m_syncActivo;
+
     // --- Tablas maestras que se sincronizan (sin las de solo local) ---
     static const QStringList TABLAS_MAESTRAS;
     
@@ -90,24 +98,35 @@ private:
     void desconectarNube();
 
     // --- Operaciones de sync ---
+    // Reciben los nombres de las conexiones Qt (local y nube) a usar, porque
+    // el ciclo pesado se ejecuta en un hilo del pool con conexiones clonadas.
 
     /// Sube los registros de sync_cola pendientes (subido=0) a la nube
-    int subirCambios();
+    int subirCambios(const QString &connLocal, const QString &connNube, const QString &usuario);
 
     /// Sube las unificaciones de maestros pendientes (sync_unificaciones) a la nube
-    int subirUnificaciones();
+    int subirUnificaciones(const QString &connLocal, const QString &connNube, const QString &usuario);
 
     /// Baja los cambios de la nube más recientes que ultima_sync para cada tabla
-    int bajarCambios();
+    int bajarCambios(const QString &connLocal, const QString &connNube, const QString &usuario);
 
     /// Baja los borrados (tombstones) de la nube y los aplica localmente
-    int bajarBorrados();
+    int bajarBorrados(const QString &connLocal, const QString &connNube, const QString &usuario);
+
+    /// Purga registros antiguos ya subidos de sync_cola y sync_unificaciones
+    void purgarCola(const QString &connLocal, const QString &usuario);
+
+    /// Escribe un mensaje en la tabla logs usando la conexión local indicada.
+    /// Funciona con las conexiones clonadas del hilo de pool (connLocal).
+    void registrarLog(const QString &connLocal, const QString &categoria,
+                      const QString &usuario, const QString &mensaje);
 
     /// Actualiza el campo ultima_sync de sync_control para una tabla
-    void actualizarUltimaSync(const QString &tabla, const QDateTime &momento);
+    void actualizarUltimaSync(const QString &tabla, const QDateTime &momento,
+                              const QString &connLocal);
 
     /// Obtiene la última sync de una tabla
-    QDateTime ultimaSync(const QString &tabla);
+    QDateTime ultimaSync(const QString &tabla, const QString &connLocal, const QString &usuario);
 
     /// Asegura que las tablas maestras en la nube tengan las columnas id_tienda_origen y updated_at
     void prepararTablasRemotas();

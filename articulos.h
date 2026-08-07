@@ -42,6 +42,7 @@ public:
     explicit Articulos(QWidget *parent = nullptr);
     ~Articulos();
     void borrarFormulario();
+    void aplicarPermisos();
 
 private slots:
     void on_pushButtonAnterior_clicked();

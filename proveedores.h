@@ -22,6 +22,7 @@ class Proveedores : public QDialog
 public:
     explicit Proveedores(QWidget *parent = 0);
     ~Proveedores();
+    void aplicarPermisos();
 
 private slots:
     void on_pushButtonNuevo_clicked();

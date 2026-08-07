@@ -22,11 +22,26 @@ FormasPago::FormasPago(QWidget *parent)
     ui->pushButtonModificar->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
     ui->pushButtonUnificar->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
     ui->pushButtonSaneador->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+    aplicarPermisos();
 }
 
 FormasPago::~FormasPago()
 {
     delete ui;
+}
+
+/**
+ * @brief Aplica permisos a los botones del formulario de formas de pago.
+ */
+void FormasPago::aplicarPermisos() {
+    if (!conf || !conf->permisos())
+        return;
+
+    ui->pushButtonAnadir->setEnabled(conf->permisos()->tiene("formas_pago.crear"));
+    ui->pushButtonModificar->setEnabled(conf->permisos()->tiene("formas_pago.modificar"));
+    ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("formas_pago.borrar"));
+    ui->pushButtonUnificar->setEnabled(conf->permisos()->tiene("formas_pago.modificar"));
+    ui->pushButtonSaneador->setEnabled(conf->permisos()->tiene("saneador_global"));
 }
 
 void FormasPago::on_pushButtonModificar_clicked()

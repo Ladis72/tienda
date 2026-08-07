@@ -104,11 +104,27 @@ GestorEncargosDialog::GestorEncargosDialog(QString autoFilterCliente, QWidget *p
 
     qDebug() << "GestorEncargosDialog: Realizando filtrado inicial...";
     ajustarFiltro();
+    aplicarPermisos();
 }
 
 GestorEncargosDialog::~GestorEncargosDialog()
 {
     delete ui;
+}
+
+/**
+ * @brief Aplica permisos a las acciones del gestor de encargos.
+ */
+void GestorEncargosDialog::aplicarPermisos() {
+    if (!conf || !conf->permisos())
+        return;
+
+    ui->btnNuevoEncargo->setEnabled(conf->permisos()->tiene("encargos.crear"));
+    ui->btnMarcarRecibido->setEnabled(conf->permisos()->tiene("encargos.modificar"));
+    ui->btnMarcarEntregado->setEnabled(conf->permisos()->tiene("encargos.modificar"));
+    ui->btnBorrar->setEnabled(conf->permisos()->tiene("encargos.borrar"));
+    ui->btnCobrarTPV->setEnabled(conf->permisos()->tiene("encargos.cobrar"));
+    ui->btnImprimirTicket->setEnabled(conf->permisos()->tiene("encargos.imprimir"));
 }
 
 void GestorEncargosDialog::ajustarFiltro()

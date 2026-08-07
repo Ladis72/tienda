@@ -121,9 +121,25 @@ void Clientes::inicializarComponentes() {
   ui->pushButtonSaneador->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
   ui->btn_encargos_cliente->setIcon(style()->standardIcon(QStyle::SP_FileDialogContentsView));
   ui->pushButtonRefrescar->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+
+  aplicarPermisos();
 }
 
 Clientes::~Clientes() { delete ui; }
+
+/**
+ * @brief Aplica permisos a los botones del formulario de clientes.
+ */
+void Clientes::aplicarPermisos() {
+  if (!conf || !conf->permisos())
+    return;
+
+  ui->pushButtonNuevo->setEnabled(conf->permisos()->tiene("clientes.crear"));
+  ui->pushButtonModificar->setEnabled(conf->permisos()->tiene("clientes.modificar"));
+  ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("clientes.borrar"));
+  ui->pushButtonUnificar->setEnabled(conf->permisos()->tiene("clientes.unificar"));
+  ui->pushButtonSaneador->setEnabled(conf->permisos()->tiene("saneador_global"));
+}
 
 void Clientes::recargarTabla() {
   modeloTabla->setQuery("SELECT * FROM clientes",
@@ -805,9 +821,13 @@ void Clientes::on_tableView2_doubleClicked(const QModelIndex &index) {
       tablaLineas = "lineasticketss";
   }
 
-  ticket->setQuery("SELECT * FROM " + tablaLineas + " WHERE nticket = '" + nTicket +
-                       "'",
-                   db);
+  QSqlQuery qTicket(db);
+  qTicket.prepare("SELECT * FROM " + tablaLineas + " WHERE nticket = ?");
+  qTicket.addBindValue(nTicket);
+  if (!qTicket.exec()) {
+      qDebug() << "Clientes::detalleTicket:" << qTicket.lastError().text();
+  }
+  ticket->setQuery(qTicket);
 
   ui->tableViewDetalleTicket->setModel(ticket);
   ui->tableViewDetalleTicket->hideColumn(0);

@@ -47,11 +47,28 @@ SaneadorGlobal::SaneadorGlobal(const UnificarMaestrosConfig &config, QWidget *pa
     ui->pushButtonClonar->setIcon(style()->standardIcon(QStyle::SP_FileDialogNewFolder));
     ui->pushButtonClonarLocal->setIcon(style()->standardIcon(QStyle::SP_FileDialogNewFolder));
     ui->pushButtonCerrar->setIcon(style()->standardIcon(QStyle::SP_DialogCloseButton));
+
+    aplicarPermisos();
 }
 
 SaneadorGlobal::~SaneadorGlobal()
 {
     delete ui;
+}
+
+/**
+ * @brief Aplica permisos al diálogo de Saneador Global.
+ */
+void SaneadorGlobal::aplicarPermisos() {
+    if (!conf || !conf->permisos())
+        return;
+
+    bool tiene = conf->permisos()->tiene("saneador_global");
+    ui->pushButtonAnalizar->setEnabled(tiene);
+    ui->pushButtonIgualar->setEnabled(tiene);
+    ui->pushButtonIgualarLocal->setEnabled(tiene);
+    ui->pushButtonClonar->setEnabled(tiene);
+    ui->pushButtonClonarLocal->setEnabled(tiene);
 }
 
 void SaneadorGlobal::log(const QString &msg)

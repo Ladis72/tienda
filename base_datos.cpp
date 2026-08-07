@@ -526,6 +526,12 @@ bool baseDatos::modificarArticulo(QSqlDatabase db, QStringList datos,
 }
 
 bool baseDatos::insertarArticulo(QSqlDatabase db, QStringList datos) {
+  // Validar que los datos recibidos no estén vacíos y que el código (primer elemento) no sea nulo o vacío
+  if (datos.isEmpty() || datos.at(0).trimmed().isEmpty()) {
+    qDebug() << "Error: Se intentó insertar un artículo sin código.";
+    return false;
+  }
+
   qDebug() << datos;
   QSqlQuery consulta(db);
   consulta.prepare(
@@ -2100,8 +2106,14 @@ int baseDatos::nTarjetasDesdeUltimoArqueo(QString fechaI, QString horaI,
 }
 
 QSqlQuery baseDatos::devolverTablaCompleta(QString base, QString nombreTabla) {
+  // SEC: solo se permite consultar tablas de la whitelist (identificadores fijos)
+  static const QRegularExpression reId("^[A-Za-z_][A-Za-z0-9_]*$");
+  if (!reId.match(nombreTabla).hasMatch()) {
+    qWarning() << "devolverTablaCompleta: identificador no válido:" << nombreTabla;
+    return QSqlQuery();
+  }
   QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
-  consulta.exec("SELECT * FROM " + nombreTabla);
+  consulta.exec("SELECT * FROM `" + nombreTabla + "`");
   return consulta;
 }
 
@@ -2317,16 +2329,22 @@ QString baseDatos::sumarStockArticulo(QString id, QString nombreConnexion) {
 
 QString baseDatos::ticketCercanoFecha(QString tabla, QString fecha,
                                       QString cuando) {
+  // SEC: solo se permite consultar las tablas oficiales de tickets (whitelist)
+  static const QStringList tablasPermitidas = {"tickets", "ticketss"};
+  if (!tablasPermitidas.contains(tabla)) {
+    qWarning() << "ticketCercanoFecha: tabla no permitida:" << tabla;
+    return 0;
+  }
+
   QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   if (cuando == "minimo") {
-    consulta.exec("SELECT min(ticket) FROM " + tabla +
-                  " WHERE concat_ws('/',fecha,hora) >= '" + fecha + "'");
+    consulta.prepare("SELECT min(ticket) FROM " + tabla +
+                     " WHERE concat_ws('/',fecha,hora) >= ?");
   } else {
-    consulta.exec("SELECT max(ticket) FROM " + tabla +
-                  " WHERE concat_ws('/',fecha,hora) <= '" + fecha + "'");
+    consulta.prepare("SELECT max(ticket) FROM " + tabla +
+                     " WHERE concat_ws('/',fecha,hora) <= ?");
   }
-  // consulta.bindValue(0,tabla);
-  // consulta.bindValue(1,fecha);
+  consulta.bindValue(0, fecha);
   if (consulta.exec()) {
     consulta.first();
     return consulta.value(0).toString();

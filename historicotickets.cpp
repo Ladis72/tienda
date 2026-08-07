@@ -16,11 +16,25 @@ HistoricoTickets::HistoricoTickets(QWidget *parent)
     listaTickets = new QSqlQueryModel(this);
     ticket = new QSqlQueryModel(this);
     nTicket = "";
+    aplicarPermisos();
 }
 
 HistoricoTickets::~HistoricoTickets()
 {
     delete ui;
+}
+
+/**
+ * @brief Aplica permisos a las acciones sobre el histórico de tickets.
+ */
+void HistoricoTickets::aplicarPermisos() {
+    if (!conf || !conf->permisos())
+        return;
+
+    ui->pushButtonImprimir->setEnabled(conf->permisos()->tiene("tickets.imprimir"));
+    ui->pushButtonFormaPago->setEnabled(conf->permisos()->tiene("tickets.modificar"));
+    ui->pushButtonCliente->setEnabled(conf->permisos()->tiene("tickets.modificar"));
+    ui->pushButtonImprimirFactura->setEnabled(conf->permisos()->tiene("tickets.facturar"));
 }
 
 void HistoricoTickets::mostrarTickets()

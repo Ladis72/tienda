@@ -23,6 +23,16 @@
 #include <QToolBar>
 #include <QVBoxLayout>
 #include <QtConcurrent/QtConcurrent>
+
+// Escapa un literal de cadena MySQL para usarlo dentro de un setFilter
+// de QSqlTableModel (que no admite parámetros enlazados).
+static QString escSQL(const QString &s) {
+  QString r = s;
+  r.replace("\\", "\\\\");
+  r.replace("'", "''");
+  return r;
+}
+
 Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   listaConexionesRemotas = conf->getNombreConexionesActivas();
   qDebug() << "Lista conexiones remotas: ";
@@ -206,9 +216,28 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   ui->lineEditCod->setFocus();
   graficoVentas = new GraficoVentasWidget(this);
   ui->layOutVentas->addWidget(graficoVentas);
+
+  aplicarPermisos();
 }
 
 Articulos::~Articulos() { delete ui; }
+
+/**
+ * @brief Aplica las restricciones de permisos a los botones del formulario de artículos.
+ */
+void Articulos::aplicarPermisos() {
+  if (!conf || !conf->permisos())
+    return;
+
+  ui->pushButtonNuevo->setEnabled(conf->permisos()->tiene("articulos.crear"));
+  ui->pushButtonModificar->setEnabled(conf->permisos()->tiene("articulos.modificar"));
+  ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("articulos.borrar"));
+  ui->pushButtonCambiarCodigo->setEnabled(conf->permisos()->tiene("articulos.cambiar_codigo"));
+  ui->pushButtonHistorialPrecios->setEnabled(conf->permisos()->tiene("articulos.historial_precios"));
+  ui->pushButtonTrazabilidad->setEnabled(conf->permisos()->tiene("articulos.trazabilidad"));
+  ui->pushButtonPonerFoto->setEnabled(conf->permisos()->tiene("articulos.modificar"));
+  ui->pushButtonBorrarFoto->setEnabled(conf->permisos()->tiene("articulos.modificar"));
+}
 
 void Articulos::refrescarBotones(int i) {
   ui->pushButtonAnterior->setEnabled(i > 0);
@@ -520,8 +549,8 @@ void Articulos::cargarCodAux() {
   modeloAux->setEditStrategy(QSqlTableModel::OnRowChange);
 
   // Se sanitiza la entrada rodeándola con comillas simples y escapando comillas
-  // internas
-  QString codSanitizado = ui->lineEditCod->text().replace("'", "''");
+  // y barras internas (evita inyección vía backslash)
+  QString codSanitizado = escSQL(ui->lineEditCod->text());
   modeloAux->setFilter(QString("cod = '%1'").arg(codSanitizado));
 
   modeloAux->select();
@@ -753,8 +782,12 @@ bool Articulos::eventFilter(QObject *obj, QEvent *event) {
 
 void Articulos::keyPressEvent(QKeyEvent *e) {
   if (e->key() == Qt::Key_F11) {
-    ui->pushButtonBorrar->setEnabled(true);
-    ui->pushButtonCambiarCodigo->setEnabled(true);
+    if (conf && conf->permisos()) {
+      if (conf->permisos()->tiene("articulos.borrar"))
+        ui->pushButtonBorrar->setEnabled(true);
+      if (conf->permisos()->tiene("articulos.cambiar_codigo"))
+        ui->pushButtonCambiarCodigo->setEnabled(true);
+    }
   }
 }
 
@@ -785,8 +818,16 @@ void Articulos::on_pushButtonSiguiente_clicked() {
 }
 
 void Articulos::on_pushButtonModificar_clicked() {
+  // Comprobar que el código del artículo no esté vacío antes de guardar o modificar
+  if (ui->lineEditCod->text().trimmed().isEmpty()) {
+    QMessageBox::warning(this, tr("ATENCIÓN"),
+                         tr("No se pueden guardar los cambios de un artículo sin código. Por favor, introduzca un código válido."));
+    ui->lineEditCod->setFocus();
+    return;
+  }
+
   QStringList datos = recogerDatosFormulario();
-  QString cod = ui->lineEditCod->text();
+  QString cod = ui->lineEditCod->text().trimmed();
   int idx = mapper.currentIndex();
 
   QMessageBox msgBox(this);
@@ -1202,10 +1243,19 @@ void Articulos::on_pushButtonCambiarCodigo_clicked() {
 }
 
 void Articulos::on_pushButtonNuevo_clicked() {
+  // Comprobar que el campo del código no esté vacío al intentar crear un nuevo artículo
+  QString cod = ui->lineEditCod->text().trimmed();
+  if (cod.isEmpty()) {
+    QMessageBox::warning(this, tr("ATENCIÓN"),
+                         tr("No se puede crear un artículo sin código. Por favor, introduzca un código de artículo válido."));
+    ui->lineEditCod->setFocus();
+    return;
+  }
+
   QSqlRecord registroExistente =
-      base.consulta_producto(conf->getConexionLocal(), ui->lineEditCod->text());
+      base.consulta_producto(conf->getConexionLocal(), cod);
   if (!registroExistente.isEmpty()) {
-    QMessageBox::warning(this, "ATENCION", "El registro ya existe");
+    QMessageBox::warning(this, tr("ATENCION"), tr("El registro ya existe"));
     return;
   }
 
@@ -1253,6 +1303,14 @@ void Articulos::on_pushButtonVer_clicked() {
 }
 
 void Articulos::on_pushButtonAnadir_clicked() {
+  // Verificar que exista un código de artículo antes de asociarle un código auxiliar
+  if (ui->lineEditCod->text().trimmed().isEmpty()) {
+    QMessageBox::warning(this, tr("ATENCIÓN"),
+                         tr("No se puede añadir un código auxiliar si el artículo no tiene código."));
+    ui->lineEditCod->setFocus();
+    return;
+  }
+
   if (!ui->lineEditAux->text().isEmpty()) {
     modeloAux->insertRow(0);
     QSqlRecord record = modeloAux->record();
