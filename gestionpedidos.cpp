@@ -9,11 +9,25 @@ GestionPedidos::GestionPedidos(QWidget *parent)
     ui->setupUi(this);
     borrarVariables();
     llenarTablaPedidos();
+    aplicarPermisos();
 }
 
 GestionPedidos::~GestionPedidos()
 {
     delete ui;
+}
+
+/**
+ * @brief Aplica permisos a los botones de gestión de pedidos.
+ */
+void GestionPedidos::aplicarPermisos() {
+    if (!conf || !conf->permisos())
+        return;
+
+    ui->pushButtonNuevo->setEnabled(conf->permisos()->tiene("pedidos.crear"));
+    ui->pushButtonGestionar->setEnabled(conf->permisos()->tiene("pedidos.modificar"));
+    ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("pedidos.borrar"));
+    ui->pushButtonAceptar->setEnabled(conf->permisos()->tiene("pedidos.aceptar"));
 }
 
 void GestionPedidos::on_pushButtonNuevo_clicked()

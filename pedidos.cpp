@@ -78,10 +78,25 @@ pedidos::pedidos(QString idPed, QString proveedor, QString ndoc,
           qDebug() << "Error al guardar notas en albaranes_tmp: " << query.lastError().text();
       }
   });
+
+  aplicarPermisos();
 }
 
 pedidos::~pedidos() {
   delete ui;
+}
+
+/**
+ * @brief Aplica las restricciones de permisos a los botones de líneas de pedidos.
+ */
+void pedidos::aplicarPermisos() {
+  if (!conf || !conf->permisos())
+    return;
+
+  ui->pushButtonAnadir->setEnabled(conf->permisos()->tiene("pedidos.crear") || conf->permisos()->tiene("pedidos.modificar"));
+  ui->pushButtonModificar->setEnabled(conf->permisos()->tiene("pedidos.modificar"));
+  ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("pedidos.borrar"));
+  ui->pushButtonImprimir->setEnabled(conf->permisos()->tiene("pedidos.imprimir"));
 }
 
 void pedidos::on_leCod_editingFinished() {

@@ -36,11 +36,25 @@ EntradaMercancia::EntradaMercancia(QWidget *parent)
         ui->dateEditCaducidad->setFocus();
     });
     connect(ui->lineEditPVP, &QLineEdit::returnPressed, this, &EntradaMercancia::on_pushButtonAgregarLinea_clicked);
+
+    aplicarPermisos();
 }
 
 EntradaMercancia::~EntradaMercancia()
 {
     delete ui;
+}
+
+/**
+ * @brief Aplica permisos a las acciones del módulo de entrada de mercancía.
+ */
+void EntradaMercancia::aplicarPermisos() {
+    if (!conf || !conf->permisos())
+        return;
+
+    ui->pushButtonAgregarLinea->setEnabled(conf->permisos()->tiene("entradas.crear"));
+    ui->pushButtonAceptar->setEnabled(conf->permisos()->tiene("entradas.crear"));
+    ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("entradas.borrar"));
 }
 
 void EntradaMercancia::on_pushButtonAceptar_clicked()

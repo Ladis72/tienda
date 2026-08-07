@@ -19,6 +19,7 @@ class HistoricoTickets : public QDialog
 public:
     explicit HistoricoTickets(QWidget *parent = 0);
     ~HistoricoTickets();
+    void aplicarPermisos();
 
 private slots:
     void on_pushButtonConsultar_clicked();

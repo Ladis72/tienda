@@ -1,5 +1,6 @@
 #include "verifactudialog.h"
 #include "ui_verifactudialog.h"
+#include "verifactuclass.h"
 #include <QCoreApplication>
 #include <QSettings>
 #include <QFileDialog>
@@ -119,15 +120,36 @@ void VerifactuDialog::llenarTabla()
                                                      conf->getConexionLocal());
         modeloTabla->setItem(row, 3, new QStandardItem(nombreUsuario));
 
-        // Mostramos el estado de remisión de forma visual (verde para éxito, rojo para pendiente/error)
+        // Mostramos el estado de remisión según la semántica de estado_envio:
+        // 0 = Pendiente/Error (rojo), 1 = Enviado (verde), 2 = Aceptado con errores (ámbar),
+        // 3 = Local/No remitido (azul).
         int estado = resultado.value("estado_envio").toInt();
-        QString estadoText = (estado == 1) ? tr("Enviado") : tr("Pendiente / Error");
-        QStandardItem *estadoItem = new QStandardItem(estadoText);
-        if (estado == 1) {
-            estadoItem->setForeground(QBrush(QColor("#2e7d32"))); // Verde
-        } else {
-            estadoItem->setForeground(QBrush(QColor("#d32f2f"))); // Rojo
+        QString estadoText;
+        QBrush estadoColor;
+        switch (estado) {
+        case verifactuClass::EstadoPendiente:
+            estadoText = tr("Pendiente / Error");
+            estadoColor = QBrush(QColor("#d32f2f")); // Rojo
+            break;
+        case verifactuClass::EstadoEnviado:
+            estadoText = tr("Enviado");
+            estadoColor = QBrush(QColor("#2e7d32")); // Verde
+            break;
+        case verifactuClass::EstadoAceptadoConErrores:
+            estadoText = tr("Aceptado con errores");
+            estadoColor = QBrush(QColor("#f57c00")); // Ámbar
+            break;
+        case verifactuClass::EstadoLocal:
+            estadoText = tr("Local (no remitido)");
+            estadoColor = QBrush(QColor("#1565c0")); // Azul
+            break;
+        default:
+            estadoText = tr("Desconocido");
+            estadoColor = QBrush(QColor("#616161")); // Gris
+            break;
         }
+        QStandardItem *estadoItem = new QStandardItem(estadoText);
+        estadoItem->setForeground(estadoColor);
         modeloTabla->setItem(row, 4, estadoItem);
         row++;
     }

@@ -26,6 +26,7 @@ class SaneadorGlobal : public QDialog
 public:
     explicit SaneadorGlobal(const UnificarMaestrosConfig &config, QWidget *parent = nullptr);
     ~SaneadorGlobal();
+    void aplicarPermisos();
 
 private slots:
     void on_comboBoxTienda_currentIndexChanged(int index);

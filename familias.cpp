@@ -6,6 +6,15 @@
 #include <QStyle>
 #include "ui_familias.h"
 
+// Escapa un literal de cadena MySQL para usarlo dentro de un setFilter
+// de QSqlTableModel (que no admite parámetros enlazados).
+static QString escSQL(const QString &s) {
+  QString r = s;
+  r.replace("\\", "\\\\");
+  r.replace("'", "''");
+  return r;
+}
+
 /**
  * @brief Constructor de la ventana de Familias.
  * Configura el modelo de datos, la interfaz y los iconos.
@@ -48,11 +57,26 @@ Familias::Familias(QWidget *parent)
     ui->pushButtonSaneador->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
 
     ui->lineEdit->setFocus();
+    aplicarPermisos();
 }
 
 Familias::~Familias()
 {
     delete ui;
+}
+
+/**
+ * @brief Aplica las restricciones de permisos a los botones del formulario de familias.
+ */
+void Familias::aplicarPermisos() {
+    if (!conf || !conf->permisos())
+        return;
+
+    ui->pushButtonAnadir->setEnabled(conf->permisos()->tiene("familias.crear"));
+    ui->pushButtonGuardar->setEnabled(conf->permisos()->tiene("familias.modificar"));
+    ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("familias.borrar"));
+    ui->pushButtonUnificar->setEnabled(conf->permisos()->tiene("familias.unificar"));
+    ui->pushButtonSaneador->setEnabled(conf->permisos()->tiene("saneador_global"));
 }
 
 /**
@@ -151,7 +175,7 @@ void Familias::on_tableView_clicked(const QModelIndex &index)
 void Familias::on_lineEdit_textChanged(const QString &arg1)
 {
     // Filtro insensible a mayúsculas/minúsculas y más seguro
-    modelo->setFilter(QString("descripcion LIKE '%%1%'").arg(arg1));
+    modelo->setFilter(QString("descripcion LIKE '%%1%'").arg(escSQL(arg1)));
 }
 
 /**

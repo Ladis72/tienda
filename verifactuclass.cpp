@@ -235,7 +235,7 @@ QString verifactuClass::generarXmlAlta(const VeriFactuConfig &config,
  * @brief Realiza el envío del XML firmado/generado a la AEAT utilizando SOAP sobre HTTPS.
  * Utiliza QEventLoop para bloquear síncronamente durante la remisión y reportar errores inmediatos.
  */
-bool verifactuClass::enviarAEAT(const QString &xmlContent, const VeriFactuConfig &config, QString &errStr)
+int verifactuClass::enviarAEAT(const QString &xmlContent, const VeriFactuConfig &config, QString &errStr)
 {
     // Validar parámetros del certificado
     if (config.certificadoRuta.isEmpty()) {
@@ -292,14 +292,17 @@ bool verifactuClass::enviarAEAT(const QString &xmlContent, const VeriFactuConfig
     connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec();
 
-    bool success = false;
+    int resultado = EstadoPendiente;
     if (reply->error() == QNetworkReply::NoError) {
         QByteArray response = reply->readAll();
-        // Buscar confirmación de aceptación en la respuesta XML de la AEAT
-        if (response.contains("Correcto") ||
-            response.contains("AceptadoConErrores") ||
+        // Distinguir la respuesta oficial de la AEAT: "Correcto" es aceptación limpia,
+        // "AceptadoConErrores"/"AceptadaConErrores" es aceptación con errores que el
+        // emisor debe subsanar (no debe tratarse como un éxito limpio).
+        if (response.contains("AceptadoConErrores") ||
             response.contains("AceptadaConErrores")) {
-            success = true;
+            resultado = EstadoAceptadoConErrores;
+        } else if (response.contains("Correcto")) {
+            resultado = EstadoEnviado;
         } else {
             errStr = tr("El servidor AEAT retornó errores: %1").arg(QString::fromUtf8(response));
         }
@@ -308,7 +311,7 @@ bool verifactuClass::enviarAEAT(const QString &xmlContent, const VeriFactuConfig
     }
 
     reply->deleteLater();
-    return success;
+    return resultado;
 }
 
 /**
@@ -439,11 +442,18 @@ void verifactuClass::procesarEnviosPendientes(const QString &conexionOriginal)
 
                 QString errStr;
                 qDebug() << "Reintentando enviar ticket pendiente" << numSerie << "a la AEAT...";
-                bool ok = enviarAEAT(xmlContent, config, errStr);
+                int resultado = enviarAEAT(xmlContent, config, errStr);
 
-                if (ok) {
+                if (resultado == EstadoPendiente) {
+                    qWarning() << "Reenvío fallido para ticket" << numSerie
+                               << ". Deteniendo cola de reintentos. Motivo:" << errStr;
+                    // Si falla un envío (por ejemplo, sigue sin haber conexión), detenemos el bucle
+                    break;
+                } else {
+                    // Aceptado (EstadoEnviado) o AceptadoConErrores: ya no se reintenta
                     QSqlQuery updateQuery(db);
-                    updateQuery.prepare("UPDATE verifactu_logs SET estado_envio = 1 WHERE id = :id");
+                    updateQuery.prepare("UPDATE verifactu_logs SET estado_envio = :estado WHERE id = :id");
+                    updateQuery.bindValue(":estado", resultado);
                     updateQuery.bindValue(":id", logId);
                     if (updateQuery.exec()) {
                         qDebug() << "Reenvío exitoso para ticket pendiente" << numSerie;
@@ -451,11 +461,6 @@ void verifactuClass::procesarEnviosPendientes(const QString &conexionOriginal)
                         qWarning() << "Fallo al actualizar el estado de envío para ticket" << numSerie
                                    << updateQuery.lastError().text();
                     }
-                } else {
-                    qWarning() << "Reenvío fallido para ticket" << numSerie
-                               << ". Deteniendo cola de reintentos. Motivo:" << errStr;
-                    // Si falla un envío (por ejemplo, sigue sin haber conexión), detenemos el bucle
-                    break;
                 }
             }
         } else {

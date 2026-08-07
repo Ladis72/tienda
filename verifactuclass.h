@@ -32,6 +32,21 @@ class verifactuClass : public QObject
 public:
     explicit verifactuClass(QObject *parent = nullptr);
 
+    /**
+     * @brief Semántica del campo estado_envio de verifactu_logs.
+     * 0 = Pendiente / Error (candidato a reenvío automático)
+     * 1 = Enviado (la AEAT respondió "Correcto")
+     * 2 = Aceptado con errores (la AEAT respondió "AceptadoConErrores": el registro
+     *     quedó admitido pero el emisor debe subsanar los errores notificados)
+     * 3 = Local (modo No VeriFactu: el XML nunca se remite a la AEAT, solo se archiva)
+     */
+    enum EstadoEnvioVerifactu {
+        EstadoPendiente = 0,
+        EstadoEnviado = 1,
+        EstadoAceptadoConErrores = 2,
+        EstadoLocal = 3
+    };
+
     /// Carga la configuración desde tienda.ini de manera limpia (SEC-01)
     static VeriFactuConfig cargarConfiguracion();
 
@@ -63,8 +78,10 @@ public:
                                   const QString &numSerieAnterior = QString(),
                                   const QString &fechaExpedicionAnterior = QString());
 
-    /// Envía el XML al web service SOAP de la AEAT mediante HTTPS y cliente certificado
-    static bool enviarAEAT(const QString &xmlContent, const VeriFactuConfig &config, QString &errStr);
+    /// Envía el XML al web service SOAP de la AEAT mediante HTTPS y cliente certificado.
+    /// Devuelve un valor de EstadoEnvioVerifactu: EstadoEnviado o EstadoAceptadoConErrores
+    /// si la AEAT respondió, EstadoPendiente si hubo error (errStr lo detalla).
+    static int enviarAEAT(const QString &xmlContent, const VeriFactuConfig &config, QString &errStr);
 
     /// Procesa y reenvía en segundo plano los registros pendientes (estado_envio = 0)
     static void procesarEnviosPendientes(const QString &conexionOriginal);

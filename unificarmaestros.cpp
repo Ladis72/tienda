@@ -135,50 +135,58 @@ bool UnificarMaestros::ejecutarFusion(int idGanador, const QList<int> &idsPerded
     }
 
     QSqlQuery q(db);
-    
-    QStringList sIds;
-    for (int id : idsPerdedores) sIds << QString::number(id);
-    QString idsParaSql = sIds.join(",");
 
     // A) Mover dependencias en cascada
     for (const auto &dep : m_config.dependencias) {
-        QString valorGanador;
-        QString idsOValoresPerdedoresParaSql;
+        // Los identificadores de tabla/campo provienen de la configuración
+        // (constantes en código, whitelist). Todos los VALORES se pasan como
+        // parámetros enlazados para evitar inyección SQL.
+        QVariant valorGanador;
+        QStringList valoresPerdedores;
 
         if (dep.campoMaestroOrigen.isEmpty()) {
             // Caso estándar: por ID numérico
-            valorGanador = QString::number(idGanador);
-            idsOValoresPerdedoresParaSql = idsParaSql;
+            valorGanador = idGanador;
+            for (int idPerdedor : idsPerdedores) valoresPerdedores << QString::number(idPerdedor);
         } else {
             // Caso especial: por otro campo (ej: login/usuario)
             // 1. Obtener valor del ganador
-            q.prepare(QString("SELECT %1 FROM %2 WHERE %3 = %4")
-                      .arg(dep.campoMaestroOrigen, m_config.tablaMaestra, m_config.campoId, QString::number(idGanador)));
+            q.prepare(QString("SELECT %1 FROM %2 WHERE %3 = ?")
+                      .arg(dep.campoMaestroOrigen, m_config.tablaMaestra, m_config.campoId));
+            q.addBindValue(idGanador);
             if (!q.exec() || !q.first()) {
                 db.rollback();
                 QMessageBox::critical(this, tr("Error"), tr("No se pudo obtener el valor de '%1' para el ganador.").arg(dep.campoMaestroOrigen));
                 return false;
             }
-            valorGanador = "'" + q.value(0).toString() + "'";
+            valorGanador = q.value(0);
 
             // 2. Obtener valores de los perdedores
+            QStringList idsPerdedoresSql;
+            for (int idPerdedor : idsPerdedores) idsPerdedoresSql << QString::number(idPerdedor);
             q.prepare(QString("SELECT %1 FROM %2 WHERE %3 IN (%4)")
-                      .arg(dep.campoMaestroOrigen, m_config.tablaMaestra, m_config.campoId, idsParaSql));
+                      .arg(dep.campoMaestroOrigen, m_config.tablaMaestra, m_config.campoId,
+                           idsPerdedoresSql.join(",")));
             if (!q.exec()) {
                 db.rollback();
                 return false;
             }
-            QStringList valoresPerdedores;
-            while (q.next()) valoresPerdedores << "'" + q.value(0).toString() + "'";
-            idsOValoresPerdedoresParaSql = valoresPerdedores.join(",");
+            while (q.next()) valoresPerdedores << q.value(0).toString();
         }
 
-        if (idsOValoresPerdedoresParaSql.isEmpty()) continue;
+        if (valoresPerdedores.isEmpty()) continue;
 
-        QString sqlUpd = QString("UPDATE %1 SET %2 = %3 WHERE %2 IN (%4)")
-                         .arg(dep.tabla, dep.campo, valorGanador, idsOValoresPerdedoresParaSql);
-        
-        if (!q.exec(sqlUpd)) {
+        // Construir placeholders para la lista de valores perdedores
+        QStringList placeholders;
+        for (int i = 0; i < valoresPerdedores.size(); ++i) placeholders << "?";
+        QString sqlUpd = QString("UPDATE %1 SET %2 = ? WHERE %2 IN (%3)")
+                         .arg(dep.tabla, dep.campo, placeholders.join(","));
+
+        q.prepare(sqlUpd);
+        q.addBindValue(valorGanador);
+        for (const QString &vp : valoresPerdedores) q.addBindValue(vp);
+
+        if (!q.exec()) {
             db.rollback();
             QMessageBox::critical(this, tr("Error SQL"), tr("Error actualizando dependencias en %1:\n").arg(dep.tabla) + q.lastError().text());
             return false;
@@ -186,11 +194,15 @@ bool UnificarMaestros::ejecutarFusion(int idGanador, const QList<int> &idsPerded
     }
 
     // B) Borrar registros perdedores
-    QString sqlDel = QString("DELETE FROM %1 WHERE %2 IN (%3)")
-                     .arg(m_config.tablaMaestra, m_config.campoId, idsParaSql);
-    if (!q.exec(sqlDel)) {
+    QStringList placeholdersDel;
+    for (int i = 0; i < idsPerdedores.size(); ++i) placeholdersDel << "?";
+    QSqlQuery qDel(db);
+    qDel.prepare(QString("DELETE FROM %1 WHERE %2 IN (%3)")
+                 .arg(m_config.tablaMaestra, m_config.campoId, placeholdersDel.join(",")));
+    for (int idPerdedor : idsPerdedores) qDel.addBindValue(idPerdedor);
+    if (!qDel.exec()) {
         db.rollback();
-        QMessageBox::critical(this, tr("Error SQL"), tr("Error eliminando registros obsoletos:\n") + q.lastError().text());
+        QMessageBox::critical(this, tr("Error SQL"), tr("Error eliminando registros obsoletos:\n") + qDel.lastError().text());
         return false;
     }
 

@@ -54,11 +54,26 @@ Fabricantes::Fabricantes(QWidget *parent)
     ui->pushButtonSaneador->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
 
     ui->lineEdit->setFocus();
+    aplicarPermisos();
 }
 
 Fabricantes::~Fabricantes()
 {
     delete ui;
+}
+
+/**
+ * @brief Aplica las restricciones de permisos a los botones del formulario de fabricantes.
+ */
+void Fabricantes::aplicarPermisos() {
+    if (!conf || !conf->permisos())
+        return;
+
+    ui->pushButtonAnadir->setEnabled(conf->permisos()->tiene("fabricantes.crear"));
+    ui->pushButtonModificar->setEnabled(conf->permisos()->tiene("fabricantes.modificar"));
+    ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("fabricantes.borrar"));
+    ui->pushButtonUnificar->setEnabled(conf->permisos()->tiene("fabricantes.unificar"));
+    ui->pushButtonSaneador->setEnabled(conf->permisos()->tiene("saneador_global"));
 }
 
 /**

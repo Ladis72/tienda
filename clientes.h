@@ -27,6 +27,7 @@ public:
   explicit Clientes(QWidget *parent = nullptr);
   explicit Clientes(QWidget *parent, QString codigo);
   ~Clientes();
+  void aplicarPermisos();
 
 private slots:
   void on_pushButtonAnterior_clicked();

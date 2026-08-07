@@ -2,6 +2,15 @@
 #include "ui_formatos.h"
 #include "saneadorglobal.h"
 
+// Escapa un literal de cadena MySQL para usarlo dentro de un setFilter
+// de QSqlTableModel (que no admite parámetros enlazados).
+static QString escSQL(const QString &s) {
+  QString r = s;
+  r.replace("\\", "\\\\");
+  r.replace("'", "''");
+  return r;
+}
+
 Formatos::Formatos(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::Formatos)
@@ -43,7 +52,7 @@ void Formatos::on_pushButtonnadir_clicked()
 
 void Formatos::on_lineEditFiltro_textChanged(const QString &arg1)
 {
-    modelo->setFilter("formato LIKE '%" + arg1 + "%'");
+    modelo->setFilter("formato LIKE '%" + escSQL(arg1) + "%'");
 }
 
 void Formatos::on_pushButtonUnificar_clicked()

@@ -20,6 +20,7 @@ class pedidos : public QDialog
 public:
     explicit pedidos(QString idPedido, QString proveedor, QString ndoc, QWidget *parent = 0);
     ~pedidos();
+    void aplicarPermisos();
 
 private slots:
     void on_leCod_editingFinished();
