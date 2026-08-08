@@ -20,6 +20,15 @@
 #include <QSettings>
 #include <QSizePolicy>
 #include <QSplitter>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QListWidget>
+#include <QDialogButtonBox>
+#include <QPushButton>
+#include <QLabel>
+#include <QApplication>
+#include <QCheckBox>
 
 /******************************************************************************
  * CONSTRUCTOR principal de la aplicación Tienda
@@ -178,6 +187,19 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
                          conf->getConexionLocal());
 
+  // Tabla para la gestión de notas y avisos de la aplicación
+  base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `notas` ("
+                         "  `id` INT AUTO_INCREMENT PRIMARY KEY,"
+                         "  `titulo` VARCHAR(200) NOT NULL,"
+                         "  `descripcion` TEXT,"
+                         "  `usuario` VARCHAR(100) NOT NULL,"
+                         "  `fecha_creacion` DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                         "  `fecha_limite` DATE DEFAULT NULL,"
+                         "  `estado` ENUM('Pendiente','Completada') DEFAULT 'Pendiente',"
+                         "  `prioridad` ENUM('Alta','Normal','Baja') DEFAULT 'Normal'"
+                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
+                         conf->getConexionLocal());
+
   base.ejecutarSentencia("DROP TRIGGER IF EXISTS `set_tienda_origen_precio`", conf->getConexionLocal());
   base.ejecutarSentencia(
       "CREATE TRIGGER `set_tienda_origen_precio` BEFORE UPDATE ON `articulos` "
@@ -268,6 +290,8 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
    ******************************************************************************/
   conexiones = new conexionesRemotas(this);
   conexiones->base = &base;
+  ui->pushButtonConectar->setToolTip(tr("Conectar a las tiendas remotas seleccionadas.\n"
+                                         "Mantén pulsado Shift al hacer clic para cambiar la selección de tiendas."));
   ui->statusBar->addPermanentWidget(ui->pushButtonConectar);
 
   // Botón de usuario en la barra de estado
@@ -563,6 +587,9 @@ void Tienda::permisos(int rol) {
     }
     ui->pushButtonSesion->setEnabled(true);
     usuario->setEnabled(true);
+    if (notasWidget) {
+      notasWidget->aplicarPermisos();
+    }
     return;
   }
 
@@ -571,6 +598,11 @@ void Tienda::permisos(int rol) {
     if (it.value())
       it.value()->setEnabled(
           conf->permisos()->tiene(it.key())); // guard: widget puede ser nullptr
+  }
+
+  // Refrescar también los permisos internos del widget de notas
+  if (notasWidget) {
+    notasWidget->aplicarPermisos();
   }
 
   // Botón de sesión y usuario siempre accesibles
@@ -774,17 +806,123 @@ void Tienda::refrescarConexiones() {
     oldLab->deleteLater();
   }
 
-  // 2. Obtener la lista de tiendas y sus estados de conexión (una sola vez)
+  // 2. Obtener la lista completa de tiendas configuradas
   QStringList nombresTiendas = conexiones->lista();
+  if (nombresTiendas.isEmpty()) {
+      return;
+  }
+
+  // Cargar configuración guardada desde tienda.ini
+  QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+  QSettings settings(iniPath, QSettings::IniFormat);
+  bool autoConectar = settings.value("TiendasRemotas/conectar_automatico", false).toBool();
+  QStringList tiendasGuardadas = settings.value("TiendasRemotas/tiendas_seleccionadas").toStringList();
+
+  // Comprobar si se mantiene pulsada la tecla Shift al hacer clic
+  bool forzarConfig = (QApplication::keyboardModifiers() & Qt::ShiftModifier);
+
+  QStringList tiendasSeleccionadas;
+
+  // Si está activado conectar automático y hay una selección guardada, usarla (salvo que pulsen Shift)
+  if (autoConectar && !tiendasGuardadas.isEmpty() && !forzarConfig) {
+      for (const QString &t : tiendasGuardadas) {
+          if (nombresTiendas.contains(t)) {
+              tiendasSeleccionadas << t;
+          }
+      }
+  }
+
+  // Si no se han determinado las tiendas a conectar (primera vez o Shift pulsado), mostrar diálogo
+  if (tiendasSeleccionadas.isEmpty()) {
+      QDialog dlg(this);
+      dlg.setWindowTitle(tr("Seleccionar Tiendas Remotas"));
+      dlg.resize(350, 420);
+
+      QVBoxLayout *layout = new QVBoxLayout(&dlg);
+      QLabel *lblInfo = new QLabel(tr("Selecciona las tiendas a las que deseas conectar:"), &dlg);
+      layout->addWidget(lblInfo);
+
+      QListWidget *listWidget = new QListWidget(&dlg);
+      layout->addWidget(listWidget);
+
+      // Agregar tiendas a la lista con casillas de verificación
+      for (const QString &nombre : nombresTiendas) {
+          QListWidgetItem *item = new QListWidgetItem(nombre, listWidget);
+          item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+          
+          // Si había una selección guardada, restaurar su estado; si no, marcar por defecto
+          if (!tiendasGuardadas.isEmpty()) {
+              item->setCheckState(tiendasGuardadas.contains(nombre) ? Qt::Checked : Qt::Unchecked);
+          } else {
+              item->setCheckState(Qt::Checked);
+          }
+      }
+
+      // Layout para botones de marcación rápida
+      QHBoxLayout *btnLayout = new QHBoxLayout();
+      QPushButton *btnMarcarTodo = new QPushButton(tr("Marcar todo"), &dlg);
+      QPushButton *btnDesmarcarTodo = new QPushButton(tr("Desmarcar todo"), &dlg);
+      btnLayout->addWidget(btnMarcarTodo);
+      btnLayout->addWidget(btnDesmarcarTodo);
+      layout->addLayout(btnLayout);
+
+      connect(btnMarcarTodo, &QPushButton::clicked, [listWidget]() {
+          for (int i = 0; i < listWidget->count(); ++i) {
+              listWidget->item(i)->setCheckState(Qt::Checked);
+          }
+      });
+
+      connect(btnDesmarcarTodo, &QPushButton::clicked, [listWidget]() {
+          for (int i = 0; i < listWidget->count(); ++i) {
+              listWidget->item(i)->setCheckState(Qt::Unchecked);
+          }
+      });
+
+      // Opción para guardar la selección de forma persistente
+      QCheckBox *chkAuto = new QCheckBox(tr("Recordar mi selección y conectar directamente"), &dlg);
+      chkAuto->setToolTip(tr("Si se activa, el botón Conectar usará esta selección de forma directa.\n"
+                             "Para modificarla en el futuro, mantén pulsada la tecla Shift mientras haces clic en Conectar."));
+      chkAuto->setChecked(autoConectar);
+      layout->addWidget(chkAuto);
+
+      QDialogButtonBox *buttonBox = new QDialogButtonBox(
+          QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+      layout->addWidget(buttonBox);
+
+      connect(buttonBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+      connect(buttonBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+      if (dlg.exec() != QDialog::Accepted) {
+          return; // Cancelado por el usuario
+      }
+
+      // Filtrar las tiendas seleccionadas
+      for (int i = 0; i < listWidget->count(); ++i) {
+          QListWidgetItem *item = listWidget->item(i);
+          if (item->checkState() == Qt::Checked) {
+              tiendasSeleccionadas << item->text();
+          }
+      }
+
+      if (tiendasSeleccionadas.isEmpty()) {
+          QMessageBox::information(this, tr("Conexión"), tr("No has seleccionado ninguna tienda."));
+          return;
+      }
+
+      // Guardar la nueva configuración en tienda.ini
+      settings.setValue("TiendasRemotas/conectar_automatico", chkAuto->isChecked());
+      settings.setValue("TiendasRemotas/tiendas_seleccionadas", tiendasSeleccionadas);
+  }
+
+  // Conectar solo a las tiendas seleccionadas
   QStringList estadosConexiones =
-      conexiones->crear(); // Devuelve pares [nombre, "1" o "0"]
+      conexiones->crear(tiendasSeleccionadas); // Devuelve pares [nombre, "1" o "0"]
 
   QStringList conexionesActivas;
 
-  // 3. Crear y configurar las nuevas etiquetas en la barra de estado
-  // Usamos el índice de nombresTiendas para mantener el orden
-  for (int i = 0; i < nombresTiendas.length(); i++) {
-    QString nombre = nombresTiendas.at(i);
+  // 3. Crear y configurar las etiquetas correspondientes a las tiendas seleccionadas en la barra de estado
+  for (int i = 0; i < tiendasSeleccionadas.length(); i++) {
+    QString nombre = tiendasSeleccionadas.at(i);
     QLabel *lab = new QLabel(nombre, this);
     lab->setObjectName("connLabel");
 

@@ -7,5 +7,7 @@
     </qresource>
     <qresource prefix="/">
         <file>documentos/style.qss</file>
+        <file>tiendaNueva_schema-MIRAR NOTAS AL FINAL.sql</file>
+        <file>tiendaNube_schema.sql</file>
     </qresource>
 </RCC>

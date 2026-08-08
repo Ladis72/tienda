@@ -105,6 +105,7 @@ SOURCES += main.cpp\
     dialogrecomendaciones.cpp \
     verificadorbasedatos.cpp \
     dialogdetallesverificador.cpp \
+    dialogasistenteinstalacion.cpp \
     dialogtrazabilidad.cpp
 
 HEADERS  += tienda.h \
@@ -194,6 +195,7 @@ HEADERS  += tienda.h \
     dialogrecomendaciones.h \
     verificadorbasedatos.h \
     dialogdetallesverificador.h \
+    dialogasistenteinstalacion.h \
     dialogtrazabilidad.h
 
 FORMS    += tienda.ui \
@@ -262,6 +264,7 @@ FORMS    += tienda.ui \
     visorlog.ui \
     verificadorbasedatos.ui \
     dialogdetallesverificador.ui \
+    dialogasistenteinstalacion.ui \
     dialogtrazabilidad.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
