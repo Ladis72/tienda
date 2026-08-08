@@ -15,6 +15,7 @@ class FormasPago : public QDialog
 public:
     explicit FormasPago(QWidget *parent = 0);
     ~FormasPago();
+    void aplicarPermisos();
     QString resultado;
 
 private slots:

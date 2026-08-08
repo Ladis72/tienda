@@ -15,6 +15,7 @@ class Familias : public QDialog
 public:
     explicit Familias(QWidget *parent = 0);
     ~Familias();
+    void aplicarPermisos();
 
     QString resultado;
 

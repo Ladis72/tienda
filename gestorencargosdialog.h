@@ -19,6 +19,7 @@ class GestorEncargosDialog : public QDialog
 public:
     explicit GestorEncargosDialog(QString autoFilterCliente = "", QWidget *parent = nullptr);
     ~GestorEncargosDialog();
+    void aplicarPermisos();
 
 private slots:
     void on_comboBoxEstado_currentTextChanged(const QString &arg1);

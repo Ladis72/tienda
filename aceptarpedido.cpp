@@ -130,6 +130,13 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         return false;
     }
 
+    // Asegurar que la fecha del documento esté correctamente asignada desde el UI (formato yyyy-MM-dd)
+    if (ui->dateEditDocumento->date().isValid()) {
+        fecha = ui->dateEditDocumento->date().toString("yyyy-MM-dd");
+    } else if (fecha.isEmpty()) {
+        fecha = QDate::currentDate().toString("yyyy-MM-dd");
+    }
+
     // Recuperar las notas del pedido temporal antes de que sea eliminado
     QString notasPedido = "";
     QSqlQuery queryNotes(QSqlDatabase::database(conf->getConexionLocal()));
@@ -139,6 +146,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         notasPedido = queryNotes.value("notas").toString();
     }
 
+    int totalUnidades = 0;
     for (int i = 0; i < modelo->rowCount(); ++i) {
         datos.clear();
         idLinea = modelo->record(i).value("id").toString();
@@ -146,10 +154,17 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         unidades = modelo->record(i).value("cantidad").toInt();
         bonificacion = modelo->record(i).value("bonificacion").toInt();
         uds = unidades + bonificacion;
+        totalUnidades += uds;
         descuentoLinea = modelo->record(i).value("descuento1").toString();
         descripcion = modelo->record(i).value("descripcion").toString();
         lote = modelo->record(i).value("lote").toString();
+        
+        // Sanitizar fechaCaducidad para evitar errores de restricción NOT NULL en la base de datos
         fechaCaducidad = modelo->record(i).value("fc").toString();
+        QDate dCad = QDate::fromString(fechaCaducidad, "yyyy-MM-dd");
+        if (!dCad.isValid()) {
+            fechaCaducidad = QDate::currentDate().toString("yyyy-MM-dd");
+        }
         precioCosto = modelo->record(i).value("costo").toDouble();
         pvp = modelo->record(i).value("pvp").toDouble();
         baseProducto = modelo->record(i).value("base").toString();
@@ -161,32 +176,66 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
 
         // Gestión de lotes y stock
         int udsPorProcesar = uds;
-        // 1. Intentar compensar stock negativo/genérico (lote vacío, fecha antigua)
-        QString idLoteGeneric = base.idLote(conf->getConexionLocal(), ean, "", "2000-01-01");
-        if (idLoteGeneric != "0") {
-            int pendientes = base.unidadesLote(conf->getConexionLocal(), idLoteGeneric);
-            qDebug() << "Compensando stock genérico: " << pendientes << " uds";
-            if (abs(pendientes) > udsPorProcesar) {
-                base.aumentarLote(conf->getConexionLocal(), idLoteGeneric, udsPorProcesar);
-                udsPorProcesar = 0;
-            } else if (abs(pendientes) == udsPorProcesar) {
-                QSqlQuery delQuery(QSqlDatabase::database(conf->getConexionLocal()));
-                delQuery.prepare("DELETE FROM lotes WHERE id = ?");
-                delQuery.bindValue(0, idLoteGeneric);
-                delQuery.exec();
-                udsPorProcesar = 0;
-            } else {
-                QSqlQuery delQuery(QSqlDatabase::database(conf->getConexionLocal()));
-                delQuery.prepare("DELETE FROM lotes WHERE id = ?");
-                delQuery.bindValue(0, idLoteGeneric);
-                delQuery.exec();
-                udsPorProcesar += pendientes; // pendientes es negativo, ej: 10 + (-4) = 6
+        
+        // 1. Si las unidades a procesar son POSITIVAS, intentar compensar stock negativo genérico previo (lote vacío, fecha "2000-01-01")
+        if (udsPorProcesar > 0) {
+            QString idLoteGeneric = base.idLote(conf->getConexionLocal(), ean, "", "2000-01-01");
+            if (idLoteGeneric != "0") {
+                int pendientes = base.unidadesLote(conf->getConexionLocal(), idLoteGeneric);
+                if (pendientes < 0) {
+                    qDebug() << "Compensando stock genérico negativo: " << pendientes << " uds";
+                    int absPendientes = qAbs(pendientes);
+                    if (absPendientes > udsPorProcesar) {
+                        base.aumentarLote(conf->getConexionLocal(), idLoteGeneric, udsPorProcesar);
+                        udsPorProcesar = 0;
+                    } else if (absPendientes == udsPorProcesar) {
+                        QSqlQuery delQuery(QSqlDatabase::database(conf->getConexionLocal()));
+                        delQuery.prepare("DELETE FROM lotes WHERE id = ?");
+                        delQuery.bindValue(0, idLoteGeneric);
+                        delQuery.exec();
+                        udsPorProcesar = 0;
+                    } else {
+                        QSqlQuery delQuery(QSqlDatabase::database(conf->getConexionLocal()));
+                        delQuery.prepare("DELETE FROM lotes WHERE id = ?");
+                        delQuery.bindValue(0, idLoteGeneric);
+                        delQuery.exec();
+                        udsPorProcesar += pendientes; // pendientes es negativo, ej: 10 + (-4) = 6
+                    }
+                }
             }
         }
 
-        // 2. Procesar el resto de unidades en el lote real del pedido
-        if (udsPorProcesar > 0) {
+        // 2. Procesar las unidades restantes (tanto positivas como negativas) en el lote real del pedido
+        if (udsPorProcesar != 0) {
             QString idLoteReal = base.idLote(conf->getConexionLocal(), ean, lote, fechaCaducidad);
+            if (idLoteReal == "0" && udsPorProcesar < 0) {
+                // Al descontar unidades, si la fecha no coincide con ninguna fecha existente en el almacén, consultar al usuario
+                QSqlQuery qFechas(QSqlDatabase::database(conf->getConexionLocal()));
+                qFechas.prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS f, sum(cantidad) AS cant "
+                                "FROM lotes WHERE ean = ? GROUP BY fecha HAVING cant > 0 ORDER BY f ASC");
+                qFechas.bindValue(0, ean);
+                QStringList opcionesFechas;
+                if (qFechas.exec()) {
+                    while (qFechas.next()) {
+                        opcionesFechas << QString("%1 (Stock: %2)").arg(qFechas.value("f").toString()).arg(qFechas.value("cant").toString());
+                    }
+                }
+                if (!opcionesFechas.isEmpty()) {
+                    bool ok = false;
+                    QString promptText = QString("La fecha '%1' para descontar el producto '%2' no coincide con ninguna fecha registrada.\n"
+                                                 "Seleccione de qué fecha desea descontar:").arg(fechaCaducidad).arg(descripcion);
+                    QString seleccion = QInputDialog::getItem(
+                        this,
+                        "Seleccionar fecha a descontar",
+                        promptText,
+                        opcionesFechas, 0, false, &ok);
+                    if (ok && !seleccion.isEmpty()) {
+                        fechaCaducidad = seleccion.split(" ").first();
+                        idLoteReal = base.idLote(conf->getConexionLocal(), ean, lote, fechaCaducidad);
+                    }
+                }
+            }
+
             if (idLoteReal == "0") {
                 base.crearLote(conf->getConexionLocal(),
                                ean,
@@ -196,7 +245,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
                 qDebug() << "Creando lote real: " << lote << " - Uds: " << udsPorProcesar;
             } else {
                 base.aumentarLote(conf->getConexionLocal(), idLoteReal, udsPorProcesar);
-                qDebug() << "Aumentando lote real: " << idLoteReal << " - Uds: " << udsPorProcesar;
+                qDebug() << "Actualizando lote real: " << idLoteReal << " - Uds: " << udsPorProcesar;
             }
         }
 
@@ -276,8 +325,6 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
         if (!base.pasarLineaPedidoAHistorico(conf->getConexionLocal(), datosLineaPedido)) {
             db.rollback();
             return false;
-        } else {
-            qDebug() << base.borrarPedido(conf->getConexionLocal(), idPedido);
         }
     }
     //Grabar pedido
@@ -287,7 +334,7 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     datosPedido.append(nDoc);
     datosPedido.append(fecha);
     datosPedido.append(QString::number(modeloPedido->rowCount()));
-    datosPedido.append(QString::number(unidades));
+    datosPedido.append(QString::number(totalUnidades));
     datosPedido.append(QString::number(descuentoReal));
 
     datosPedido.append(ui->leTotalBase->text());
@@ -348,6 +395,9 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
                      "Info",
                      conf->getUsuario(),
                      "Registrada la factura o albarán" + datosFactura.at(0));
+
+    // Borrar el pedido temporal (albaranes_tmp y lineaspedido_tmp) tras haber procesado todo con éxito
+    base.borrarPedido(conf->getConexionLocal(), idPedido);
 
     db.commit();
     return true;

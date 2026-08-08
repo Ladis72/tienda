@@ -33,6 +33,7 @@ public:
 
     void refrescar();
     void setConexion(const QString &conn);
+    void aplicarPermisos();
 
 signals:
     void pendingCountChanged(int count);

@@ -96,6 +96,21 @@ Proveedores::Proveedores(QWidget *parent)
     qDebug() << "Valor en lineEditNombre:" << ui->lineEditNombre->text();
   }
   refrescarBotones(mapper.currentIndex());
+  aplicarPermisos();
+}
+
+/**
+ * @brief Aplica las restricciones de permisos a los botones del formulario de proveedores.
+ */
+void Proveedores::aplicarPermisos() {
+  if (!conf || !conf->permisos())
+    return;
+
+  ui->pushButtonNuevo->setEnabled(conf->permisos()->tiene("proveedores.crear"));
+  ui->pushButtonModificar->setEnabled(conf->permisos()->tiene("proveedores.modificar"));
+  ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("proveedores.borrar"));
+  ui->pushButtonUnificar->setEnabled(conf->permisos()->tiene("proveedores.unificar"));
+  ui->pushButtonSaneador->setEnabled(conf->permisos()->tiene("saneador_global"));
 }
 
 void Proveedores::setupIcons() {

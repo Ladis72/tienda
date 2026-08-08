@@ -19,6 +19,7 @@ class Salidas : public QDialog
 public:
     explicit Salidas(QWidget *parent = nullptr);
     ~Salidas();
+    void aplicarPermisos();
 
 private slots:
     void on_lineEditCod_returnPressed();

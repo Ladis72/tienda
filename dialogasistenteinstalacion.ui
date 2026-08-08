@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DialogAsistenteInstalacion</class>
+ <widget class="QDialog" name="DialogAsistenteInstalacion">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>720</width>
+    <height>560</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Asistente de Instalación y Despliegue — Tienda 2.0</string>
+  </property>
+  <property name="sizeGripEnabled">
+   <bool>true</bool>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayoutMain">
+   <property name="leftMargin">
+    <number>15</number>
+   </property>
+   <property name="topMargin">
+    <number>15</number>
+   </property>
+   <property name="rightMargin">
+    <number>15</number>
+   </property>
+   <property name="bottomMargin">
+    <number>15</number>
+   </property>
+   <item>
+    <widget class="QLabel" name="labelHeaderTitle">
+     <property name="font">
+      <font>
+       <pointsize>14</pointsize>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Asistente de Instalación Inicial de Tienda 2.0</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="labelHeaderSubtitle">
+     <property name="text">
+      <string>Seleccione el escenario de despliegue correspondiente a su establecimiento comercial:</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="spacerHeader">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>8</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBoxModos">
+     <property name="title">
+      <string>1. Modo de Instalación</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayoutModos">
+      <item>
+       <widget class="QRadioButton" name="radioNuevaEmpresa">
+        <property name="font">
+         <font>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Nueva Empresa / Tienda Principal (Instalación Matriz)</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelDescNuevaEmpresa">
+        <property name="styleSheet">
+         <string notr="true">color: #555555; margin-left: 20px;</string>
+        </property>
+        <property name="text">
+         <string>Crea la base de datos local inicial para una empresa nueva o la tienda matriz principal.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioUnirGrupo">
+        <property name="font">
+         <font>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Unirse a un Grupo de Tiendas Existente (Nueva Sucursal / Tienda Remota)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelDescUnirGrupo">
+        <property name="styleSheet">
+         <string notr="true">color: #555555; margin-left: 20px;</string>
+        </property>
+        <property name="text">
+         <string>Configura una nueva sucursal y la conecta con la Nube central para sincronizar artículos, clientes y ventas.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioNuevoTPV">
+        <property name="font">
+         <font>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Añadir Punto de Venta (TPV Secundario) a una Tienda Ya Existente</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelDescNuevoTPV">
+        <property name="styleSheet">
+         <string notr="true">color: #555555; margin-left: 20px;</string>
+        </property>
+        <property name="text">
+         <string>Configura una segunda o tercera caja TPV en la misma tienda física, conectándose al servidor de la red local.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QStackedWidget" name="stackedWidgetParametros">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <!-- PAGINA 0: NUEVA EMPRESA -->
+     <widget class="QWidget" name="pageNuevaEmpresa">
+      <layout class="QFormLayout" name="formLayoutPage0">
+       <item row="0" column="0">
+        <widget class="QLabel" name="lbl0Host">
+         <property name="text">
+          <string>Servidor MariaDB Local:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="lineEditHostP0">
+         <property name="text">
+          <string>localhost</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="lbl0Puerto">
+         <property name="text">
+          <string>Puerto:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="lineEditPuertoP0">
+         <property name="text">
+          <string>3306</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="lbl0BD">
+         <property name="text">
+          <string>Base de Datos Local:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="lineEditBDP0">
+         <property name="text">
+          <string>tiendaNueva</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="lbl0User">
+         <property name="text">
+          <string>Usuario BD:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="lineEditUserP0">
+         <property name="text">
+          <string>tienda_user</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="lbl0Pass">
+         <property name="text">
+          <string>Contraseña BD:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="lineEditPassP0">
+         <property name="echoMode">
+          <enum>QLineEdit::Password</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="lbl0NombreTienda">
+         <property name="text">
+          <string>Nombre de la Tienda:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLineEdit" name="lineEditNombreTiendaP0">
+         <property name="text">
+          <string>Tienda Principal</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <!-- PAGINA 1: UNIRSE A GRUPO DE TIENDAS -->
+     <widget class="QWidget" name="pageUnirGrupo">
+      <layout class="QFormLayout" name="formLayoutPage1">
+       <item row="0" column="0">
+        <widget class="QLabel" name="lbl1BDLocal">
+         <property name="text">
+          <string>Base de Datos Local:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="lineEditBDLocalP1">
+         <property name="text">
+          <string>tiendaNueva</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="lbl1UserLocal">
+         <property name="text">
+          <string>Usuario Local BD:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="lineEditUserLocalP1">
+         <property name="text">
+          <string>tienda_user</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="lbl1PassLocal">
+         <property name="text">
+          <string>Clave Local BD:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="lineEditPassLocalP1">
+         <property name="echoMode">
+          <enum>QLineEdit::Password</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="lbl1HostNube">
+         <property name="text">
+          <string>Servidor Nube (Central):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="lineEditHostNubeP1">
+         <property name="placeholderText">
+          <string>ej. nube.micomercio.com</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="lbl1BDNube">
+         <property name="text">
+          <string>Base Datos Nube:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="lineEditBDNubeP1">
+         <property name="text">
+          <string>tiendaNube</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="lbl1UserNube">
+         <property name="text">
+          <string>Usuario Nube:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLineEdit" name="lineEditUserNubeP1">
+         <property name="text">
+          <string>sync_user</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="lbl1PassNube">
+         <property name="text">
+          <string>Clave Nube:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLineEdit" name="lineEditPassNubeP1">
+         <property name="echoMode">
+          <enum>QLineEdit::Password</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="lbl1NombreTienda">
+         <property name="text">
+          <string>Nombre Nueva Sucursal:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QLineEdit" name="lineEditNombreTiendaP1">
+         <property name="text">
+          <string>Sucursal 2</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <!-- PAGINA 2: NUEVO TPV EN MISMA TIENDA -->
+     <widget class="QWidget" name="pageNuevoTPV">
+      <layout class="QFormLayout" name="formLayoutPage2">
+       <item row="0" column="0">
+        <widget class="QLabel" name="lbl2IPServidor">
+         <property name="text">
+          <string>IP Servidor de la Tienda:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="lineEditIPServidorP2">
+         <property name="placeholderText">
+          <string>ej. 192.168.1.100</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="lbl2Puerto">
+         <property name="text">
+          <string>Puerto MariaDB:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="lineEditPuertoP2">
+         <property name="text">
+          <string>3306</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="lbl2BD">
+         <property name="text">
+          <string>Base de Datos Compartida:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="lineEditBDP2">
+         <property name="text">
+          <string>tiendaNueva</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="lbl2User">
+         <property name="text">
+          <string>Usuario BD:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="lineEditUserP2">
+         <property name="text">
+          <string>tienda_user</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="lbl2Pass">
+         <property name="text">
+          <string>Contraseña BD:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="lineEditPassP2">
+         <property name="echoMode">
+          <enum>QLineEdit::Password</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="lbl2NombreTPV">
+         <property name="text">
+          <string>Identificador de este TPV:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLineEdit" name="lineEditNombreTPVP2">
+         <property name="text">
+          <string>Caja 2</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayoutButtons">
+     <item>
+      <widget class="QPushButton" name="pushButtonTest">
+       <property name="text">
+        <string>Probar Conexión</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacerButtons">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonCancelar">
+       <property name="text">
+        <string>Cancelar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonGuardar">
+       <property name="text">
+        <string>Guardar e Iniciar</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

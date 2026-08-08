@@ -22,8 +22,8 @@ ListadoArqueos::~ListadoArqueos()
 void ListadoArqueos::on_pushButtonConsultar_clicked()
 {
     QString fechaI, fechaF;
-    fechaI = ui->dateEditDesde->text();
-    fechaF = ui->dateEditHasta->text();
+    fechaI = ui->dateEditDesde->date().toString("yyyy-MM-dd");
+    fechaF = ui->dateEditHasta->date().toString("yyyy-MM-dd");
     qDebug() << fechaF << "   " << fechaI;
     modeloTabla = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
     modeloTabla->setTable("arqueos");

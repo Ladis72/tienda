@@ -22,11 +22,26 @@ FormasPago::FormasPago(QWidget *parent)
     ui->pushButtonModificar->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
     ui->pushButtonUnificar->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
     ui->pushButtonSaneador->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+    aplicarPermisos();
 }
 
 FormasPago::~FormasPago()
 {
     delete ui;
+}
+
+/**
+ * @brief Aplica permisos a los botones del formulario de formas de pago.
+ */
+void FormasPago::aplicarPermisos() {
+    if (!conf || !conf->permisos())
+        return;
+
+    ui->pushButtonAnadir->setEnabled(conf->permisos()->tiene("formas_pago.crear"));
+    ui->pushButtonModificar->setEnabled(conf->permisos()->tiene("formas_pago.modificar"));
+    ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("formas_pago.borrar"));
+    ui->pushButtonUnificar->setEnabled(conf->permisos()->tiene("formas_pago.modificar"));
+    ui->pushButtonSaneador->setEnabled(conf->permisos()->tiene("saneador_global"));
 }
 
 void FormasPago::on_pushButtonModificar_clicked()
@@ -46,7 +61,32 @@ void FormasPago::on_pushButtonAnadir_clicked()
 
 void FormasPago::on_pushButtonBorrar_clicked()
 {
-    modelolista->removeRow(Qt::EditRole);
+    QModelIndex indice = ui->tableView->currentIndex();
+    if (!indice.isValid() || resultado.isEmpty()) {
+        QMessageBox::warning(this, "ATENCION", "Debe seleccionar una forma de pago.");
+        return;
+    }
+
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Confirmar Borrado");
+    msgBox.setText("¿Está seguro de que desea eliminar esta forma de pago?");
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox.setDefaultButton(QMessageBox::No);
+    msgBox.setButtonText(QMessageBox::Yes, "Eliminar");
+    msgBox.setButtonText(QMessageBox::No, "Cancelar");
+
+    if (msgBox.exec() != QMessageBox::Yes)
+        return;
+
+    if (!modelolista->removeRow(indice.row()) || !modelolista->submitAll()) {
+        modelolista->revertAll();
+        QMessageBox::warning(this, "ATENCION",
+                             "No se ha podido borrar el registro"
+                                 + modelolista->lastError().text());
+        return;
+    }
+    resultado.clear();
 }
 
 void FormasPago::on_tableView_clicked(const QModelIndex &index)

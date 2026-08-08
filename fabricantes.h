@@ -15,6 +15,7 @@ class Fabricantes : public QDialog
 public:
     explicit Fabricantes(QWidget *parent = 0);
     ~Fabricantes();
+    void aplicarPermisos();
 
     QString resultado;
 

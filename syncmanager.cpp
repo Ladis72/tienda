@@ -10,6 +10,9 @@
 #include <QSqlRecord>
 #include <QTimer>
 #include <QDateTime>
+#include <QtConcurrent>
+#include <QUuid>
+#include <QPointer>
 #include "unificarmaestros.h"
 #include <QTcpSocket>
 #include "configuracion.h"
@@ -36,6 +39,7 @@ const QStringList SyncManager::TABLAS_MAESTRAS = {
     "articulos",    // depende de familias y fabricantes
     "clientes",
     "codaux",       // depende de articulos
+    "tiendas",
     "usuarios",
     "permisos",
     "vales"         // vales de fidelidad (estado se propaga via nube)
@@ -94,6 +98,19 @@ void SyncManager::crearTablasSyncLocal()
            "  fecha       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,"
            "  subido      TINYINT(1)   NOT NULL DEFAULT 0"
            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Índice para la purga periódica de registros ya subidos (subido=1, fecha antigua).
+    // Comprobar por nombre de índice exacto para evitar duplicados.
+    q.exec("SELECT COUNT(*) FROM information_schema.statistics "
+           "WHERE table_schema = (SELECT DATABASE()) AND table_name = 'sync_cola' "
+           "AND index_name = 'idx_sync_cola_purga'");
+    if (q.next() && q.value(0).toInt() == 0) {
+        q.exec("ALTER TABLE sync_cola ADD INDEX idx_sync_cola_purga (subido, fecha)");
+    }
+
+    // Watermark para controlar cuándo se hizo la última purga (máx. una vez al día)
+    q.prepare("INSERT IGNORE INTO sync_control (tabla) VALUES ('sync_cola_purga')");
+    q.exec();
 
     q.exec("CREATE TABLE IF NOT EXISTS sync_control ("
            "  tabla       VARCHAR(64) PRIMARY KEY,"
@@ -195,7 +212,9 @@ void SyncManager::crearTrigger(const QString &nombreTabla, const QString &claveP
         "  END IF; "
         "END"
     ).arg(nombreTrigger, evento, nombreTabla, prefijo, clavePrimaria);
-    q.exec(sql);
+    if (!q.exec(sql)) {
+        qDebug() << "SyncManager: Error creando trigger" << nombreTrigger << ":" << q.lastError().text();
+    }
 }
 
 bool SyncManager::conectarNube()
@@ -216,9 +235,9 @@ bool SyncManager::conectarNube()
     QString sslCa = q.value(5).toString();
     if (!sslCa.isEmpty()) {
         if (QDir::isRelativePath(sslCa)) sslCa = QCoreApplication::applicationDirPath() + "/" + sslCa;
-        dbNube.setConnectOptions("SSL_CA=" + sslCa + ";MYSQL_OPT_CONNECT_TIMEOUT=2");
+        dbNube.setConnectOptions("SSL_CA=" + sslCa + ";MYSQL_OPT_CONNECT_TIMEOUT=2;MYSQL_OPT_READ_TIMEOUT=5;MYSQL_OPT_WRITE_TIMEOUT=5");
     } else {
-        dbNube.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=2");
+        dbNube.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=2;MYSQL_OPT_READ_TIMEOUT=5;MYSQL_OPT_WRITE_TIMEOUT=5");
     }
 
     if (!dbNube.open()) {
@@ -309,27 +328,106 @@ void SyncManager::comprobarConexion()
 
 void SyncManager::sincronizar()
 {
+    if (m_syncActivo.exchange(true)) {
+        qDebug() << "SyncManager: Sincronización ya en curso, se omite este ciclo";
+        return;
+    }
+
     if (!m_hayConexion && !conectarNube()) {
+        m_syncActivo = false;
         qDebug() << "SyncManager: Sincronización cancelada (sin conexión a la nube)";
         return;
     }
 
     qDebug() << "SyncManager: Iniciando ciclo de sincronización..." << QDateTime::currentDateTime().toString("HH:mm:ss");
-    
-    int subidos = subirCambios();
-    int subUnif = subirUnificaciones();
-    int bajados = bajarCambios();
-    
-    qDebug() << "SyncManager: Ciclo completado — Registros subidos:" << subidos
-             << "| Unificaciones subidas:" << subUnif
-             << "| Registros bajados:" << bajados;
-    emit syncCompletado(subidos, bajados);
+
+    // Capturar los parámetros de la conexión local y de la nube en el hilo GUI.
+    // QSqlDatabase no se puede compartir entre hilos, así que el hilo del pool
+    // abrirá sus propias conexiones clonadas con estos parámetros.
+    QSqlDatabase dbLocalGui = QSqlDatabase::database(conf->getConexionLocal());
+    const QString driverLocal = dbLocalGui.driverName();
+    const QString hostLocal = dbLocalGui.hostName();
+    const int portLocal = dbLocalGui.port();
+    const QString baseLocal = dbLocalGui.databaseName();
+    const QString userLocal = dbLocalGui.userName();
+    const QString passLocal = dbLocalGui.password();
+
+    QSqlDatabase dbNubeGui = QSqlDatabase::database(CONEXION_NUBE);
+    const QString hostNube = dbNubeGui.hostName();
+    const int portNube = dbNubeGui.port();
+    const QString baseNube = dbNubeGui.databaseName();
+    const QString userNube = dbNubeGui.userName();
+    const QString passNube = dbNubeGui.password();
+    const QString optsNube = dbNubeGui.connectOptions();
+
+    const QString usuario = conf->getUsuario(); // capturado en el hilo GUI (seguro para el hilo de pool)
+    QPointer<SyncManager> self = this;
+
+    m_futuroSync = QtConcurrent::run([=]() {
+        if (!self) return;
+
+        QString connLocalClone = "SyncLocal_" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+        QString connNubeClone  = "SyncNube_"  + QUuid::createUuid().toString(QUuid::WithoutBraces);
+
+        QSqlDatabase dbLocal = QSqlDatabase::addDatabase(driverLocal, connLocalClone);
+        dbLocal.setHostName(hostLocal);
+        if (portLocal > 0) dbLocal.setPort(portLocal);
+        dbLocal.setDatabaseName(baseLocal);
+        dbLocal.setUserName(userLocal);
+        dbLocal.setPassword(passLocal);
+        bool okLocal = dbLocal.open();
+
+        QSqlDatabase dbNube;
+        bool okNube = false;
+        if (okLocal) {
+            dbNube = QSqlDatabase::addDatabase("QMYSQL", connNubeClone);
+            dbNube.setHostName(hostNube);
+            if (portNube > 0) dbNube.setPort(portNube);
+            dbNube.setDatabaseName(baseNube);
+            dbNube.setUserName(userNube);
+            dbNube.setPassword(passNube);
+            if (!optsNube.isEmpty()) dbNube.setConnectOptions(optsNube);
+            okNube = dbNube.open();
+        }
+
+        int subidos = 0, subUnif = 0, bajados = 0;
+        if (okLocal && okNube) {
+            subidos = self->subirCambios(connLocalClone, connNubeClone, usuario);
+            subUnif = self->subirUnificaciones(connLocalClone, connNubeClone, usuario);
+            bajados = self->bajarCambios(connLocalClone, connNubeClone, usuario);
+            qDebug() << "SyncManager: Ciclo completado — Registros subidos:" << subidos
+                     << "| Unificaciones subidas:" << subUnif
+                     << "| Registros bajados:" << bajados;
+        } else {
+            qWarning() << "SyncManager: No se pudieron abrir las conexiones del ciclo de sync"
+                       << "(local:" << okLocal << ", nube:" << okNube << ")";
+        }
+
+        // Purga periódica de sync_cola (máx. una vez al día) usando la conexión local clonada
+        if (okLocal) self->purgarCola(connLocalClone, usuario);
+
+        if (dbNube.isOpen()) dbNube.close();
+        if (dbLocal.isOpen()) dbLocal.close();
+        if (QSqlDatabase::contains(connNubeClone)) QSqlDatabase::removeDatabase(connNubeClone);
+        if (QSqlDatabase::contains(connLocalClone)) QSqlDatabase::removeDatabase(connLocalClone);
+
+        // Volver al hilo GUI para actualizar estado y emitir la señal
+        QMetaObject::invokeMethod(self, [self, subidos, bajados, okNube]() {
+            if (!self) return;
+            self->m_syncActivo = false;
+            if (!okNube && self->m_hayConexion) {
+                self->m_hayConexion = false;
+                emit self->conexionPerdida();
+            }
+            emit self->syncCompletado(subidos, bajados);
+        }, Qt::QueuedConnection);
+    });
 }
 
-int SyncManager::subirCambios()
+int SyncManager::subirCambios(const QString &connLocal, const QString &connNube, const QString &usuario)
 {
-    QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
-    QSqlDatabase dbNube  = QSqlDatabase::database(CONEXION_NUBE);
+    QSqlDatabase dbLocal = QSqlDatabase::database(connLocal);
+    QSqlDatabase dbNube  = QSqlDatabase::database(connNube);
     QSqlQuery cola(dbLocal);
     cola.exec("SELECT id, tabla, id_registro, accion FROM sync_cola WHERE subido = 0 ORDER BY fecha ASC");
 
@@ -382,6 +480,19 @@ int SyncManager::subirCambios()
                             vStr = "'" + val.toString().replace("'", "''") + "'";
                         }
                     }
+                    if (tabla == "tiendas") {
+                        bool esLocal = (rec.value("local").toInt() == 1 || rec.value("id").toInt() == m_idTiendaLocal);
+                        if (esLocal) {
+                            if (campo.toLower() == "local") {
+                                vStr = "0"; // En la nube todas las tiendas deben tener local = 0
+                            } else {
+                                QStringList camposLocales = {"ip", "usuario", "password", "baseDatos", "puerto", "ssl_ca"};
+                                if (camposLocales.contains(campo.toLower())) {
+                                    continue; // Evitar subir credenciales y configuración locales
+                                }
+                            }
+                        }
+                    }
                     campos << "`" + campo + "`"; valores << vStr;
                     updates << QString("`%1` = VALUES(`%1`)").arg(campo);
                 }
@@ -390,8 +501,11 @@ int SyncManager::subirCambios()
                 QSqlQuery ins(dbNube);
                 ok = ins.exec(sql);
                 if (!ok) {
-                    qDebug() << "SyncManager: Error subiendo a" << tabla << ":" << ins.lastError().text();
+                    QString err = QString("Error subiendo a %1 (id %2): %3")
+                                  .arg(tabla, idReg, ins.lastError().text());
+                    qDebug() << "SyncManager:" << err;
                     qDebug() << "SQL fallido:" << sql;
+                    registrarLog(connLocal, "SyncError", usuario, err);
                 }
             } else ok = true;
         }
@@ -404,10 +518,10 @@ int SyncManager::subirCambios()
     return subidos;
 }
 
-int SyncManager::subirUnificaciones()
+int SyncManager::subirUnificaciones(const QString &connLocal, const QString &connNube, const QString &usuario)
 {
-    QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
-    QSqlDatabase dbNube  = QSqlDatabase::database(CONEXION_NUBE);
+    QSqlDatabase dbLocal = QSqlDatabase::database(connLocal);
+    QSqlDatabase dbNube  = QSqlDatabase::database(connNube);
     QSqlQuery cola(dbLocal);
     cola.exec("SELECT id, tabla, id_perdedor, id_ganador FROM sync_unificaciones WHERE subido = 0 ORDER BY fecha ASC");
 
@@ -429,8 +543,10 @@ int SyncManager::subirUnificaciones()
         if (ins.exec()) {
             procesados << idCola; subidos++;
         } else {
-            qDebug() << "SyncManager: Error subiendo unificación" << tabla
-                     << perdedor << "->" << ganador << ":" << ins.lastError().text();
+            QString err = QString("Error subiendo unificación %1 (%2 -> %3): %4")
+                          .arg(tabla, perdedor, ganador, ins.lastError().text());
+            qDebug() << "SyncManager:" << err;
+            registrarLog(connLocal, "SyncError", usuario, err);
         }
     }
     if (!procesados.isEmpty()) {
@@ -440,69 +556,156 @@ int SyncManager::subirUnificaciones()
     return subidos;
 }
 
-int SyncManager::bajarBorrados()
+int SyncManager::bajarBorrados(const QString &connLocal, const QString &connNube, const QString &usuario)
 {
-    QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
-    QSqlDatabase dbNube  = QSqlDatabase::database(CONEXION_NUBE);
+    QSqlDatabase dbLocal = QSqlDatabase::database(connLocal);
+    QSqlDatabase dbNube  = QSqlDatabase::database(connNube);
 
-    QDateTime watermark = ultimaSync("sync_borrados");
+    QDateTime watermark = ultimaSync("sync_borrados", connLocal, usuario);
     QSqlQuery qN(dbNube);
     QString sql = QString("SELECT tabla, id_registro, UNIX_TIMESTAMP(fecha) AS f_ts "
                           "FROM sync_borrados WHERE fecha > '%1' ORDER BY fecha ASC")
                   .arg(watermark.toUTC().toString("yyyy-MM-dd HH:mm:ss"));
     if (!qN.exec(sql)) {
-        qDebug() << "SyncManager: Error consultando sync_borrados:" << qN.lastError().text();
+        QString err = "Error consultando sync_borrados: " + qN.lastError().text();
+        qDebug() << "SyncManager:" << err;
+        registrarLog(connLocal, "SyncError", usuario, err);
         return 0;
     }
 
-    struct Borrado { QString tabla; QString idReg; };
+    struct Borrado { QString tabla; QString idReg; qint64 ts; };
     QList<Borrado> borradosPendientes;
     qint64 maxTs = watermark.toUTC().toSecsSinceEpoch();
     while (qN.next()) {
         QString t = qN.value(0).toString();
         QString idReg = qN.value(1).toString();
-        if (getPkTabla(t).isEmpty()) continue;
-        borradosPendientes << Borrado{t, idReg};
         qint64 fTs = qN.value(2).toLongLong();
+        if (getPkTabla(t).isEmpty()) continue;
+        borradosPendientes << Borrado{t, idReg, fTs};
         if (fTs > maxTs) maxTs = fTs;
     }
 
     int borrados = 0;
+    int conservados = 0;
     if (!borradosPendientes.isEmpty()) {
         // SkipSyncGuard evita que el DELETE local re-encuele en sync_cola
         // (el borrado ya está registrado como tombstone en la nube).
-        SkipSyncGuard guard(conf->getConexionLocal());
+        SkipSyncGuard guard(connLocal);
+
+        QSqlQuery qTsLocal(dbLocal);
         QSqlQuery qDel(dbLocal);
+        QSqlQuery qPurge(dbLocal);
+        qPurge.prepare("DELETE FROM sync_cola WHERE tabla = ? AND id_registro = ? AND subido = 0");
+
         for (const Borrado &b : borradosPendientes) {
-            qDel.prepare(QString("DELETE FROM `%1` WHERE `%2` = ?").arg(b.tabla, getPkTabla(b.tabla)));
+            QString pk = getPkTabla(b.tabla);
+
+            // ── Resolución de conflictos: edición local más nueva gana ──
+            // Si la fila local fue modificada después del borrado en la nube,
+            // se conserva: la edición local pendiente en sync_cola se re-subirá
+            // y recreará la fila en la nube (filosofía "lo más nuevo gana").
+            qTsLocal.prepare(QString("SELECT UNIX_TIMESTAMP(updated_at) FROM `%1` WHERE `%2` = ?").arg(b.tabla, pk));
+            qTsLocal.addBindValue(b.idReg);
+            bool localMasNuevo = false;
+            if (qTsLocal.exec() && qTsLocal.first() && !qTsLocal.value(0).isNull()) {
+                if (qTsLocal.value(0).toLongLong() > b.ts) localMasNuevo = true;
+            }
+            if (localMasNuevo) {
+                conservados++;
+                continue;
+            }
+
+            qDel.prepare(QString("DELETE FROM `%1` WHERE `%2` = ?").arg(b.tabla, pk));
             qDel.addBindValue(b.idReg);
             if (qDel.exec()) {
+                // Purga de pendientes obsoletos: evita que un INSERT/UPDATE que
+                // quedara sin subir re-cree la fila borrada en la nube.
+                qPurge.bindValue(0, b.tabla);
+                qPurge.bindValue(1, b.idReg);
+                qPurge.exec();
                 if (qDel.numRowsAffected() > 0) borrados++;
             } else {
-                qDebug() << "SyncManager: Error aplicando borrado en" << b.tabla
-                         << b.idReg << ":" << qDel.lastError().text();
+                QString err = QString("Error aplicando borrado en %1 (id %2): %3")
+                              .arg(b.tabla, b.idReg, qDel.lastError().text());
+                qDebug() << "SyncManager:" << err;
+                registrarLog(connLocal, "SyncError", usuario, err);
             }
         }
     }
 
-    actualizarUltimaSync("sync_borrados", QDateTime::fromSecsSinceEpoch(maxTs, Qt::UTC));
+    actualizarUltimaSync("sync_borrados", QDateTime::fromSecsSinceEpoch(maxTs, Qt::UTC), connLocal);
     if (borrados > 0)
         qDebug() << "SyncManager: Borrados aplicados localmente:" << borrados;
+    if (conservados > 0)
+        qDebug() << "SyncManager: Borrados conservados por edición local más nueva:" << conservados;
     return borrados;
 }
 
-int SyncManager::bajarCambios()
+void SyncManager::purgarCola(const QString &connLocal, const QString &usuario)
 {
-    QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
-    QSqlDatabase dbNube  = QSqlDatabase::database(CONEXION_NUBE);
+    QSqlDatabase dbLocal = QSqlDatabase::database(connLocal);
+
+    // Solo purgar una vez al día: el watermark evita recorrer/borrar la tabla en cada ciclo (5 min).
+    QDateTime ultimaPurga = ultimaSync("sync_cola_purga", connLocal, usuario);
+    if (ultimaPurga.isValid() && ultimaPurga.secsTo(QDateTime::currentDateTime()) < 24 * 3600) return;
+
+    // Borrar registros ya subidos (subido=1) con más de 7 días de antigüedad.
+    // Los pendientes (subido=0) nunca se tocan: aún deben subirse a la nube.
+    QSqlQuery q(dbLocal);
+    int borradosCola = 0;
+    if (q.exec("DELETE FROM sync_cola WHERE subido = 1 AND fecha < DATE_SUB(NOW(), INTERVAL 7 DAY)")) {
+        borradosCola = q.numRowsAffected();
+        if (borradosCola > 0)
+            qDebug() << "SyncManager: Purga de sync_cola:" << borradosCola << "registros eliminados";
+    } else {
+        QString err = "Error purgando sync_cola: " + q.lastError().text();
+        qWarning() << "SyncManager:" << err;
+        registrarLog(connLocal, "SyncError", usuario, err);
+    }
+
+    // Idem para las unificaciones de maestros ya propagadas
+    int borradosUnif = 0;
+    if (q.exec("DELETE FROM sync_unificaciones WHERE subido = 1 AND fecha < DATE_SUB(NOW(), INTERVAL 7 DAY)")) {
+        borradosUnif = q.numRowsAffected();
+        if (borradosUnif > 0)
+            qDebug() << "SyncManager: Purga de sync_unificaciones:" << borradosUnif << "registros eliminados";
+    } else {
+        QString err = "Error purgando sync_unificaciones: " + q.lastError().text();
+        qWarning() << "SyncManager:" << err;
+        registrarLog(connLocal, "SyncError", usuario, err);
+    }
+
+    actualizarUltimaSync("sync_cola_purga", QDateTime::currentDateTime(), connLocal);
+}
+
+void SyncManager::registrarLog(const QString &connLocal, const QString &categoria,
+                               const QString &usuario, const QString &mensaje)
+{
+    QSqlDatabase db = QSqlDatabase::database(connLocal);
+    if (!db.isOpen()) return;
+
+    QSqlQuery q(db);
+    q.prepare("INSERT INTO logs (categoria, usuario, mensaje) VALUES (?, ?, ?)");
+    q.addBindValue(categoria);
+    q.addBindValue(usuario);
+    q.addBindValue(mensaje);
+    if (!q.exec()) {
+        qWarning() << "SyncManager: Error al insertar log:" << q.lastError().text();
+    }
+}
+
+int SyncManager::bajarCambios(const QString &connLocal, const QString &connNube, const QString &usuario)
+{
+    QSqlDatabase dbLocal = QSqlDatabase::database(connLocal);
+    QSqlDatabase dbNube  = QSqlDatabase::database(connNube);
     int bajados = 0;
     QDateTime ahora = QDateTime::currentDateTime();
 
     // Aplicar primero los borrados (tombstones) para que las filas re-creadas
     // se vuelvan a insertar después por el loop de tablas.
-    int borrados = bajarBorrados();
+    int borrados = bajarBorrados(connLocal, connNube, usuario);
 
-    QDateTime maxUpdate = ultimaSync("sync_unificaciones");
+    QDateTime maxUpdate = ultimaSync("sync_unificaciones", connLocal, usuario);
     QSqlQuery qNU(dbNube);
     // Usar consulta directa para evitar el bug del protocolo binario con QDateTime(Invalid) en prepared statements.
     QString sqlU = QString("SELECT tabla, id_perdedor, id_ganador, fecha FROM sync_unificaciones WHERE fecha > '%1' ORDER BY fecha ASC")
@@ -511,7 +714,7 @@ int SyncManager::bajarCambios()
     if (qNU.exec(sqlU)) {
         // SkipSyncGuard evita que los UPDATE/DELETE locales de la unificación
         // re-encuelen en sync_cola (el cambio ya se ha propagado desde la nube).
-        SkipSyncGuard guardUnif(conf->getConexionLocal());
+        SkipSyncGuard guardUnif(connLocal);
         while (qNU.next()) {
             QString t = qNU.value(0).toString();
             QString p = qNU.value(1).toString();
@@ -535,11 +738,11 @@ int SyncManager::bajarCambios()
             
             if (f > maxUpdate) maxUpdate = f;
         }
-        actualizarUltimaSync("sync_unificaciones", maxUpdate);
+        actualizarUltimaSync("sync_unificaciones", maxUpdate, connLocal);
     }
 
     for (const QString &tabla : TABLAS_MAESTRAS) {
-        QDateTime ultimaSyncActual = ultimaSync(tabla);
+        QDateTime ultimaSyncActual = ultimaSync(tabla, connLocal, usuario);
         QDateTime desde = ultimaSyncActual.addSecs(-120); // 2 min overlap
         QSqlQuery qN(dbNube);
         
@@ -551,7 +754,10 @@ int SyncManager::bajarCambios()
         QString sqlN = QString("SELECT *, UNIX_TIMESTAMP(updated_at) AS up_ts FROM `%1` WHERE updated_at > '%2' ORDER BY updated_at ASC")
                        .arg(tabla, desde.toUTC().toString("yyyy-MM-dd HH:mm:ss"));
         if (!qN.exec(sqlN)) {
-            qDebug() << "SyncManager: Error consultando tabla" << tabla << "en la nube:" << qN.lastError().text();
+            QString err = QString("Error consultando tabla %1 en la nube: %2")
+                          .arg(tabla, qN.lastError().text());
+            qDebug() << "SyncManager:" << err;
+            registrarLog(connLocal, "SyncError", usuario, err);
             continue;
         }
 
@@ -573,7 +779,7 @@ int SyncManager::bajarCambios()
         {
             // SkipSyncGuard desactiva los triggers de sync durante la escritura local
             // y garantiza el reset de @skip_sync en todos los caminos (RAII).
-            SkipSyncGuard guard(conf->getConexionLocal());
+            SkipSyncGuard guard(connLocal);
             while (qN.next()) {
                 QSqlRecord rec = qN.record();
                 QString idReg = rec.value(pk).toString();
@@ -633,6 +839,15 @@ int SyncManager::bajarCambios()
                     // NUNCA sincronizar el ID físico local ni la PK aquí (se añade luego)
                     if (campo == pk || campo.toLower() == "id" + tabla.toLower()) continue;
                     if (recLoc.indexOf(campo) == -1 || excluidos.contains(campo.toLower())) continue;
+                    if (tabla == "tiendas") {
+                        bool esLocal = (idReg.toInt() == m_idTiendaLocal || rec.value("local").toInt() == 1);
+                        if (esLocal) {
+                            QStringList camposLocales = {"ip", "local", "usuario", "password", "baseDatos", "puerto", "ssl_ca"};
+                            if (camposLocales.contains(campo.toLower())) {
+                                continue;
+                            }
+                        }
+                    }
                     
                     QVariant val = rec.value(i);
                     QString vStr = "NULL";
@@ -689,7 +904,10 @@ int SyncManager::bajarCambios()
                         }
                     }
                 } else {
-                    qDebug() << "SyncManager: ERROR bajando" << tabla << ":" << qIns.lastError().text();
+                    QString err = QString("ERROR bajando %1 (id %2): %3")
+                                  .arg(tabla, idReg, qIns.lastError().text());
+                    qDebug() << "SyncManager:" << err;
+                    registrarLog(connLocal, "SyncError", usuario, err);
                 }
             }
         }
@@ -708,7 +926,9 @@ int SyncManager::bajarCambios()
             qNot.addBindValue("Pendiente");
             
             if (!qNot.exec()) {
-                qWarning() << "   [!] Error al crear nota de precios:" << qNot.lastError().text();
+                QString err = "Error al crear nota de precios: " + qNot.lastError().text();
+                qWarning() << "   [!]" << err;
+                registrarLog(connLocal, "SyncError", usuario, err);
             } else {
                 qDebug() << "   [+] Nota de aviso creada correctamente.";
                 avisosPrecios.clear(); // Limpiar para que no se repita en la siguiente tabla si hubiera errores
@@ -721,7 +941,7 @@ int SyncManager::bajarCambios()
         if (bajadosTabla > 0) {
             // Salvaguarda anti-retroceso: el watermark nunca debe ser menor que el actual.
             if (maxUpdate < ultimaSyncActual) maxUpdate = ultimaSyncActual;
-            actualizarUltimaSync(tabla, maxUpdate);
+            actualizarUltimaSync(tabla, maxUpdate, connLocal);
         }
         bajados += bajadosTabla;
     }
@@ -729,9 +949,10 @@ int SyncManager::bajarCambios()
     return bajados;
 }
 
-void SyncManager::actualizarUltimaSync(const QString &tabla, const QDateTime &momento)
+void SyncManager::actualizarUltimaSync(const QString &tabla, const QDateTime &momento,
+                                       const QString &connLocal)
 {
-    QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
+    QSqlQuery q(QSqlDatabase::database(connLocal));
     // Usar consulta directa para evitar el bug del protocolo binario con QDateTime(Invalid)
     QString sql = QString("UPDATE sync_control SET ultima_sync = '%1' WHERE tabla = '%2'")
                   .arg(momento.toString("yyyy-MM-dd HH:mm:ss"), tabla);
@@ -745,19 +966,19 @@ void SyncManager::cargarIdTiendaLocal()
         m_idTiendaLocal = q.value(0).toInt();
 }
 
-QDateTime SyncManager::ultimaSync(const QString &tabla)
+QDateTime SyncManager::ultimaSync(const QString &tabla, const QString &connLocal, const QString &usuario)
 {
-    QString connName = conf->getConexionLocal();
+    QString connName = connLocal;
     QSqlDatabase db = QSqlDatabase::database(connName);
     QSqlQuery q(db);
     // Usar consulta directa para evitar el bug del protocolo binario de MySQL/MariaDB en Qt 6,
     // que retorna QDateTime(Invalid) en campos de fecha/hora cuando se preparan consultas (prepare()).
     QString sql = QString("SELECT ultima_sync FROM sync_control WHERE tabla = '%1'").arg(tabla);
     if (!q.exec(sql)) {
-        qWarning() << "SyncManager: Error en ultimaSync para" << tabla 
-                   << "usando conexion" << connName 
-                   << "abierta:" << db.isOpen() 
-                   << "error:" << q.lastError().text();
+        QString err = QString("Error en ultimaSync para %1 (conexión %2, abierta: %3): %4")
+                      .arg(tabla, connName, db.isOpen() ? "sí" : "no", q.lastError().text());
+        qWarning() << "SyncManager:" << err;
+        registrarLog(connLocal, "SyncError", usuario, err);
     } else if (q.first()) {
         return q.value(0).toDateTime();
     }
@@ -771,7 +992,7 @@ QString SyncManager::getPkTabla(const QString &tabla) const
     static const QMap<QString, QString> m = {
         {"articulos","cod"},{"clientes","idCliente"},{"familias","id"},{"fabricantes","id"},
         {"proveedores","idProveedor"},{"codaux","id"},{"fpago","id"},{"impuestos","tipoIva"},
-        {"formatos","idformato"},{"motivosEntrada","idtiposEntrada"},{"usuarios","id"},
+        {"formatos","idformato"},{"motivosEntrada","idtiposEntrada"},{"tiendas","id"},{"usuarios","id"},
         {"permisos","id"},{"vales","vale_uuid"}
     };
     return m.value(tabla, "");
@@ -781,7 +1002,8 @@ void SyncManager::prepararTablasRemotas()
 {
     if (!m_hayConexion) return;
     
-    QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
+    const QString connLocal = conf->getConexionLocal();
+    QSqlDatabase dbLocal = QSqlDatabase::database(connLocal);
     QSqlDatabase dbNube = QSqlDatabase::database(CONEXION_NUBE);
     QSqlQuery qN(dbNube);
     QSqlQuery qL(dbLocal);
@@ -797,7 +1019,10 @@ void SyncManager::prepararTablasRemotas()
                 if (qN.exec(createSql)) {
                     qDebug() << "SyncManager: Tabla" << tabla << "creada con éxito en la nube.";
                 } else {
-                    qWarning() << "SyncManager: Error al crear tabla" << tabla << "en la nube:" << qN.lastError().text();
+                    QString err = QString("Error al crear tabla %1 en la nube: %2")
+                                  .arg(tabla, qN.lastError().text());
+                    qWarning() << "SyncManager:" << err;
+                    registrarLog(connLocal, "SyncError", conf->getUsuario(), err);
                     continue; // No podemos seguir con esta tabla si no se pudo crear
                 }
             } else {
@@ -819,7 +1044,10 @@ void SyncManager::prepararTablasRemotas()
              if (qN.next() && qN.value(0).toInt() == 0) {
                  qDebug() << "SyncManager: Añadiendo PK faltante a" << tabla << "en la nube";
                  if (!qN.exec(QString("ALTER TABLE `%1` ADD PRIMARY KEY (`%2`)").arg(tabla, pk))) {
-                     qWarning() << "SyncManager: Error al añadir PK a" << tabla << "en la nube:" << qN.lastError().text();
+                     QString err = QString("Error al añadir PK a %1 en la nube: %2")
+                                   .arg(tabla, qN.lastError().text());
+                     qWarning() << "SyncManager:" << err;
+                     registrarLog(connLocal, "SyncError", conf->getUsuario(), err);
                  }
              }
         }
@@ -894,8 +1122,10 @@ void SyncManager::prepararTablasRemotas()
             "ON DUPLICATE KEY UPDATE fecha = CURRENT_TIMESTAMP"
         ).arg(nombreTrigger, tabla, pk);
         if (!qN.exec(sql)) {
-            qWarning() << "SyncManager: Error creando trigger de borrados para" << tabla
-                       << "en la nube:" << qN.lastError().text();
+            QString err = QString("Error creando trigger de borrados para %1 en la nube: %2")
+                          .arg(tabla, qN.lastError().text());
+            qWarning() << "SyncManager:" << err;
+            registrarLog(connLocal, "SyncError", conf->getUsuario(), err);
         }
     }
 }

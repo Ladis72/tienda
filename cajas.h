@@ -20,6 +20,7 @@ class Cajas : public QDialog
 public:
     explicit Cajas(QWidget *parent = 0);
     ~Cajas();
+    void aplicarPermisos();
 
 private slots:
     void on_spinBox20_valueChanged(int arg1);

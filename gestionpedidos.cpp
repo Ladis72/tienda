@@ -9,11 +9,25 @@ GestionPedidos::GestionPedidos(QWidget *parent)
     ui->setupUi(this);
     borrarVariables();
     llenarTablaPedidos();
+    aplicarPermisos();
 }
 
 GestionPedidos::~GestionPedidos()
 {
     delete ui;
+}
+
+/**
+ * @brief Aplica permisos a los botones de gestión de pedidos.
+ */
+void GestionPedidos::aplicarPermisos() {
+    if (!conf || !conf->permisos())
+        return;
+
+    ui->pushButtonNuevo->setEnabled(conf->permisos()->tiene("pedidos.crear"));
+    ui->pushButtonGestionar->setEnabled(conf->permisos()->tiene("pedidos.modificar"));
+    ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("pedidos.borrar"));
+    ui->pushButtonAceptar->setEnabled(conf->permisos()->tiene("pedidos.aceptar"));
 }
 
 void GestionPedidos::on_pushButtonNuevo_clicked()
@@ -27,9 +41,8 @@ void GestionPedidos::llenarTablaPedidos()
 {
     listaPedidos.clear();
     QSqlQuery consultaPedidos = base->recuperarPedidos(conf->getConexionLocal());
-    consultaPedidos.first();
     QList<QStandardItem *> listaItems;
-    for (int i = 0; i < consultaPedidos.numRowsAffected(); i++) {
+    while (consultaPedidos.next()) {
         listaItems.clear();
         QString idPedido = consultaPedidos.value(0).toString();
         //qDebug() << idPedido;
@@ -81,7 +94,6 @@ void GestionPedidos::llenarTablaPedidos()
         QStandardItem *itemTotal = new QStandardItem(QString::number(baseArticulos + iva + re));
         listaItems.append(itemTotal);
         listaPedidos.appendRow(listaItems);
-        consultaPedidos.next();
     }
     QStringList cabeceras;
     cabeceras << "ID" << "PROVEEDOR" << "PEDIDO" << "FECHA" << "LINEAS" << "ARICULOS" << "BASE"

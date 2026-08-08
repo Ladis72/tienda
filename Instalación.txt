@@ -1,0 +1,102 @@
+==========================================================================
+ INSTALACIÓN Y CONFIGURACIÓN — TPV Tienda (Qt 6 / C++ / MariaDB)
+==========================================================================
+
+El programa es un TPV para la gestión de un comercio. Las tablas de la
+base de datos se crean automáticamente en el primer arranque, por lo que
+solo hay que preparar la conexión.
+
+--------------------------------------------------------------------------
+1. REQUISITOS DEL SISTEMA
+--------------------------------------------------------------------------
+
+- Qt 6 (módulos: sql, charts, webenginewidgets, concurrent, network,
+  core5compat, widgets) y el driver QMYSQL.
+- Servidor MariaDB o MySQL accesible (local o en red).
+- Librería libqrencode (códigos QR VeriFactu).
+- Compilador compatible con C++17 (GCC 11+).
+
+--------------------------------------------------------------------------
+2. COMPILACIÓN
+--------------------------------------------------------------------------
+
+Desde la raíz del proyecto:
+
+    qmake6 tienda.pro
+    make -j$(nproc)
+
+El binario resultante se llama "tienda" y se genera en el directorio de
+compilación.
+
+--------------------------------------------------------------------------
+3. PREPARAR LA BASE DE DATOS
+--------------------------------------------------------------------------
+
+1. Crear la base de datos local (por defecto se llama "tiendaNueva"):
+
+       CREATE DATABASE tiendaNueva CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+2. Las tablas (articulos, clientes, proveedores, tickets, pedidos, lotes,
+   impuestos, etc.) y los triggers de sincronización se crean de forma
+   automática al iniciar el programa por primera vez.
+
+3. Para la sincronización multi-tienda se necesita una base de datos en la
+   nube con el mismo esquema. La conexión se configura desde la aplicación
+   (ventana de configuraciones / conexión remota).
+
+--------------------------------------------------------------------------
+4. CONFIGURACIÓN DE CREDENCIALES (tienda.ini)
+--------------------------------------------------------------------------
+
+Copiar el fichero de ejemplo:
+
+    cp tienda.ini.example tienda.ini
+
+Y rellenar con los datos de la conexión local:
+
+    [BaseDatos]
+    host=localhost
+    puerto=3306
+    baseDatos=tiendaNueva
+    usuario=MI_USUARIO
+    clave=MI_CLAVE
+
+IMPORTANTE: tienda.ini contiene credenciales en texto plano. Está excluido
+de git (ver .gitignore) y no debe compartirse ni versionarse.
+
+Si el fichero tienda.ini no existe o la conexión falla, la aplicación
+mostrará un diálogo para configurar la conexión de forma interactiva en
+el primer arranque.
+
+--------------------------------------------------------------------------
+5. PRIMER ARRANQUE Y ACCESO
+--------------------------------------------------------------------------
+
+1. Ejecutar el binario "tienda".
+2. Si la conexión local no está configurada, se ofrece el diálogo de
+   configuración (ConfigLocal).
+3. Se inicia sesión con un usuario de la tabla "usuarios". Las contraseñas
+   se almacenan con SHA-256 + salt. Por defecto debe existir un usuario
+   administrador creado previamente en la base de datos.
+4. Desde "Configuración" se pueden registrar las tiendas (local y remotas)
+   y la conexión a la nube para la sincronización.
+
+--------------------------------------------------------------------------
+6. VERIFICACIÓN DE INTEGRIDAD
+--------------------------------------------------------------------------
+
+El programa incluye un "Verificador de base de datos" que detecta
+incoherencias (enlaces rotos, stock, duplicados, etc.) y permite consultar
+el detalle de los registros afectados. Se recomienda ejecutarlo
+periódicamente y tras cada migración.
+
+--------------------------------------------------------------------------
+7. NOTAS
+--------------------------------------------------------------------------
+
+- El fichero canbiosVersiónNueva contiene los cambios de esquema que se
+  aplicaron a versiones anteriores y puede ser útil como referencia al
+  actualizar una base de datos antigua.
+- Las fechas se manejan internamente en formato yyyy-MM-dd.
+- Los certificados SSL para la conexión remota (ssl_ca) son opcionales y
+  se indican en la configuración de cada tienda.

@@ -19,6 +19,7 @@ class GestionPedidos : public QDialog
 public:
     explicit GestionPedidos(QWidget *parent = 0);
     ~GestionPedidos();
+    void aplicarPermisos();
 
 private slots:
     void on_pushButtonNuevo_clicked();

@@ -2,11 +2,13 @@
 #include "hashutil.h"
 #include "qprocess.h"
 #include "skip_sync_guard.h"
+#include <QApplication>
 #include <QDate>
 #include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QInputDialog>
 #include <QMessageBox>
 
 
@@ -33,6 +35,13 @@ bool baseDatos::conectar(QString host, QString puerto, QString baseDatos,
     mensaje.exec();
     return false;
   }
+
+  // Forzar zona horaria UTC para que updated_at (TIMESTAMP) se interprete de
+  // forma consistente con la nube en la resolución de conflictos de sync.
+  // Solo afecta a columnas TIMESTAMP (updated_at es interna de sync); las
+  // columnas DATETIME/DATE del resto de la aplicación no se ven alteradas.
+  QSqlQuery qUtc(db);
+  qUtc.exec("SET time_zone = '+00:00'");
 
   // Asegurar de forma eficiente que las columnas de notas existen en albaranes_tmp y pedidos
   QSqlQuery checkQuery(db);
@@ -517,6 +526,12 @@ bool baseDatos::modificarArticulo(QSqlDatabase db, QStringList datos,
 }
 
 bool baseDatos::insertarArticulo(QSqlDatabase db, QStringList datos) {
+  // Validar que los datos recibidos no estén vacíos y que el código (primer elemento) no sea nulo o vacío
+  if (datos.isEmpty() || datos.at(0).trimmed().isEmpty()) {
+    qDebug() << "Error: Se intentó insertar un artículo sin código.";
+    return false;
+  }
+
   qDebug() << datos;
   QSqlQuery consulta(db);
   consulta.prepare(
@@ -1179,6 +1194,22 @@ bool baseDatos::crearTienda(QStringList datos) {
                    "usuario, password, master, local, baseDatos, puerto, "
                    "ssl_ca) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
+  // Vincular todos los parámetros necesarios para la consulta SQL
+  consulta.bindValue(0, datos.at(1));
+  consulta.bindValue(1, datos.at(2));
+  consulta.bindValue(2, datos.at(3));
+  consulta.bindValue(3, datos.at(4));
+  consulta.bindValue(4, datos.at(5));
+  consulta.bindValue(5, datos.at(6));
+  consulta.bindValue(6, datos.at(7));
+  consulta.bindValue(7, datos.at(8));
+  consulta.bindValue(8, datos.at(9));
+  consulta.bindValue(9, datos.at(10));
+  consulta.bindValue(10, datos.at(11));
+  consulta.bindValue(11, datos.at(12));
+  consulta.bindValue(12, datos.at(13).toInt());
+  consulta.bindValue(13, datos.at(14));
+
   // Comprobar duplicados por nombre o IP
   QSqlQuery check(QSqlDatabase::database(conf->getConexionLocal()));
   check.prepare("SELECT id FROM tiendas WHERE nombre = ? OR ip = ?");
@@ -1665,15 +1696,15 @@ double baseDatos::sumarColumna(QString base, QString tabla, QString campo,
 
 int baseDatos::contarLineas(QString tabla, QString base, QString campoCondicion,
                             QString condicion) {
+  // Se realiza una consulta SELECT COUNT(*) para contar las filas reales asociadas a la condición
   QSqlQuery consulta(QSqlDatabase::database(base));
-  consulta.prepare("SELECT * FROM " + tabla + " WHERE " + campoCondicion +
+  consulta.prepare("SELECT COUNT(*) FROM " + tabla + " WHERE " + campoCondicion +
                    " = ?");
   consulta.bindValue(0, condicion);
-  if (!consulta.exec()) {
-    qDebug() << "contarLineas:" << consulta.lastError().text();
+  if (consulta.exec() && consulta.first()) {
+    return consulta.value(0).toInt();
   }
-  consulta.first();
-  return consulta.numRowsAffected();
+  return 0;
 }
 
 bool baseDatos::insertarES(QStringList datos, QString base, QString usuario) {
@@ -1784,12 +1815,12 @@ bool baseDatos::crearPedido(QString proveedor, QString nPedido, QString fecha,
 }
 
 bool baseDatos::borrarPedido(QString base, QString numeroPedido) {
+  // Se utiliza una consulta preparada para buscar y eliminar el pedido temporal y sus líneas asociadas
   QSqlQuery consulta(QSqlDatabase::database(base));
   consulta.prepare("SELECT id FROM albaranes_tmp WHERE id = ?");
   consulta.bindValue(0, numeroPedido);
   consulta.exec();
-  consulta.first();
-  if (consulta.numRowsAffected() == 1) {
+  if (consulta.next()) {
     consulta.prepare("DELETE FROM lineaspedido_tmp WHERE idPedido = ?");
     consulta.bindValue(0, numeroPedido);
     consulta.exec();
@@ -1799,7 +1830,6 @@ bool baseDatos::borrarPedido(QString base, QString numeroPedido) {
 
     return true;
   } else {
-    // Buscar los pedidos que coincidan y mostrarlos
     return false;
   }
 }
@@ -2092,8 +2122,14 @@ int baseDatos::nTarjetasDesdeUltimoArqueo(QString fechaI, QString horaI,
 }
 
 QSqlQuery baseDatos::devolverTablaCompleta(QString base, QString nombreTabla) {
+  // SEC: solo se permite consultar tablas de la whitelist (identificadores fijos)
+  static const QRegularExpression reId("^[A-Za-z_][A-Za-z0-9_]*$");
+  if (!reId.match(nombreTabla).hasMatch()) {
+    qWarning() << "devolverTablaCompleta: identificador no válido:" << nombreTabla;
+    return QSqlQuery();
+  }
   QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
-  consulta.exec("SELECT * FROM " + nombreTabla);
+  consulta.exec("SELECT * FROM `" + nombreTabla + "`");
   return consulta;
 }
 
@@ -2199,9 +2235,37 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
   consulta.bindValue(0, cod);
   consulta.bindValue(1, fecha);
   consulta.exec();
-  qDebug() << consulta.numRowsAffected();
-  if (consulta.numRowsAffected() == 0) {
-    qDebug() << "Pasa por filas = 0";
+  
+  if (!consulta.first()) {
+    // La fecha a descontar no coincide con ningún lote existente de este producto.
+    // Consultar las fechas registradas con existencias para dar opción de elegir al usuario.
+    QSqlQuery qFechas(QSqlDatabase::database(conf->getConexionLocal()));
+    qFechas.prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS f, sum(cantidad) AS cant "
+                    "FROM lotes WHERE ean = ? GROUP BY fecha HAVING cant > 0 ORDER BY f ASC");
+    qFechas.bindValue(0, cod);
+    QStringList opciones;
+    if (qFechas.exec()) {
+      while (qFechas.next()) {
+        opciones << QString("%1 (Stock: %2)").arg(qFechas.value("f").toString()).arg(qFechas.value("cant").toString());
+      }
+    }
+
+    if (!opciones.isEmpty() && QApplication::activeWindow()) {
+      bool ok = false;
+      QString selec = QInputDialog::getItem(
+          QApplication::activeWindow(),
+          "Seleccionar fecha a descontar",
+          "La fecha indicada no coincide con ninguna fecha registrada para este producto.\n"
+          "Seleccione la fecha de la que desea descontar:",
+          opciones, 0, false, &ok);
+      if (ok && !selec.isEmpty()) {
+        QString fechaElegida = selec.split(" ").first();
+        disminuirLote(cod, fechaElegida, uds);
+        return;
+      }
+    }
+
+    qDebug() << "Creando registro genérico negativo de lote para fecha:" << fecha;
     QString udsString = QString::number(uds);
     consulta.prepare("INSERT INTO lotes (ean , lote ,fecha , cantidad) "
                      "VALUES (?, '', ?, ?)");
@@ -2212,8 +2276,6 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
     qDebug() << consulta.lastError() << "Sin lotes";
     return;
   }
-
-  consulta.first();
   QString id = consulta.record().value(0).toString();
   qDebug() << id;
   if (consulta.record().value(1).toInt() == uds) {
@@ -2283,16 +2345,22 @@ QString baseDatos::sumarStockArticulo(QString id, QString nombreConnexion) {
 
 QString baseDatos::ticketCercanoFecha(QString tabla, QString fecha,
                                       QString cuando) {
+  // SEC: solo se permite consultar las tablas oficiales de tickets (whitelist)
+  static const QStringList tablasPermitidas = {"tickets", "ticketss"};
+  if (!tablasPermitidas.contains(tabla)) {
+    qWarning() << "ticketCercanoFecha: tabla no permitida:" << tabla;
+    return 0;
+  }
+
   QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   if (cuando == "minimo") {
-    consulta.exec("SELECT min(ticket) FROM " + tabla +
-                  " WHERE concat_ws('/',fecha,hora) >= '" + fecha + "'");
+    consulta.prepare("SELECT min(ticket) FROM " + tabla +
+                     " WHERE concat_ws('/',fecha,hora) >= ?");
   } else {
-    consulta.exec("SELECT max(ticket) FROM " + tabla +
-                  " WHERE concat_ws('/',fecha,hora) <= '" + fecha + "'");
+    consulta.prepare("SELECT max(ticket) FROM " + tabla +
+                     " WHERE concat_ws('/',fecha,hora) <= ?");
   }
-  // consulta.bindValue(0,tabla);
-  // consulta.bindValue(1,fecha);
+  consulta.bindValue(0, fecha);
   if (consulta.exec()) {
     consulta.first();
     return consulta.value(0).toString();

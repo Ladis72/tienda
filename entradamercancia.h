@@ -19,6 +19,7 @@ class EntradaMercancia : public QDialog
 public:
     explicit EntradaMercancia(QWidget *parent = 0);
     ~EntradaMercancia();
+    void aplicarPermisos();
 
 private slots:
     void on_pushButtonAceptar_clicked();

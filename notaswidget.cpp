@@ -191,6 +191,25 @@ void NotasWidget::setupUi() {
           &NotasWidget::onContextMenu);
   connect(tablaView, &QTableView::doubleClicked, this,
           &NotasWidget::onDoubleClicked);
+
+  aplicarPermisos();
+}
+
+/**
+ * @brief Aplica las restricciones de permisos sobre los controles de la interfaz de notas.
+ *
+ * Evalúa las claves "notas.crear" y "encargos" del GestorPermisos para activar o
+ * desactivar los botones de acción ("➕ Nueva nota" y "📦 Encargos").
+ */
+void NotasWidget::aplicarPermisos() {
+  if (!conf || !conf->permisos())
+    return;
+
+  if (btnNueva)
+    btnNueva->setEnabled(conf->permisos()->tiene("notas.crear"));
+
+  if (btnEncargos)
+    btnEncargos->setEnabled(conf->permisos()->tiene("encargos"));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -356,6 +375,9 @@ void NotasWidget::onFiltroChanged(int /*index*/) { refrescar(); }
 
 void NotasWidget::onDoubleClicked(const QModelIndex &index) {
   Q_UNUSED(index)
+  if (conf && conf->permisos() && !conf->permisos()->tiene("notas.modificar"))
+    return;
+
   int id = idNotaSeleccionada();
   if (id < 0)
     return;
@@ -392,34 +414,40 @@ void NotasWidget::onContextMenu(const QPoint &pos) {
   QString prioActual = modelo->data(modelo->index(srcIdx.row(), 1)).toString();
 
   QMenu menu(this);
+  bool canModificar = (conf && conf->permisos() && conf->permisos()->tiene("notas.modificar"));
+  bool canBorrar = (conf && conf->permisos() && conf->permisos()->tiene("notas.borrar"));
 
   // Estado
-  if (estadoActual != "Completada") {
-    QAction *acComp = menu.addAction(tr("✅  Marcar como completada"));
-    connect(acComp, &QAction::triggered, this,
-            &NotasWidget::onMarcarCompletada);
-  } else {
-    QAction *acPend = menu.addAction(tr("🔄  Marcar como pendiente"));
-    connect(acPend, &QAction::triggered, this, &NotasWidget::onMarcarPendiente);
+  if (canModificar) {
+    if (estadoActual != "Completada") {
+      QAction *acComp = menu.addAction(tr("✅  Marcar como completada"));
+      connect(acComp, &QAction::triggered, this,
+              &NotasWidget::onMarcarCompletada);
+    } else {
+      QAction *acPend = menu.addAction(tr("🔄  Marcar como pendiente"));
+      connect(acPend, &QAction::triggered, this, &NotasWidget::onMarcarPendiente);
+    }
+    menu.addSeparator();
+
+    // Prioridad
+    QMenu *menuPrio = menu.addMenu(tr("🏷  Cambiar prioridad"));
+    for (const QString &p : {tr("Alta"), tr("Normal"), tr("Baja")}) {
+      QAction *ac = menuPrio->addAction((p == prioActual ? "● " : "○ ") + p);
+      QString pFinal = p;
+      connect(ac, &QAction::triggered, this,
+              [this, pFinal]() { onCambiarPrioridad(pFinal); });
+    }
+    menu.addSeparator();
+
+    QAction *acEditar = menu.addAction(tr("✏  Editar nota"));
+    connect(acEditar, &QAction::triggered, this,
+            [this, idx]() { onDoubleClicked(idx); });
   }
-  menu.addSeparator();
 
-  // Prioridad
-  QMenu *menuPrio = menu.addMenu(tr("🏷  Cambiar prioridad"));
-  for (const QString &p : {tr("Alta"), tr("Normal"), tr("Baja")}) {
-    QAction *ac = menuPrio->addAction((p == prioActual ? "● " : "○ ") + p);
-    QString pFinal = p;
-    connect(ac, &QAction::triggered, this,
-            [this, pFinal]() { onCambiarPrioridad(pFinal); });
+  if (canBorrar) {
+    QAction *acBorrar = menu.addAction(tr("🗑  Eliminar nota"));
+    connect(acBorrar, &QAction::triggered, this, &NotasWidget::onEliminar);
   }
-  menu.addSeparator();
-
-  QAction *acEditar = menu.addAction(tr("✏  Editar nota"));
-  connect(acEditar, &QAction::triggered, this,
-          [this, idx]() { onDoubleClicked(idx); });
-
-  QAction *acBorrar = menu.addAction(tr("🗑  Eliminar nota"));
-  connect(acBorrar, &QAction::triggered, this, &NotasWidget::onEliminar);
 
   menu.exec(tablaView->viewport()->mapToGlobal(pos));
 }

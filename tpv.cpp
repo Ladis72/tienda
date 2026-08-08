@@ -769,18 +769,27 @@ void Tpv::on_btn_cobrar_clicked()
                 fechaAnteriorAEAT
             );
             
-            // Si el modo es VERI*FACTU, remitimos telemáticamente a la AEAT
-            int estadoEnvio = 1;
+            // Si el modo es VERI*FACTU, remitimos telemáticamente a la AEAT.
+            // En modo local (2) nunca se remite: el estado queda "Local", no "Enviado".
+            int estadoEnvio = verifactuClass::EstadoLocal;
             if (vfConfig.modo == 1) {
+                estadoEnvio = verifactuClass::EstadoPendiente;
                 QString errStr;
-                bool okEnvio = verifactuClass::enviarAEAT(xmlContent, vfConfig, errStr);
-                if (!okEnvio) {
-                    estadoEnvio = 0; // 0 = Pendiente / Error
+                int resultadoEnvio = verifactuClass::enviarAEAT(xmlContent, vfConfig, errStr);
+                if (resultadoEnvio == verifactuClass::EstadoPendiente) {
+                    estadoEnvio = verifactuClass::EstadoPendiente; // Pendiente / Error
                     qWarning() << "Error en la remisión VeriFactu a la AEAT:" << errStr;
                     // Registramos en local pero guardando el error en el log del sistema
                     base.insertarLog(conf->getConexionLocal(), "VeriFactuError", conf->getUsuario(),
                                      QString("Fallo envío ticket %1: %2").arg(numSerie).arg(errStr));
+                } else if (resultadoEnvio == verifactuClass::EstadoAceptadoConErrores) {
+                    // La AEAT admitió el registro pero notificó errores a subsanar
+                    estadoEnvio = verifactuClass::EstadoAceptadoConErrores;
+                    qWarning() << "AEAT aceptó con errores el ticket" << numSerie << ":" << errStr;
+                    base.insertarLog(conf->getConexionLocal(), "VeriFactuError", conf->getUsuario(),
+                                     QString("AEAT aceptó con errores ticket %1: %2").arg(numSerie).arg(errStr));
                 } else {
+                    estadoEnvio = verifactuClass::EstadoEnviado;
                     qDebug() << "Ticket" << numSerie << "remitido con éxito a la AEAT.";
                 }
             } else if (vfConfig.modo == 2) {
