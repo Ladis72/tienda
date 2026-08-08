@@ -76,3 +76,11 @@ test_db.py
 
 # SEC-06: Fichero de configuración con credenciales
 tienda.ini
+
+# Fase 4.1: artefactos de build y scripts one-off
+build_output*.txt
+schema_diff.txt
+*.dump.sql
+*.sql
+*.py
+*.sh
