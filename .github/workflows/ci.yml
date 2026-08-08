@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    name: Unit tests (QTest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.7.*'
+          modules: 'qtbase'
+          cache: true
+
+      - name: Install libqrencode
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libqrencode-dev
+
+      - name: Configure tests
+        run: |
+          qmake6 tests/tests.pro
+
+      - name: Build tests
+        run: |
+          make -j$(nproc)
+
+      - name: Run tests
+        run: |
+          ./tests
