@@ -1,5 +1,6 @@
 #include "verificadorbasedatos.h"
 #include "ui_verificadorbasedatos.h"
+#include "dialogdetallesverificador.h"
 #include "configuracion.h"
 #include <QSqlQuery>
 #include <QSqlError>
@@ -536,14 +537,9 @@ void VerificadorBaseDatos::on_pushButtonDetalles_clicked()
         return;
     }
 
-    // Construir ventana descriptiva con los detalles de los registros incoherentes
-    QMessageBox msg(this);
-    msg.setWindowTitle(tr("Detalles del Diagnóstico"));
-    msg.setIcon(QMessageBox::Warning);
-    msg.setText(tr("Diagnóstico: %1").arg(c.titulo));
-    msg.setInformativeText(tr("Se detectaron %1 registros incoherentes. A continuación se muestran los primeros elementos afectados:").arg(c.totalErrores));
-    msg.setDetailedText(c.detalles.join("\n"));
-    msg.exec();
+    // Abrir ventana modal redimensionable con los detalles del diagnóstico
+    DialogDetallesVerificador dlg(c.titulo, c.totalErrores, c.detalles, this);
+    dlg.exec();
 }
 
 /**

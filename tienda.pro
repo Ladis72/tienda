@@ -104,6 +104,7 @@ SOURCES += main.cpp\
     monitorcaducidades.cpp \
     dialogrecomendaciones.cpp \
     verificadorbasedatos.cpp \
+    dialogdetallesverificador.cpp \
     dialogtrazabilidad.cpp
 
 HEADERS  += tienda.h \
@@ -192,6 +193,7 @@ HEADERS  += tienda.h \
     monitorcaducidades.h \
     dialogrecomendaciones.h \
     verificadorbasedatos.h \
+    dialogdetallesverificador.h \
     dialogtrazabilidad.h
 
 FORMS    += tienda.ui \
@@ -256,11 +258,11 @@ FORMS    += tienda.ui \
     dialoganadirapedido.ui \
     historialprecios.ui \
     dialogcambiocodigo.ui \
-    dialogcambiocodigo.ui \
     dialogdetallearqueo.ui \
     dialogrecomendaciones.ui \
     visorlog.ui \
     verificadorbasedatos.ui \
+    dialogdetallesverificador.ui \
     dialogtrazabilidad.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
