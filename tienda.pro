@@ -197,7 +197,6 @@ HEADERS  += tienda.h \
     dialogtrazabilidad.h
 
 FORMS    += tienda.ui \
-    copiaseguridad.ui \
     generarvales.ui \
     impuestos.ui \
     login.ui \
