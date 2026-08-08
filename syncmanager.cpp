@@ -39,6 +39,7 @@ const QStringList SyncManager::TABLAS_MAESTRAS = {
     "articulos",    // depende de familias y fabricantes
     "clientes",
     "codaux",       // depende de articulos
+    "tiendas",
     "usuarios",
     "permisos",
     "vales"         // vales de fidelidad (estado se propaga via nube)
@@ -211,7 +212,9 @@ void SyncManager::crearTrigger(const QString &nombreTabla, const QString &claveP
         "  END IF; "
         "END"
     ).arg(nombreTrigger, evento, nombreTabla, prefijo, clavePrimaria);
-    q.exec(sql);
+    if (!q.exec(sql)) {
+        qDebug() << "SyncManager: Error creando trigger" << nombreTrigger << ":" << q.lastError().text();
+    }
 }
 
 bool SyncManager::conectarNube()
@@ -475,6 +478,19 @@ int SyncManager::subirCambios(const QString &connLocal, const QString &connNube,
                             }
                         } else {
                             vStr = "'" + val.toString().replace("'", "''") + "'";
+                        }
+                    }
+                    if (tabla == "tiendas") {
+                        bool esLocal = (rec.value("local").toInt() == 1 || rec.value("id").toInt() == m_idTiendaLocal);
+                        if (esLocal) {
+                            if (campo.toLower() == "local") {
+                                vStr = "0"; // En la nube todas las tiendas deben tener local = 0
+                            } else {
+                                QStringList camposLocales = {"ip", "usuario", "password", "baseDatos", "puerto", "ssl_ca"};
+                                if (camposLocales.contains(campo.toLower())) {
+                                    continue; // Evitar subir credenciales y configuración locales
+                                }
+                            }
                         }
                     }
                     campos << "`" + campo + "`"; valores << vStr;
@@ -823,6 +839,15 @@ int SyncManager::bajarCambios(const QString &connLocal, const QString &connNube,
                     // NUNCA sincronizar el ID físico local ni la PK aquí (se añade luego)
                     if (campo == pk || campo.toLower() == "id" + tabla.toLower()) continue;
                     if (recLoc.indexOf(campo) == -1 || excluidos.contains(campo.toLower())) continue;
+                    if (tabla == "tiendas") {
+                        bool esLocal = (idReg.toInt() == m_idTiendaLocal || rec.value("local").toInt() == 1);
+                        if (esLocal) {
+                            QStringList camposLocales = {"ip", "local", "usuario", "password", "baseDatos", "puerto", "ssl_ca"};
+                            if (camposLocales.contains(campo.toLower())) {
+                                continue;
+                            }
+                        }
+                    }
                     
                     QVariant val = rec.value(i);
                     QString vStr = "NULL";
@@ -967,7 +992,7 @@ QString SyncManager::getPkTabla(const QString &tabla) const
     static const QMap<QString, QString> m = {
         {"articulos","cod"},{"clientes","idCliente"},{"familias","id"},{"fabricantes","id"},
         {"proveedores","idProveedor"},{"codaux","id"},{"fpago","id"},{"impuestos","tipoIva"},
-        {"formatos","idformato"},{"motivosEntrada","idtiposEntrada"},{"usuarios","id"},
+        {"formatos","idformato"},{"motivosEntrada","idtiposEntrada"},{"tiendas","id"},{"usuarios","id"},
         {"permisos","id"},{"vales","vale_uuid"}
     };
     return m.value(tabla, "");

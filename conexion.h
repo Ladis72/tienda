@@ -67,6 +67,14 @@
         return false;
     }
 
+    // Comprobar si la base de datos está vacía o incompleta (si falta la tabla 'usuarios')
+    QSqlQuery checkEmpty(db);
+    checkEmpty.exec("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'usuarios'");
+    if (checkEmpty.next() && checkEmpty.value(0).toInt() == 0) {
+        db.close();
+        return false; // Tratar como conexión fallida para abrir el asistente de instalación
+    }
+
     // Asegurar de forma eficiente que las columnas de notas existen en albaranes_tmp y pedidos
     QSqlQuery checkQuery(db);
     

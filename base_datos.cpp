@@ -1194,6 +1194,22 @@ bool baseDatos::crearTienda(QStringList datos) {
                    "usuario, password, master, local, baseDatos, puerto, "
                    "ssl_ca) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
+  // Vincular todos los parámetros necesarios para la consulta SQL
+  consulta.bindValue(0, datos.at(1));
+  consulta.bindValue(1, datos.at(2));
+  consulta.bindValue(2, datos.at(3));
+  consulta.bindValue(3, datos.at(4));
+  consulta.bindValue(4, datos.at(5));
+  consulta.bindValue(5, datos.at(6));
+  consulta.bindValue(6, datos.at(7));
+  consulta.bindValue(7, datos.at(8));
+  consulta.bindValue(8, datos.at(9));
+  consulta.bindValue(9, datos.at(10));
+  consulta.bindValue(10, datos.at(11));
+  consulta.bindValue(11, datos.at(12));
+  consulta.bindValue(12, datos.at(13).toInt());
+  consulta.bindValue(13, datos.at(14));
+
   // Comprobar duplicados por nombre o IP
   QSqlQuery check(QSqlDatabase::database(conf->getConexionLocal()));
   check.prepare("SELECT id FROM tiendas WHERE nombre = ? OR ip = ?");

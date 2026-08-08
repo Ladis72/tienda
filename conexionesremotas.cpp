@@ -4,12 +4,16 @@ conexionesRemotas::conexionesRemotas(QObject *parent)
     : QObject(parent)
 {}
 
-QStringList conexionesRemotas::crear()
+QStringList conexionesRemotas::crear(const QStringList &filtroNombres)
 {
     listaConexionesRemotas.clear();
     if (!base) return listaConexionesRemotas;
     QSqlQuery conexiones = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
     while (conexiones.next()) {
+        QString nombreConexion = conexiones.value("nombre").toString();
+        if (!filtroNombres.isEmpty() && !filtroNombres.contains(nombreConexion)) {
+            continue;
+        }
         QString host = conexiones.value("ip").toString();
         // Leer el puerto desde la BD; si está vacío o es 0, usar 3306 por defecto
         QString puerto = conexiones.value("puerto").toString();
@@ -22,7 +26,7 @@ QStringList conexionesRemotas::crear()
         }
         QString usuario = conexiones.value("usuario").toString();
         QString constrasena = conexiones.value("password").toString();
-        QString nombreConexion = conexiones.value("nombre").toString();
+        // nombreConexion ya está declarada al inicio del bucle
         // Leer el certificado CA para SSL (vacío = sin SSL)
         QString sslCa = conexiones.value("ssl_ca").toString();
         if (createConnection(host, puerto, baseDatos, usuario, constrasena, nombreConexion, sslCa)) {

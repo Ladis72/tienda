@@ -196,7 +196,10 @@ void NotasWidget::setupUi() {
 }
 
 /**
- * @brief Aplica las restricciones de permisos sobre las notas.
+ * @brief Aplica las restricciones de permisos sobre los controles de la interfaz de notas.
+ *
+ * Evalúa las claves "notas.crear" y "encargos" del GestorPermisos para activar o
+ * desactivar los botones de acción ("➕ Nueva nota" y "📦 Encargos").
  */
 void NotasWidget::aplicarPermisos() {
   if (!conf || !conf->permisos())
@@ -204,6 +207,9 @@ void NotasWidget::aplicarPermisos() {
 
   if (btnNueva)
     btnNueva->setEnabled(conf->permisos()->tiene("notas.crear"));
+
+  if (btnEncargos)
+    btnEncargos->setEnabled(conf->permisos()->tiene("encargos"));
 }
 
 // ─────────────────────────────────────────────────────────────

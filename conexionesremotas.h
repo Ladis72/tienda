@@ -10,7 +10,7 @@ class conexionesRemotas : public QObject
     Q_OBJECT
 public:
     explicit conexionesRemotas(QObject *parent = nullptr);
-    QStringList crear();
+    QStringList crear(const QStringList &filtroNombres = QStringList());
     QStringList lista();
     QStringList listaOnLine();
 
