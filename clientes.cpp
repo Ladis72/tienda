@@ -139,6 +139,7 @@ void Clientes::aplicarPermisos() {
   ui->pushButtonBorrar->setEnabled(conf->permisos()->tiene("clientes.borrar"));
   ui->pushButtonUnificar->setEnabled(conf->permisos()->tiene("clientes.unificar"));
   ui->pushButtonSaneador->setEnabled(conf->permisos()->tiene("saneador_global"));
+  ui->btn_encargos_cliente->setEnabled(conf->permisos()->tiene("encargos"));
 }
 
 void Clientes::recargarTabla() {

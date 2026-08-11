@@ -36,7 +36,8 @@ void GestorPermisos::cargarPermisos(int rol, const QString &conexion) {
       m_permisos.insert(query.value(0).toString());
     }
   } else {
-    qDebug() << "GestorPermisos::cargarPermisos error:" << query.lastError().text();
+    qDebug() << "GestorPermisos::cargarPermisos error:"
+             << query.lastError().text();
   }
 
   qDebug() << "GestorPermisos: cargados" << m_permisos.size()
@@ -103,8 +104,7 @@ bool GestorPermisos::conceder(int rol, const QString &clave,
     return false;
 
   QSqlQuery query(db);
-  query.prepare(
-      "INSERT IGNORE INTO permisos (rol, clave) VALUES (?, ?)");
+  query.prepare("INSERT IGNORE INTO permisos (rol, clave) VALUES (?, ?)");
   query.bindValue(0, rol);
   query.bindValue(1, clave);
   if (!query.exec()) {
@@ -138,7 +138,8 @@ bool GestorPermisos::revocar(int rol, const QString &clave,
  * @brief Nombres descriptivos de los 5 roles del sistema.
  *
  * - 0: Administrador   → acceso total
- * - 1: Encargado       → gestión avanzada sin acceso a configuración del sistema
+ * - 1: Encargado       → gestión avanzada sin acceso a configuración del
+ * sistema
  * - 2: Vendedor        → ventas, consultas básicas y gestión de stock
  * - 3: Cajero          → solo TPV y funciones mínimas de caja
  * - 4: Almacén         → gestión de stock, entradas, salidas y pedidos
@@ -164,13 +165,12 @@ void GestorPermisos::inicializar(const QString &conexion) {
   QSqlQuery query(db);
 
   // Crear la tabla si no existe
-  QString crearTabla =
-      "CREATE TABLE IF NOT EXISTS permisos ("
-      "  id    INT AUTO_INCREMENT PRIMARY KEY,"
-      "  rol   INT NOT NULL,"
-      "  clave VARCHAR(64) NOT NULL,"
-      "  UNIQUE KEY uk_rol_clave (rol, clave)"
-      ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+  QString crearTabla = "CREATE TABLE IF NOT EXISTS permisos ("
+                       "  id    INT AUTO_INCREMENT PRIMARY KEY,"
+                       "  rol   INT NOT NULL,"
+                       "  clave VARCHAR(64) NOT NULL,"
+                       "  UNIQUE KEY uk_rol_clave (rol, clave)"
+                       ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
   if (!query.exec(crearTabla)) {
     qDebug() << "GestorPermisos: error creando tabla permisos:"
@@ -178,16 +178,12 @@ void GestorPermisos::inicializar(const QString &conexion) {
     return;
   }
 
-  // Comprobar si ya tiene datos (para no hacer INSERTs innecesarios)
-  query.exec("SELECT COUNT(*) FROM permisos");
-  if (query.next() && query.value(0).toInt() > 0) {
-    qDebug() << "GestorPermisos: tabla permisos ya tiene datos, omitiendo inserts por defecto";
-    return;
-  }
-
-  // Insertar permisos por defecto para los 5 roles
+  // Insertar permisos por defecto para los 5 roles (usando INSERT IGNORE de
+  // forma idempotente) Esto asegura que nuevas claves de permisos se añadan
+  // automáticamente a BD existentes.
   insertarPermisosPorDefecto(conexion);
-  qDebug() << "GestorPermisos: permisos inicializados correctamente";
+  qDebug()
+      << "GestorPermisos: permisos inicializados/actualizados correctamente";
 }
 
 /**
@@ -195,7 +191,8 @@ void GestorPermisos::inicializar(const QString &conexion) {
  *
  * Catálogo completo de permisos con notación granular:
  * - Claves simples: "ventas", "estadisticas", "tab_config" → acceso al módulo
- * - Claves granulares: "articulos.crear", "articulos.borrar" → acción específica
+ * - Claves granulares: "articulos.crear", "articulos.borrar" → acción
+ * específica
  *
  * ROL 0 (Admin):      TODO
  * ROL 1 (Encargado):  Gestión avanzada, sin config sistema ni estadísticas
@@ -225,184 +222,184 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
 
   QList<PermisoDefault> catalogo = {
       // ── Ventas / TPV ──
-      {"ventas",                    {0, 1, 2, 3}},
+      {"ventas", {0, 1, 2, 3}},
 
       // ── Artículos ──
-      {"articulos",                 {0, 1, 2, 4}},
-      {"articulos.crear",           {0, 1}},
-      {"articulos.modificar",       {0, 1}},
-      {"articulos.borrar",          {0}},
-      {"articulos.cambiar_codigo",  {0, 1}},
+      {"articulos", {0, 1, 2, 4}},
+      {"articulos.crear", {0, 1}},
+      {"articulos.modificar", {0, 1}},
+      {"articulos.borrar", {0}},
+      {"articulos.cambiar_codigo", {0, 1}},
       {"articulos.historial_precios", {0, 1, 2, 4}},
-      {"articulos.trazabilidad",    {0, 1, 4}},
-      {"articulos.unificar",        {0, 1}},
+      {"articulos.trazabilidad", {0, 1, 4}},
+      {"articulos.unificar", {0, 1}},
 
       // ── Familias ──
-      {"familias",                  {0, 1}},
-      {"familias.crear",            {0, 1}},
-      {"familias.modificar",        {0, 1}},
-      {"familias.borrar",           {0}},
-      {"familias.unificar",         {0, 1}},
+      {"familias", {0, 1}},
+      {"familias.crear", {0, 1}},
+      {"familias.modificar", {0, 1}},
+      {"familias.borrar", {0}},
+      {"familias.unificar", {0, 1}},
 
       // ── Fabricantes ──
-      {"fabricantes",               {0, 1}},
-      {"fabricantes.crear",         {0, 1}},
-      {"fabricantes.modificar",     {0, 1}},
-      {"fabricantes.borrar",        {0}},
-      {"fabricantes.unificar",      {0, 1}},
+      {"fabricantes", {0, 1}},
+      {"fabricantes.crear", {0, 1}},
+      {"fabricantes.modificar", {0, 1}},
+      {"fabricantes.borrar", {0}},
+      {"fabricantes.unificar", {0, 1}},
 
       // ── Clientes ──
-      {"clientes",                  {0, 1, 2}},
-      {"clientes.crear",            {0, 1}},
-      {"clientes.modificar",        {0, 1}},
-      {"clientes.borrar",           {0}},
-      {"clientes.unificar",         {0, 1}},
+      {"clientes", {0, 1, 2}},
+      {"clientes.crear", {0, 1}},
+      {"clientes.modificar", {0, 1}},
+      {"clientes.borrar", {0}},
+      {"clientes.unificar", {0, 1}},
 
       // ── Proveedores ──
-      {"proveedores",               {0, 1}},
-      {"proveedores.crear",         {0, 1}},
-      {"proveedores.modificar",     {0, 1}},
-      {"proveedores.borrar",        {0}},
-      {"proveedores.unificar",      {0, 1}},
+      {"proveedores", {0, 1}},
+      {"proveedores.crear", {0, 1}},
+      {"proveedores.modificar", {0, 1}},
+      {"proveedores.borrar", {0}},
+      {"proveedores.unificar", {0, 1}},
 
       // ── Formas de pago ──
-      {"formas_pago",               {0, 1}},
-      {"formas_pago.crear",         {0}},
-      {"formas_pago.modificar",     {0}},
-      {"formas_pago.borrar",        {0}},
+      {"formas_pago", {0, 1}},
+      {"formas_pago.crear", {0}},
+      {"formas_pago.modificar", {0}},
+      {"formas_pago.borrar", {0}},
 
       // ── Usuarios ──
-      {"usuarios",                  {0}},
-      {"usuarios.crear",            {0}},
-      {"usuarios.modificar",        {0}},
-      {"usuarios.borrar",           {0}},
+      {"usuarios", {0}},
+      {"usuarios.crear", {0}},
+      {"usuarios.modificar", {0}},
+      {"usuarios.borrar", {0}},
 
       // ── Tiendas ──
-      {"tiendas",                   {0}},
+      {"tiendas", {0}},
 
       // ── Formatos ──
-      {"formatos",                  {0}},
+      {"formatos", {0}},
 
       // ── Tipos entrada/salida ──
-      {"tipos_entrada_salida",      {0}},
+      {"tipos_entrada_salida", {0}},
 
       // ── Etiquetas ──
-      {"etiquetas",                 {0, 1, 4}},
+      {"etiquetas", {0, 1, 4}},
 
       // ── Entrada de mercancía ──
-      {"entradas",                  {0, 1, 4}},
-      {"entradas.crear",            {0, 1, 4}},
-      {"entradas.borrar",           {0, 1}},
+      {"entradas", {0, 1, 4}},
+      {"entradas.crear", {0, 1, 4}},
+      {"entradas.borrar", {0, 1}},
 
       // ── Salidas ──
-      {"salidas",                   {0, 1, 4}},
-      {"salidas.crear",             {0, 1, 4}},
-      {"salidas.borrar",            {0, 1}},
+      {"salidas", {0, 1, 4}},
+      {"salidas.crear", {0, 1, 4}},
+      {"salidas.borrar", {0, 1}},
 
       // ── Venta por artículo (listado) ──
-      {"venta_articulos",           {0, 1}},
+      {"venta_articulos", {0, 1}},
 
       // ── Caducidades ──
-      {"caducidades",               {0, 1, 4}},
+      {"caducidades", {0, 1, 4}},
 
       // ── Caducados ──
-      {"caducados",                 {0, 1, 4}},
+      {"caducados", {0, 1, 4}},
 
       // ── Movimientos E/S ──
-      {"movimientos",               {0, 1, 4}},
+      {"movimientos", {0, 1, 4}},
 
       // ── Tickets ──
-      {"tickets",                   {0, 1}},
-      {"tickets.imprimir",          {0, 1, 2, 3}},
-      {"tickets.modificar",         {0, 1}},
-      {"tickets.facturar",          {0, 1}},
-      {"tickets.borrar",            {0}},
+      {"tickets", {0, 1}},
+      {"tickets.imprimir", {0, 1, 2, 3}},
+      {"tickets.modificar", {0, 1}},
+      {"tickets.facturar", {0, 1}},
+      {"tickets.borrar", {0}},
 
       // ── Facturas ──
-      {"facturas",                  {0, 1}},
+      {"facturas", {0, 1}},
 
       // ── Albaranes ──
-      {"albaranes",                 {0, 1}},
+      {"albaranes", {0, 1}},
 
       // ── Facturar albaranes ──
-      {"facturar",                  {0, 1}},
+      {"facturar", {0, 1}},
 
       // ── Gestión de pedidos ──
-      {"gestionar_pedidos",         {0, 1, 4}},
-      {"pedidos.crear",             {0, 1, 4}},
-      {"pedidos.modificar",         {0, 1, 4}},
-      {"pedidos.borrar",            {0, 1}},
-      {"pedidos.aceptar",           {0, 1, 4}},
-      {"pedidos.imprimir",          {0, 1, 4}},
+      {"gestionar_pedidos", {0, 1, 4}},
+      {"pedidos.crear", {0, 1, 4}},
+      {"pedidos.modificar", {0, 1, 4}},
+      {"pedidos.borrar", {0, 1}},
+      {"pedidos.aceptar", {0, 1, 4}},
+      {"pedidos.imprimir", {0, 1, 4}},
 
       // ── Cajas ──
-      {"cajas",                     {0, 1, 3}},
-      {"cajas.abrir",               {0, 1, 3}},
-      {"cajas.cerrar",              {0, 1, 3}},
-      {"cajas.retirar",             {0, 1}},
+      {"cajas", {0, 1, 3}},
+      {"cajas.abrir", {0, 1, 3}},
+      {"cajas.cerrar", {0, 1, 3}},
+      {"cajas.retirar", {0, 1}},
 
       // ── Saneador / Alineación Global ──
-      {"saneador_global",           {0, 1}},
+      {"saneador_global", {0}},
 
       // ── Generar vales ──
-      {"generar_vales",             {0}},
+      {"generar_vales", {0}},
 
       // ── Actualizar clientes ──
-      {"actualizar_clientes",       {0}},
+      {"actualizar_clientes", {0}},
 
       // ── Listados ──
-      {"listado_ventas",            {0, 1}},
-      {"listado_movimientos",       {0}},
-      {"listado_arqueos",           {0}},
-      {"listado_caducados",         {0, 1, 4}},
+      {"listado_ventas", {0, 1}},
+      {"listado_movimientos", {0}},
+      {"listado_arqueos", {0}},
+      {"listado_caducados", {0, 1, 4}},
 
       // ── Estadísticas ──
-      {"estadisticas",              {0}},
+      {"estadisticas", {0}},
 
       // ── Configuración ──
-      {"config_ticket",             {0}},
-      {"configuracion",             {0}},
-      {"informes",                  {0}},
-      {"impuestos",                 {0, 1}},
-      {"copia_seguridad",           {0, 1}},
-      {"conectar",                  {0, 1}},
-      {"config_base",               {0}},
-      {"config_local",              {0}},
-      {"tab_config",                {0}},
+      {"config_ticket", {0}},
+      {"configuracion", {0}},
+      {"informes", {0}},
+      {"impuestos", {0, 1}},
+      {"copia_seguridad", {0, 1}},
+      {"conectar", {0, 1}},
+      {"config_base", {0}},
+      {"config_local", {0}},
+      {"tab_config", {0}},
 
       // ── Preparar (pedidos) ──
-      {"preparar",                  {0, 1, 4}},
+      {"preparar", {0, 1, 4}},
 
       // ── Notas y Avisos ──
-      {"notas",                     {0, 1, 2, 3, 4}},
-      {"notas.crear",               {0, 1, 2, 3, 4}},
-      {"notas.modificar",           {0, 1, 2}},
-      {"notas.borrar",              {0, 1}},
+      {"notas", {0, 1, 2, 3, 4}},
+      {"notas.crear", {0, 1, 2, 3, 4}},
+      {"notas.modificar", {0, 1, 2}},
+      {"notas.borrar", {0, 1}},
 
       // ── Sistema de Encargos ──
-      {"encargos",                  {0, 1, 2, 4}},
-      {"encargos.crear",            {0, 1, 2, 4}},
-      {"encargos.modificar",        {0, 1, 2, 4}},
-      {"encargos.borrar",           {0, 1}},
-      {"encargos.cobrar",           {0, 1, 2, 3}},
-      {"encargos.imprimir",         {0, 1, 2, 4}},
+      {"encargos", {0, 1, 2, 4}},
+      {"encargos.crear", {0, 1, 2, 4}},
+      {"encargos.modificar", {0, 1, 2, 4}},
+      {"encargos.borrar", {0, 1}},
+      {"encargos.cobrar", {0, 1, 2, 3}},
+      {"encargos.imprimir", {0, 1, 2, 4}},
 
       // ── Visor de logs ──
-      {"visor_log.limpiar",         {0}},
+      {"visor_log.limpiar", {0}},
 
       // ── Configuración Avanzada ──
-      {"editor_permisos",           {0}},
-      {"verifactu",                 {0}},
-      {"verificar_bd",              {0}},
+      {"editor_permisos", {0}},
+      {"verifactu", {0}},
+      {"verificar_bd", {0}},
 
       // ── TPV (Acciones granulares) ──
-      {"tpv.anadir",                {0, 1, 2, 3}},
-      {"tpv.borrar",                {0, 1, 2}},
-      {"tpv.borrar_todo",           {0, 1}},
-      {"tpv.cobrar",                {0, 1, 2, 3}},
-      {"tpv.preticket",             {0, 1, 2, 3}},
-      {"tpv.hacer_encargo",         {0, 1, 2, 4}},
-      {"tpv.gestor_encargos",       {0, 1, 2, 4}},
+      {"tpv.anadir", {0, 1, 2, 3}},
+      {"tpv.borrar", {0, 1, 2}},
+      {"tpv.borrar_todo", {0, 1}},
+      {"tpv.cobrar", {0, 1, 2, 3}},
+      {"tpv.preticket", {0, 1, 2, 3}},
+      {"tpv.hacer_encargo", {0, 1, 2, 4}},
+      {"tpv.gestor_encargos", {0, 1, 2, 4}},
   };
 
   // Insertar todas las filas con INSERT IGNORE (idempotente)
@@ -414,8 +411,8 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
       query.bindValue(0, rol);
       query.bindValue(1, QString(p.clave));
       if (!query.exec()) {
-        qDebug() << "GestorPermisos: error insertando" << p.clave
-                 << "para rol" << rol << ":" << query.lastError().text();
+        qDebug() << "GestorPermisos: error insertando" << p.clave << "para rol"
+                 << rol << ":" << query.lastError().text();
       }
     }
   }
