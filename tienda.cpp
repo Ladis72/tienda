@@ -444,18 +444,16 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   });
 
   // Botón para iniciar el Gestor de Encargos desde la pantalla principal
-  // btnEncargosMain = new QPushButton(tr("Gestor de Encargos"), this);
-  /*QGridLayout *pedidosLayout = qobject_cast<QGridLayout
-  *>(ui->TabPedidos->layout()); if (pedidosLayout) {
-      // Se añade en una nueva posición del grid de pedidos
-      pedidosLayout->addWidget(btnEncargosMain, 1, 1);
-  }*/
-  /*
+  btnEncargosMain = new QPushButton(tr("Gestor de Encargos"), this);
+  btnEncargosMain->setIcon(style()->standardIcon(QStyle::SP_FileDialogContentsView));
+  QGridLayout *pedidosLayout = qobject_cast<QGridLayout *>(ui->TabPedidos->layout());
+  if (pedidosLayout) {
+    pedidosLayout->addWidget(btnEncargosMain, 0, 6);
+  }
   connect(btnEncargosMain, &QPushButton::clicked, this, [this]() {
     GestorEncargosDialog dial("", this);
     dial.exec();
   });
-  */
 
   base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                    "Inicio programa ");
