@@ -81,6 +81,22 @@ public:
     QString etiquetaCliente(QString idCliente);
     QString nombreFormaPago(QString id, QString base);
     QString idFormaPago(QString fpago, QString base);
+
+    /**
+     * @brief Comprueba si una forma de pago (por ID o por nombre) corresponde a efectivo.
+     */
+    bool esFormaPagoEfectivo(QString fpago, QString base);
+
+    /**
+     * @brief Devuelve la suma acumulada de anticipos de encargos en tarjetas/no-efectivo desde el último arqueo.
+     */
+    double anticiposNoEfectivoDesdeUltimoArqueo(QString fechaI, QString horaI, QString base);
+
+    /**
+     * @brief Devuelve la cantidad de operaciones de anticipos en tarjeta/no-efectivo desde el último arqueo.
+     */
+    int nAnticiposNoEfectivoDesdeUltimoArqueo(QString fechaI, QString horaI, QString base);
+
     bool insertarEtiqueta(QString base, QString etiqueta);
     bool modificarTienda(QStringList datos);
     bool borrarTienda(QString dato);

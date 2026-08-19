@@ -123,8 +123,26 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
                          conf->getConexionLocal());
 
-  // Añadimos el campo forma_pago si la tabla ya existía anteriormente
+  // Añadimos campos para el seguimiento de forma de pago y devoluciones si la tabla ya existía
   base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN `forma_pago` VARCHAR(50) DEFAULT 'Efectivo';",
+                         conf->getConexionLocal());
+  base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN `dev_fecha` DATETIME DEFAULT NULL;",
+                         conf->getConexionLocal());
+  base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN `dev_forma_pago` VARCHAR(50) DEFAULT NULL;",
+                         conf->getConexionLocal());
+  base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN `dev_anticipo` DOUBLE(10,2) DEFAULT '0.00';",
+                         conf->getConexionLocal());
+
+  // Tabla para almacenar las líneas de productos individuales de encargos multiproducto
+  base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `encargos_lineas` ("
+                         "  `id` INT AUTO_INCREMENT PRIMARY KEY,"
+                         "  `id_encargo` INT NOT NULL,"
+                         "  `cod_articulo` VARCHAR(15) NOT NULL,"
+                         "  `descripcion` VARCHAR(255) NOT NULL,"
+                         "  `cantidad` INT NOT NULL DEFAULT 1,"
+                         "  `pvp` DOUBLE(10,2) DEFAULT '0.00',"
+                         "  INDEX `idx_encargo` (`id_encargo`)"
+                         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;",
                          conf->getConexionLocal());
 
   base.ejecutarSentencia("CREATE TABLE IF NOT EXISTS `historico_stock` ("

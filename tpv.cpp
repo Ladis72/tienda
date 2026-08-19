@@ -508,11 +508,65 @@ bool Tpv::cargarEncargo(QString codArticulo, double anticipo, int cantidad)
 
 bool Tpv::cargarEncargoConId(QString codArticulo, double anticipo, int cantidad, int idEncargo)
 {
-    if (cargarEncargo(codArticulo, anticipo, cantidad)) {
-        this->idEncargoPendiente = idEncargo;
-        return true;
+    // 1. Si no hay ticket abierto, creamos uno
+    if (modeloTicket->rowCount() == 0 && ui->tableView->rowAt(0) < 0) {
+        ticketNuevo(base.maxTicketPendiente(QSqlDatabase::database(conf->getConexionLocal())) + 1);
     }
-    return false;
+
+    // 2. Consultar si existen líneas en la tabla encargos_lineas
+    QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
+    q.prepare("SELECT cod_articulo, descripcion, cantidad, pvp FROM encargos_lineas WHERE id_encargo = ?");
+    q.bindValue(0, idEncargo);
+
+    bool cargadoLineas = false;
+    if (q.exec() && q.next()) {
+        cargadoLineas = true;
+        do {
+            QString cArt = q.value("cod_articulo").toString();
+            QString dArt = q.value("descripcion").toString();
+            int cantArt = q.value("cantidad").toInt();
+            double pvpArt = q.value("pvp").toDouble();
+
+            QSqlRecord reg = base.consulta_producto(conf->getConexionLocal(), cArt);
+            QString ivaStr = reg.value("iva").toString();
+            if (ivaStr.isEmpty()) ivaStr = "21";
+
+            QList<QString> lineaArt;
+            lineaArt << cArt;
+            lineaArt << dArt;
+            lineaArt << QString::number(cantArt);
+            lineaArt << ivaStr;
+            lineaArt << QString::number(pvpArt, 'f', 2);
+            lineaArt << "0"; // Descuento
+            lineaArt << QString::number(cantArt * pvpArt, 'f', 2);
+
+            actualizarLineaTicket(lineaArt);
+        } while (q.next());
+    }
+
+    // Fallback para encargos legados con producto único
+    if (!cargadoLineas) {
+        cargarEncargo(codArticulo, 0, cantidad);
+    }
+
+    // 3. Añadir la línea del anticipo negativo a descontar
+    if (anticipo > 0) {
+        QList<QString> lineaAnticipo;
+        lineaAnticipo << "0";
+        lineaAnticipo << QString("ANTICIPO ENCARGO #%1").arg(idEncargo);
+        lineaAnticipo << "1";
+        lineaAnticipo << "0";
+        lineaAnticipo << QString::number(-anticipo, 'f', 2);
+        lineaAnticipo << "0";
+        lineaAnticipo << QString::number(-anticipo, 'f', 2);
+
+        actualizarLineaTicket(lineaAnticipo);
+    }
+
+    actualizarParrillaVentas();
+    ui->lineEdit_cod->setFocus();
+    this->idEncargoPendiente = idEncargo;
+    return true;
 }
 
 void Tpv::keyPressEvent(QKeyEvent *e)
@@ -832,7 +886,7 @@ void Tpv::on_btn_cobrar_clicked()
                                      + db.lastError().text().toStdString());
         }
 
-        // Si veníamos de cobrar un encargo, ahora que el ticket se ha grabado, lo marcamos como entregado
+        // Si veníamos de cobrar un encargo, ahora que el ticket se ha grabado, lo marcamos como entregado y borramos su nota
         if (idEncargoPendiente > 0) {
             QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
             q.prepare("UPDATE encargos SET estado = 'Entregado' WHERE id_encargo = ?");
@@ -840,6 +894,17 @@ void Tpv::on_btn_cobrar_clicked()
             if (q.exec()) {
                 qDebug() << "Encargo ID" << idEncargoPendiente << "marcado como ENTREGADO tras cobro de ticket.";
             }
+
+            // Borrar la nota correspondiente al encargo en la tabla de notas
+            QSqlQuery qNota(QSqlDatabase::database(conf->getConexionLocal()));
+            qNota.prepare("DELETE FROM notas WHERE titulo LIKE ? OR descripcion LIKE ?");
+            QString patronNota = QString("%Encargo #%1%").arg(idEncargoPendiente);
+            qNota.bindValue(0, patronNota);
+            qNota.bindValue(1, patronNota);
+            if (qNota.exec()) {
+                qDebug() << "Nota asociada al encargo #" << idEncargoPendiente << "eliminada tras el cobro del ticket.";
+            }
+
             idEncargoPendiente = 0; // Reset para el siguiente ticket
         }
 
@@ -1274,7 +1339,36 @@ void Tpv::on_btn_encargo_clicked()
     if (usuarioSistema.isEmpty()) usuarioSistema = ui->comboBox_vendedor->currentText();
 
     EncargosDialog dialog(codCliente, nombreCliente, codArticulo, descArticulo, usuarioSistema, this);
+
+    // Si la parrilla del TPV contiene líneas abiertas, cargarlas como productos iniciales en el diálogo
+    if (modeloTicket && modeloTicket->rowCount() > 0) {
+        QList<LineaEncargo> lineasTpv;
+        for (int r = 0; r < modeloTicket->rowCount(); ++r) {
+            QString c = modeloTicket->data(modeloTicket->index(r, 2)).toString();
+            QString d = modeloTicket->data(modeloTicket->index(r, 3)).toString();
+            int cant = modeloTicket->data(modeloTicket->index(r, 4)).toInt();
+            double p = modeloTicket->data(modeloTicket->index(r, 6)).toDouble();
+            if (!c.isEmpty() && c != "0") {
+                LineaEncargo l;
+                l.codArticulo = c;
+                l.descripcion = d;
+                l.cantidad = (cant > 0) ? cant : 1;
+                l.pvp = p;
+                lineasTpv.append(l);
+            }
+        }
+        if (!lineasTpv.isEmpty()) {
+            dialog.setLineas(lineasTpv);
+        }
+    }
+
     if (dialog.exec() == QDialog::Accepted) {
+        QList<LineaEncargo> lineasDialog = dialog.getLineas();
+        if (lineasDialog.isEmpty() && dialog.getCodArticulo().isEmpty()) {
+            QMessageBox::warning(this, "Aviso", "No se puede crear el encargo, debe añadir al menos un producto.");
+            return;
+        }
+
         QString finalCodArticulo = dialog.getCodArticulo();
         QString finalCodCliente = dialog.getCodCliente();
         int cantidad = dialog.getCantidad();
@@ -1282,12 +1376,12 @@ void Tpv::on_btn_encargo_clicked()
         QString formaPago = dialog.getFormaPago();
         QString notas = dialog.getNotas();
 
-        if (finalCodArticulo.isEmpty() || finalCodCliente.isEmpty()) {
-            QMessageBox::warning(this, "Aviso", "No se puede crear el encargo, faltan datos (artículo o cliente vacío).");
+        if (finalCodCliente.isEmpty()) {
+            QMessageBox::warning(this, "Aviso", "No se puede crear el encargo, falta seleccionar el cliente.");
             return;
         }
 
-        // Insertar en la tabla encargos (incluyendo la forma de pago seleccionada)
+        // Insertar en la cabecera de encargos
         QSqlQuery query(QSqlDatabase::database(conf->getConexionLocal()));
         query.prepare("INSERT INTO encargos (id_cliente, cod_articulo, cantidad, notas, empleado, anticipo, forma_pago, estado) "
                       "VALUES (?, ?, ?, ?, ?, ?, ?, 'Pendiente')");
@@ -1303,10 +1397,23 @@ void Tpv::on_btn_encargo_clicked()
             QMessageBox::critical(this, "Error", "No se pudo guardar el encargo:\n" + query.lastError().text());
         } else {
             int idNuevoEncargo = query.lastInsertId().toInt();
+
+            // Insertar las líneas de productos en encargos_lineas
+            QSqlQuery qLin(QSqlDatabase::database(conf->getConexionLocal()));
+            qLin.prepare("INSERT INTO encargos_lineas (id_encargo, cod_articulo, descripcion, cantidad, pvp) VALUES (?, ?, ?, ?, ?)");
+            for (const LineaEncargo &l : lineasDialog) {
+                qLin.bindValue(0, idNuevoEncargo);
+                qLin.bindValue(1, l.codArticulo);
+                qLin.bindValue(2, l.descripcion);
+                qLin.bindValue(3, l.cantidad);
+                qLin.bindValue(4, l.pvp);
+                qLin.exec();
+            }
+
             baseDatos base;
             base.crearNota(conf->getConexionLocal(),
-                           "Nuevo Encargo: " + finalCodArticulo,
-                           "Cliente ID: " + finalCodCliente + "\nCantidad: " + QString::number(cantidad) + "\nForma Pago Anticipo: " + formaPago + "\nNotas: " + notas,
+                           QString("Encargo #%1: %2").arg(QString::number(idNuevoEncargo), dialog.getDescArticulo()),
+                           QString("Encargo #%1\nCliente ID: %2\nProductos: %3\nForma Pago Anticipo: %4\nNotas: %5").arg(QString::number(idNuevoEncargo), finalCodCliente, QString::number(lineasDialog.size()), formaPago, notas),
                            usuarioSistema,
                            "",
                            "Alta");
@@ -1327,21 +1434,27 @@ void Tpv::on_btn_encargo_clicked()
             }
         }
         
-        // Si hay un anticipo, registrarlo en movimientos de caja (entradasSalidas) especificando la forma de pago
+        // Si hay un anticipo, registrarlo en los movimientos de caja en efectivo solo si la forma de pago es en EFECTIVO.
+        // Si es con Tarjeta u otro medio no-efectivo, se incluirá automáticamente en las Ventas por Tarjeta de Cajas.
         if (anticipo > 0) {
-            QStringList datosES;
-            datosES.append(QDate::currentDate().toString("yyyy-MM-dd"));
-            datosES.append(QTime::currentTime().toString("hh:mm:ss"));
-            datosES.append(QString::number(anticipo));
-            // Suponemos ID 1 como ingreso por defecto
-            datosES.append("1"); 
-            datosES.append(QString("Anticipo Encargo [%1] (Cliente %2) - %3").arg(formaPago, codCliente, codArticulo));
-            
             baseDatos base;
-            if (!base.insertarES(datosES, conf->getConexionLocal(), conf->getUsuario())) {
-                QMessageBox::warning(this, "Aviso", "El encargo se guardó, pero no se pudo registrar el anticipo en la caja.");
+            bool esEfectivo = base.esFormaPagoEfectivo(formaPago, conf->getConexionLocal());
+            
+            if (esEfectivo) {
+                QStringList datosES;
+                datosES.append(QDate::currentDate().toString("yyyy-MM-dd"));
+                datosES.append(QTime::currentTime().toString("hh:mm:ss"));
+                datosES.append(QString::number(anticipo));
+                datosES.append("1"); // ID motivo ingreso en caja
+                datosES.append(QString("Anticipo Encargo (Efectivo) [Cliente %1] - %2").arg(codCliente, codArticulo));
+                
+                if (!base.insertarES(datosES, conf->getConexionLocal(), conf->getUsuario())) {
+                    QMessageBox::warning(this, "Aviso", "El encargo se guardó, pero no se pudo registrar el anticipo en el cajón de efectivo.");
+                } else {
+                    QMessageBox::information(this, "Éxito", "Encargo creado y anticipo registrado en el cajón de efectivo correctamente.");
+                }
             } else {
-                QMessageBox::information(this, "Éxito", "Encargo creado y anticipo registrado en caja correctamente.");
+                QMessageBox::information(this, "Éxito", QString("Encargo creado y anticipo de %1 € (%2) registrado correctamente.").arg(QString::number(anticipo, 'f', 2), formaPago));
             }
         } else {
             QMessageBox::information(this, "Éxito", "Encargo creado correctamente (sin anticipo).");
