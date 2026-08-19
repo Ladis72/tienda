@@ -8,6 +8,16 @@ namespace Ui {
 class EncargosDialog;
 }
 
+/**
+ * @brief Estructura que representa un producto dentro de un encargo multiproducto.
+ */
+struct LineaEncargo {
+    QString codArticulo;
+    QString descripcion;
+    int cantidad;
+    double pvp;
+};
+
 class EncargosDialog : public QDialog
 {
     Q_OBJECT
@@ -35,18 +45,38 @@ public:
      */
     bool getImprimirTicket() const;
 
-    QString getCodArticulo() const { return m_codArticulo; }
-    QString getDescArticulo() const { return m_descArticulo; }
+    /**
+     * @brief Devuelve la lista completa de productos añadidos al encargo.
+     */
+    QList<LineaEncargo> getLineas() const;
+
+    /**
+     * @brief Añade una línea de producto a la tabla del encargo.
+     */
+    void addLinea(const LineaEncargo &linea);
+
+    /**
+     * @brief Reemplaza todas las líneas del encargo.
+     */
+    void setLineas(const QList<LineaEncargo> &lineas);
+
+    /**
+     * @brief Devuelve el importe total acumulado de todos los productos del encargo.
+     */
+    double getTotalEncargo() const;
+
+    QString getCodArticulo() const;
+    QString getDescArticulo() const;
     QString getCodCliente() const { return m_codCliente; }
     
 private slots:
-    void on_btnBuscarArticulo_clicked();
+    void on_btnAnadirArticulo_clicked();
+    void on_btnEliminarArticulo_clicked();
     void on_btnBuscarCliente_clicked();
+    void recalcularTotal();
 
 private:
     Ui::EncargosDialog *ui;
-    QString m_codArticulo;
-    QString m_descArticulo;
     QString m_codCliente;
 };
 

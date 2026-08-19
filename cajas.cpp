@@ -191,12 +191,26 @@ void Cajas::ventas()
     }
 
     ventasTarjeta = resultado.value(0).toDouble();
+
+    // Sumar los anticipos de encargos en tarjeta/no-efectivo recibidos desde el último arqueo
+    double anticiposTarjeta = base->anticiposNoEfectivoDesdeUltimoArqueo(fechaUltimoArqueo,
+                                                                          horaUltimoArqueo,
+                                                                          conf->getConexionLocal());
+    ventasTarjeta += anticiposTarjeta;
+
     ui->labelVentasTarjeta->setText(QString::number(ventasTarjeta, 'f', 2));
     ui->lineEditVentasTarjeta->setText(QString::number(ventasTarjeta, 'f', 2));
 
     nTarjetas = base->nTarjetasDesdeUltimoArqueo(fechaUltimoArqueo,
                                                  horaUltimoArqueo,
                                                  conf->getConexionLocal());
+
+    // Sumar el número de operaciones de anticipo por tarjeta/no-efectivo
+    int nAnticiposTarjeta = base->nAnticiposNoEfectivoDesdeUltimoArqueo(fechaUltimoArqueo,
+                                                                         horaUltimoArqueo,
+                                                                         conf->getConexionLocal());
+    nTarjetas += nAnticiposTarjeta;
+
     ui->labelNumeroTarjetas->setText(QString::number(nTarjetas));
     resultado = base->ventasDesdeUltimoArqueo(fechaUltimoArqueo,
                                               horaUltimoArqueo,

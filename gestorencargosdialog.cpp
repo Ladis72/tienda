@@ -12,6 +12,7 @@
 #include <QPainter>
 #include "tienda.h"
 #include "tpv.h"
+#include "dialogdevolucionanticipo.h"
 
 
 
@@ -24,37 +25,34 @@ public:
         QStyleOptionViewItem opt = option;
         initStyleOption(&opt, index);
 
-        // El estado está en la columna 9 según la consulta SQL en ajustarFiltro()
-        QString estado = index.model()->data(index.model()->index(index.row(), 9)).toString();
+        // El estado del encargo está en la columna 10 según la consulta SQL en ajustarFiltro()
+        QString estado = index.model()->data(index.model()->index(index.row(), 10)).toString();
 
-        QColor colorFondo;
-        QColor colorTexto = Qt::black;
+        QColor colorFondo = option.palette.base().color();
+        QColor colorTexto = option.palette.text().color();
 
         if (estado == "Pendiente") {
             colorFondo = QColor(255, 205, 210); // Rojo suave
+            colorTexto = QColor(183, 28, 28);   // Rojo oscuro
         } else if (estado == "Recibido") {
             colorFondo = QColor(255, 245, 157); // Amarillo suave
+            colorTexto = QColor(130, 119, 23);  // Amarillo/marrón oscuro
         } else if (estado == "Entregado") {
             colorFondo = QColor(197, 225, 165); // Verde suave
+            colorTexto = QColor(46, 125, 50);   // Verde oscuro
         } else if (estado == "Cancelado") {
             colorFondo = QColor(224, 224, 224); // Gris suave
             colorTexto = Qt::gray;
         }
 
-        painter->save();
-        if (option.state & QStyle::State_Selected) {
-            painter->fillRect(option.rect, option.palette.highlight());
-            painter->setPen(option.palette.highlightedText().color());
-        } else {
-            painter->fillRect(option.rect, colorFondo);
-            painter->setPen(colorTexto);
+        // Si la fila no está seleccionada, aplicar el color personalizado de fondo y texto
+        if (!(option.state & QStyle::State_Selected)) {
+            opt.backgroundBrush = QBrush(colorFondo);
+            opt.palette.setColor(QPalette::Text, colorTexto);
+            opt.palette.setColor(QPalette::WindowText, colorTexto);
         }
-        
-        // Dibujar el texto centrado verticalmente con un pequeño margen
-        QString text = opt.text;
-        QRect textRect = option.rect.adjusted(5, 0, -5, 0);
-        painter->drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, text);
-        painter->restore();
+
+        QStyledItemDelegate::paint(painter, opt, index);
     }
 };
 
@@ -247,6 +245,14 @@ void GestorEncargosDialog::on_btnMarcarEntregado_clicked()
     q.bindValue(0, idEncargo);
     
     if (q.exec()) {
+        // Eliminar la nota del encargo entregado
+        QSqlQuery qNota(QSqlDatabase::database(conf->getConexionLocal()));
+        qNota.prepare("DELETE FROM notas WHERE titulo LIKE ? OR descripcion LIKE ?");
+        QString patronNota = QString("%Encargo #%1%").arg(idEncargo);
+        qNota.bindValue(0, patronNota);
+        qNota.bindValue(1, patronNota);
+        qNota.exec();
+
         ajustarFiltro();
     } else {
         QMessageBox::critical(this, "Error", "No se pudo actualizar el estado.");
@@ -260,20 +266,85 @@ void GestorEncargosDialog::on_btnBorrar_clicked()
         QMessageBox::warning(this, "Aviso", "Seleccione un encargo primero.");
         return;
     }
-    
-    if (QMessageBox::question(this, "Borrar", "¿Está seguro de que desea borrar este encargo? Esto no devolverá el anticipo a la caja automáticamente.", QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
-        int row = index.row();
-        int idEncargo = modelEncargos->data(modelEncargos->index(row, 0)).toInt();
-        
-        QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
-        q.prepare("DELETE FROM encargos WHERE id_encargo = ?");
-        q.bindValue(0, idEncargo);
-        
-        if (q.exec()) {
-            ajustarFiltro();
+
+    int row = index.row();
+    int idEncargo = modelEncargos->data(modelEncargos->index(row, 0)).toInt();
+    QString codCliente = modelEncargos->data(modelEncargos->index(row, 1)).toString();
+    QString codArticulo = modelEncargos->data(modelEncargos->index(row, 2)).toString();
+    double anticipo = modelEncargos->data(modelEncargos->index(row, 8)).toDouble();
+    QString formaPagoOriginal = modelEncargos->data(modelEncargos->index(row, 9)).toString();
+    QString estadoActual = modelEncargos->data(modelEncargos->index(row, 10)).toString();
+
+    if (estadoActual == "Cancelado") {
+        QMessageBox::information(this, "Aviso", "Este encargo ya se encuentra cancelado.");
+        return;
+    }
+
+    if (QMessageBox::question(this, "Cancelar Encargo", QString("¿Está seguro de que desea cancelar el encargo #%1?").arg(idEncargo), QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
+        return;
+    }
+
+    baseDatos base;
+    QString usuario = conf->getUsuario();
+    if (usuario.isEmpty()) usuario = "Sistema";
+
+    QString formaPagoDevolucion = "";
+    double anticipoDevuelto = 0.0;
+    bool registrarDevolucion = false;
+
+    // Si el encargo tenía un anticipo cobrado previamente, preguntar la forma de devolución
+    if (anticipo > 0) {
+        DialogDevolucionAnticipo devDialog(anticipo, formaPagoOriginal, this);
+        if (devDialog.exec() == QDialog::Accepted) {
+            if (devDialog.getDevolverAnticipo()) {
+                registrarDevolucion = true;
+                formaPagoDevolucion = devDialog.getFormaPago();
+                anticipoDevuelto = anticipo;
+                bool esEfectivo = base.esFormaPagoEfectivo(formaPagoDevolucion, conf->getConexionLocal());
+
+                if (esEfectivo) {
+                    // Registrar salida de caja por la devolución en efectivo
+                    QStringList datosES;
+                    datosES.append(QDate::currentDate().toString("yyyy-MM-dd"));
+                    datosES.append(QTime::currentTime().toString("hh:mm:ss"));
+                    datosES.append(QString::number(-anticipo)); // Importe negativo para restar en salidas/cajón
+                    datosES.append("2"); // Motivo salida de caja
+                    datosES.append(QString("Devolución Anticipo Encargo #%1 (Efectivo) [Cliente %2]").arg(QString::number(idEncargo), codCliente));
+                    
+                    base.insertarES(datosES, conf->getConexionLocal(), usuario);
+                    QMessageBox::information(this, "Devolución", QString("Se ha registrado la devolución de %1 € en efectivo en la caja.").arg(QString::number(anticipo, 'f', 2)));
+                } else {
+                    QMessageBox::information(this, "Devolución", QString("Se ha marcado la devolución del anticipo (%1 €) mediante %2.").arg(QString::number(anticipo, 'f', 2), formaPagoDevolucion));
+                }
+            }
         } else {
-            QMessageBox::critical(this, "Error", "No se pudo borrar el encargo:\n" + q.lastError().text());
+            // Cancelado por el usuario en el diálogo de devolución
+            return;
         }
+    }
+
+    // Actualizar el estado del encargo a 'Cancelado' registrando la fecha y forma de devolución si la hubo
+    QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
+    if (registrarDevolucion) {
+        q.prepare("UPDATE encargos SET estado = 'Cancelado', dev_fecha = CURRENT_TIMESTAMP, dev_forma_pago = ?, dev_anticipo = ? WHERE id_encargo = ?");
+        q.bindValue(0, formaPagoDevolucion);
+        q.bindValue(1, anticipoDevuelto);
+        q.bindValue(2, idEncargo);
+    } else {
+        q.prepare("UPDATE encargos SET estado = 'Cancelado' WHERE id_encargo = ?");
+        q.bindValue(0, idEncargo);
+    }
+
+    if (q.exec()) {
+        base.crearNota(conf->getConexionLocal(),
+                       QString("Encargo Cancelado #%1").arg(idEncargo),
+                       QString("Encargo #%1 cancelado. Cliente: %2. Anticipo: %3 €").arg(QString::number(idEncargo), codCliente, QString::number(anticipo, 'f', 2)),
+                       usuario,
+                       "",
+                       "Baja");
+        ajustarFiltro();
+    } else {
+        QMessageBox::critical(this, "Error", "No se pudo cambiar el estado del encargo a Cancelado:\n" + q.lastError().text());
     }
 }
 
@@ -289,8 +360,14 @@ void GestorEncargosDialog::on_btnNuevoEncargo_clicked()
     
     EncargosDialog enc("", "", "", "", usuario, this);
     if (enc.exec() == QDialog::Accepted) {
-        if (enc.getCantidad() <= 0 || enc.getCodArticulo().isEmpty() || enc.getCodCliente().isEmpty()) {
-            QMessageBox::warning(this, "Aviso", "Datos incompletos para crear el encargo.");
+        QList<LineaEncargo> lineas = enc.getLineas();
+        if (lineas.isEmpty() && enc.getCodArticulo().isEmpty()) {
+            QMessageBox::warning(this, "Aviso", "Debe incluir al menos un producto para crear el encargo.");
+            return;
+        }
+
+        if (enc.getCodCliente().isEmpty()) {
+            QMessageBox::warning(this, "Aviso", "Falta seleccionar el cliente.");
             return;
         }
 
@@ -308,23 +385,39 @@ void GestorEncargosDialog::on_btnNuevoEncargo_clicked()
 
         if (q.exec()) {
             int idNuevoEncargo = q.lastInsertId().toInt();
+
+            // Insertar líneas de productos en encargos_lineas
+            QSqlQuery qLin(QSqlDatabase::database(conf->getConexionLocal()));
+            qLin.prepare("INSERT INTO encargos_lineas (id_encargo, cod_articulo, descripcion, cantidad, pvp) VALUES (?, ?, ?, ?, ?)");
+            for (const LineaEncargo &l : lineas) {
+                qLin.bindValue(0, idNuevoEncargo);
+                qLin.bindValue(1, l.codArticulo);
+                qLin.bindValue(2, l.descripcion);
+                qLin.bindValue(3, l.cantidad);
+                qLin.bindValue(4, l.pvp);
+                qLin.exec();
+            }
+
             ajustarFiltro();
             base.crearNota(conf->getConexionLocal(),
-                           "Encargo: " + enc.getDescArticulo() + "(" + enc.getCodArticulo() +")",
-                           "Cliente ID: " + enc.getCodCliente() + "\nCantidad: " + QString::number(enc.getCantidad()) + "\nForma Pago Anticipo: " + enc.getFormaPago() + "\nNotas: " + enc.getNotas(),
+                           QString("Encargo #%1: %2").arg(QString::number(idNuevoEncargo), enc.getDescArticulo()),
+                           QString("Encargo #%1\nCliente ID: %2\nProductos: %3\nForma Pago Anticipo: %4\nNotas: %5").arg(QString::number(idNuevoEncargo), enc.getCodCliente(), QString::number(lineas.size()), enc.getFormaPago(), enc.getNotas()),
                            usuario,
                            "",
                            "Alta");
 
-            // Si se introdujo un anticipo mayor a 0, registrar el movimiento en caja
+            // Si se introdujo un anticipo mayor a 0, registrar el movimiento en el cajón de efectivo únicamente si es en EFECTIVO
             if (enc.getAnticipo() > 0) {
-                QStringList datosES;
-                datosES.append(QDate::currentDate().toString("yyyy-MM-dd"));
-                datosES.append(QTime::currentTime().toString("hh:mm:ss"));
-                datosES.append(QString::number(enc.getAnticipo()));
-                datosES.append("1");
-                datosES.append(QString("Anticipo Encargo [%1] (Cliente %2) - %3").arg(enc.getFormaPago(), enc.getCodCliente(), enc.getCodArticulo()));
-                base.insertarES(datosES, conf->getConexionLocal(), usuario);
+                bool esEfectivo = base.esFormaPagoEfectivo(enc.getFormaPago(), conf->getConexionLocal());
+                if (esEfectivo) {
+                    QStringList datosES;
+                    datosES.append(QDate::currentDate().toString("yyyy-MM-dd"));
+                    datosES.append(QTime::currentTime().toString("hh:mm:ss"));
+                    datosES.append(QString::number(enc.getAnticipo()));
+                    datosES.append("1");
+                    datosES.append(QString("Anticipo Encargo (Efectivo) [Cliente %1] - %2").arg(enc.getCodCliente(), enc.getCodArticulo()));
+                    base.insertarES(datosES, conf->getConexionLocal(), usuario);
+                }
             }
 
             // Si el usuario marcó la opción de imprimir comprobante por la impresora de tickets

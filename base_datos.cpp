@@ -1136,6 +1136,33 @@ QString baseDatos::idFormaPago(QString fpago, QString base) {
   return nullptr;
 }
 
+/**
+ * @brief Comprueba si una forma de pago dada (por ID o por nombre) corresponde a efectivo (contado).
+ * @param fpago Nombre o ID de la forma de pago
+ * @param base Nombre de la conexión a la base de datos
+ * @return true si es forma de pago en efectivo (campo 'efectivo' == 1), false en caso contrario
+ */
+bool baseDatos::esFormaPagoEfectivo(QString fpago, QString base) {
+  if (fpago.isEmpty()) {
+    return true; // Si no se indica forma de pago, asumimos efectivo por defecto
+  }
+
+  QSqlQuery consulta(QSqlDatabase::database(base));
+  consulta.prepare("SELECT efectivo FROM fpago WHERE tipo = ? OR id = ?");
+  consulta.bindValue(0, fpago);
+  consulta.bindValue(1, fpago);
+  if (consulta.exec() && consulta.first()) {
+    return (consulta.value(0).toInt() == 1);
+  }
+
+  // Comprobación de respaldo por texto si la consulta no devuelve datos
+  QString fpLower = fpago.toLower();
+  if (fpLower.contains("efectivo") || fpLower.contains("contado")) {
+    return true;
+  }
+  return false;
+}
+
 bool baseDatos::insertarEtiqueta(QString base, QString etiqueta) {
   QSqlQuery consulta(QSqlDatabase::database(base));
   consulta.prepare("INSERT INTO etiquetas (cod) VALUES (?)");
@@ -2119,6 +2146,83 @@ int baseDatos::nTarjetasDesdeUltimoArqueo(QString fechaI, QString horaI,
   consulta.exec();
   consulta.first();
   return consulta.value(0).toInt();
+}
+
+/**
+ * @brief Suma el total de anticipos en encargos abonados mediante medios NO efectivo desde el último arqueo.
+ */
+double baseDatos::anticiposNoEfectivoDesdeUltimoArqueo(QString fechaI, QString horaI, QString base) {
+  QString fechaHoraUltimoArqueo = fechaI + " " + horaI;
+  QSqlQuery consultaIngresos(QSqlDatabase::database(base));
+  
+  // 1. Suma de ingresos por anticipos en tarjeta / no-efectivo registrados desde el último arqueo
+  consultaIngresos.prepare(
+      "SELECT SUM(e.anticipo) "
+      "FROM encargos e "
+      "LEFT JOIN fpago f ON (e.forma_pago = f.tipo OR e.forma_pago = CAST(f.id AS CHAR)) "
+      "WHERE e.fecha_encargo >= ? AND e.anticipo > 0 AND (f.efectivo = 0 OR (f.efectivo IS NULL AND LOWER(e.forma_pago) NOT LIKE '%efectivo%' AND LOWER(e.forma_pago) NOT LIKE '%contado%'))"
+  );
+  consultaIngresos.bindValue(0, fechaHoraUltimoArqueo);
+
+  double ingresos = 0.0;
+  if (consultaIngresos.exec() && consultaIngresos.first()) {
+    ingresos = consultaIngresos.value(0).toDouble();
+  }
+
+  // 2. Suma de devoluciones de anticipos mediante tarjeta / no-efectivo realizadas desde el último arqueo
+  QSqlQuery consultaDevoluciones(QSqlDatabase::database(base));
+  consultaDevoluciones.prepare(
+      "SELECT SUM(e.dev_anticipo) "
+      "FROM encargos e "
+      "LEFT JOIN fpago f ON (e.dev_forma_pago = f.tipo OR e.dev_forma_pago = CAST(f.id AS CHAR)) "
+      "WHERE e.dev_fecha >= ? AND e.dev_anticipo > 0 AND (f.efectivo = 0 OR (f.efectivo IS NULL AND LOWER(e.dev_forma_pago) NOT LIKE '%efectivo%' AND LOWER(e.dev_forma_pago) NOT LIKE '%contado%'))"
+  );
+  consultaDevoluciones.bindValue(0, fechaHoraUltimoArqueo);
+
+  double devoluciones = 0.0;
+  if (consultaDevoluciones.exec() && consultaDevoluciones.first()) {
+    devoluciones = consultaDevoluciones.value(0).toDouble();
+  }
+
+  // Retornar el importe neto de anticipos en tarjeta
+  return ingresos - devoluciones;
+}
+
+/**
+ * @brief Devuelve la cantidad de operaciones netas de anticipo en encargos por medios NO efectivo desde el último arqueo.
+ */
+int baseDatos::nAnticiposNoEfectivoDesdeUltimoArqueo(QString fechaI, QString horaI, QString base) {
+  QString fechaHoraUltimoArqueo = fechaI + " " + horaI;
+
+  QSqlQuery consultaIngresos(QSqlDatabase::database(base));
+  consultaIngresos.prepare(
+      "SELECT COUNT(*) "
+      "FROM encargos e "
+      "LEFT JOIN fpago f ON (e.forma_pago = f.tipo OR e.forma_pago = CAST(f.id AS CHAR)) "
+      "WHERE e.fecha_encargo >= ? AND e.anticipo > 0 AND (f.efectivo = 0 OR (f.efectivo IS NULL AND LOWER(e.forma_pago) NOT LIKE '%efectivo%' AND LOWER(e.forma_pago) NOT LIKE '%contado%'))"
+  );
+  consultaIngresos.bindValue(0, fechaHoraUltimoArqueo);
+  
+  int nIngresos = 0;
+  if (consultaIngresos.exec() && consultaIngresos.first()) {
+    nIngresos = consultaIngresos.value(0).toInt();
+  }
+
+  QSqlQuery consultaDevoluciones(QSqlDatabase::database(base));
+  consultaDevoluciones.prepare(
+      "SELECT COUNT(*) "
+      "FROM encargos e "
+      "LEFT JOIN fpago f ON (e.dev_forma_pago = f.tipo OR e.dev_forma_pago = CAST(f.id AS CHAR)) "
+      "WHERE e.dev_fecha >= ? AND e.dev_anticipo > 0 AND (f.efectivo = 0 OR (f.efectivo IS NULL AND LOWER(e.dev_forma_pago) NOT LIKE '%efectivo%' AND LOWER(e.dev_forma_pago) NOT LIKE '%contado%'))"
+  );
+  consultaDevoluciones.bindValue(0, fechaHoraUltimoArqueo);
+
+  int nDevoluciones = 0;
+  if (consultaDevoluciones.exec() && consultaDevoluciones.first()) {
+    nDevoluciones = consultaDevoluciones.value(0).toInt();
+  }
+
+  return nIngresos - nDevoluciones;
 }
 
 QSqlQuery baseDatos::devolverTablaCompleta(QString base, QString nombreTabla) {

@@ -91,6 +91,7 @@ SOURCES += main.cpp\
     notaswidget.cpp \
     encargosdialog.cpp \
     gestorencargosdialog.cpp \
+    dialogdevolucionanticipo.cpp \
     syncmanager.cpp \
     unificarproveedores.cpp \
     saneadorglobal.cpp \
@@ -180,6 +181,7 @@ HEADERS  += tienda.h \
     notaswidget.h \
     encargosdialog.h \
     gestorencargosdialog.h \
+    dialogdevolucionanticipo.h \
     syncmanager.h \
     unificarproveedores.h \
     saneadorglobal.h \
@@ -252,6 +254,7 @@ FORMS    += tienda.ui \
     comprasventasremoto.ui \
     encargosdialog.ui \
     gestorencargosdialog.ui \
+    dialogdevolucionanticipo.ui \
     unificarproveedores.ui \
     saneadorglobal.ui \
     unificarmaestros.ui \

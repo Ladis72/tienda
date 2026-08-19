@@ -364,12 +364,49 @@ bool ImprimirTicket::imprimirComprobanteEncargo(int idEncargo,
 
     printer.imprimirLineaSeparadora('-', 48);
 
-    // 5. Detalles del artículo encargado y anticipo a cuenta
-    printer.setNegrita(true);
-    printer.imprimirLinea("CODIGO: " + codArticulo);
-    printer.imprimirLinea("ARTICULO: " + descArticulo);
-    printer.setNegrita(false);
-    printer.imprimirLinea("CANTIDAD ENCARGADA: " + QString::number(cantidad));
+    // 5. Detalles de los artículos encargados y anticipo a cuenta
+    bool desglosadoMultiproducto = false;
+    if (idEncargo > 0) {
+        QSqlQuery qLineas(QSqlDatabase::database(conf->getConexionLocal()));
+        qLineas.prepare("SELECT cod_articulo, descripcion, cantidad, pvp FROM encargos_lineas WHERE id_encargo = ?");
+        qLineas.bindValue(0, idEncargo);
+        if (qLineas.exec() && qLineas.next()) {
+            desglosadoMultiproducto = true;
+            printer.setNegrita(true);
+            printer.imprimirLinea("PRODUCTOS ENCARGADOS:");
+            printer.setNegrita(false);
+            
+            double totalProductos = 0.0;
+            do {
+                QString cArt = qLineas.value("cod_articulo").toString();
+                QString dArt = qLineas.value("descripcion").toString();
+                int cantArt = qLineas.value("cantidad").toInt();
+                double pvpArt = qLineas.value("pvp").toDouble();
+                double subTotal = cantArt * pvpArt;
+                totalProductos += subTotal;
+
+                printer.imprimirLinea(QString("- [%1] %2").arg(cArt, dArt));
+                printer.imprimirLinea(QString("  Cant: %1  PVP: %2 EUR  Subtotal: %3 EUR")
+                                      .arg(QString::number(cantArt),
+                                           QString::number(pvpArt, 'f', 2),
+                                           QString::number(subTotal, 'f', 2)));
+            } while (qLineas.next());
+
+            printer.setNegrita(true);
+            printer.imprimirLinea(QString("TOTAL PRODUCTOS: %1 EUR").arg(QString::number(totalProductos, 'f', 2)));
+            printer.setNegrita(false);
+        }
+    }
+
+    if (!desglosadoMultiproducto) {
+        // Modo legado de producto único
+        printer.setNegrita(true);
+        printer.imprimirLinea("CODIGO: " + codArticulo);
+        printer.imprimirLinea("ARTICULO: " + descArticulo);
+        printer.setNegrita(false);
+        printer.imprimirLinea("CANTIDAD ENCARGADA: " + QString::number(cantidad));
+    }
+
     printer.imprimirLinea(QString("ANTICIPO A CUENTA: %1 EUR").arg(QString::number(anticipo, 'f', 2)));
     printer.imprimirLinea("FORMA PAGO ANTICIPO: " + formaPago);
 
