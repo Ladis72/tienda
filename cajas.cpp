@@ -1,7 +1,14 @@
 #include "cajas.h"
+#include <QCoreApplication>
 #include <QDate>
 #include <QDebug>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMessageBox>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QSettings>
 #include "ui_cajas.h"
 
 Cajas::Cajas(QWidget *parent)
@@ -307,6 +314,9 @@ void Cajas::on_pushButtonAceptar_clicked()
             MsgBox->setText("ERROR");
             MsgBox->setInformativeText("No se ha podido grabar la información.");
             MsgBox->exec();
+        } else {
+            // Iniciar envío remoto asíncrono a Google Sheets si está activado
+            enviarArqueoGoogleSheets(datos, desglose);
         }
         break;
     default:
@@ -329,4 +339,93 @@ void Cajas::on_lineEditVentasTarjeta_textChanged(const QString &arg1)
     } else {
         ui->label_ventasTotales->setText(QString::number(ventasEfectivo + card, 'f', 2));
     }
+}
+
+/**
+ * @brief Envía los datos del arqueo a una Hoja de Cálculo de Google mediante la API Web App de Google Apps Script.
+ * @param datos Lista con la información básica del arqueo (fecha, hora, ventas, entradas/salidas, descuadre, usuario).
+ * @param desglose Mapa con el recuento de monedas y billetes.
+ */
+void Cajas::enviarArqueoGoogleSheets(const QStringList &datos, const QMap<double, int> &desglose)
+{
+    // Leer configuración desde tienda.ini
+    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QSettings settings(iniPath, QSettings::IniFormat);
+    settings.beginGroup("GoogleSheets");
+    bool habilitado = settings.value("enviarGoogleSheets", false).toBool();
+    QString urlStr = settings.value("urlGoogleSheets", "").toString().trimmed();
+    settings.endGroup();
+
+    if (!habilitado || urlStr.isEmpty()) {
+        qDebug() << "Envío remoto a Google Sheets no configurado o deshabilitado.";
+        return;
+    }
+
+    QUrl url(urlStr);
+    if (!url.isValid()) {
+        qWarning() << "La URL de Google Sheets no es válida:" << urlStr;
+        return;
+    }
+
+    // Leer el nombre de la tienda desde tienda.ini o desde la configuración global
+    settings.beginGroup("Local");
+    QString nombreTienda = settings.value("nombreTienda", "").toString().trimmed();
+    settings.endGroup();
+
+    if (nombreTienda.isEmpty()) {
+        settings.beginGroup("BaseDatos");
+        nombreTienda = settings.value("nombreTienda", "").toString().trimmed();
+        settings.endGroup();
+    }
+
+    if (nombreTienda.isEmpty() && conf) {
+        nombreTienda = conf->getConexionLocal();
+    }
+
+    // 1. Construir el objeto JSON principal del arqueo
+    QJsonObject jsonArqueo;
+    jsonArqueo["tienda"] = nombreTienda;
+
+    if (datos.size() >= 9) {
+        jsonArqueo["fecha"]          = datos.at(0); // Formato "yyyy-MM-dd"
+        jsonArqueo["hora"]           = datos.at(1); // Formato "hh:mm:ss"
+        jsonArqueo["ventasEfectivo"] = datos.at(2).toDouble();
+        jsonArqueo["ventasTarjeta"]  = datos.at(3).toDouble();
+        jsonArqueo["salidas"]        = datos.at(4).toDouble();
+        jsonArqueo["totalEfectivo"]  = datos.at(5).toDouble();
+        jsonArqueo["descuadre"]      = datos.at(6).toDouble();
+        jsonArqueo["efectivoReal"]   = datos.at(7).toDouble();
+        jsonArqueo["usuario"]        = datos.at(8);
+    }
+
+    // 2. Construir objeto JSON con el desglose de denominaciones
+    QJsonObject jsonDesglose;
+    QMapIterator<double, int> it(desglose);
+    while (it.hasNext()) {
+        it.next();
+        if (it.value() > 0) {
+            jsonDesglose[QString::number(it.key(), 'f', 2)] = it.value();
+        }
+    }
+    jsonArqueo["desglose"] = jsonDesglose;
+
+    // 3. Preparar la petición HTTP POST
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    // Permitir redirecciones de Google Apps Script (302)
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+
+    // 4. Iniciar envío asíncrono
+    QNetworkAccessManager *manager = new QNetworkAccessManager(this);
+    QNetworkReply *reply = manager->post(request, QJsonDocument(jsonArqueo).toJson(QJsonDocument::Compact));
+
+    connect(reply, &QNetworkReply::finished, this, [reply, manager]() {
+        if (reply->error() == QNetworkReply::NoError) {
+            qDebug() << "Arqueo registrado exitosamente en Google Sheets.";
+        } else {
+            qWarning() << "Error al enviar el arqueo a Google Sheets:" << reply->errorString();
+        }
+        reply->deleteLater();
+        manager->deleteLater();
+    });
 }

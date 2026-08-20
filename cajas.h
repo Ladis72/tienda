@@ -63,6 +63,13 @@ private:
     void ES();
     EntradaSalida *entSal;
     void keyPressEvent(QKeyEvent *e);
+
+    /**
+     * @brief Envía de forma asíncrona los datos del arqueo a Google Sheets si está activado en la configuración.
+     * @param datos Lista de datos principales del arqueo (fecha, hora, ventas, descuadre, usuario, etc.).
+     * @param desglose Mapa con la cantidad por denominación de billetes/monedas.
+     */
+    void enviarArqueoGoogleSheets(const QStringList &datos, const QMap<double, int> &desglose);
 };
 
 #endif // CAJAS_H

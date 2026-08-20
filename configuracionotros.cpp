@@ -10,15 +10,16 @@ ConfiguracionOtros::ConfiguracionOtros(QWidget *parent)
     , ui(new Ui::ConfiguracionOtros)
 {
     ui->setupUi(this);
-    QMap<QString, QVariant> config = base->leerConfiguracion();
+    // Leer la configuración global actual de la base de datos
+    QMap<QString, QVariant> config = base.leerConfiguracion();
     ui->checkBoxRE->setChecked(config.value("recargoeq").toBool());
     
     if (ui->checkBoxNube) {
         ui->checkBoxNube->setChecked(config.value("precios_locales").toBool());
     }
 
-    // Poblar combos de vendedores
-    QSqlQuery q = base->usuarios(QSqlDatabase::database(conf->getConexionLocal()));
+    // Poblar combos de vendedores desde la base de datos
+    QSqlQuery q = base.usuarios(QSqlDatabase::database(conf->getConexionLocal()));
     ui->comboBoxF1->addItem(tr("Ninguno"), QVariant());
     ui->comboBoxF2->addItem(tr("Ninguno"), QVariant());
     ui->comboBoxF3->addItem(tr("Ninguno"), QVariant());
@@ -40,6 +41,13 @@ ConfiguracionOtros::ConfiguracionOtros(QWidget *parent)
     ui->comboBoxF3->setCurrentIndex(ui->comboBoxF3->findData(config.value("vendedor_f3").toString()));
     ui->comboBoxF4->setCurrentIndex(ui->comboBoxF4->findData(config.value("vendedor_f4").toString()));
 
+    // Cargar configuración de Google Sheets desde tienda.ini
+    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QSettings settings(iniPath, QSettings::IniFormat);
+    settings.beginGroup("GoogleSheets");
+    ui->checkBoxGoogleSheets->setChecked(settings.value("enviarGoogleSheets", false).toBool());
+    ui->lineEditUrlGoogleSheets->setText(settings.value("urlGoogleSheets", "").toString());
+    settings.endGroup();
 }
 
 ConfiguracionOtros::~ConfiguracionOtros()
@@ -61,8 +69,17 @@ void ConfiguracionOtros::on_pushButtonAceptar_clicked()
     config["vendedor_f3"] = ui->comboBoxF3->currentData();
     config["vendedor_f4"] = ui->comboBoxF4->currentData();
     
-    base->GuardarConfiguracion(config);
+    // Guardar la configuración actualizada en la base de datos
+    base.GuardarConfiguracion(config);
     conf->setUsarPreciosLocales(ui->checkBoxNube->isChecked());
+
+    // Guardar configuración de Google Sheets en tienda.ini
+    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QSettings settings(iniPath, QSettings::IniFormat);
+    settings.beginGroup("GoogleSheets");
+    settings.setValue("enviarGoogleSheets", ui->checkBoxGoogleSheets->isChecked());
+    settings.setValue("urlGoogleSheets", ui->lineEditUrlGoogleSheets->text().trimmed());
+    settings.endGroup();
 
     emit accept();
 }

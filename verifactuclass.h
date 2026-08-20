@@ -83,7 +83,18 @@ public:
     /// si la AEAT respondió, EstadoPendiente si hubo error (errStr lo detalla).
     static int enviarAEAT(const QString &xmlContent, const VeriFactuConfig &config, QString &errStr);
 
+    /// Estructura para transferir parámetros de conexión entre hilos de forma segura
+    struct DbConnectionParams {
+        QString driver;
+        QString host;
+        int port;
+        QString dbName;
+        QString user;
+        QString pass;
+    };
+
     /// Procesa y reenvía en segundo plano los registros pendientes (estado_envio = 0)
+    static void procesarEnviosPendientes(const DbConnectionParams &params);
     static void procesarEnviosPendientes(const QString &conexionOriginal);
 
     /// Genera la URL de cotejo que irá en el código QR

@@ -369,45 +369,48 @@ void SyncManager::sincronizar()
         QString connLocalClone = "SyncLocal_" + QUuid::createUuid().toString(QUuid::WithoutBraces);
         QString connNubeClone  = "SyncNube_"  + QUuid::createUuid().toString(QUuid::WithoutBraces);
 
-        QSqlDatabase dbLocal = QSqlDatabase::addDatabase(driverLocal, connLocalClone);
-        dbLocal.setHostName(hostLocal);
-        if (portLocal > 0) dbLocal.setPort(portLocal);
-        dbLocal.setDatabaseName(baseLocal);
-        dbLocal.setUserName(userLocal);
-        dbLocal.setPassword(passLocal);
-        bool okLocal = dbLocal.open();
-
-        QSqlDatabase dbNube;
-        bool okNube = false;
-        if (okLocal) {
-            dbNube = QSqlDatabase::addDatabase("QMYSQL", connNubeClone);
-            dbNube.setHostName(hostNube);
-            if (portNube > 0) dbNube.setPort(portNube);
-            dbNube.setDatabaseName(baseNube);
-            dbNube.setUserName(userNube);
-            dbNube.setPassword(passNube);
-            if (!optsNube.isEmpty()) dbNube.setConnectOptions(optsNube);
-            okNube = dbNube.open();
-        }
-
         int subidos = 0, subUnif = 0, bajados = 0;
-        if (okLocal && okNube) {
-            subidos = self->subirCambios(connLocalClone, connNubeClone, usuario);
-            subUnif = self->subirUnificaciones(connLocalClone, connNubeClone, usuario);
-            bajados = self->bajarCambios(connLocalClone, connNubeClone, usuario);
-            qDebug() << "SyncManager: Ciclo completado — Registros subidos:" << subidos
-                     << "| Unificaciones subidas:" << subUnif
-                     << "| Registros bajados:" << bajados;
-        } else {
-            qWarning() << "SyncManager: No se pudieron abrir las conexiones del ciclo de sync"
-                       << "(local:" << okLocal << ", nube:" << okNube << ")";
+        bool okNube = false;
+        {
+            QSqlDatabase dbLocal = QSqlDatabase::addDatabase(driverLocal, connLocalClone);
+            dbLocal.setHostName(hostLocal);
+            if (portLocal > 0) dbLocal.setPort(portLocal);
+            dbLocal.setDatabaseName(baseLocal);
+            dbLocal.setUserName(userLocal);
+            dbLocal.setPassword(passLocal);
+            bool okLocal = dbLocal.open();
+
+            QSqlDatabase dbNube;
+            if (okLocal) {
+                dbNube = QSqlDatabase::addDatabase("QMYSQL", connNubeClone);
+                dbNube.setHostName(hostNube);
+                if (portNube > 0) dbNube.setPort(portNube);
+                dbNube.setDatabaseName(baseNube);
+                dbNube.setUserName(userNube);
+                dbNube.setPassword(passNube);
+                if (!optsNube.isEmpty()) dbNube.setConnectOptions(optsNube);
+                okNube = dbNube.open();
+            }
+
+            if (okLocal && okNube) {
+                subidos = self->subirCambios(connLocalClone, connNubeClone, usuario);
+                subUnif = self->subirUnificaciones(connLocalClone, connNubeClone, usuario);
+                bajados = self->bajarCambios(connLocalClone, connNubeClone, usuario);
+                qDebug() << "SyncManager: Ciclo completado — Registros subidos:" << subidos
+                         << "| Unificaciones subidas:" << subUnif
+                         << "| Registros bajados:" << bajados;
+            } else {
+                qWarning() << "SyncManager: No se pudieron abrir las conexiones del ciclo de sync"
+                           << "(local:" << okLocal << ", nube:" << okNube << ")";
+            }
+
+            // Purga periódica de sync_cola (máx. una vez al día) usando la conexión local clonada
+            if (okLocal) self->purgarCola(connLocalClone, usuario);
+
+            if (dbNube.isOpen()) dbNube.close();
+            if (dbLocal.isOpen()) dbLocal.close();
         }
 
-        // Purga periódica de sync_cola (máx. una vez al día) usando la conexión local clonada
-        if (okLocal) self->purgarCola(connLocalClone, usuario);
-
-        if (dbNube.isOpen()) dbNube.close();
-        if (dbLocal.isOpen()) dbLocal.close();
         if (QSqlDatabase::contains(connNubeClone)) QSqlDatabase::removeDatabase(connNubeClone);
         if (QSqlDatabase::contains(connLocalClone)) QSqlDatabase::removeDatabase(connLocalClone);
 
@@ -494,7 +497,9 @@ int SyncManager::subirCambios(const QString &connLocal, const QString &connNube,
                         }
                     }
                     campos << "`" + campo + "`"; valores << vStr;
-                    updates << QString("`%1` = VALUES(`%1`)").arg(campo);
+                    if (campo.toLower() != pk.toLower()) {
+                        updates << QString("`%1` = VALUES(`%1`)").arg(campo);
+                    }
                 }
                 QString sql = QString("INSERT INTO `%1` (%2) VALUES (%3) ON DUPLICATE KEY UPDATE %4")
                               .arg(tabla, campos.join(","), valores.join(","), updates.join(","));

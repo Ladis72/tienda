@@ -2565,20 +2565,44 @@ QMap<QString, QVariant> baseDatos::leerConfiguracion() {
 
 bool baseDatos::GuardarConfiguracion(QMap<QString, QVariant> datos) {
   QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
-  consulta.prepare("UPDATE configuracion SET recargoeq = ?, precios_locales = ?, "
-                   "vendedor_f1 = ?, vendedor_f2 = ?, vendedor_f3 = ?, vendedor_f4 = ? "
-                   "WHERE idconfiguracion = 0");
-  consulta.bindValue(0, datos.value("recargoeq", 0));
-  consulta.bindValue(1, datos.value("precios_locales", 0));
-  consulta.bindValue(2, datos.value("vendedor_f1"));
-  consulta.bindValue(3, datos.value("vendedor_f2"));
-  consulta.bindValue(4, datos.value("vendedor_f3"));
-  consulta.bindValue(5, datos.value("vendedor_f4"));
-  if (consulta.exec()) {
+  
+  // Comprobar si ya existe algún registro en la tabla de configuración
+  bool existeRegistro = false;
+  if (consulta.exec("SELECT COUNT(*) FROM configuracion") && consulta.next()) {
+    existeRegistro = (consulta.value(0).toInt() > 0);
+  }
+
+  if (existeRegistro) {
+    // Si ya existe registro, actualizamos la fila existente
+    consulta.prepare("UPDATE configuracion SET recargoeq = ?, precios_locales = ?, "
+                     "vendedor_f1 = ?, vendedor_f2 = ?, vendedor_f3 = ?, vendedor_f4 = ?");
+    consulta.bindValue(0, datos.value("recargoeq", 0));
+    consulta.bindValue(1, datos.value("precios_locales", 0));
+    consulta.bindValue(2, datos.value("vendedor_f1"));
+    consulta.bindValue(3, datos.value("vendedor_f2"));
+    consulta.bindValue(4, datos.value("vendedor_f3"));
+    consulta.bindValue(5, datos.value("vendedor_f4"));
+    if (!consulta.exec()) {
+      qDebug() << "Error al actualizar configuración:" << consulta.lastError().text();
+      return false;
+    }
+    return true;
+  } else {
+    // Si la tabla estaba totalmente vacía, insertamos el primer registro de configuración asignando idconfiguracion = 1
+    consulta.prepare("INSERT INTO configuracion (idconfiguracion, recargoeq, precios_locales, vendedor_f1, vendedor_f2, vendedor_f3, vendedor_f4) "
+                     "VALUES (1, ?, ?, ?, ?, ?, ?)");
+    consulta.bindValue(0, datos.value("recargoeq", 0));
+    consulta.bindValue(1, datos.value("precios_locales", 0));
+    consulta.bindValue(2, datos.value("vendedor_f1"));
+    consulta.bindValue(3, datos.value("vendedor_f2"));
+    consulta.bindValue(4, datos.value("vendedor_f3"));
+    consulta.bindValue(5, datos.value("vendedor_f4"));
+    if (!consulta.exec()) {
+      qDebug() << "Error al insertar configuración:" << consulta.lastError().text();
+      return false;
+    }
     return true;
   }
-  qDebug() << consulta.lastError().text();
-  return false;
 }
 
 bool baseDatos::guardarDirectorios(QString base,

@@ -131,6 +131,40 @@
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBoxGoogleSheets">
+         <property name="title">
+          <string>Integración Google Sheets (Envío Remoto de Arqueos)</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayoutGoogleSheets">
+          <item>
+           <widget class="QCheckBox" name="checkBoxGoogleSheets">
+            <property name="text">
+             <string>Enviar arqueos de caja automáticamente a Google Sheets</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayoutUrlGS">
+            <item>
+             <widget class="QLabel" name="labelUrlGoogleSheets">
+              <property name="text">
+               <string>URL Web App:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditUrlGoogleSheets">
+              <property name="placeholderText">
+               <string>https://script.google.com/macros/s/.../exec</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBoxHotkeys">
          <property name="title">
           <string>Teclas Rápidas de Vendedores (F1-F4)</string>
