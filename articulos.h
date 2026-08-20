@@ -93,6 +93,7 @@ private slots:
     void on_pushButtonAnadir_clicked();
     
     void on_pushButtonAnadirAPedido_clicked();
+    void on_pushButtonAnadirASalidas_clicked();
 
     void on_pushButtonTrazabilidad_clicked();
 
