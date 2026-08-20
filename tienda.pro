@@ -107,7 +107,8 @@ SOURCES += main.cpp\
     verificadorbasedatos.cpp \
     dialogdetallesverificador.cpp \
     dialogasistenteinstalacion.cpp \
-    dialogtrazabilidad.cpp
+    dialogtrazabilidad.cpp \
+    dialoganadirasalidas.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -198,7 +199,8 @@ HEADERS  += tienda.h \
     verificadorbasedatos.h \
     dialogdetallesverificador.h \
     dialogasistenteinstalacion.h \
-    dialogtrazabilidad.h
+    dialogtrazabilidad.h \
+    dialoganadirasalidas.h
 
 FORMS    += tienda.ui \
     generarvales.ui \
@@ -268,7 +270,8 @@ FORMS    += tienda.ui \
     verificadorbasedatos.ui \
     dialogdetallesverificador.ui \
     dialogasistenteinstalacion.ui \
-    dialogtrazabilidad.ui
+    dialogtrazabilidad.ui \
+    dialoganadirasalidas.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 

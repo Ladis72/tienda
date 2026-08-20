@@ -8,6 +8,7 @@
 #include "buscarpornotas.h"
 
 #include "dialoganadirapedido.h"
+#include "dialoganadirasalidas.h"
 #include "dialogcambiocodigo.h"
 #include "dialogcomparararticulos.h"
 #include <QAction>
@@ -1331,6 +1332,21 @@ void Articulos::on_pushButtonAnadirAPedido_clicked() {
     return;
   }
   DialogAnadirAPedido *dialogo = new DialogAnadirAPedido(cod, this);
+  dialogo->exec();
+  delete dialogo;
+}
+
+/**
+ * @brief Abre el diálogo para añadir el producto actual a la lista de salidas de mercancía / traspasos.
+ */
+void Articulos::on_pushButtonAnadirASalidas_clicked() {
+  QString cod = ui->lineEditCod->text().trimmed();
+  if (cod.isEmpty()) {
+    QMessageBox::warning(this, tr("Aviso"),
+                         tr("No hay ningún artículo seleccionado para añadir a salidas."));
+    return;
+  }
+  DialogAnadirASalidas *dialogo = new DialogAnadirASalidas(cod, this);
   dialogo->exec();
   delete dialogo;
 }
