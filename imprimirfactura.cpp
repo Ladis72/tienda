@@ -102,12 +102,23 @@ void ImprimirFactura::facturaPDF()
 </html>
 )";
 
+    // Cargar la configuración de VeriFactu para obtener el NIF del emisor y otros datos tributarios
+    VeriFactuConfig vfConfig = verifactuClass::cargarConfiguracion();
+
     QString datosTiendaLocal = "";
     datosTienda = base.datosTiendaLocal(conf->getConexionLocal());
 
+    // Añadir los datos comerciales de la tienda (nombre, dirección, población, teléfono, email)
     for (int i = 1; i < 7; ++i) {
-        datosTiendaLocal += datosTienda.at(i) + "<br>";
+        if (i < datosTienda.size()) {
+            datosTiendaLocal += datosTienda.at(i) + "<br>";
+        }
     }
+    // Incluir el NIF del emisor si está configurado en VeriFactu
+    if (!vfConfig.emisorNif.isEmpty()) {
+        datosTiendaLocal += "NIF: " + vfConfig.emisorNif + "<br>";
+    }
+
     html.replace("%TIENDA%", datosTiendaLocal);
     html.replace("%CLIENTE%", cliente);
     html.replace("%NUM_FACTURA%", ticket);
@@ -152,7 +163,6 @@ void ImprimirFactura::facturaPDF()
     // --- Integración QR de VeriFactu en el PDF ---
     // SEC/F1.4: las facturas serie B (ventas especiales, tabla 'ticketss') no se
     // registran en VeriFactu, así que no deben imprimir el QR tributario.
-    VeriFactuConfig vfConfig = verifactuClass::cargarConfiguracion();
     QString qrHtml = "";
     if (vfConfig.modo != 0 && !esSerieB) {
         QDate dateExp = QDate::fromString(fecha, "yyyy-MM-dd");

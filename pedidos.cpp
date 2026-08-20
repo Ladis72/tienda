@@ -131,8 +131,8 @@ QString pedidos::calcularTotalLinea()
         pr = 0;
     }
 
-    // El recargo de equivalencia solo se aplica si la tienda lo tiene configurado
-    bool esRE = (base.leerConfiguracion() == "1");
+    // El recargo de equivalencia solo se aplica si la tienda lo tiene configurado en la base de datos
+    bool esRE = base.leerConfiguracion().value("recargoeq").toBool();
     if (!esRE) pr = 0;
 
     // Venta bruta estimada (Unidades + Bonificadas) * PVP

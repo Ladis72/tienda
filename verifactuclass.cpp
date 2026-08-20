@@ -403,19 +403,19 @@ QString verifactuClass::obtenerFechaHoraHusoActual()
  *        al servidor SOAP de la AEAT en un hilo secundario de forma segura.
  * @param conexionOriginal Nombre de la conexión de base de datos activa del hilo principal.
  */
-void verifactuClass::procesarEnviosPendientes(const QString &conexionOriginal)
+void verifactuClass::procesarEnviosPendientes(const DbConnectionParams &params)
 {
     // Generar un nombre único de conexión para evitar colisiones entre hilos
     QString nombreConexion = QString("VeriFactuRetryConnection_%1")
                                  .arg(quintptr(QThread::currentThreadId()));
     {
-        QSqlDatabase dbOriginal = QSqlDatabase::database(conexionOriginal);
-        if (!dbOriginal.isOpen()) {
-            return;
-        }
+        QSqlDatabase db = QSqlDatabase::addDatabase(params.driver.isEmpty() ? "QMYSQL" : params.driver, nombreConexion);
+        db.setHostName(params.host);
+        if (params.port > 0) db.setPort(params.port);
+        db.setDatabaseName(params.dbName);
+        db.setUserName(params.user);
+        db.setPassword(params.pass);
 
-        // Clonamos la conexión para que este hilo secundario acceda de forma segura
-        QSqlDatabase db = QSqlDatabase::cloneDatabase(dbOriginal, nombreConexion);
         if (!db.open()) {
             qWarning() << "No se pudo abrir la conexión a la base de datos de reintentos VeriFactu:"
                        << db.lastError().text();
@@ -473,4 +473,22 @@ void verifactuClass::procesarEnviosPendientes(const QString &conexionOriginal)
     
     // Eliminamos del registro global la conexión temporal una vez destruidos todos los objetos SQL
     QSqlDatabase::removeDatabase(nombreConexion);
+}
+
+void verifactuClass::procesarEnviosPendientes(const QString &conexionOriginal)
+{
+    // Extraer los parámetros de la conexión en el hilo actual antes de llamar a la sobrecarga
+    QSqlDatabase dbOriginal = QSqlDatabase::database(conexionOriginal);
+    if (!dbOriginal.isOpen()) {
+        return;
+    }
+    DbConnectionParams params;
+    params.driver = dbOriginal.driverName();
+    params.host = dbOriginal.hostName();
+    params.port = dbOriginal.port();
+    params.dbName = dbOriginal.databaseName();
+    params.user = dbOriginal.userName();
+    params.pass = dbOriginal.password();
+
+    procesarEnviosPendientes(params);
 }

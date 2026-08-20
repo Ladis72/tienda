@@ -124,13 +124,13 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
                          conf->getConexionLocal());
 
   // Añadimos campos para el seguimiento de forma de pago y devoluciones si la tabla ya existía
-  base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN `forma_pago` VARCHAR(50) DEFAULT 'Efectivo';",
+  base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN IF NOT EXISTS `forma_pago` VARCHAR(50) DEFAULT 'Efectivo';",
                          conf->getConexionLocal());
-  base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN `dev_fecha` DATETIME DEFAULT NULL;",
+  base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN IF NOT EXISTS `dev_fecha` DATETIME DEFAULT NULL;",
                          conf->getConexionLocal());
-  base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN `dev_forma_pago` VARCHAR(50) DEFAULT NULL;",
+  base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN IF NOT EXISTS `dev_forma_pago` VARCHAR(50) DEFAULT NULL;",
                          conf->getConexionLocal());
-  base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN `dev_anticipo` DOUBLE(10,2) DEFAULT '0.00';",
+  base.ejecutarSentencia("ALTER TABLE `encargos` ADD COLUMN IF NOT EXISTS `dev_anticipo` DOUBLE(10,2) DEFAULT '0.00';",
                          conf->getConexionLocal());
 
   // Tabla para almacenar las líneas de productos individuales de encargos multiproducto
@@ -408,22 +408,28 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
 
   notasWidget->refrescar();
 
+  // Lambda auxiliar para capturar parámetros de conexión en el hilo GUI y procesar reenvíos en hilo secundario de forma segura
+  auto lanzarVerifactuAsync = [this]() {
+    QSqlDatabase dbLocalGui = QSqlDatabase::database(conf->getConexionLocal());
+    verifactuClass::DbConnectionParams params;
+    params.driver = dbLocalGui.driverName();
+    params.host = dbLocalGui.hostName();
+    params.port = dbLocalGui.port();
+    params.dbName = dbLocalGui.databaseName();
+    params.user = dbLocalGui.userName();
+    params.pass = dbLocalGui.password();
+    QtConcurrent::run([params]() {
+      verifactuClass::procesarEnviosPendientes(params);
+    });
+  };
+
   // Configurar temporizador para reenvío automático de VeriFactu cada 1 hora
   verifactuTimer = new QTimer(this);
-  connect(verifactuTimer, &QTimer::timeout, this, [this]() {
-    // Lanzamos el reenvío en un hilo secundario para no congelar la UI
-    QtConcurrent::run([conn = conf->getConexionLocal()]() {
-      verifactuClass::procesarEnviosPendientes(conn);
-    });
-  });
+  connect(verifactuTimer, &QTimer::timeout, this, lanzarVerifactuAsync);
   verifactuTimer->start(3600000); // 1 hora (3600000 ms)
 
   // Realizar un primer reenvío automático al arrancar la aplicación (con un pequeño delay de 5 segundos)
-  QTimer::singleShot(5000, this, [this]() {
-    QtConcurrent::run([conn = conf->getConexionLocal()]() {
-      verifactuClass::procesarEnviosPendientes(conn);
-    });
-  });
+  QTimer::singleShot(5000, this, lanzarVerifactuAsync);
 
   // Botones dinámicos para nuevas opciones de configuración
   btnEditorPermisos = new QPushButton(tr("Editor de Permisos"), this);

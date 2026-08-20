@@ -21,7 +21,7 @@ private slots:
 
 private:
     Ui::ConfiguracionOtros *ui;
-    baseDatos *base;
+    baseDatos base; // Instancia directa de la clase baseDatos para evitar punteros sin inicializar
 };
 
 #endif // CONFIGURACIONOTROS_H
