@@ -3,13 +3,23 @@
 #include "qprocess.h"
 #include "skip_sync_guard.h"
 #include <QApplication>
+#include <QCoreApplication>
 #include <QDate>
 #include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QHostInfo>
 #include <QInputDialog>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMessageBox>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QSettings>
+#include <QUrl>
 
 
 baseDatos::baseDatos() {}
@@ -2077,7 +2087,6 @@ QSqlQuery baseDatos::ventasDesdeUltimoArqueo(QString fechaI, QString horaI,
                    " WHERE concat_ws('/',fecha , hora) >= ? group by fpago");
   consulta.bindValue(0, fechaI + "/" + horaI);
   consulta.exec();
-  consulta.first();
   return consulta;
 }
 QSqlQuery baseDatos::recuperarDatosUltimoArqueo(QString base) {
@@ -2119,6 +2128,241 @@ bool baseDatos::grabarArqueo(QStringList datos, QString base,
     }
   }
   return true;
+}
+
+/**
+ * @brief Recupera el desglose de monedas y billetes para un arqueo específico.
+ * @param idArqueo Identificador único del arqueo.
+ * @param base Nombre de la conexión de base de datos.
+ * @return QMap con las denominaciones como clave y las cantidades como valor.
+ */
+QMap<double, int> baseDatos::recuperarDesgloseArqueo(int idArqueo, QString base) {
+  QMap<double, int> desglose;
+  QSqlQuery consulta(QSqlDatabase::database(base));
+  consulta.prepare("SELECT denominacion, cantidad FROM arqueos_detalle WHERE idArqueo = ?");
+  consulta.bindValue(0, idArqueo);
+  if (consulta.exec()) {
+    while (consulta.next()) {
+      desglose.insert(consulta.value(0).toDouble(), consulta.value(1).toInt());
+    }
+  } else {
+    qDebug() << "Error recuperando desglose de arqueo:" << consulta.lastError().text();
+  }
+  return desglose;
+}
+
+/**
+ * @brief Envía los datos completos del arqueo y su desglose a Google Sheets mediante Web App Apps Script.
+ * @param datos Lista con los campos del arqueo (fecha, hora, vefectivo, vtarjeta, entradas, efectivo, descuadre, efectivoContado, usuario).
+ * @param desglose Mapa de denominaciones y unidades contadas.
+ * @param parent Objeto padre opcional para el NetworkAccessManager.
+ * @return true si se inició la petición correctamente, false en caso contrario.
+ */
+bool baseDatos::enviarArqueoGoogleSheets(const QStringList &datos,
+                                        const QMap<double, int> &desglose,
+                                        QObject *parent) {
+  // Leer configuración desde tienda.ini
+  QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+  QSettings settings(iniPath, QSettings::IniFormat);
+  settings.beginGroup("GoogleSheets");
+  bool habilitado = settings.value("enviarGoogleSheets", false).toBool();
+  QString urlStr = settings.value("urlGoogleSheets", "").toString().trimmed();
+  settings.endGroup();
+
+  if (!habilitado || urlStr.isEmpty()) {
+    qDebug() << "Envío a Google Sheets no configurado o deshabilitado.";
+    return false;
+  }
+
+  QUrl url(urlStr);
+  if (!url.isValid()) {
+    qWarning() << "La URL de Google Sheets no es válida:" << urlStr;
+    return false;
+  }
+
+  // Obtener el nombre real de la tienda local
+  // 1. Intentar desde tienda.ini [Local] nombreTienda
+  settings.beginGroup("Local");
+  QString nombreTienda = settings.value("nombreTienda", "").toString().trimmed();
+  settings.endGroup();
+
+  // 2. Si está vacío o es "DB", intentar desde tienda.ini [BaseDatos] nombreTienda
+  if (nombreTienda.isEmpty() || nombreTienda.compare("DB", Qt::CaseInsensitive) == 0) {
+    settings.beginGroup("BaseDatos");
+    nombreTienda = settings.value("nombreTienda", "").toString().trimmed();
+    settings.endGroup();
+  }
+
+  // 3. Si sigue vacío o es "DB", consultar la tabla 'tiendas' de la base de datos local
+  if ((nombreTienda.isEmpty() || nombreTienda.compare("DB", Qt::CaseInsensitive) == 0) && conf) {
+    QSqlQuery qTienda(QSqlDatabase::database(conf->getConexionLocal()));
+    if (qTienda.exec("SELECT nombre FROM tiendas WHERE local = '1' OR local = 1 LIMIT 1") && qTienda.next()) {
+      QString nBd = qTienda.value(0).toString().trimmed();
+      if (!nBd.isEmpty()) {
+        nombreTienda = nBd;
+      }
+    }
+  }
+
+  // 4. Si aún no se encuentra, consultar la tabla configTicket
+  if ((nombreTienda.isEmpty() || nombreTienda.compare("DB", Qt::CaseInsensitive) == 0) && conf) {
+    QSqlQuery qTicket(QSqlDatabase::database(conf->getConexionLocal()));
+    if (qTicket.exec("SELECT nombre FROM configTicket LIMIT 1") && qTicket.next()) {
+      QString nTicket = qTicket.value(0).toString().trimmed();
+      if (!nTicket.isEmpty()) {
+        nombreTienda = nTicket;
+      }
+    }
+  }
+
+  // 5. Si como último recurso sigue sin nombre o es "DB", usar el nombre del equipo
+  if (nombreTienda.isEmpty() || nombreTienda.compare("DB", Qt::CaseInsensitive) == 0) {
+    nombreTienda = QHostInfo::localHostName();
+  }
+
+  // 1. Construir el objeto JSON principal del arqueo con todos los alias comunes
+  QJsonObject jsonArqueo;
+  jsonArqueo["tienda"] = nombreTienda;
+
+  if (datos.size() >= 9) {
+    // Formato de fecha estándar "yyyy-MM-dd"
+    jsonArqueo["fecha"] = datos.at(0);
+    // Formato de hora "hh:mm:ss"
+    jsonArqueo["hora"] = datos.at(1);
+
+    // Ventas en efectivo
+    double vEfectivo = datos.at(2).toDouble();
+    jsonArqueo["vefectivo"] = vEfectivo;
+    jsonArqueo["ventasEfectivo"] = vEfectivo;
+    jsonArqueo["ventas_efectivo"] = vEfectivo;
+    jsonArqueo["efectivoVentas"] = vEfectivo;
+
+    // Ventas con tarjeta
+    double vTarjeta = datos.at(3).toDouble();
+    jsonArqueo["vtarjeta"] = vTarjeta;
+    jsonArqueo["ventasTarjeta"] = vTarjeta;
+    jsonArqueo["ventas_tarjeta"] = vTarjeta;
+    jsonArqueo["tarjeta"] = vTarjeta;
+
+    // Ventas totales
+    double vTotales = vEfectivo + vTarjeta;
+    jsonArqueo["ventasTotales"] = vTotales;
+    jsonArqueo["totalVentas"] = vTotales;
+    jsonArqueo["ventas"] = vTotales;
+
+    // Entradas / Salidas (retiradas)
+    double entrSal = datos.at(4).toDouble();
+    jsonArqueo["entradas"] = entrSal;
+    jsonArqueo["salidas"] = entrSal;
+    jsonArqueo["entradasSalidas"] = entrSal;
+
+    // Efectivo teórico en caja
+    double efectTeorico = datos.at(5).toDouble();
+    jsonArqueo["efectivo"] = efectTeorico;
+    jsonArqueo["efectivoTeorico"] = efectTeorico;
+    jsonArqueo["totalEfectivo"] = efectTeorico;
+
+    // Descuadre
+    double descuadre = datos.at(6).toDouble();
+    jsonArqueo["descuadre"] = descuadre;
+
+    // Efectivo real contado
+    double efectContado = datos.at(7).toDouble();
+    jsonArqueo["efectivoContado"] = efectContado;
+    jsonArqueo["efectivoReal"] = efectContado;
+    jsonArqueo["contado"] = efectContado;
+
+    // Usuario que realizó el arqueo
+    jsonArqueo["usuario"] = datos.at(8);
+  }
+
+  // 2. Construir objeto JSON con el desglose detallado de todas las monedas y billetes
+  QJsonObject jsonDesglose;
+  QJsonArray jsonDetalleArray;
+  QList<double> todasDenominaciones = {
+      500.0, 200.0, 100.0, 50.0, 20.0, 10.0, 5.0,
+      2.0, 1.0, 0.50, 0.20, 0.10, 0.05, 0.02, 0.01
+  };
+
+  for (double denom : todasDenominaciones) {
+    int cantidad = desglose.value(denom, 0);
+    QString clave = QString::number(denom, 'f', 2);
+    jsonDesglose[clave] = cantidad;
+
+    // Claves planas para facilitar la correspondencia con columnas individuales en Google Sheets
+    QString clavePlana;
+    if (denom >= 5.0) {
+      clavePlana = QString("b%1").arg(static_cast<int>(denom));
+    } else if (denom >= 1.0) {
+      clavePlana = QString("m%1").arg(static_cast<int>(denom));
+    } else {
+      clavePlana = QString("m0_%1").arg(static_cast<int>(denom * 100), 2, 10, QChar('0'));
+    }
+    jsonArqueo[clavePlana] = cantidad;
+
+    if (cantidad > 0) {
+      QJsonObject item;
+      item["denominacion"] = denom;
+      item["cantidad"] = cantidad;
+      item["total"] = denom * cantidad;
+      jsonDetalleArray.append(item);
+    }
+  }
+  jsonArqueo["desglose"] = jsonDesglose;
+  jsonArqueo["detalle"] = jsonDetalleArray;
+
+  // 3. Preparar la petición HTTP POST
+  QNetworkRequest request(url);
+  request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+  request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                       QNetworkRequest::NoLessSafeRedirectPolicy);
+
+  // 4. Iniciar envío asíncrono
+  qDebug().noquote() << "JSON enviado a Google Sheets:" << QJsonDocument(jsonArqueo).toJson(QJsonDocument::Compact);
+  QNetworkAccessManager *manager = new QNetworkAccessManager(parent);
+  QNetworkReply *reply = manager->post(
+      request, QJsonDocument(jsonArqueo).toJson(QJsonDocument::Compact));
+
+  QObject::connect(reply, &QNetworkReply::finished, [reply, manager]() {
+    if (reply->error() == QNetworkReply::NoError) {
+      qDebug() << "Arqueo registrado exitosamente en Google Sheets.";
+    } else {
+      qWarning() << "Error al enviar el arqueo a Google Sheets:"
+                 << reply->errorString();
+    }
+    reply->deleteLater();
+    manager->deleteLater();
+  });
+
+  return true;
+}
+
+/**
+ * @brief Recupera un arqueo por su ID de BD y lo envía a Google Sheets con su desglose.
+ * @param idArqueo Identificador del arqueo.
+ * @param base Nombre de la conexión de base de datos.
+ * @param parent Objeto padre opcional.
+ * @return true si se inició el envío correctamente, false si no se encontró o hubo error.
+ */
+bool baseDatos::enviarArqueoPorIdGoogleSheets(int idArqueo, QString base, QObject *parent) {
+  QSqlQuery consulta(QSqlDatabase::database(base));
+  consulta.prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d'), hora, vefectivo, vtarjeta, entradas, efectivo, descuadre, efectivoContado, usuario FROM arqueos WHERE id = ?");
+  consulta.bindValue(0, idArqueo);
+  if (consulta.exec() && consulta.next()) {
+    QStringList datos;
+    datos << consulta.value(0).toString()
+          << consulta.value(1).toString()
+          << QString::number(consulta.value(2).toDouble(), 'f', 2)
+          << QString::number(consulta.value(3).toDouble(), 'f', 2)
+          << QString::number(consulta.value(4).toDouble(), 'f', 2)
+          << QString::number(consulta.value(5).toDouble(), 'f', 2)
+          << QString::number(consulta.value(6).toDouble(), 'f', 2)
+          << QString::number(consulta.value(7).toDouble(), 'f', 2)
+          << consulta.value(8).toString();
+    QMap<double, int> desglose = recuperarDesgloseArqueo(idArqueo, base);
+    return enviarArqueoGoogleSheets(datos, desglose, parent);
+  }
+  return false;
 }
 
 QSqlQuery baseDatos::ventasEntreFechas(QString fechaI, QString FechaF,

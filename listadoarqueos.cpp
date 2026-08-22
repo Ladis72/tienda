@@ -4,18 +4,22 @@
 #include "qtextdocument.h"
 #include "ui_listadoarqueos.h"
 #include "dialogdetallearqueo.h"
+#include <QMessageBox>
 
 ListadoArqueos::ListadoArqueos(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::ListadoArqueos)
+    , modeloTabla(nullptr)
 {
     ui->setupUi(this);
+    base = new baseDatos();
     ui->dateEditDesde->setDate(QDate::currentDate());
     ui->dateEditHasta->setDate(QDate::currentDate());
 }
 
 ListadoArqueos::~ListadoArqueos()
 {
+    delete base;
     delete ui;
 }
 
@@ -24,13 +28,31 @@ void ListadoArqueos::on_pushButtonConsultar_clicked()
     QString fechaI, fechaF;
     fechaI = ui->dateEditDesde->date().toString("yyyy-MM-dd");
     fechaF = ui->dateEditHasta->date().toString("yyyy-MM-dd");
-    qDebug() << fechaF << "   " << fechaI;
+    qDebug() << "Consultando arqueos entre:" << fechaI << "y" << fechaF;
+
     modeloTabla = new QSqlTableModel(this, QSqlDatabase::database(conf->getConexionLocal()));
     modeloTabla->setTable("arqueos");
     modeloTabla->setEditStrategy(QSqlTableModel::OnManualSubmit);
     modeloTabla->setFilter("fecha >= '" + fechaI + "' AND fecha <= '" + fechaF + "'");
     modeloTabla->select();
+
+    // Establecer nombres de cabeceras claros y amigables
+    modeloTabla->setHeaderData(0, Qt::Horizontal, tr("ID"));
+    modeloTabla->setHeaderData(1, Qt::Horizontal, tr("Fecha"));
+    modeloTabla->setHeaderData(2, Qt::Horizontal, tr("Hora"));
+    modeloTabla->setHeaderData(3, Qt::Horizontal, tr("V. Efectivo"));
+    modeloTabla->setHeaderData(4, Qt::Horizontal, tr("V. Tarjeta"));
+    modeloTabla->setHeaderData(5, Qt::Horizontal, tr("Entr./Sal."));
+    modeloTabla->setHeaderData(6, Qt::Horizontal, tr("Efect. Teórico"));
+    modeloTabla->setHeaderData(7, Qt::Horizontal, tr("Descuadre"));
+    modeloTabla->setHeaderData(8, Qt::Horizontal, tr("Contado"));
+    modeloTabla->setHeaderData(9, Qt::Horizontal, tr("Usuario"));
+
     ui->tableView->setModel(modeloTabla);
+    ui->tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableView->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->tableView->resizeColumnsToContents();
 }
 
 void ListadoArqueos::on_pushButtonImprimir_clicked()
@@ -118,7 +140,7 @@ void ListadoArqueos::on_pushButtonImprimir_clicked()
 
 void ListadoArqueos::on_tableView_doubleClicked(const QModelIndex &index)
 {
-    if (!index.isValid()) return;
+    if (!index.isValid() || !modeloTabla) return;
     
     // Obtener el ID del arqueo de la columna 0 de la fila seleccionada
     int idArqueo = modeloTabla->data(modeloTabla->index(index.row(), 0)).toInt();
