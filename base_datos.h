@@ -168,6 +168,9 @@ public:
     QSqlQuery recuperarDatosUltimoArqueo(QString base);
     bool grabarArqueo(QStringList datos, QString base,
                       const QMap<double, int> &desglose = QMap<double, int>());
+    QMap<double, int> recuperarDesgloseArqueo(int idArqueo, QString base);
+    bool enviarArqueoGoogleSheets(const QStringList &datos, const QMap<double, int> &desglose, QObject *parent = nullptr);
+    bool enviarArqueoPorIdGoogleSheets(int idArqueo, QString base, QObject *parent = nullptr);
     QSqlQuery ventasEntreFechas(QString fechaI, QString FechaF, QString tabla, QString base);
     int nTarjetasDesdeUltimoArqueo(QString fechaI, QString horaI, QString base);
     //Funciones GENERALISTAS
