@@ -66,8 +66,11 @@ private:
     /// Evita que dos ciclos de sincronización se solapen (timer + ping)
     std::atomic<bool> m_syncActivo;
 
-    // --- Tablas maestras que se sincronizan (sin las de solo local) ---
+    // --- Tablas maestras que se sincronizan bidireccionalmente entre tiendas ---
     static const QStringList TABLAS_MAESTRAS;
+
+    // --- Tablas transaccionales locales que se consolidan en la nube (unidireccional: local -> nube) ---
+    static const QStringList TABLAS_TRANSACCIONALES;
     
     // --- Campos operativos que no deben sincronizarse para evitar corrupción entre tiendas ---
     static const QMap<QString, QStringList> CAMPOS_EXCLUIDOS;

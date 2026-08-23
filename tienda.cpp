@@ -29,6 +29,7 @@
 #include <QLabel>
 #include <QApplication>
 #include <QCheckBox>
+#include <QShortcut>
 
 /******************************************************************************
  * CONSTRUCTOR principal de la aplicación Tienda
@@ -490,6 +491,19 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   ui->statusBar->addPermanentWidget(btnMonitorCaducidades);
   connect(btnMonitorCaducidades, &QPushButton::clicked, this, &Tienda::onBtnMonitorCaducidadesClicked);
   
+  // -- Asistente Inteligente IA (Ollama) --
+  btnAsistenteIA = new QPushButton("🤖 Asistente IA (F12)", this);
+  btnAsistenteIA->setStyleSheet("background-color: #2980b9; color: white; font-weight: bold; border-radius: 5px; padding: 5px; margin-right: 10px;");
+  btnAsistenteIA->setToolTip("Abrir el Asistente Inteligente TPV (Atajo: F12 o Ctrl+I)");
+  ui->statusBar->addPermanentWidget(btnAsistenteIA);
+  connect(btnAsistenteIA, &QPushButton::clicked, this, &Tienda::onBtnAsistenteIAClicked);
+
+  // Atajos de teclado para el asistente
+  QShortcut *shortcutF12 = new QShortcut(QKeySequence(Qt::Key_F12), this);
+  connect(shortcutF12, &QShortcut::activated, this, &Tienda::onBtnAsistenteIAClicked);
+  QShortcut *shortcutCtrlI = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_I), this);
+  connect(shortcutCtrlI, &QShortcut::activated, this, &Tienda::onBtnAsistenteIAClicked);
+
   login();
 }
 
@@ -1244,3 +1258,16 @@ void Tienda::onMonitorCaducidadesError(QString msg) {
     btnMonitorCaducidades->setText("🔍 Analizar Caducidades Inteligente");
     QMessageBox::warning(this, "Monitor de Caducidades", msg);
 }
+
+/**
+ * @brief Abre el diálogo del Asistente de IA local (Ollama), conservando la conversación y memoria de la sesión.
+ */
+void Tienda::onBtnAsistenteIAClicked() {
+    if (!m_dialogAsistenteIA) {
+        m_dialogAsistenteIA = new DialogAsistenteIA(this);
+    }
+    m_dialogAsistenteIA->show();
+    m_dialogAsistenteIA->raise();
+    m_dialogAsistenteIA->activateWindow();
+}
+

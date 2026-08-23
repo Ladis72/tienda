@@ -1,4 +1,6 @@
 #include "configuracion.h"
+#include <QSqlQuery>
+#include <QSqlDatabase>
 
 Configuracion::Configuracion() {
   usarPreciosLocales = false;
@@ -37,6 +39,20 @@ QString Configuracion::getConexionCommon() {
 bool Configuracion::getUsarPreciosLocales() { return usarPreciosLocales; }
 
 void Configuracion::setUsarPreciosLocales(bool value) { usarPreciosLocales = value; }
+
+/**
+ * @brief Obtiene el identificador único de la tienda local actual.
+ * Realiza una consulta rápida a la tabla de tiendas donde local = 1.
+ * Si no se encuentra, retorna 1 por defecto.
+ * @return ID de la tienda local.
+ */
+int Configuracion::getIdTienda() {
+  QSqlQuery q(QSqlDatabase::database(conexionLocal));
+  if (q.exec("SELECT id FROM tiendas WHERE local = 1 LIMIT 1") && q.first()) {
+    return q.value(0).toInt();
+  }
+  return 1;
+}
 
 QString Configuracion::getUsuario() { return usuario; }
 

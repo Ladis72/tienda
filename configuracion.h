@@ -33,6 +33,9 @@ public:
   bool getUsarPreciosLocales();
   void setUsarPreciosLocales(bool value);
 
+  /// @brief Obtiene el ID numérico de la tienda local actual desde la base de datos
+  int getIdTienda();
+
   QString getUsuario();
   void setUsuario(QString user);
   int getRol();

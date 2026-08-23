@@ -16,6 +16,7 @@
 #include "unificarmaestros.h"
 #include <QTcpSocket>
 #include "configuracion.h"
+#include "base_datos.h"
 #include "skip_sync_guard.h"
 
 extern Configuracion *conf;
@@ -45,8 +46,20 @@ const QStringList SyncManager::TABLAS_MAESTRAS = {
     "vales"         // vales de fidelidad (estado se propaga via nube)
 };
 
+/// Tablas transaccionales locales que se consolidan en la nube (tickets, pedidos, arqueos, etc.)
+const QStringList SyncManager::TABLAS_TRANSACCIONALES = {
+    "tickets",
+    "lineasticket",
+    "arqueos",
+    "pedidos",
+    "lineaspedido",
+    "salidaGenero",
+    "entradasSalidas"
+};
+
 const QMap<QString, QStringList> SyncManager::CAMPOS_EXCLUIDOS = {
     {"articulos", {"stock", "min", "max", "pendientes_pedido", "ultima_venta", "ultimo_pedido", "encargados", "minimo_pedido"}},
+    {"permisos", {"id"}},
     {"vales", {"idvales"}}
 };
 
@@ -189,6 +202,14 @@ void SyncManager::crearTriggers()
         crearTrigger(tabla, pk, "UPDATE");
         crearTrigger(tabla, pk, "DELETE");
     }
+
+    for (const QString &tabla : TABLAS_TRANSACCIONALES) {
+        QString pk = getPkTabla(tabla);
+        if (pk.isEmpty()) continue;
+        crearTrigger(tabla, pk, "INSERT");
+        crearTrigger(tabla, pk, "UPDATE");
+        crearTrigger(tabla, pk, "DELETE");
+    }
     
     // Limpieza: eliminar triggers de tablas que ya no se sincronizan (como 'directorios')
     QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
@@ -256,6 +277,10 @@ bool SyncManager::conectarNube()
     }
     
     m_hayConexion = true;
+
+    // Asegurar que las tablas de la nube estén inicializadas
+    baseDatos::inicializarEsquemaNube();
+
     return true;
 }
 
@@ -443,7 +468,178 @@ int SyncManager::subirCambios(const QString &connLocal, const QString &connNube,
         QString accion = cola.value(3).toString();
         bool ok = false;
 
-        if (accion == "DELETE") {
+        if (TABLAS_TRANSACCIONALES.contains(tabla)) {
+            if (accion == "DELETE") {
+                QSqlQuery del(dbNube);
+                if (tabla == "tickets") {
+                    del.prepare("DELETE FROM `tickets_nube` WHERE `id_tienda` = ? AND `ticket` = ?");
+                    del.addBindValue(m_idTiendaLocal);
+                    del.addBindValue(idReg);
+                } else if (tabla == "lineasticket") {
+                    del.prepare("DELETE FROM `lineasticket_nube` WHERE `id_tienda` = ? AND `id_local` = ?");
+                    del.addBindValue(m_idTiendaLocal);
+                    del.addBindValue(idReg);
+                } else if (tabla == "arqueos") {
+                    del.prepare("DELETE FROM `arqueos_nube` WHERE `id_tienda` = ? AND `id_local` = ?");
+                    del.addBindValue(m_idTiendaLocal);
+                    del.addBindValue(idReg);
+                } else if (tabla == "pedidos") {
+                    del.prepare("DELETE FROM `pedidos_nube` WHERE `id_tienda` = ? AND `id_local` = ?");
+                    del.addBindValue(m_idTiendaLocal);
+                    del.addBindValue(idReg);
+                } else if (tabla == "lineaspedido") {
+                    del.prepare("DELETE FROM `lineaspedido_nube` WHERE `id_tienda` = ? AND `id_local` = ?");
+                    del.addBindValue(m_idTiendaLocal);
+                    del.addBindValue(idReg);
+                } else if (tabla == "salidaGenero") {
+                    del.prepare("DELETE FROM `salidas_nube` WHERE `id_tienda_origen` = ? AND `id_local` = ?");
+                    del.addBindValue(m_idTiendaLocal);
+                    del.addBindValue(idReg);
+                } else if (tabla == "entradasSalidas") {
+                    del.prepare("DELETE FROM `entradasalida_nube` WHERE `id_tienda` = ? AND `id_local` = ?");
+                    del.addBindValue(m_idTiendaLocal);
+                    del.addBindValue(idReg);
+                }
+                ok = del.exec();
+            } else {
+                QString pk = getPkTabla(tabla);
+                QSqlQuery reg(dbLocal);
+                QString sqlReg = QString("SELECT * FROM `%1` WHERE `%2` = '%3'")
+                                 .arg(tabla, pk, QString(idReg).replace("'", "''"));
+                if (reg.exec(sqlReg) && reg.first()) {
+                    QSqlRecord rec = reg.record();
+                    QSqlQuery ins(dbNube);
+                    if (tabla == "tickets") {
+                        ins.prepare("INSERT INTO `tickets_nube` (id_tienda, ticket, usuario, cliente, fecha, hora, base, iva, descuento, total, fpago, cobrado, entrega, cambio) "
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                                    "ON DUPLICATE KEY UPDATE usuario=VALUES(usuario), cliente=VALUES(cliente), fecha=VALUES(fecha), hora=VALUES(hora), base=VALUES(base), iva=VALUES(iva), descuento=VALUES(descuento), total=VALUES(total), fpago=VALUES(fpago), cobrado=VALUES(cobrado), entrega=VALUES(entrega), cambio=VALUES(cambio)");
+                        ins.addBindValue(m_idTiendaLocal);
+                        ins.addBindValue(rec.value("ticket"));
+                        ins.addBindValue(rec.value("usuario").toInt() > 0 ? rec.value("usuario") : 1);
+                        ins.addBindValue(rec.value("cliente").toInt() > 0 ? rec.value("cliente") : 1);
+                        ins.addBindValue(rec.value("fecha"));
+                        ins.addBindValue(rec.value("hora"));
+                        ins.addBindValue(rec.value("base"));
+                        ins.addBindValue(rec.value("iva"));
+                        ins.addBindValue(rec.value("descuento"));
+                        ins.addBindValue(rec.value("total"));
+                        ins.addBindValue(rec.value("fpago"));
+                        ins.addBindValue(rec.value("cobrado"));
+                        ins.addBindValue(rec.value("entrega"));
+                        ins.addBindValue(rec.value("cambio"));
+                        ok = ins.exec();
+                    } else if (tabla == "lineasticket") {
+                        ins.prepare("INSERT INTO `lineasticket_nube` (id_tienda, id_local, nticket, cod, descripcion, cantidad, iva, precio, descuento, totallinea, fecha, hora) "
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                                    "ON DUPLICATE KEY UPDATE nticket=VALUES(nticket), cod=VALUES(cod), descripcion=VALUES(descripcion), cantidad=VALUES(cantidad), iva=VALUES(iva), precio=VALUES(precio), descuento=VALUES(descuento), totallinea=VALUES(totallinea), fecha=VALUES(fecha), hora=VALUES(hora)");
+                        ins.addBindValue(m_idTiendaLocal);
+                        ins.addBindValue(rec.value("id"));
+                        ins.addBindValue(rec.value("nticket"));
+                        ins.addBindValue(rec.value("cod"));
+                        ins.addBindValue(rec.value("descripcion"));
+                        ins.addBindValue(rec.value("cantidad"));
+                        ins.addBindValue(rec.value("iva"));
+                        ins.addBindValue(rec.value("precio"));
+                        ins.addBindValue(rec.value("descuento"));
+                        ins.addBindValue(rec.value("totallinea"));
+                        ins.addBindValue(rec.value("fecha"));
+                        ins.addBindValue(rec.value("hora"));
+                        ok = ins.exec();
+                    } else if (tabla == "arqueos") {
+                        ins.prepare("INSERT INTO `arqueos_nube` (id_tienda, id_local, fecha, hora, ventasEfectivo, ventasTarjeta, entradas, efectivoReal, descuadre, efectivoContado, usuario) "
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                                    "ON DUPLICATE KEY UPDATE fecha=VALUES(fecha), hora=VALUES(hora), ventasEfectivo=VALUES(ventasEfectivo), ventasTarjeta=VALUES(ventasTarjeta), entradas=VALUES(entradas), efectivoReal=VALUES(efectivoReal), descuadre=VALUES(descuadre), efectivoContado=VALUES(efectivoContado), usuario=VALUES(usuario)");
+                        ins.addBindValue(m_idTiendaLocal);
+                        ins.addBindValue(rec.value("id"));
+                        ins.addBindValue(rec.value("fecha"));
+                        ins.addBindValue(rec.value("hora"));
+                        ins.addBindValue(rec.value("ventasEfectivo"));
+                        ins.addBindValue(rec.value("ventasTarjeta"));
+                        ins.addBindValue(rec.value("entradas"));
+                        ins.addBindValue(rec.value("efectivoReal"));
+                        ins.addBindValue(rec.value("descuadre"));
+                        ins.addBindValue(rec.value("efectivoContado"));
+                        ins.addBindValue(rec.value("usuario"));
+                        ok = ins.exec();
+                    } else if (tabla == "pedidos") {
+                        ins.prepare("INSERT INTO `pedidos_nube` (id_tienda, id_local, idProveedor, npedido, fechaPedido, nLineas, nArticulos, descuento, totalbase, totaliva, totalre, total, nFactura, notas) "
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                                    "ON DUPLICATE KEY UPDATE idProveedor=VALUES(idProveedor), npedido=VALUES(npedido), fechaPedido=VALUES(fechaPedido), nLineas=VALUES(nLineas), nArticulos=VALUES(nArticulos), descuento=VALUES(descuento), totalbase=VALUES(totalbase), totaliva=VALUES(totaliva), totalre=VALUES(totalre), total=VALUES(total), nFactura=VALUES(nFactura), notas=VALUES(notas)");
+                        ins.addBindValue(m_idTiendaLocal);
+                        ins.addBindValue(rec.value("id"));
+                        ins.addBindValue(rec.value("idProveedor"));
+                        ins.addBindValue(rec.value("npedido"));
+                        ins.addBindValue(rec.value("fechaPedido"));
+                        ins.addBindValue(rec.value("nLineas"));
+                        ins.addBindValue(rec.value("nArticulos"));
+                        ins.addBindValue(rec.value("descuento"));
+                        ins.addBindValue(rec.value("totalbase"));
+                        ins.addBindValue(rec.value("totaliva"));
+                        ins.addBindValue(rec.value("totalre"));
+                        ins.addBindValue(rec.value("total"));
+                        ins.addBindValue(rec.value("nFactura"));
+                        ins.addBindValue(rec.value("notas"));
+                        ok = ins.exec();
+                    } else if (tabla == "lineaspedido") {
+                        ins.prepare("INSERT INTO `lineaspedido_nube` (id_tienda, id_local, nDocumento, idProveedor, cod, descripcion, cantidad, bonificacion, lote, fc, costo, descuento1, base, tipoIva, totalbase, iva, re, pvp) "
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                                    "ON DUPLICATE KEY UPDATE nDocumento=VALUES(nDocumento), idProveedor=VALUES(idProveedor), cod=VALUES(cod), descripcion=VALUES(descripcion), cantidad=VALUES(cantidad), bonificacion=VALUES(bonificacion), lote=VALUES(lote), fc=VALUES(fc), costo=VALUES(costo), descuento1=VALUES(descuento1), base=VALUES(base), tipoIva=VALUES(tipoIva), totalbase=VALUES(totalbase), iva=VALUES(iva), re=VALUES(re), pvp=VALUES(pvp)");
+                        ins.addBindValue(m_idTiendaLocal);
+                        ins.addBindValue(rec.value("id"));
+                        ins.addBindValue(rec.value("nDocumento"));
+                        ins.addBindValue(rec.value("idProveedor"));
+                        ins.addBindValue(rec.value("cod"));
+                        ins.addBindValue(rec.value("descripcion"));
+                        ins.addBindValue(rec.value("cantidad"));
+                        ins.addBindValue(rec.value("bonificacion"));
+                        ins.addBindValue(rec.value("lote"));
+                        ins.addBindValue(rec.value("fc"));
+                        ins.addBindValue(rec.value("costo"));
+                        ins.addBindValue(rec.value("descuento1"));
+                        ins.addBindValue(rec.value("base"));
+                        ins.addBindValue(rec.value("tipoIva"));
+                        ins.addBindValue(rec.value("totalbase"));
+                        ins.addBindValue(rec.value("iva"));
+                        ins.addBindValue(rec.value("re"));
+                        ins.addBindValue(rec.value("pvp"));
+                        ok = ins.exec();
+                    } else if (tabla == "salidaGenero") {
+                        ins.prepare("INSERT INTO `salidas_nube` (id_tienda_origen, id_local, cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp, idTienda_destino) "
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                                    "ON DUPLICATE KEY UPDATE cod=VALUES(cod), fechaEntrada=VALUES(fechaEntrada), descripcion=VALUES(descripcion), cantidad=VALUES(cantidad), fechaCaducidad=VALUES(fechaCaducidad), pvp=VALUES(pvp), idTienda_destino=VALUES(idTienda_destino)");
+                        ins.addBindValue(m_idTiendaLocal);
+                        ins.addBindValue(rec.value("id"));
+                        ins.addBindValue(rec.value("cod"));
+                        ins.addBindValue(rec.value("fechaEntrada"));
+                        ins.addBindValue(rec.value("descripcion"));
+                        ins.addBindValue(rec.value("cantidad"));
+                        ins.addBindValue(rec.value("fechaCaducidad"));
+                        ins.addBindValue(rec.value("pvp"));
+                        ins.addBindValue(rec.value("idTienda"));
+                        ok = ins.exec();
+                    } else if (tabla == "entradasSalidas") {
+                        ins.prepare("INSERT INTO `entradasalida_nube` (id_tienda, id_local, fecha, hora, cantidad, idTiposRentrada, descripcion, usuario) "
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+                                    "ON DUPLICATE KEY UPDATE fecha=VALUES(fecha), hora=VALUES(hora), cantidad=VALUES(cantidad), idTiposRentrada=VALUES(idTiposRentrada), descripcion=VALUES(descripcion), usuario=VALUES(usuario)");
+                        ins.addBindValue(m_idTiendaLocal);
+                        ins.addBindValue(rec.value("identradasSalidas"));
+                        ins.addBindValue(rec.value("fecha"));
+                        ins.addBindValue(rec.value("hora"));
+                        ins.addBindValue(rec.value("cantidad"));
+                        ins.addBindValue(rec.value("idTiposRentrada"));
+                        ins.addBindValue(rec.value("descripcion"));
+                        ins.addBindValue(rec.value("usuario"));
+                        ok = ins.exec();
+                    }
+                    if (!ok) {
+                        QString err = QString("Error subiendo transacción a %1 (id %2): %3")
+                                      .arg(tabla, idReg, ins.lastError().text());
+                        qDebug() << "SyncManager:" << err;
+                        registrarLog(connLocal, "SyncError", usuario, err);
+                    }
+                } else ok = true;
+            }
+        } else if (accion == "DELETE") {
             QString pk = getPkTabla(tabla);
             QSqlQuery del(dbNube);
             del.prepare(QString("DELETE FROM `%1` WHERE `%2` = ?").arg(tabla, pk));
@@ -998,7 +1194,9 @@ QString SyncManager::getPkTabla(const QString &tabla) const
         {"articulos","cod"},{"clientes","idCliente"},{"familias","id"},{"fabricantes","id"},
         {"proveedores","idProveedor"},{"codaux","id"},{"fpago","id"},{"impuestos","tipoIva"},
         {"formatos","idformato"},{"motivosEntrada","idtiposEntrada"},{"tiendas","id"},{"usuarios","id"},
-        {"permisos","id"},{"vales","vale_uuid"}
+        {"permisos","id"},{"vales","vale_uuid"},
+        {"tickets","ticket"},{"lineasticket","id"},{"arqueos","id"},
+        {"pedidos","id"},{"lineaspedido","id"},{"salidaGenero","id"},{"entradasSalidas","identradasSalidas"}
     };
     return m.value(tabla, "");
 }

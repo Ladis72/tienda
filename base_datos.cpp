@@ -2,6 +2,7 @@
 #include "hashutil.h"
 #include "qprocess.h"
 #include "skip_sync_guard.h"
+#include "syncmanager.h"
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDate>
@@ -3799,3 +3800,526 @@ int baseDatos::estadisticasNumeroPedidos(const QString &db, const QDate &desde,
              << query.lastError().text();
   return 0;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Consolidación de Ventas, Compras y Arqueos en la NUBE (nubeCervantes)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @brief Crea las tablas consolidadas en la BD de la nube si no existen.
+ */
+bool baseDatos::inicializarEsquemaNube() {
+  if (!QSqlDatabase::contains(SyncManager::CONEXION_NUBE) ||
+      !QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    return false;
+  }
+
+  QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+  QSqlQuery q(dbNube);
+
+  // 1. Tickets nube
+  q.exec("CREATE TABLE IF NOT EXISTS `tickets_nube` ("
+         "  `id_tienda` INT NOT NULL,"
+         "  `ticket` INT UNSIGNED NOT NULL,"
+         "  `usuario` INT NOT NULL DEFAULT 1,"
+         "  `cliente` INT NOT NULL DEFAULT 1,"
+         "  `fecha` DATE NOT NULL,"
+         "  `hora` TIME NOT NULL,"
+         "  `base` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `iva` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `descuento` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `total` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `fpago` TINYINT UNSIGNED NOT NULL DEFAULT 0,"
+         "  `cobrado` TINYINT(1) NULL,"
+         "  `entrega` DECIMAL(10,2) NULL,"
+         "  `cambio` DECIMAL(10,2) NULL,"
+         "  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+         "  PRIMARY KEY (`id_tienda`, `ticket`),"
+         "  INDEX `idx_fecha` (`fecha`),"
+         "  INDEX `idx_tienda_fecha` (`id_tienda`, `fecha`),"
+         "  INDEX `idx_cliente` (`cliente`)"
+         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+  // 2. Líneas de ticket nube
+  q.exec("CREATE TABLE IF NOT EXISTS `lineasticket_nube` ("
+         "  `id_tienda` INT NOT NULL,"
+         "  `id_local` INT NOT NULL,"
+         "  `nticket` CHAR(11) NOT NULL,"
+         "  `cod` VARCHAR(20) NOT NULL,"
+         "  `descripcion` CHAR(50) NULL,"
+         "  `cantidad` INT NOT NULL DEFAULT 1,"
+         "  `iva` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `precio` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `descuento` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `totallinea` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `fecha` DATE NOT NULL,"
+         "  `hora` TIME NOT NULL,"
+         "  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+         "  PRIMARY KEY (`id_tienda`, `id_local`),"
+         "  INDEX `idx_tienda_ticket` (`id_tienda`, `nticket`),"
+         "  INDEX `idx_cod` (`cod`),"
+         "  INDEX `idx_fecha` (`fecha`)"
+         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+  // 3. Arqueos nube
+  q.exec("CREATE TABLE IF NOT EXISTS `arqueos_nube` ("
+         "  `id_tienda` INT NOT NULL,"
+         "  `id_local` INT NOT NULL,"
+         "  `fecha` DATE NULL,"
+         "  `hora` TIME NOT NULL DEFAULT '00:00:00',"
+         "  `ventasEfectivo` DOUBLE NULL,"
+         "  `ventasTarjeta` DOUBLE NULL,"
+         "  `entradas` DOUBLE NULL,"
+         "  `efectivoReal` DOUBLE NULL,"
+         "  `descuadre` DOUBLE NULL,"
+         "  `efectivoContado` DOUBLE NULL DEFAULT 0,"
+         "  `usuario` VARCHAR(50) NULL DEFAULT '',"
+         "  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+         "  PRIMARY KEY (`id_tienda`, `id_local`),"
+         "  INDEX `idx_fecha` (`fecha`),"
+         "  INDEX `idx_tienda_fecha` (`id_tienda`, `fecha`)"
+         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+  // 4. Pedidos nube
+  q.exec("CREATE TABLE IF NOT EXISTS `pedidos_nube` ("
+         "  `id_tienda` INT NOT NULL,"
+         "  `id_local` INT NOT NULL,"
+         "  `idProveedor` INT NOT NULL,"
+         "  `npedido` CHAR(50) NOT NULL,"
+         "  `fechaPedido` DATE NOT NULL,"
+         "  `nLineas` INT NOT NULL DEFAULT 0,"
+         "  `nArticulos` INT NOT NULL DEFAULT 0,"
+         "  `descuento` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `totalbase` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `totaliva` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `totalre` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `total` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `nFactura` CHAR(50) NULL,"
+         "  `notas` MEDIUMTEXT NULL,"
+         "  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+         "  PRIMARY KEY (`id_tienda`, `id_local`),"
+         "  INDEX `idx_proveedor` (`idProveedor`),"
+         "  INDEX `idx_fecha_ped` (`fechaPedido`)"
+         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+  // 5. Líneas de pedido nube
+  q.exec("CREATE TABLE IF NOT EXISTS `lineaspedido_nube` ("
+         "  `id_tienda` INT NOT NULL,"
+         "  `id_local` INT NOT NULL,"
+         "  `nDocumento` CHAR(50) NOT NULL,"
+         "  `idProveedor` INT NOT NULL,"
+         "  `cod` VARCHAR(20) NOT NULL,"
+         "  `descripcion` CHAR(50) NULL,"
+         "  `cantidad` INT NOT NULL DEFAULT 1,"
+         "  `bonificacion` INT NOT NULL DEFAULT 0,"
+         "  `lote` CHAR(13) NULL,"
+         "  `fc` DATE NULL,"
+         "  `costo` DOUBLE NULL,"
+         "  `descuento1` DOUBLE NULL,"
+         "  `base` DOUBLE NULL,"
+         "  `tipoIva` DOUBLE NOT NULL DEFAULT 0,"
+         "  `totalbase` DOUBLE NULL,"
+         "  `iva` DOUBLE NULL,"
+         "  `re` DOUBLE NULL,"
+         "  `pvp` DOUBLE NULL,"
+         "  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+         "  PRIMARY KEY (`id_tienda`, `id_local`),"
+         "  INDEX `idx_tienda_doc` (`id_tienda`, `nDocumento`),"
+         "  INDEX `idx_cod` (`cod`)"
+         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+  // 6. Salidas de género (traspasos/mermas)
+  q.exec("CREATE TABLE IF NOT EXISTS `salidas_nube` ("
+         "  `id_tienda_origen` INT NOT NULL,"
+         "  `id_local` INT NOT NULL,"
+         "  `cod` VARCHAR(20) NOT NULL,"
+         "  `fechaEntrada` DATE NOT NULL,"
+         "  `descripcion` CHAR(100) NULL,"
+         "  `cantidad` INT NOT NULL DEFAULT 1,"
+         "  `fechaCaducidad` DATE NULL,"
+         "  `pvp` DOUBLE NULL,"
+         "  `idTienda_destino` INT NULL,"
+         "  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+         "  PRIMARY KEY (`id_tienda_origen`, `id_local`),"
+         "  INDEX `idx_origen` (`id_tienda_origen`),"
+         "  INDEX `idx_destino` (`idTienda_destino`),"
+         "  INDEX `idx_fecha` (`fechaEntrada`)"
+         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+  // 7. Entradas/Salidas de caja (caja chica/efectivo)
+  q.exec("CREATE TABLE IF NOT EXISTS `entradasalida_nube` ("
+         "  `id_tienda` INT NOT NULL,"
+         "  `id_local` INT NOT NULL,"
+         "  `fecha` DATE NULL,"
+         "  `hora` TIME NULL,"
+         "  `cantidad` DOUBLE NULL,"
+         "  `idTiposRentrada` INT NULL,"
+         "  `descripcion` VARCHAR(145) NULL,"
+         "  `usuario` VARCHAR(45) NULL DEFAULT 'Sin Usuario',"
+         "  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+         "  PRIMARY KEY (`id_tienda`, `id_local`),"
+         "  INDEX `idx_tienda_fecha` (`id_tienda`, `fecha`)"
+         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+  // 8. Stock por tienda nube
+  q.exec("CREATE TABLE IF NOT EXISTS `stock_tiendas_nube` ("
+         "  `id_tienda` INT NOT NULL,"
+         "  `cod` VARCHAR(20) NOT NULL,"
+         "  `stock` DOUBLE NOT NULL DEFAULT 0.00,"
+         "  `min` DOUBLE NOT NULL DEFAULT 0.00,"
+         "  `max` DOUBLE NOT NULL DEFAULT 0.00,"
+         "  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+         "  PRIMARY KEY (`id_tienda`, `cod`),"
+         "  INDEX `idx_cod` (`cod`)"
+         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+  // 9. Vistas analíticas y de integración
+  q.exec("CREATE OR REPLACE VIEW vista_ventas_detalladas AS "
+         "SELECT l.id_tienda, COALESCE(ti.nombre, CONCAT('Tienda ', l.id_tienda)) AS tienda, "
+         "l.nticket AS ticket, l.fecha, t.hora, t.cliente AS id_cliente, "
+         "CASE WHEN t.cliente = 1 OR c.nombre LIKE '%contado%' THEN 'Cliente contado' "
+         "ELSE TRIM(CONCAT(COALESCE(c.nombre, ''), ' ', COALESCE(c.apellidos, ''))) END AS cliente, "
+         "COALESCE(c.telefono, '') AS telefono_cliente, l.cod AS codigo_articulo, l.descripcion AS producto, "
+         "l.cantidad, l.precio AS pvp_unitario, l.descuento AS descuento_linea, l.totallinea AS total, l.iva, "
+         "t.fpago AS id_forma_pago, CASE WHEN t.fpago = 1 THEN 'Efectivo' ELSE 'Tarjeta' END AS forma_pago, "
+         "COALESCE(b.id, 0) AS id_fabricante, COALESCE(b.nombre, 'Sin Marca') AS fabricante, "
+         "COALESCE(f.id, 0) AS id_familia, COALESCE(f.descripcion, 'Sin Familia') AS familia, t.usuario AS usuario_caja "
+         "FROM lineasticket_nube l "
+         "LEFT JOIN tickets_nube t ON l.id_tienda = t.id_tienda AND l.nticket = t.ticket "
+         "LEFT JOIN articulos a ON l.cod = a.cod "
+         "LEFT JOIN fabricantes b ON a.fabricante = b.id "
+         "LEFT JOIN familias f ON a.familia = f.id "
+         "LEFT JOIN tiendas ti ON l.id_tienda = ti.id "
+         "LEFT JOIN clientes c ON t.cliente = c.idCliente");
+
+  q.exec("CREATE OR REPLACE VIEW vista_stock_tiendas AS "
+         "SELECT s.id_tienda, COALESCE(t.nombre, CONCAT('Tienda ', s.id_tienda)) AS tienda, "
+         "a.cod AS codigo, a.descripcion AS producto, COALESCE(b.id, 0) AS id_fabricante, "
+         "COALESCE(b.nombre, 'Sin Marca') AS fabricante, COALESCE(f.id, 0) AS id_familia, "
+         "COALESCE(f.descripcion, 'Sin Familia') AS familia, a.pvp, a.precio_compra AS coste_pvd, "
+         "s.stock AS stock_actual, s.min AS stock_minimo, s.max AS stock_maximo, "
+         "CASE WHEN s.stock <= 0 THEN 'Agotado' WHEN s.min > 0 AND s.stock <= s.min THEN 'Bajo Mínimos' ELSE 'Normal' END AS estado_stock, "
+         "a.notas "
+         "FROM stock_tiendas_nube s "
+         "JOIN articulos a ON s.cod = a.cod "
+         "LEFT JOIN tiendas t ON s.id_tienda = t.id "
+         "LEFT JOIN fabricantes b ON a.fabricante = b.id "
+         "LEFT JOIN familias f ON a.familia = f.id");
+
+  q.exec("CREATE OR REPLACE VIEW vista_compras_clientes AS "
+         "SELECT c.idCliente AS id_cliente, TRIM(CONCAT(COALESCE(c.nombre, ''), ' ', COALESCE(c.apellidos, ''))) AS cliente, "
+         "COALESCE(c.telefono, '') AS telefono, COALESCE(c.mail, '') AS email, l.id_tienda, "
+         "COALESCE(ti.nombre, CONCAT('Tienda ', l.id_tienda)) AS tienda, l.fecha, t.hora, l.nticket AS ticket, "
+         "l.cod AS codigo_articulo, l.descripcion AS producto, l.cantidad, l.precio AS pvp_unitario, l.totallinea AS total, "
+         "COALESCE(b.nombre, 'Sin Marca') AS fabricante, COALESCE(f.descripcion, 'Sin Familia') AS familia "
+         "FROM lineasticket_nube l "
+         "JOIN tickets_nube t ON l.id_tienda = t.id_tienda AND l.nticket = t.ticket "
+         "JOIN clientes c ON t.cliente = c.idCliente "
+         "LEFT JOIN articulos a ON l.cod = a.cod "
+         "LEFT JOIN fabricantes b ON a.fabricante = b.id "
+         "LEFT JOIN familias f ON a.familia = f.id "
+         "LEFT JOIN tiendas ti ON l.id_tienda = ti.id "
+         "WHERE t.cliente != 1 AND c.nombre NOT LIKE '%contado%'");
+
+  q.exec("CREATE OR REPLACE VIEW vista_arqueos_diarios AS "
+         "SELECT a.id_tienda, COALESCE(t.nombre, CONCAT('Tienda ', a.id_tienda)) AS tienda, "
+         "a.id_local AS id_arqueo, a.fecha, a.hora, "
+         "(COALESCE(a.ventasEfectivo, 0) + COALESCE(a.ventasTarjeta, 0)) AS total_ventas, "
+         "COALESCE(a.ventasEfectivo, 0) AS ventas_efectivo, COALESCE(a.ventasTarjeta, 0) AS ventas_tarjeta, "
+         "COALESCE(a.entradas, 0) AS entradas_caja, COALESCE(a.efectivoReal, 0) AS efectivo_real, "
+         "COALESCE(a.efectivoContado, 0) AS efectivo_contado, COALESCE(a.descuadre, 0) AS descuadre, "
+         "COALESCE(a.usuario, '') AS usuario "
+         "FROM arqueos_nube a "
+         "LEFT JOIN tiendas t ON a.id_tienda = t.id");
+
+  return true;
+}
+
+/**
+ * @brief Sube un ticket y sus líneas a la base de datos central en la nube.
+ */
+bool baseDatos::subirTicketNube(int idTienda, int nTicket, const QString &fecha, const QString &hora,
+                               double total, int fpago, int cliente, int usuario,
+                               const QList<QVariantMap> &lineas) {
+  if (!QSqlDatabase::contains(SyncManager::CONEXION_NUBE) ||
+      !QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    return false;
+  }
+
+  QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+  QSqlQuery q(dbNube);
+  q.prepare("INSERT INTO tickets_nube (id_tienda, ticket, usuario, cliente, fecha, hora, total, fpago) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON DUPLICATE KEY UPDATE usuario=VALUES(usuario), cliente=VALUES(cliente), "
+            "total=VALUES(total), fpago=VALUES(fpago)");
+  q.bindValue(0, idTienda);
+  q.bindValue(1, nTicket);
+  q.bindValue(2, usuario);
+  q.bindValue(3, cliente);
+  q.bindValue(4, fecha);
+  q.bindValue(5, hora);
+  q.bindValue(6, total);
+  q.bindValue(7, fpago);
+
+  if (!q.exec()) {
+    qDebug() << "baseDatos::subirTicketNube error cabecera:" << q.lastError().text();
+    return false;
+  }
+
+  // Eliminar líneas anteriores si existieran y reinsertar
+  QSqlQuery qDel(dbNube);
+  qDel.prepare("DELETE FROM lineasticket_nube WHERE id_tienda = ? AND nticket = ?");
+  qDel.bindValue(0, idTienda);
+  qDel.bindValue(1, nTicket);
+  qDel.exec();
+
+  for (const QVariantMap &l : lineas) {
+    QSqlQuery qL(dbNube);
+    qL.prepare("INSERT INTO lineasticket_nube (id_tienda, nticket, cod, descripcion, cantidad, precio, iva, descuento, totallinea) "
+               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    qL.bindValue(0, idTienda);
+    qL.bindValue(1, nTicket);
+    qL.bindValue(2, l.value("cod").toString());
+    qL.bindValue(3, l.value("descripcion").toString());
+    qL.bindValue(4, l.value("cantidad").toDouble());
+    qL.bindValue(5, l.value("precio").toDouble());
+    qL.bindValue(6, l.value("iva").toDouble());
+    qL.bindValue(7, l.value("descuento").toDouble());
+    qL.bindValue(8, l.value("totallinea").toDouble());
+    qL.exec();
+  }
+
+  return true;
+}
+
+/**
+ * @brief Sube un arqueo de caja a la base de datos central en la nube.
+ */
+bool baseDatos::subirArqueoNube(int idTienda, int idLocal, const QString &fecha, const QString &hora,
+                               const QString &usuario, double totalVentas, double vEfectivo,
+                               double vTarjeta, double descuadre, double contado, double entradasSalidas) {
+  if (!QSqlDatabase::contains(SyncManager::CONEXION_NUBE) ||
+      !QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    return false;
+  }
+
+  QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+  QSqlQuery q(dbNube);
+  q.prepare("INSERT INTO arqueos_nube (id_tienda, id_local, fecha, hora, usuario, totalVentas, vefectivo, vtarjeta, descuadre, contado, entradasSalidas) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON DUPLICATE KEY UPDATE usuario=VALUES(usuario), totalVentas=VALUES(totalVentas), "
+            "vefectivo=VALUES(vefectivo), vtarjeta=VALUES(vtarjeta), descuadre=VALUES(descuadre), "
+            "contado=VALUES(contado), entradasSalidas=VALUES(entradasSalidas)");
+  q.bindValue(0, idTienda);
+  q.bindValue(1, idLocal);
+  q.bindValue(2, fecha);
+  q.bindValue(3, hora);
+  q.bindValue(4, usuario);
+  q.bindValue(5, totalVentas);
+  q.bindValue(6, vEfectivo);
+  q.bindValue(7, vTarjeta);
+  q.bindValue(8, descuadre);
+  q.bindValue(9, contado);
+  q.bindValue(10, entradasSalidas);
+
+  if (!q.exec()) {
+    qDebug() << "baseDatos::subirArqueoNube error:" << q.lastError().text();
+    return false;
+  }
+  return true;
+}
+
+/**
+ * @brief Sube un pedido a proveedor y sus líneas a la nube.
+ */
+bool baseDatos::subirPedidoNube(int idTienda, int idLocal, const QString &nDoc, int idProv,
+                               const QString &fechaPed, const QString &fechaEnt, double total,
+                               const QString &estado, const QString &notas,
+                               const QList<QVariantMap> &lineas) {
+  if (!QSqlDatabase::contains(SyncManager::CONEXION_NUBE) ||
+      !QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    return false;
+  }
+
+  QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+  QSqlQuery q(dbNube);
+  q.prepare("INSERT INTO pedidos_nube (id_tienda, id_local, nDocumento, idProveedor, fechaPedido, fechaEntrega, total, estado, notas) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON DUPLICATE KEY UPDATE total=VALUES(total), estado=VALUES(estado), notas=VALUES(notas)");
+  q.bindValue(0, idTienda);
+  q.bindValue(1, idLocal);
+  q.bindValue(2, nDoc);
+  q.bindValue(3, idProv);
+  q.bindValue(4, fechaPed);
+  q.bindValue(5, fechaEnt);
+  q.bindValue(6, total);
+  q.bindValue(7, estado);
+  q.bindValue(8, notas);
+
+  if (!q.exec()) {
+    qDebug() << "baseDatos::subirPedidoNube error:" << q.lastError().text();
+    return false;
+  }
+
+  // Actualizar líneas
+  QSqlQuery qDel(dbNube);
+  qDel.prepare("DELETE FROM lineaspedido_nube WHERE id_tienda = ? AND nDocumento = ? AND idProveedor = ?");
+  qDel.bindValue(0, idTienda);
+  qDel.bindValue(1, nDoc);
+  qDel.bindValue(2, idProv);
+  qDel.exec();
+
+  for (const QVariantMap &l : lineas) {
+    QSqlQuery qL(dbNube);
+    qL.prepare("INSERT INTO lineaspedido_nube (id_tienda, nDocumento, idProveedor, cod, descripcion, cantidad, precio, iva, bonificacion, totallinea) "
+               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    qL.bindValue(0, idTienda);
+    qL.bindValue(1, nDoc);
+    qL.bindValue(2, idProv);
+    qL.bindValue(3, l.value("cod").toString());
+    qL.bindValue(4, l.value("descripcion").toString());
+    qL.bindValue(5, l.value("cantidad").toDouble());
+    qL.bindValue(6, l.value("precio").toDouble());
+    qL.bindValue(7, l.value("iva").toDouble());
+    qL.bindValue(8, l.value("bonificacion").toDouble());
+    qL.bindValue(9, l.value("totallinea").toDouble());
+    qL.exec();
+  }
+
+  return true;
+}
+
+/**
+ * @brief Sube la foto de stock actual de un producto en esta tienda a la nube.
+ */
+bool baseDatos::subirStockTiendaNube(int idTienda, const QString &cod, double stock, double min, double max) {
+  if (!QSqlDatabase::contains(SyncManager::CONEXION_NUBE) ||
+      !QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    return false;
+  }
+
+  QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+  QSqlQuery q(dbNube);
+  q.prepare("INSERT INTO stock_tiendas_nube (id_tienda, cod, stock, min, max) "
+            "VALUES (?, ?, ?, ?, ?) "
+            "ON DUPLICATE KEY UPDATE stock=VALUES(stock), min=VALUES(min), max=VALUES(max)");
+  q.bindValue(0, idTienda);
+  q.bindValue(1, cod);
+  q.bindValue(2, stock);
+  q.bindValue(3, min);
+  q.bindValue(4, max);
+  return q.exec();
+}
+
+/**
+ * @brief Vuelca todo el histórico de tickets, líneas, arqueos y stock local a la nube.
+ */
+bool baseDatos::volcarHistoricoLocalANube(int idTienda, const QString &fechaDesde, QString &resumenResultado) {
+  if (!inicializarEsquemaNube()) {
+    resumenResultado = "No hay conexión abierta con la base de datos en la nube.";
+    return false;
+  }
+
+  QSqlDatabase dbLocal = QSqlDatabase::database(conf ? conf->getConexionLocal() : "DB");
+  if (!dbLocal.isOpen()) {
+    resumenResultado = "Base de datos local no disponible.";
+    return false;
+  }
+
+  int ticketsSubidos = 0;
+  int arqueosSubidos = 0;
+  int articulosSubidos = 0;
+
+  // 1. Subir Tickets y sus líneas
+  QSqlQuery qTickets(dbLocal);
+  qTickets.prepare("SELECT ticket, usuario, cliente, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha_fmt, "
+                   "hora, total, fpago FROM tickets WHERE fecha >= ?");
+  qTickets.bindValue(0, fechaDesde);
+
+  if (qTickets.exec()) {
+    while (qTickets.next()) {
+      int nTkt = qTickets.value("ticket").toInt();
+      QString f = qTickets.value("fecha_fmt").toString();
+      QString h = qTickets.value("hora").toString();
+      double tot = qTickets.value("total").toDouble();
+      int fp = qTickets.value("fpago").toInt();
+      int cli = qTickets.value("cliente").toInt();
+      int usu = qTickets.value("usuario").toInt();
+
+      // Obtener líneas
+      QList<QVariantMap> lineas;
+      QSqlQuery qL(dbLocal);
+      qL.prepare("SELECT cod, descripcion, cantidad, precio, iva, descuento, totallinea "
+                 "FROM lineasticket WHERE nticket = ?");
+      qL.bindValue(0, nTkt);
+      if (qL.exec()) {
+        while (qL.next()) {
+          QVariantMap lm;
+          lm["cod"] = qL.value("cod").toString();
+          lm["descripcion"] = qL.value("descripcion").toString();
+          lm["cantidad"] = qL.value("cantidad").toDouble();
+          lm["precio"] = qL.value("precio").toDouble();
+          lm["iva"] = qL.value("iva").toDouble();
+          lm["descuento"] = qL.value("descuento").toDouble();
+          lm["totallinea"] = qL.value("totallinea").toDouble();
+          lineas.append(lm);
+        }
+      }
+
+      if (subirTicketNube(idTienda, nTkt, f, h, tot, fp, cli, usu, lineas)) {
+        ticketsSubidos++;
+      }
+    }
+  }
+
+  // 2. Subir Arqueos
+  QSqlQuery qArqueos(dbLocal);
+  qArqueos.prepare("SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha_fmt, hora, usuario, "
+                   "totalVentas, vefectivo, vtarjeta, descuadre, contado, entradasSalidas "
+                   "FROM arqueos WHERE fecha >= ?");
+  qArqueos.bindValue(0, fechaDesde);
+
+  if (qArqueos.exec()) {
+    while (qArqueos.next()) {
+      int idLocal = qArqueos.value("id").toInt();
+      QString f = qArqueos.value("fecha_fmt").toString();
+      QString h = qArqueos.value("hora").toString();
+      QString usu = qArqueos.value("usuario").toString();
+      double totV = qArqueos.value("totalVentas").toDouble();
+      double vEf = qArqueos.value("vefectivo").toDouble();
+      double vTar = qArqueos.value("vtarjeta").toDouble();
+      double desc = qArqueos.value("descuadre").toDouble();
+      double cont = qArqueos.value("contado").toDouble();
+      double es = qArqueos.value("entradasSalidas").toDouble();
+
+      if (subirArqueoNube(idTienda, idLocal, f, h, usu, totV, vEf, vTar, desc, cont, es)) {
+        arqueosSubidos++;
+      }
+    }
+  }
+
+  // 3. Subir Stock actual
+  QSqlQuery qStock(dbLocal);
+  qStock.exec("SELECT a.cod, a.min, a.max, "
+              "(SELECT COALESCE(SUM(l.cantidad), 0) FROM lotes l WHERE l.ean = a.cod) as stock_real "
+              "FROM articulos a");
+  while (qStock.next()) {
+    QString cod = qStock.value("cod").toString();
+    double stk = qStock.value("stock_real").toDouble();
+    double mn = qStock.value("min").toDouble();
+    double mx = qStock.value("max").toDouble();
+    if (subirStockTiendaNube(idTienda, cod, stk, mn, mx)) {
+      articulosSubidos++;
+    }
+  }
+
+  resumenResultado = QString("Sincronización completada con éxito:\n"
+                             " • %1 tickets con sus líneas subidos a la nube.\n"
+                             " • %2 arqueos de caja subidos a la nube.\n"
+                             " • %3 artículos con stock actualizados en la nube.")
+                         .arg(ticketsSubidos)
+                         .arg(arqueosSubidos)
+                         .arg(articulosSubidos);
+  return true;
+}
+
