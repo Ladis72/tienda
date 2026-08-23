@@ -108,7 +108,10 @@ SOURCES += main.cpp\
     dialogdetallesverificador.cpp \
     dialogasistenteinstalacion.cpp \
     dialogtrazabilidad.cpp \
-    dialoganadirasalidas.cpp
+    dialoganadirasalidas.cpp \
+    asistenteia.cpp \
+    dialogasistenteia.cpp \
+    dialogconocimientoia.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -200,7 +203,10 @@ HEADERS  += tienda.h \
     dialogdetallesverificador.h \
     dialogasistenteinstalacion.h \
     dialogtrazabilidad.h \
-    dialoganadirasalidas.h
+    dialoganadirasalidas.h \
+    asistenteia.h \
+    dialogasistenteia.h \
+    dialogconocimientoia.h
 
 FORMS    += tienda.ui \
     generarvales.ui \
@@ -271,7 +277,9 @@ FORMS    += tienda.ui \
     dialogdetallesverificador.ui \
     dialogasistenteinstalacion.ui \
     dialogtrazabilidad.ui \
-    dialoganadirasalidas.ui
+    dialoganadirasalidas.ui \
+    dialogasistenteia.ui \
+    dialogconocimientoia.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 

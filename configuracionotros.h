@@ -18,6 +18,8 @@ public:
 
 private slots:
     void on_pushButtonAceptar_clicked();
+    void on_pushButtonProbarOllama_clicked();
+    void on_pushButtonSincronizarNube_clicked();
 
 private:
     Ui::ConfiguracionOtros *ui;

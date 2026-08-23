@@ -53,6 +53,7 @@
 #include "monitorcaducidades.h"
 #include "dialogrecomendaciones.h"
 #include "verificadorbasedatos.h"
+#include "dialogasistenteia.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -138,6 +139,7 @@ private slots:
     void onRecomendacionesListas(QList<RecomendacionCaducidad> recomendaciones);
     void onBtnMonitorCaducidadesClicked();
     void onMonitorCaducidadesError(QString msg);
+    void onBtnAsistenteIAClicked();
 
 private:
     // sincroVales eliminado: ya no se usa el mecanismo de vales pendientes marcar
@@ -206,6 +208,10 @@ private:
     QPushButton *btnMonitorCaducidades;
     MonitorCaducidades *m_monitorCaducidades;
     QList<RecomendacionCaducidad> m_recomendacionesActivas;
+
+    // Asistente Inteligente IA
+    QPushButton *btnAsistenteIA;
+    DialogAsistenteIA *m_dialogAsistenteIA = nullptr;
 
 protected:
     void resizeEvent(QResizeEvent *event) override;

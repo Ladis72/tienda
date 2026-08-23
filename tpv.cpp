@@ -5,7 +5,7 @@
 #include <QDir>
 #include <QItemDelegate>
 #include <QString>
-//#include <QtConcurrent/QtConcurrent>
+#include <QtConcurrent>
 #include <QCryptographicHash>
 #include "dialogfecha.h"
 #include "imprimirfactura.h"
@@ -885,6 +885,33 @@ void Tpv::on_btn_cobrar_clicked()
             throw std::runtime_error("Error al confirmar la transacción: "
                                      + db.lastError().text().toStdString());
         }
+
+        // Subida asíncrona del ticket y sus líneas a la base de datos central en la nube (nubeCervantes)
+        int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        int nTicketCreado = totalTicket.at(0).toInt();
+        QString fechaTkt = totalTicket.at(3);
+        QString horaTkt = totalTicket.at(4);
+        double totalImporte = totalTicket.at(6).toDouble();
+        int fpagoTkt = totalTicket.at(7).toInt();
+        int clienteTkt = totalTicket.at(2).toInt();
+        int usuarioTkt = totalTicket.at(1).toInt();
+
+        QList<QVariantMap> lineasSubir;
+        for (int i = 0; i < modeloTicket->rowCount(); ++i) {
+            QVariantMap lm;
+            lm["cod"] = modeloTicket->record(i).value("cod").toString();
+            lm["descripcion"] = modeloTicket->record(i).value("descripcion").toString();
+            lm["cantidad"] = modeloTicket->record(i).value("cantidad").toDouble();
+            lm["precio"] = modeloTicket->record(i).value("pvp").toDouble();
+            lm["iva"] = modeloTicket->record(i).value("iva").toDouble();
+            lm["descuento"] = modeloTicket->record(i).value("descuento").toDouble();
+            lm["totallinea"] = modeloTicket->record(i).value("totallinea").toDouble();
+            lineasSubir.append(lm);
+        }
+
+        QtConcurrent::run([idTiendaLocal, nTicketCreado, fechaTkt, horaTkt, totalImporte, fpagoTkt, clienteTkt, usuarioTkt, lineasSubir]() {
+            baseDatos::subirTicketNube(idTiendaLocal, nTicketCreado, fechaTkt, horaTkt, totalImporte, fpagoTkt, clienteTkt, usuarioTkt, lineasSubir);
+        });
 
         // Si veníamos de cobrar un encargo, ahora que el ticket se ha grabado, lo marcamos como entregado y borramos su nota
         if (idEncargoPendiente > 0) {

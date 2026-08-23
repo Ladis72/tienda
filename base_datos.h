@@ -264,7 +264,7 @@ public:
                                       const int ususario,
                                       const int estadoEnvio = 1);
 
-    //Funciones NOTAS
+    // Funciones NOTAS
     bool crearNota(const QString &db, const QString &titulo, const QString &descripcion,
                    const QString &usuario, const QString &fechaLimite, const QString &prioridad);
     bool actualizarEstadoNota(const QString &db, int idNota, const QString &estado);
@@ -275,6 +275,21 @@ public:
     QSqlQueryModel *consultarNotas(const QString &db, const QString &filtroEstado = "");
     int contarNotasPendientes(const QString &db);
     QString getLastError() const { return m_lastError; }
+
+    // Funciones de Consolidación y Subida a la NUBE (nubeCervantes)
+    static bool inicializarEsquemaNube();
+    static bool subirTicketNube(int idTienda, int nTicket, const QString &fecha, const QString &hora,
+                                double total, int fpago, int cliente, int usuario,
+                                const QList<QVariantMap> &lineas);
+    static bool subirArqueoNube(int idTienda, int idLocal, const QString &fecha, const QString &hora,
+                                const QString &usuario, double totalVentas, double vEfectivo,
+                                double vTarjeta, double descuadre, double contado, double entradasSalidas);
+    static bool subirPedidoNube(int idTienda, int idLocal, const QString &nDoc, int idProv,
+                                const QString &fechaPed, const QString &fechaEnt, double total,
+                                const QString &estado, const QString &notas,
+                                const QList<QVariantMap> &lineas);
+    static bool subirStockTiendaNube(int idTienda, const QString &cod, double stock, double min = 0, double max = 0);
+    static bool volcarHistoricoLocalANube(int idTienda, const QString &fechaDesde, QString &resumenResultado);
 
 private:
     QString m_lastError;

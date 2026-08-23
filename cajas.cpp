@@ -9,6 +9,8 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QSettings>
+#include <QSqlQuery>
+#include <QtConcurrent>
 #include "ui_cajas.h"
 
 Cajas::Cajas(QWidget *parent)
@@ -321,6 +323,27 @@ void Cajas::on_pushButtonAceptar_clicked()
         } else {
             // Iniciar envío remoto asíncrono a Google Sheets si está activado
             enviarArqueoGoogleSheets(datos, desglose);
+
+            // Subida asíncrona del arqueo a la base de datos central en la nube (nubeCervantes)
+            int idTienda = conf ? conf->getIdTienda() : 1;
+            int idLocal = 0;
+            QSqlQuery qId(QSqlDatabase::database(conf->getConexionLocal()));
+            if (qId.exec("SELECT MAX(id) FROM arqueos") && qId.next()) {
+                idLocal = qId.value(0).toInt();
+            }
+            QString f = datos.at(0);
+            QString h = datos.at(1);
+            double vEf = datos.at(2).toDouble();
+            double vTar = datos.at(3).toDouble();
+            double es = datos.at(4).toDouble();
+            double desc = datos.at(6).toDouble();
+            double cont = datos.at(7).toDouble();
+            QString usu = datos.at(8);
+            double totV = vEf + vTar;
+
+            QtConcurrent::run([idTienda, idLocal, f, h, usu, totV, vEf, vTar, desc, cont, es]() {
+                baseDatos::subirArqueoNube(idTienda, idLocal, f, h, usu, totV, vEf, vTar, desc, cont, es);
+            });
         }
         break;
     default:

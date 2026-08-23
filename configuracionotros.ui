@@ -215,6 +215,165 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tabAsistenteIA">
+      <attribute name="title">
+       <string>Asistente IA (Ollama)</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutTabIA">
+       <item>
+        <widget class="QGroupBox" name="groupBoxOllamaConexion">
+         <property name="title">
+          <string>Conexión con el Servidor Ollama</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayoutOllamaConn">
+          <item>
+           <widget class="QCheckBox" name="checkBoxActivarIA">
+            <property name="text">
+             <string>Habilitar Asistente Inteligente IA en el TPV</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayoutUrlOllama">
+            <item>
+             <widget class="QLabel" name="labelUrlOllama">
+              <property name="text">
+               <string>URL del Servidor:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditUrlOllama">
+              <property name="placeholderText">
+               <string>http://localhost:11434</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonProbarOllama">
+              <property name="text">
+               <string>Probar Conexión</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelEstadoOllama">
+            <property name="text">
+             <string>Estado: Sin comprobar</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBoxOllamaModelo">
+         <property name="title">
+          <string>Modelo de Inteligencia Artificial</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayoutOllamaMod">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayoutModeloOllama">
+            <item>
+             <widget class="QLabel" name="labelModeloOllama">
+              <property name="text">
+               <string>Modelo seleccionado:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBoxModeloOllama">
+              <property name="editable">
+               <bool>true</bool>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>200</width>
+                <height>0</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelInfoAtajo">
+            <property name="text">
+             <string>Atajos de acceso rápido: F12 o Ctrl+I en la ventana principal.</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBoxConsolidacionNube">
+         <property name="title">
+          <string>Consolidación de Ventas y Arqueos en la Nube (nubeCervantes)</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayoutConsolNube">
+          <item>
+           <widget class="QLabel" name="labelExplicacionNube">
+            <property name="text">
+             <string>Sube las ventas, líneas de ticket, arqueos y stock actuales de esta tienda a la base de datos central en la nube para que estén siempre accesibles para el Asistente IA.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayoutSyncNube">
+            <item>
+             <widget class="QLabel" name="labelFechaDesde">
+              <property name="text">
+               <string>Sincronizar desde:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDateEdit" name="dateEditSyncDesde">
+              <property name="displayFormat">
+               <string>yyyy-MM-dd</string>
+              </property>
+              <property name="calendarPopup">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonSincronizarNube">
+              <property name="text">
+               <string>Sincronizar Histórico con la Nube</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelEstadoSyncNube">
+            <property name="text">
+             <string>Estado: Listo</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacerIA">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
    <item>
