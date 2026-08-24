@@ -120,6 +120,9 @@ private:
     QJsonObject toolFacturacionPorHoras(const QJsonObject &args);
     QJsonObject toolConsultarSalidasTiendas(const QJsonObject &args);
     QJsonObject toolConsultarPedidos(const QJsonObject &args);
+    QJsonObject toolConsultarUsuarios(const QJsonObject &args);
+    QJsonObject toolVentasPorUsuario(const QJsonObject &args);
+    QJsonObject toolActividadUsuario(const QJsonObject &args);
     QJsonObject toolEjecutarConsultaSql(const QJsonObject &args);
 };
 

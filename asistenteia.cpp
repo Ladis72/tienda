@@ -197,7 +197,10 @@ QJsonObject AsistenteIA::construirMensajeSistema()
         "10. Proveedores, Precios de Compra y Márgenes/Rentabilidad -> 'consultar_compras_proveedor' (producto: 'nombre', proveedor: 'nombre', margenes_bajos: true). Si te piden detectar productos con márgenes bajos o analizar rentabilidad, pasa margenes_bajos: true.\n"
         "11. Salidas y Traspasos entre Tiendas (tabla salidaGenero_tmp y salidas) -> 'consultar_salidas_tiendas' (tienda_origen: 'Casablanca' o 'todas', tienda_destino: 'Cervantes', producto: 'nombre', estado: 'pendientes', 'enviadas' o 'todas'). Úsala SIEMPRE que te pregunten por salidas de género, traspasos o la tabla salidaGenero_tmp de cualquier tienda (ej. 'Casablanca').\n"
         "12. Pedidos a Proveedores -> Si el usuario pide pedidos pendientes, sin aceptar o por aceptar, usa OBLIGATORIAMENTE estado: 'sin_aceptar'. Si pide pedidos aceptados, recibidos o compras históricas, usa estado: 'aceptados'. Cíñete ESTRICTAMENTE al estado solicitado por el usuario y jamás mezcles ni menciones pedidos aceptados si te preguntaron por pedidos pendientes.\n"
-        "13. Consultas SQL Especiales a Medida -> 'ejecutar_consulta_sql' (SELECT sobre 'vista_ventas_detalladas' [columnas: id_tienda, tienda, ticket, fecha, hora, id_cliente, cliente, telefono_cliente, codigo_articulo, producto, cantidad, pvp_unitario, total, fabricante, familia], 'vista_stock_tiendas', 'vista_compras_clientes').\n\n"
+        "13. Usuarios y Empleados -> 'consultar_usuarios' (filtro: 'nombre o usuario', rol: 0/1/2) para ver la lista de usuarios, roles o empleados registrados.\n"
+        "14. Ventas y Rendimiento por Usuario/Vendedor -> 'ventas_por_usuario' (usuario: 'nombre o id' o 'todos' para ranking comparativo entre vendedores, fecha_inicio, fecha_fin, tienda, agrupar_por: 'ranking', 'dia', 'mes', 'horas', 'dia_semana'). Úsala SIEMPRE que te pregunten cuánto ha vendido un usuario o quién vende más.\n"
+        "15. Actividad y Productos más vendidos por Usuario -> 'actividad_usuario' (usuario: 'nombre o id', fecha_inicio, fecha_fin, tienda) para ver tickets recientes y top artículos vendidos por un empleado específico.\n"
+        "16. Consultas SQL Especiales a Medida -> 'ejecutar_consulta_sql' (SELECT sobre 'vista_ventas_detalladas' [columnas: id_tienda, tienda, ticket, fecha, hora, id_cliente, cliente, telefono_cliente, codigo_articulo, producto, cantidad, pvp_unitario, total, fabricante, familia], 'vista_stock_tiendas', 'vista_compras_clientes').\n\n"
         "REGLAS CRÍTICAS DE CONVERSACIÓN Y FORMATO:\n"
         "- Responde siempre en español, de forma concisa, educada y profesional.\n"
         "- Fechas siempre en formato 'yyyy-MM-dd'.\n"
@@ -838,6 +841,125 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas()
         tools.append(tool);
     }
 
+    // 14. Tool: consultar_usuarios
+    {
+        QJsonObject func;
+        func["name"] = "consultar_usuarios";
+        func["description"] = "Consulta la lista de usuarios, empleados, cajeros o administradores registrados en el sistema, mostrando su ID, nombre, nombre de usuario y rol asignado.";
+
+        QJsonObject props;
+
+        QJsonObject propFiltro;
+        propFiltro["type"] = "string";
+        propFiltro["description"] = "Término de búsqueda para filtrar por nombre, usuario o ID (opcional).";
+        props["filtro"] = propFiltro;
+
+        QJsonObject propRol;
+        propRol["type"] = "integer";
+        propRol["description"] = "Filtrar por rol: 0 (Administrador), 1 (Encargado/Supervisor), 2 (Cajero/Vendedor). Opcional.";
+        props["rol"] = propRol;
+
+        QJsonObject propLim;
+        propLim["type"] = "integer";
+        propLim["description"] = "Límite máximo de usuarios a devolver (por defecto 50).";
+        props["limite"] = propLim;
+
+        QJsonObject params;
+        params["type"] = "object";
+        params["properties"] = props;
+
+        QJsonObject tool;
+        tool["type"] = "function";
+        tool["function"] = func;
+        tools.append(tool);
+    }
+
+    // 15. Tool: ventas_por_usuario
+    {
+        QJsonObject func;
+        func["name"] = "ventas_por_usuario";
+        func["description"] = "Consulta las ventas, facturación total, número de tickets y ticket promedio generado por un usuario/empleado concreto o genera un ranking comparativo de todos los vendedores.";
+
+        QJsonObject props;
+
+        QJsonObject propUsuario;
+        propUsuario["type"] = "string";
+        propUsuario["description"] = "Nombre o ID del usuario a consultar (ej. 'Ladis', 'admin', '1'). Si se indica 'todos' o se deja vacío, genera un ranking de todos los usuarios.";
+        props["usuario"] = propUsuario;
+
+        QJsonObject propFechaI;
+        propFechaI["type"] = "string";
+        propFechaI["description"] = "Fecha de inicio en formato yyyy-MM-dd (opcional).";
+        props["fecha_inicio"] = propFechaI;
+
+        QJsonObject propFechaF;
+        propFechaF["type"] = "string";
+        propFechaF["description"] = "Fecha de fin en formato yyyy-MM-dd (opcional).";
+        props["fecha_fin"] = propFechaF;
+
+        QJsonObject propTienda;
+        propTienda["type"] = "string";
+        propTienda["description"] = "Tienda a consultar ('todas', 'local', o nombre específico como 'Casablanca', 'Cervantes', 'Emeicjac').";
+        props["tienda"] = propTienda;
+
+        QJsonObject propAgrup;
+        propAgrup["type"] = "string";
+        propAgrup["description"] = "Tipo de agrupación: 'ranking' (comparar vendedores), 'dia' (evolución diaria), 'mes' (evolución mensual), 'horas' (ventas por franja horaria), 'dia_semana' (ventas por día de semana).";
+        props["agrupar_por"] = propAgrup;
+
+        QJsonObject params;
+        params["type"] = "object";
+        params["properties"] = props;
+
+        QJsonObject tool;
+        tool["type"] = "function";
+        tool["function"] = func;
+        tools.append(tool);
+    }
+
+    // 16. Tool: actividad_usuario
+    {
+        QJsonObject func;
+        func["name"] = "actividad_usuario";
+        func["description"] = "Consulta la actividad detallada de un usuario o empleado: últimos tickets cobrados y productos más vendidos por dicho usuario.";
+
+        QJsonObject props;
+
+        QJsonObject propUsuario;
+        propUsuario["type"] = "string";
+        propUsuario["description"] = "Nombre o ID del usuario / empleado a consultar (obligatorio o buscado).";
+        props["usuario"] = propUsuario;
+
+        QJsonObject propFechaI;
+        propFechaI["type"] = "string";
+        propFechaI["description"] = "Fecha de inicio en formato yyyy-MM-dd (opcional).";
+        props["fecha_inicio"] = propFechaI;
+
+        QJsonObject propFechaF;
+        propFechaF["type"] = "string";
+        propFechaF["description"] = "Fecha de fin en formato yyyy-MM-dd (opcional).";
+        props["fecha_fin"] = propFechaF;
+
+        QJsonObject propTienda;
+        propTienda["type"] = "string";
+        propTienda["description"] = "Tienda a consultar: 'todas', 'local' o nombre específico.";
+        props["tienda"] = propTienda;
+
+        QJsonObject propLim;
+        propLim["type"] = "integer";
+        propLim["description"] = "Número máximo de tickets recientes a listar (por defecto 20).";
+        props["limite"] = propLim;
+
+        QJsonObject params;
+        params["type"] = "object";
+        params["properties"] = props;
+
+        QJsonObject tool;
+        tool["type"] = "function";
+        tool["function"] = func;
+        tools.append(tool);
+    }
+
     return tools;
 }
 
@@ -1269,6 +1391,12 @@ QJsonObject AsistenteIA::ejecutarHerramienta(const QString &nombre, const QJsonO
         return toolConsultarSalidasTiendas(argumentos);
     } else if (nombre == "consultar_pedidos" || nombre == "pedidos_proveedor" || nombre == "pedidos_pendientes" || nombre == "pedidos_aceptados" || nombre == "detalle_pedido" || nombre == "consultar_pedido") {
         return toolConsultarPedidos(argumentos);
+    } else if (nombre == "consultar_usuarios" || nombre == "listar_usuarios" || nombre == "empleados" || nombre == "vendedores" || nombre == "cajeros") {
+        return toolConsultarUsuarios(argumentos);
+    } else if (nombre == "ventas_por_usuario" || nombre == "ventas_usuario" || nombre == "ventas_empleado" || nombre == "ranking_vendedores" || nombre == "ranking_usuarios" || nombre == "ventas_empleados") {
+        return toolVentasPorUsuario(argumentos);
+    } else if (nombre == "actividad_usuario" || nombre == "tickets_usuario" || nombre == "productos_usuario" || nombre == "ultimos_tickets_usuario") {
+        return toolActividadUsuario(argumentos);
     } else if (nombre == "ejecutar_consulta_sql") {
         return toolEjecutarConsultaSql(argumentos);
     }
@@ -5351,6 +5479,497 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
         res["pedidos_aceptados_procesados"] = arrayAceptados;
     }
     res["importe_total_acumulado"] = QString::number(importeTotalGlobal, 'f', 2) + " €";
+
+    return res;
+}
+
+/**
+ * @brief Consulta la lista de usuarios / empleados registrados en el sistema y sus roles.
+ */
+QJsonObject AsistenteIA::toolConsultarUsuarios(const QJsonObject &args)
+{
+    QString filtro = args.value("filtro").toString().trimmed();
+    if (filtro.isEmpty()) filtro = args.value("usuario").toString().trimmed();
+    if (filtro.isEmpty()) filtro = args.value("nombre").toString().trimmed();
+
+    int rolFiltro = args.value("rol").toInt(-1);
+    int limite = args.value("limite").toInt(50);
+    if (limite <= 0) limite = 50;
+
+    QJsonObject res;
+    QJsonArray arrayUsuarios;
+
+    QSqlDatabase db = QSqlDatabase::database(conf ? conf->getConexionLocal() : "DB");
+    if (!db.isOpen()) {
+        res["error"] = "No se puede acceder a la base de datos de usuarios.";
+        return res;
+    }
+
+    QString sql = "SELECT id, nombre, usuario, rol FROM usuarios WHERE 1=1 ";
+    if (!filtro.isEmpty()) {
+        sql += "AND (LOWER(nombre) LIKE :filtro OR LOWER(usuario) LIKE :filtro2 OR id = :idFiltro) ";
+    }
+    if (rolFiltro >= 0) {
+        sql += "AND rol = :rol ";
+    }
+    sql += QString("ORDER BY id ASC LIMIT %1").arg(limite);
+
+    QSqlQuery q(db);
+    q.prepare(sql);
+    if (!filtro.isEmpty()) {
+        q.bindValue(":filtro", "%" + filtro.toLower() + "%");
+        q.bindValue(":filtro2", "%" + filtro.toLower() + "%");
+        q.bindValue(":idFiltro", filtro.toInt());
+    }
+    if (rolFiltro >= 0) {
+        q.bindValue(":rol", rolFiltro);
+    }
+
+    if (q.exec()) {
+        while (q.next()) {
+            QJsonObject uObj;
+            int id = q.value("id").toInt();
+            QString nombre = q.value("nombre").toString();
+            QString usuario = q.value("usuario").toString();
+            int rol = q.value("rol").toInt();
+
+            QString nombreRol;
+            if (rol == 0) nombreRol = "Administrador";
+            else if (rol == 1) nombreRol = "Encargado / Supervisor";
+            else if (rol == 2) nombreRol = "Cajero / Vendedor";
+            else nombreRol = QString("Rol %1").arg(rol);
+
+            uObj["id"] = id;
+            uObj["nombre"] = nombre;
+            uObj["usuario"] = usuario;
+            uObj["rol_id"] = rol;
+            uObj["nombre_rol"] = nombreRol;
+
+            arrayUsuarios.append(uObj);
+        }
+    } else {
+        qDebug() << "toolConsultarUsuarios error:" << q.lastError().text();
+        res["error"] = "Error al consultar la tabla de usuarios: " + q.lastError().text();
+        return res;
+    }
+
+    res["tipo_resultado"] = "listado_usuarios";
+    res["total_usuarios"] = arrayUsuarios.size();
+    res["usuarios"] = arrayUsuarios;
+    if (!filtro.isEmpty()) res["filtro_aplicado"] = filtro;
+
+    return res;
+}
+
+/**
+ * @brief Consulta las ventas, tickets y rendimiento por usuario/vendedor o genera ranking comparativo entre empleados.
+ */
+QJsonObject AsistenteIA::toolVentasPorUsuario(const QJsonObject &args)
+{
+    QString usuarioFiltro = args.value("usuario").toString().trimmed();
+    if (usuarioFiltro.isEmpty()) usuarioFiltro = args.value("vendedor").toString().trimmed();
+    if (usuarioFiltro.isEmpty()) usuarioFiltro = args.value("empleado").toString().trimmed();
+
+    QString fechaI = args.value("fecha_inicio").toString().trimmed();
+    if (fechaI.isEmpty()) fechaI = args.value("fecha").toString().trimmed();
+    QString fechaF = args.value("fecha_fin").toString().trimmed();
+
+    QString tiendaFiltro = args.value("tienda").toString().trimmed();
+    if (tiendaFiltro.isEmpty()) tiendaFiltro = "todas";
+
+    QString agruparPor = args.value("agrupar_por").toString().trimmed().toLower();
+    if (agruparPor.isEmpty()) {
+        if (usuarioFiltro.isEmpty() || usuarioFiltro.contains("toda", Qt::CaseInsensitive) || usuarioFiltro.contains("ranking", Qt::CaseInsensitive)) {
+            agruparPor = "ranking";
+        } else {
+            agruparPor = "dia";
+        }
+    }
+
+    // Cargar mapa de usuarios: ID/username -> Nombre real
+    QMap<QString, QString> mapaNombres;
+    QSqlDatabase dbLocal = QSqlDatabase::database(conf ? conf->getConexionLocal() : "DB");
+    if (dbLocal.isOpen()) {
+        QSqlQuery qU("SELECT id, nombre, usuario FROM usuarios", dbLocal);
+        while (qU.next()) {
+            QString idStr = qU.value("id").toString();
+            QString nom = qU.value("nombre").toString();
+            QString uNom = qU.value("usuario").toString();
+            mapaNombres[idStr] = nom;
+            mapaNombres[uNom] = nom;
+            mapaNombres[nom] = nom;
+        }
+    }
+
+    // Resolver ID de usuario si se especificó nombre
+    QString targetUsuarioId = usuarioFiltro;
+    if (!usuarioFiltro.isEmpty() && usuarioFiltro != "todos" && !usuarioFiltro.contains("toda", Qt::CaseInsensitive)) {
+        for (auto it = mapaNombres.begin(); it != mapaNombres.end(); ++it) {
+            if (it.value().compare(usuarioFiltro, Qt::CaseInsensitive) == 0 || it.key().compare(usuarioFiltro, Qt::CaseInsensitive) == 0) {
+                targetUsuarioId = it.key();
+                break;
+            }
+        }
+    }
+
+    QStringList conexiones = resolverConexiones(tiendaFiltro);
+    double granTotalVentas = 0.0;
+    int granTotalTickets = 0;
+
+    struct Agregado {
+        double ventas = 0.0;
+        int numTickets = 0;
+        QString nombreExtra;
+    };
+    QMap<QString, Agregado> datosAgrupados;
+
+    for (const QString &connName : conexiones) {
+        if (!QSqlDatabase::contains(connName) || !QSqlDatabase::database(connName).isOpen()) continue;
+        QSqlDatabase db = QSqlDatabase::database(connName);
+
+        QString sql;
+        if (agruparPor == "ranking") {
+            sql = QString("SELECT usuario, SUM(total) AS tot, COUNT(*) AS cnt FROM ("
+                          "  SELECT usuario, fecha, total FROM tickets WHERE 1=1 ")
+                  + (fechaI.isEmpty() ? "" : " AND fecha >= :f1 ")
+                  + (fechaF.isEmpty() ? "" : " AND fecha <= :f2 ")
+                  + " UNION ALL "
+                  + "  SELECT usuario, fecha, total FROM ticketss WHERE 1=1 "
+                  + (fechaI.isEmpty() ? "" : " AND fecha >= :f1_b ")
+                  + (fechaF.isEmpty() ? "" : " AND fecha <= :f2_b ")
+                  + ") AS v GROUP BY usuario";
+        } else if (agruparPor == "mes") {
+            sql = QString("SELECT DATE_FORMAT(fecha, '%Y-%m') AS periodo, SUM(total) AS tot, COUNT(*) AS cnt FROM ("
+                          "  SELECT usuario, fecha, total FROM tickets WHERE 1=1 ")
+                  + (targetUsuarioId.isEmpty() || targetUsuarioId == "todos" ? "" : " AND (usuario = :u OR usuario = :u2) ")
+                  + (fechaI.isEmpty() ? "" : " AND fecha >= :f1 ")
+                  + (fechaF.isEmpty() ? "" : " AND fecha <= :f2 ")
+                  + " UNION ALL "
+                  + "  SELECT usuario, fecha, total FROM ticketss WHERE 1=1 "
+                  + (targetUsuarioId.isEmpty() || targetUsuarioId == "todos" ? "" : " AND (usuario = :u_b OR usuario = :u2_b) ")
+                  + (fechaI.isEmpty() ? "" : " AND fecha >= :f1_b ")
+                  + (fechaF.isEmpty() ? "" : " AND fecha <= :f2_b ")
+                  + ") AS v GROUP BY periodo ORDER BY periodo DESC";
+        } else if (agruparPor == "horas") {
+            sql = QString("SELECT HOUR(hora) AS periodo, SUM(total) AS tot, COUNT(*) AS cnt FROM ("
+                          "  SELECT usuario, fecha, hora, total FROM tickets WHERE 1=1 ")
+                  + (targetUsuarioId.isEmpty() || targetUsuarioId == "todos" ? "" : " AND (usuario = :u OR usuario = :u2) ")
+                  + (fechaI.isEmpty() ? "" : " AND fecha >= :f1 ")
+                  + (fechaF.isEmpty() ? "" : " AND fecha <= :f2 ")
+                  + " UNION ALL "
+                  + "  SELECT usuario, fecha, hora, total FROM ticketss WHERE 1=1 "
+                  + (targetUsuarioId.isEmpty() || targetUsuarioId == "todos" ? "" : " AND (usuario = :u_b OR usuario = :u2_b) ")
+                  + (fechaI.isEmpty() ? "" : " AND fecha >= :f1_b ")
+                  + (fechaF.isEmpty() ? "" : " AND fecha <= :f2_b ")
+                  + ") AS v GROUP BY periodo ORDER BY periodo ASC";
+        } else if (agruparPor == "dia_semana") {
+            sql = QString("SELECT DAYOFWEEK(fecha) AS periodo, SUM(total) AS tot, COUNT(*) AS cnt FROM ("
+                          "  SELECT usuario, fecha, total FROM tickets WHERE 1=1 ")
+                  + (targetUsuarioId.isEmpty() || targetUsuarioId == "todos" ? "" : " AND (usuario = :u OR usuario = :u2) ")
+                  + (fechaI.isEmpty() ? "" : " AND fecha >= :f1 ")
+                  + (fechaF.isEmpty() ? "" : " AND fecha <= :f2 ")
+                  + " UNION ALL "
+                  + "  SELECT usuario, fecha, total FROM ticketss WHERE 1=1 "
+                  + (targetUsuarioId.isEmpty() || targetUsuarioId == "todos" ? "" : " AND (usuario = :u_b OR usuario = :u2_b) ")
+                  + (fechaI.isEmpty() ? "" : " AND fecha >= :f1_b ")
+                  + (fechaF.isEmpty() ? "" : " AND fecha <= :f2_b ")
+                  + ") AS v GROUP BY periodo ORDER BY periodo ASC";
+        } else { // "dia"
+            sql = QString("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS periodo, SUM(total) AS tot, COUNT(*) AS cnt FROM ("
+                          "  SELECT usuario, fecha, total FROM tickets WHERE 1=1 ")
+                  + (targetUsuarioId.isEmpty() || targetUsuarioId == "todos" ? "" : " AND (usuario = :u OR usuario = :u2) ")
+                  + (fechaI.isEmpty() ? "" : " AND fecha >= :f1 ")
+                  + (fechaF.isEmpty() ? "" : " AND fecha <= :f2 ")
+                  + " UNION ALL "
+                  + "  SELECT usuario, fecha, total FROM ticketss WHERE 1=1 "
+                  + (targetUsuarioId.isEmpty() || targetUsuarioId == "todos" ? "" : " AND (usuario = :u_b OR usuario = :u2_b) ")
+                  + (fechaI.isEmpty() ? "" : " AND fecha >= :f1_b ")
+                  + (fechaF.isEmpty() ? "" : " AND fecha <= :f2_b ")
+                  + ") AS v GROUP BY periodo ORDER BY periodo DESC";
+        }
+
+        QSqlQuery q(db);
+        q.prepare(sql);
+        if (!targetUsuarioId.isEmpty() && targetUsuarioId != "todos" && agruparPor != "ranking") {
+            q.bindValue(":u", targetUsuarioId);
+            q.bindValue(":u2", usuarioFiltro);
+            q.bindValue(":u_b", targetUsuarioId);
+            q.bindValue(":u2_b", usuarioFiltro);
+        }
+        if (!fechaI.isEmpty()) {
+            q.bindValue(":f1", fechaI);
+            q.bindValue(":f1_b", fechaI);
+        }
+        if (!fechaF.isEmpty()) {
+            q.bindValue(":f2", fechaF);
+            q.bindValue(":f2_b", fechaF);
+        }
+
+        if (q.exec()) {
+            while (q.next()) {
+                QString clave = q.value(0).toString();
+                double tot = q.value(1).toDouble();
+                int cnt = q.value(2).toInt();
+
+                datosAgrupados[clave].ventas += tot;
+                datosAgrupados[clave].numTickets += cnt;
+                granTotalVentas += tot;
+                granTotalTickets += cnt;
+            }
+        } else {
+            qDebug() << "toolVentasPorUsuario error en" << connName << ":" << q.lastError().text();
+        }
+    }
+
+    QJsonObject res;
+    res["tipo_resultado"] = "ventas_por_usuario";
+    res["agrupacion"] = agruparPor;
+    if (!usuarioFiltro.isEmpty()) res["usuario_consultado"] = mapaNombres.value(targetUsuarioId, usuarioFiltro);
+    if (!fechaI.isEmpty()) res["fecha_inicio"] = fechaI;
+    if (!fechaF.isEmpty()) res["fecha_fin"] = fechaF;
+    res["tiendas_consultadas"] = conexiones.join(", ");
+    res["total_ventas_acumulado"] = QString::number(granTotalVentas, 'f', 2) + " €";
+    res["total_tickets_emitidos"] = granTotalTickets;
+    double ticketPromedioGlobal = (granTotalTickets > 0) ? (granTotalVentas / granTotalTickets) : 0.0;
+    res["ticket_promedio"] = QString::number(ticketPromedioGlobal, 'f', 2) + " €";
+
+    QJsonArray arrayDesglose;
+    static const QStringList nombresDias = {"", "Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"};
+
+    if (agruparPor == "ranking") {
+        struct RankingItem {
+            QString userKey;
+            QString nombreReal;
+            double ventas;
+            int tickets;
+        };
+        QList<RankingItem> listaRanking;
+        for (auto it = datosAgrupados.begin(); it != datosAgrupados.end(); ++it) {
+            RankingItem ri;
+            ri.userKey = it.key();
+            ri.nombreReal = mapaNombres.value(it.key(), QString("Usuario ID %1").arg(it.key()));
+            ri.ventas = it.value().ventas;
+            ri.tickets = it.value().numTickets;
+            listaRanking.append(ri);
+        }
+        std::sort(listaRanking.begin(), listaRanking.end(), [](const RankingItem &a, const RankingItem &b) {
+            return a.ventas > b.ventas;
+        });
+
+        int pos = 1;
+        for (const RankingItem &ri : listaRanking) {
+            QJsonObject item;
+            item["posicion"] = pos++;
+            item["usuario_id"] = ri.userKey;
+            item["nombre_empleado"] = ri.nombreReal;
+            item["total_ventas"] = QString::number(ri.ventas, 'f', 2) + " €";
+            item["numero_tickets"] = ri.tickets;
+            double promedio = (ri.tickets > 0) ? (ri.ventas / ri.tickets) : 0.0;
+            item["ticket_promedio"] = QString::number(promedio, 'f', 2) + " €";
+            double porcentaje = (granTotalVentas > 0) ? ((ri.ventas / granTotalVentas) * 100.0) : 0.0;
+            item["porcentaje_del_total"] = QString::number(porcentaje, 'f', 1) + " %";
+            arrayDesglose.append(item);
+        }
+        res["ranking_vendedores"] = arrayDesglose;
+    } else {
+        for (auto it = datosAgrupados.begin(); it != datosAgrupados.end(); ++it) {
+            QJsonObject item;
+            QString etiqueta = it.key();
+            if (agruparPor == "dia_semana") {
+                int dNum = etiqueta.toInt();
+                etiqueta = nombresDias.value(dNum, etiqueta);
+            } else if (agruparPor == "horas") {
+                etiqueta = QString("%1:00 h").arg(etiqueta.toInt(), 2, 10, QChar('0'));
+            }
+            item["periodo"] = etiqueta;
+            item["ventas"] = QString::number(it.value().ventas, 'f', 2) + " €";
+            item["tickets"] = it.value().numTickets;
+            double promedio = (it.value().numTickets > 0) ? (it.value().ventas / it.value().numTickets) : 0.0;
+            item["ticket_promedio"] = QString::number(promedio, 'f', 2) + " €";
+            arrayDesglose.append(item);
+        }
+        res["desglose_temporal"] = arrayDesglose;
+    }
+
+    return res;
+}
+
+/**
+ * @brief Consulta la actividad detallada de un usuario: tickets recientes y top artículos vendidos.
+ */
+QJsonObject AsistenteIA::toolActividadUsuario(const QJsonObject &args)
+{
+    QString usuarioFiltro = args.value("usuario").toString().trimmed();
+    if (usuarioFiltro.isEmpty()) usuarioFiltro = args.value("empleado").toString().trimmed();
+    if (usuarioFiltro.isEmpty()) usuarioFiltro = args.value("vendedor").toString().trimmed();
+
+    QString fechaI = args.value("fecha_inicio").toString().trimmed();
+    if (fechaI.isEmpty()) fechaI = args.value("fecha").toString().trimmed();
+    QString fechaF = args.value("fecha_fin").toString().trimmed();
+
+    QString tiendaFiltro = args.value("tienda").toString().trimmed();
+    if (tiendaFiltro.isEmpty()) tiendaFiltro = "todas";
+
+    int limite = args.value("limite").toInt(20);
+    if (limite <= 0) limite = 20;
+
+    // Cargar mapa de usuarios
+    QMap<QString, QString> mapaNombres;
+    QSqlDatabase dbLocal = QSqlDatabase::database(conf ? conf->getConexionLocal() : "DB");
+    if (dbLocal.isOpen()) {
+        QSqlQuery qU("SELECT id, nombre, usuario FROM usuarios", dbLocal);
+        while (qU.next()) {
+            mapaNombres[qU.value("id").toString()] = qU.value("nombre").toString();
+            mapaNombres[qU.value("usuario").toString()] = qU.value("nombre").toString();
+        }
+    }
+
+    QString targetUsuarioId = usuarioFiltro;
+    if (!usuarioFiltro.isEmpty()) {
+        for (auto it = mapaNombres.begin(); it != mapaNombres.end(); ++it) {
+            if (it.value().compare(usuarioFiltro, Qt::CaseInsensitive) == 0 || it.key().compare(usuarioFiltro, Qt::CaseInsensitive) == 0) {
+                targetUsuarioId = it.key();
+                break;
+            }
+        }
+    }
+
+    QStringList conexiones = resolverConexiones(tiendaFiltro);
+    QJsonArray arrayTickets;
+    QMap<QString, QPair<QString, double>> mapProductos; // cod -> (descripcion, cantidad)
+
+    for (const QString &connName : conexiones) {
+        if (!QSqlDatabase::contains(connName) || !QSqlDatabase::database(connName).isOpen()) continue;
+        QSqlDatabase db = QSqlDatabase::database(connName);
+        QString nombreTienda = (connName == "DB" || (conf && connName == conf->getConexionLocal())) ? "Tienda Local" : connName;
+
+        // 1. Tickets recientes
+        QString sqlTickets = QString("SELECT ticket, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha_str, hora, total "
+                                     "FROM tickets WHERE 1=1 ")
+                             + (targetUsuarioId.isEmpty() ? "" : "AND (usuario = :u OR usuario = :u2) ")
+                             + (fechaI.isEmpty() ? "" : "AND fecha >= :f1 ")
+                             + (fechaF.isEmpty() ? "" : "AND fecha <= :f2 ")
+                             + " UNION ALL "
+                             + "SELECT ticket, DATE_FORMAT(fecha, '%Y-%m-%d') AS fecha_str, hora, total "
+                             + "FROM ticketss WHERE 1=1 "
+                             + (targetUsuarioId.isEmpty() ? "" : "AND (usuario = :u_b OR usuario = :u2_b) ")
+                             + (fechaI.isEmpty() ? "" : "AND fecha >= :f1_b ")
+                             + (fechaF.isEmpty() ? "" : "AND fecha <= :f2_b ")
+                             + QString(" ORDER BY fecha_str DESC, hora DESC LIMIT %1").arg(limite);
+
+        QSqlQuery qT(db);
+        qT.prepare(sqlTickets);
+        if (!targetUsuarioId.isEmpty()) {
+            qT.bindValue(":u", targetUsuarioId);
+            qT.bindValue(":u2", usuarioFiltro);
+            qT.bindValue(":u_b", targetUsuarioId);
+            qT.bindValue(":u2_b", usuarioFiltro);
+        }
+        if (!fechaI.isEmpty()) {
+            qT.bindValue(":f1", fechaI);
+            qT.bindValue(":f1_b", fechaI);
+        }
+        if (!fechaF.isEmpty()) {
+            qT.bindValue(":f2", fechaF);
+            qT.bindValue(":f2_b", fechaF);
+        }
+
+        if (qT.exec()) {
+            while (qT.next()) {
+                QJsonObject tObj;
+                tObj["ticket"] = qT.value("ticket").toString();
+                tObj["fecha"] = qT.value("fecha_str").toString();
+                tObj["hora"] = qT.value("hora").toString();
+                tObj["total"] = QString::number(qT.value("total").toDouble(), 'f', 2) + " €";
+                tObj["tienda"] = nombreTienda;
+                arrayTickets.append(tObj);
+            }
+        }
+
+        // 2. Top productos vendidos por el usuario
+        QString sqlProds = QString("SELECT l.cod, l.descripcion, SUM(l.cantidad) AS c "
+                                   "FROM lineasticket l JOIN tickets t ON l.nticket = CAST(t.ticket AS CHAR) "
+                                   "WHERE 1=1 ")
+                           + (targetUsuarioId.isEmpty() ? "" : "AND (t.usuario = :u OR t.usuario = :u2) ")
+                           + (fechaI.isEmpty() ? "" : "AND t.fecha >= :f1 ")
+                           + (fechaF.isEmpty() ? "" : "AND t.fecha <= :f2 ")
+                           + " GROUP BY l.cod, l.descripcion "
+                           + " UNION ALL "
+                           + "SELECT l.cod, l.descripcion, SUM(l.cantidad) AS c "
+                           + "FROM lineasticketss l JOIN ticketss t ON l.nticket = CAST(t.ticket AS CHAR) "
+                           + "WHERE 1=1 "
+                           + (targetUsuarioId.isEmpty() ? "" : "AND (t.usuario = :u_b OR t.usuario = :u2_b) ")
+                           + (fechaI.isEmpty() ? "" : "AND t.fecha >= :f1_b ")
+                           + (fechaF.isEmpty() ? "" : "AND t.fecha <= :f2_b ")
+                           + " GROUP BY l.cod, l.descripcion";
+
+        QSqlQuery qP(db);
+        qP.prepare(sqlProds);
+        if (!targetUsuarioId.isEmpty()) {
+            qP.bindValue(":u", targetUsuarioId);
+            qP.bindValue(":u2", usuarioFiltro);
+            qP.bindValue(":u_b", targetUsuarioId);
+            qP.bindValue(":u2_b", usuarioFiltro);
+        }
+        if (!fechaI.isEmpty()) {
+            qP.bindValue(":f1", fechaI);
+            qP.bindValue(":f1_b", fechaI);
+        }
+        if (!fechaF.isEmpty()) {
+            qP.bindValue(":f2", fechaF);
+            qP.bindValue(":f2_b", fechaF);
+        }
+
+        if (qP.exec()) {
+            while (qP.next()) {
+                QString cod = qP.value("cod").toString();
+                QString desc = qP.value("descripcion").toString();
+                double cant = qP.value("c").toDouble();
+                if (!mapProductos.contains(cod)) {
+                    mapProductos[cod] = qMakePair(desc, cant);
+                } else {
+                    mapProductos[cod].second += cant;
+                }
+            }
+        }
+    }
+
+    // Ordenar top productos
+    struct ProdItem {
+        QString cod;
+        QString desc;
+        double cantidad;
+    };
+    QList<ProdItem> listaProds;
+    for (auto it = mapProductos.begin(); it != mapProductos.end(); ++it) {
+        ProdItem pi;
+        pi.cod = it.key();
+        pi.desc = it.value().first;
+        pi.cantidad = it.value().second;
+        listaProds.append(pi);
+    }
+    std::sort(listaProds.begin(), listaProds.end(), [](const ProdItem &a, const ProdItem &b) {
+        return a.cantidad > b.cantidad;
+    });
+
+    QJsonArray arrayTopProds;
+    int topLim = qMin(15, listaProds.size());
+    for (int i = 0; i < topLim; ++i) {
+        QJsonObject pObj;
+        pObj["codigo"] = listaProds[i].cod;
+        pObj["descripcion"] = listaProds[i].desc;
+        pObj["unidades_vendidas"] = listaProds[i].cantidad;
+        arrayTopProds.append(pObj);
+    }
+
+    QJsonObject res;
+    res["tipo_resultado"] = "actividad_usuario";
+    res["usuario"] = mapaNombres.value(targetUsuarioId, usuarioFiltro);
+    if (!fechaI.isEmpty()) res["fecha_inicio"] = fechaI;
+    if (!fechaF.isEmpty()) res["fecha_fin"] = fechaF;
+    res["total_tickets_recientes"] = arrayTickets.size();
+    res["ultimos_tickets"] = arrayTickets;
+    res["top_productos_mas_vendidos"] = arrayTopProds;
 
     return res;
 }
