@@ -213,6 +213,11 @@ private:
     QPushButton *btnAsistenteIA;
     DialogAsistenteIA *m_dialogAsistenteIA = nullptr;
 
+    // Panel flotante de Notas para acceso global (Shift+F12)
+    void onToggleNotasGlobal();
+    QDialog *m_dialogNotasFlotante = nullptr;
+    NotasWidget *m_notasWidgetFlotante = nullptr;
+
 protected:
     void resizeEvent(QResizeEvent *event) override;
     bool eventFilter(QObject *obj, QEvent *event) override;

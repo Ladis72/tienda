@@ -17,6 +17,9 @@ DialogAsistenteIA::DialogAsistenteIA(QWidget *parent)
 {
     ui->setupUi(this);
 
+    // Permitir que el diálogo esté siempre al frente y accesible desde cualquier ventana o modal
+    setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
+
     // Conectar señales del motor AsistenteIA
     connect(m_asistente, &AsistenteIA::respuestaRecibida, this, &DialogAsistenteIA::slotRespuestaRecibida);
     connect(m_asistente, &AsistenteIA::estadoCambiado, this, &DialogAsistenteIA::slotEstadoCambiado);

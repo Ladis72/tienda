@@ -30,6 +30,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QShortcut>
+#include <QKeyEvent>
 
 /******************************************************************************
  * CONSTRUCTOR principal de la aplicación Tienda
@@ -43,6 +44,11 @@
 Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
 
   ui->setupUi(this);
+
+  // Instalar filtro de eventos global para capturar F12, Shift+F12 y F8 desde cualquier ventana/modal
+  qApp->installEventFilter(this);
+
+  ui->ventasButton->setToolTip(tr("Abrir TPV de Ventas (F8)"));
 
   // Inicializar todos los punteros a nullptr para evitar punteros colgantes
   T = nullptr;
@@ -1084,6 +1090,24 @@ void Tienda::resizeEvent(QResizeEvent *event) {
   QMainWindow::resizeEvent(event);
 }
 bool Tienda::eventFilter(QObject *obj, QEvent *event) {
+  // Captura global de teclas para F12 (Asistente IA), Shift+F12 (Notas) y F8 (TPV Ventas)
+  if (event->type() == QEvent::KeyPress) {
+    QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+    if (keyEvent->key() == Qt::Key_F12) {
+      if (keyEvent->modifiers() & Qt::ShiftModifier) {
+        onToggleNotasGlobal();
+        return true;
+      } else {
+        onBtnAsistenteIAClicked();
+        return true;
+      }
+    } else if (keyEvent->key() == Qt::Key_F8) {
+      // F8: Abrir TPV de ventas desde cualquier pestaña o parte de la ventana principal
+      on_ventasButton_clicked();
+      return true;
+    }
+  }
+
   if (obj == ui->logo && event->type() == QEvent::Resize) {
     if (!logoOriginal.isNull() && ui->logo->width() > 0) {
       ui->logo->setPixmap(logoOriginal.scaled(
@@ -1260,14 +1284,52 @@ void Tienda::onMonitorCaducidadesError(QString msg) {
 }
 
 /**
- * @brief Abre el diálogo del Asistente de IA local (Ollama), conservando la conversación y memoria de la sesión.
+ * @brief Abre el diálogo del Asistente de IA local (Ollama), configurado como ventana flotante superior (no bloqueada por modales).
  */
 void Tienda::onBtnAsistenteIAClicked() {
     if (!m_dialogAsistenteIA) {
-        m_dialogAsistenteIA = new DialogAsistenteIA(this);
+        m_dialogAsistenteIA = new DialogAsistenteIA(nullptr); // Sin parent para que sea ventana independiente de primer nivel
     }
+    m_dialogAsistenteIA->setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
     m_dialogAsistenteIA->show();
     m_dialogAsistenteIA->raise();
     m_dialogAsistenteIA->activateWindow();
+}
+
+/**
+ * @brief Alterna la visualización de notas: si se pulsa desde otra ventana o modal, abre el panel flotante superior.
+ */
+void Tienda::onToggleNotasGlobal() {
+    QWidget *activeModal = QApplication::activeModalWidget();
+    if (activeModal || !this->isActiveWindow()) {
+        if (!m_dialogNotasFlotante) {
+            m_dialogNotasFlotante = new QDialog(nullptr);
+            m_dialogNotasFlotante->setWindowTitle(tr("📋 Panel Global de Notas y Avisos"));
+            m_dialogNotasFlotante->setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
+            m_dialogNotasFlotante->resize(700, 500);
+
+            QVBoxLayout *layout = new QVBoxLayout(m_dialogNotasFlotante);
+            layout->setContentsMargins(0, 0, 0, 0);
+
+            NotasWidget *nw = new NotasWidget(m_dialogNotasFlotante);
+            layout->addWidget(nw);
+
+            connect(nw, &NotasWidget::hideRequested, m_dialogNotasFlotante, &QDialog::hide);
+            connect(nw, &NotasWidget::pendingCountChanged, this, &Tienda::actualizarNotificacionNotas);
+
+            m_notasWidgetFlotante = nw;
+        }
+
+        if (m_dialogNotasFlotante->isVisible()) {
+            m_dialogNotasFlotante->hide();
+        } else {
+            m_notasWidgetFlotante->refrescar();
+            m_dialogNotasFlotante->show();
+            m_dialogNotasFlotante->raise();
+            m_dialogNotasFlotante->activateWindow();
+        }
+    } else {
+        onToggleNotas();
+    }
 }
 
