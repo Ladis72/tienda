@@ -2155,7 +2155,7 @@ QJsonObject AsistenteIA::toolUltimosArqueos(const QJsonObject &args)
         }
     }
 
-    if (!consultadoNube) {
+    if (!consultadoNube || arqueosArray.isEmpty() || idTiendaFiltro == 4 || tiendaFiltro == "local") {
         QStringList conexiones = resolverConexiones(tiendaFiltro);
 
         for (const QString &connName : conexiones) {
@@ -2196,7 +2196,34 @@ QJsonObject AsistenteIA::toolUltimosArqueos(const QJsonObject &args)
         }
     }
 
+    // Calcular estado de caja actual en vivo (hoy)
+    QJsonObject cajaEnVivo;
+    QString fechaHoy = QDate::currentDate().toString("yyyy-MM-dd");
+    QString connLocal = conf ? conf->getConexionLocal() : "DB";
+    if (QSqlDatabase::contains(connLocal) && QSqlDatabase::database(connLocal).isOpen()) {
+        QSqlQuery qHoy(QSqlDatabase::database(connLocal));
+        qHoy.prepare("SELECT COUNT(*) as num_tickets, "
+                     "COALESCE(SUM(t.total), 0) as total_ventas, "
+                     "COALESCE(SUM(CASE WHEN f.efectivo = 1 THEN t.total ELSE 0 END), 0) as total_efectivo, "
+                     "COALESCE(SUM(CASE WHEN f.efectivo = 0 OR f.efectivo IS NULL THEN t.total ELSE 0 END), 0) as total_tarjeta "
+                     "FROM tickets t "
+                     "LEFT JOIN fpago f ON t.fpago = f.id "
+                     "WHERE t.fecha = :f");
+        qHoy.bindValue(":f", fechaHoy);
+        if (qHoy.exec() && qHoy.next()) {
+            cajaEnVivo["fecha"] = fechaHoy;
+            cajaEnVivo["tickets_hoy"] = qHoy.value("num_tickets").toInt();
+            cajaEnVivo["total_ventas_hoy"] = QString::number(qHoy.value("total_ventas").toDouble(), 'f', 2) + " €";
+            cajaEnVivo["ventas_efectivo_hoy"] = QString::number(qHoy.value("total_efectivo").toDouble(), 'f', 2) + " €";
+            cajaEnVivo["ventas_tarjeta_hoy"] = QString::number(qHoy.value("total_tarjeta").toDouble(), 'f', 2) + " €";
+            cajaEnVivo["estado_caja"] = "Abierta / En curso";
+        }
+    }
+
     res["total_arqueos"] = arqueosArray.size();
+    if (!cajaEnVivo.isEmpty()) {
+        res["caja_actual_en_curso"] = cajaEnVivo;
+    }
     if (!ultimosPorTiendaArray.isEmpty()) {
         res["ultimo_arqueo_de_cada_tienda"] = ultimosPorTiendaArray;
     }
@@ -5090,7 +5117,7 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
         QSqlDatabase dbLocal = QSqlDatabase::database(conf ? conf->getConexionLocal() : "DB");
         if (dbLocal.isOpen()) {
             QSqlQuery qArt(dbLocal);
-            qArt.prepare("SELECT codigo FROM articulos WHERE LOWER(descripcion) LIKE :d OR codigo = :c LIMIT 10");
+            qArt.prepare("SELECT cod FROM articulos WHERE LOWER(descripcion) LIKE :d OR cod = :c LIMIT 10");
             qArt.bindValue(":d", "%" + producto.toLower() + "%");
             qArt.bindValue(":c", producto.trimmed());
             if (qArt.exec()) {
