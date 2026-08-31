@@ -54,6 +54,7 @@
 #include "dialogrecomendaciones.h"
 #include "verificadorbasedatos.h"
 #include "dialogasistenteia.h"
+#include "prepararpedidos.h"
 
 extern Configuracion *conf;
 namespace Ui {
@@ -85,6 +86,7 @@ private slots:
     void on_pushButtonClientes_clicked();
     void on_pushButtonProveedores_clicked();
     void on_pushButtonGestionar_clicked();
+    void on_pushButtonPreparar_clicked();
     void on_cajasButton_clicked();
     void on_pushButtonEntradaSalida_clicked();
     void on_movimientosButton_clicked();

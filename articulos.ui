@@ -402,6 +402,68 @@
            <widget class="QLineEdit" name="lineEditDesc"/>
           </item>
           <item row="9" column="0" colspan="11">
+           <layout class="QHBoxLayout" name="horizontalLayoutCabeceraNotas">
+            <property name="spacing">
+             <number>6</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="labelNotasTitulo">
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>Notas y Ficha del Producto:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacerNotas">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonGenerarDescripcionIA">
+              <property name="toolTip">
+               <string>Genera automáticamente la descripción, indicación, precauciones, composición y posología usando IA y búsqueda en internet</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton#pushButtonGenerarDescripcionIA {
+    background-color: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffb74d;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-weight: bold;
+}
+QPushButton#pushButtonGenerarDescripcionIA:hover {
+    background-color: #ffe0b2;
+    border-color: #f57c00;
+}
+QPushButton#pushButtonGenerarDescripcionIA:pressed {
+    background-color: #ffcc80;
+}</string>
+              </property>
+              <property name="text">
+               <string>✨ Generar descripción con IA</string>
+              </property>
+              <property name="autoDefault">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="10" column="0" colspan="11">
            <widget class="QTextEdit" name="textEditNotas">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -668,25 +730,62 @@
             </property>
            </widget>
           </item>
-          <item row="8" column="8">
-           <widget class="QPushButton" name="pushButtonBorrarFoto">
-            <property name="text">
-             <string>Borrar foto</string>
+          <item row="8" column="7" colspan="2">
+           <layout class="QHBoxLayout" name="horizontalLayoutBotonesFoto">
+            <property name="spacing">
+             <number>4</number>
             </property>
-            <property name="autoDefault">
-             <bool>false</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="8" column="7">
-           <widget class="QPushButton" name="pushButtonPonerFoto">
-            <property name="text">
-             <string>Añadir Foto</string>
-            </property>
-            <property name="autoDefault">
-             <bool>false</bool>
-            </property>
-           </widget>
+            <item>
+             <widget class="QPushButton" name="pushButtonBuscarFotoInternet">
+              <property name="toolTip">
+               <string>Buscar y descargar fotos del producto automáticamente desde internet</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton#pushButtonBuscarFotoInternet {
+    background-color: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffb74d;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-weight: bold;
+}
+QPushButton#pushButtonBuscarFotoInternet:hover {
+    background-color: #ffe0b2;
+    border-color: #f57c00;
+}
+QPushButton#pushButtonBuscarFotoInternet:pressed {
+    background-color: #ffcc80;
+}</string>
+              </property>
+              <property name="text">
+               <string>✨ Buscar en Internet</string>
+              </property>
+              <property name="autoDefault">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonPonerFoto">
+              <property name="text">
+               <string>Añadir Foto</string>
+              </property>
+              <property name="autoDefault">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonBorrarFoto">
+              <property name="text">
+               <string>Borrar foto</string>
+              </property>
+              <property name="autoDefault">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
           <item row="8" column="5" colspan="2">
            <widget class="QLineEdit" name="lineEditFoto">

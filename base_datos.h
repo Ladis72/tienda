@@ -288,6 +288,7 @@ public:
                                 const QString &fechaPed, const QString &fechaEnt, double total,
                                 const QString &estado, const QString &notas,
                                 const QList<QVariantMap> &lineas);
+    static bool subirLoteTiendaNube(int idTienda, int idLocal, const QString &cod, const QString &lote, const QString &fecha, double cantidad);
     static bool subirStockTiendaNube(int idTienda, const QString &cod, double stock, double min = 0, double max = 0);
     static bool volcarHistoricoLocalANube(int idTienda, const QString &fechaDesde, QString &resumenResultado);
 

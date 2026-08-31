@@ -722,6 +722,15 @@ void Tienda::on_pushButtonGestionar_clicked() {
   GestPed->show();
 }
 
+/**
+ * @brief Abre la ventana de preparación analítica de pedidos con datos de compras y ventas de la nube.
+ */
+void Tienda::on_pushButtonPreparar_clicked() {
+  PrepararPedidos *prep = new PrepararPedidos(this);
+  prep->exec();
+  delete prep;
+}
+
 void Tienda::on_cajasButton_clicked() {
   caja = new Cajas;
   caja->exec();

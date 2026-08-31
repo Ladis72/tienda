@@ -55,6 +55,8 @@ private slots:
 
     void on_pushButtonPonerFoto_clicked();
 
+    void on_pushButtonBuscarFotoInternet_clicked();
+
     void on_pushButtonBorrarFoto_clicked();
 
     void on_pushButtonRefrescar_clicked();
@@ -66,6 +68,7 @@ private slots:
     void on_lineEditDesc_returnPressed();
 
     void on_pushButtonBuscarNotas_clicked();
+    void on_pushButtonGenerarDescripcionIA_clicked();
 
     void on_lineEditCod_returnPressed();
 

@@ -35,8 +35,18 @@ public:
     /// Devuelve true si la última comprobación de conexión fue exitosa
     bool hayConexionNube() const { return m_hayConexion; }
 
+    /// Instancia global del SyncManager
+    static SyncManager* instance() { return s_instance; }
+
     /// Nombre de la conexión Qt a la BD en la nube
     static const QString CONEXION_NUBE;
+
+    /// Resincroniza limpiamente todo el stock de las tiendas conectadas a la tabla stock_tiendas_nube
+    static void resincronizarTodoElStockNube();
+
+public slots:
+    /// Ejecuta la sincronización completa (inmediata o programada)
+    void sincronizar();
 
 signals:
     /// Emitido cuando se recupera la conexión a la nube
@@ -52,10 +62,8 @@ private slots:
     /// Comprueba si la nube está accesible (cada 30 segundos)
     void comprobarConexion();
 
-    /// Ejecuta la sincronización completa (cada 5 minutos si hay conexión)
-    void sincronizar();
-
 private:
+    static SyncManager *s_instance;
     QTimer *m_timerPing;   ///< Comprobación de conexión cada 30s
     QTimer *m_timerSync;   ///< Sincronización cada 5 minutos
     bool    m_hayConexion; ///< Estado actual de conexión a la nube
@@ -115,6 +123,9 @@ private:
 
     /// Baja los borrados (tombstones) de la nube y los aplica localmente
     int bajarBorrados(const QString &connLocal, const QString &connNube, const QString &usuario);
+
+    /// Realiza un volcado inicial de lotes a stock_tiendas_nube si no se ha realizado previamente
+    void sincronizarLotesInicial(const QString &connLocal, const QString &connNube, const QString &usuario);
 
     /// Purga registros antiguos ya subidos de sync_cola y sync_unificaciones
     void purgarCola(const QString &connLocal, const QString &usuario);

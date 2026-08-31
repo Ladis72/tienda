@@ -2554,10 +2554,6 @@ bool baseDatos::borrarLotesArticulo(QString nombreConexion, QString codigo) {
 
 void baseDatos::aumentarLote(QString base, QString idLote, int uds) {
   QSqlQuery consulta(QSqlDatabase::database(base));
-  
-  // No sincronizar cambios realizados desde el proceso de venta (TPV)
-  // El guard RAII garantiza el reset de @skip_sync en todos los caminos.
-  SkipSyncGuard guard(base);
 
   consulta.prepare("UPDATE lotes SET cantidad = cantidad + ? WHERE id = ?");
   consulta.bindValue(0, uds);
@@ -2573,11 +2569,6 @@ void baseDatos::aumentarLote(QString base, QString idLote, int uds) {
 
 void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
   QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
-  
-  // No sincronizar cambios realizados desde el proceso de venta (TPV)
-  // El guard RAII garantiza el reset de @skip_sync en todos los caminos,
-  // incluidas las llamadas recursivas y los early returns.
-  SkipSyncGuard guard(conf->getConexionLocal());
 
   consulta.prepare("SELECT id , cantidad FROM lotes WHERE ean = ? "
                    "AND fecha = ?");
@@ -2897,22 +2888,61 @@ QString baseDatos::devolverDirectorio(QString tipo) {
   consulta.prepare("SELECT directorio FROM directorios WHERE nombre = ?");
   consulta.bindValue(0, tipo);
   consulta.exec();
-  qDebug() << consulta.lastError();
-  consulta.first();
-  return consulta.record().value(0).toString();
+  if (consulta.first()) {
+    QString dir = consulta.record().value(0).toString().trimmed();
+    if (!dir.isEmpty()) {
+      return dir;
+    }
+  }
+  // Valores predeterminados si no está configurado en la base de datos
+  if (tipo == "imagenes") {
+    return "./imagenes";
+  } else if (tipo == "documentos") {
+    return "./documentos";
+  } else if (tipo == "cseg") {
+    return "./documentos/copiaSeg";
+  }
+  return "";
 }
 
 QString baseDatos::resolverRutaImagen(QString nombreFoto) {
     if (nombreFoto.isEmpty()) return "";
     
-    // Si la ruta ya es absoluta y el fichero existe, usarla tal cual
+    // 1. Si la ruta ya es absoluta y el fichero existe, usarla tal cual
     if (QFileInfo(nombreFoto).isAbsolute() && QFile::exists(nombreFoto)) {
         return nombreFoto;
     }
     
-    // Obtener el directorio base de imágenes (ej: ./imagenes o /ruta/absoluta/imagenes)
+    // 2. Si existe directamente como ruta relativa en el directorio actual
+    if (QFile::exists(nombreFoto)) {
+        return QFileInfo(nombreFoto).absoluteFilePath();
+    }
+    
+    // 3. Obtener el directorio base de imágenes configurado
     QString baseDir = devolverDirectorio("imagenes");
+    if (baseDir.isEmpty()) {
+        baseDir = "./imagenes";
+    }
+    
     QDir d(baseDir);
+    QString path = d.absoluteFilePath(nombreFoto);
+    if (QFile::exists(path)) {
+        return path;
+    }
+    
+    // 4. Búsqueda en rutas relativas y absolutas habituales
+    QStringList rutasFallback = {
+        QDir::current().absoluteFilePath("imagenes/" + nombreFoto),
+        QDir::current().absoluteFilePath("../imagenes/" + nombreFoto),
+        QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("imagenes/" + nombreFoto),
+        QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("../imagenes/" + nombreFoto),
+        QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(nombreFoto)
+    };
+    for (const QString &fallback : rutasFallback) {
+        if (QFile::exists(fallback)) {
+            return fallback;
+        }
+    }
     
     // Devolver la ruta absoluta combinando el directorio base y el nombre del fichero
     return d.absoluteFilePath(nombreFoto);
@@ -3961,17 +3991,41 @@ bool baseDatos::inicializarEsquemaNube() {
          "  INDEX `idx_tienda_fecha` (`id_tienda`, `fecha`)"
          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-  // 8. Stock por tienda nube
+  // 8. Stock por tienda y lotes en la nube
+  // Comprobar si la tabla existe con el esquema antiguo (sin id_local) y migrarla si es necesario
+  QSqlQuery qCheck(dbNube);
+  if (qCheck.exec("SELECT COUNT(*) FROM information_schema.columns "
+                  "WHERE table_schema = (SELECT DATABASE()) AND table_name = 'stock_tiendas_nube' AND column_name = 'id_local'")
+      && qCheck.next() && qCheck.value(0).toInt() == 0) {
+    q.exec("DROP TABLE IF EXISTS `stock_tiendas_nube`");
+  }
+
   q.exec("CREATE TABLE IF NOT EXISTS `stock_tiendas_nube` ("
          "  `id_tienda` INT NOT NULL,"
+         "  `id_local` INT NOT NULL,"
          "  `cod` VARCHAR(20) NOT NULL,"
-         "  `stock` DOUBLE NOT NULL DEFAULT 0.00,"
-         "  `min` DOUBLE NOT NULL DEFAULT 0.00,"
-         "  `max` DOUBLE NOT NULL DEFAULT 0.00,"
+         "  `lote` VARCHAR(50) NOT NULL DEFAULT '',"
+         "  `fecha` DATE NOT NULL DEFAULT '2000-01-01',"
+         "  `cantidad` DOUBLE NOT NULL DEFAULT 0.00,"
+         "  `stock` DOUBLE GENERATED ALWAYS AS (`cantidad`) VIRTUAL,"
          "  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
-         "  PRIMARY KEY (`id_tienda`, `cod`),"
-         "  INDEX `idx_cod` (`cod`)"
+         "  PRIMARY KEY (`id_tienda`, `id_local`),"
+         "  INDEX `idx_tienda_cod` (`id_tienda`, `cod`),"
+         "  INDEX `idx_cod` (`cod`),"
+         "  INDEX `idx_fecha` (`fecha`)"
          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+  // Estandarizar cotejamientos (collations) para compatibilidad total entre subconsultas
+  q.exec("ALTER TABLE `stock_tiendas_nube` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+  q.exec("ALTER TABLE `lineaspedido_nube` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+  q.exec("ALTER TABLE `lineasticket_nube` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+  q.exec("ALTER TABLE `pedidos_nube` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+  q.exec("ALTER TABLE `tickets_nube` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+  // Índices analíticos adicionales para máxima velocidad en la nube
+  q.exec("ALTER TABLE `lineaspedido_nube` ADD INDEX IF NOT EXISTS `idx_prov_cod` (`idProveedor`, `cod`)");
+  q.exec("ALTER TABLE `lineasticket_nube` ADD INDEX IF NOT EXISTS `idx_cod_fecha` (`cod`, `fecha`)");
+  q.exec("ALTER TABLE `lineasticket_nube` ADD INDEX IF NOT EXISTS `idx_fecha_tienda` (`fecha`, `id_tienda`)");
 
   // 9. Vistas analíticas y de integración
   q.exec("CREATE OR REPLACE VIEW vista_ventas_detalladas AS "
@@ -3994,11 +4048,11 @@ bool baseDatos::inicializarEsquemaNube() {
 
   q.exec("CREATE OR REPLACE VIEW vista_stock_tiendas AS "
          "SELECT s.id_tienda, COALESCE(t.nombre, CONCAT('Tienda ', s.id_tienda)) AS tienda, "
-         "a.cod AS codigo, a.descripcion AS producto, COALESCE(b.id, 0) AS id_fabricante, "
-         "COALESCE(b.nombre, 'Sin Marca') AS fabricante, COALESCE(f.id, 0) AS id_familia, "
-         "COALESCE(f.descripcion, 'Sin Familia') AS familia, a.pvp, a.precio_compra AS coste_pvd, "
-         "s.stock AS stock_actual, s.min AS stock_minimo, s.max AS stock_maximo, "
-         "CASE WHEN s.stock <= 0 THEN 'Agotado' WHEN s.min > 0 AND s.stock <= s.min THEN 'Bajo Mínimos' ELSE 'Normal' END AS estado_stock, "
+         "a.cod AS codigo, a.descripcion AS producto, s.lote, s.fecha AS caducidad, "
+         "COALESCE(b.id, 0) AS id_fabricante, COALESCE(b.nombre, 'Sin Marca') AS fabricante, "
+         "COALESCE(f.id, 0) AS id_familia, COALESCE(f.descripcion, 'Sin Familia') AS familia, "
+         "a.pvp, a.precio_compra AS coste_pvd, s.cantidad AS stock_actual, a.min AS stock_minimo, a.max AS stock_maximo, "
+         "CASE WHEN s.cantidad <= 0 THEN 'Agotado' WHEN a.min > 0 AND s.cantidad <= a.min THEN 'Bajo Mínimos' ELSE 'Normal' END AS estado_stock, "
          "a.notas "
          "FROM stock_tiendas_nube s "
          "JOIN articulos a ON s.cod = a.cod "
@@ -4190,9 +4244,9 @@ bool baseDatos::subirPedidoNube(int idTienda, int idLocal, const QString &nDoc, 
 }
 
 /**
- * @brief Sube la foto de stock actual de un producto en esta tienda a la nube.
+ * @brief Sube un lote de un producto en esta tienda a la tabla stock_tiendas_nube.
  */
-bool baseDatos::subirStockTiendaNube(int idTienda, const QString &cod, double stock, double min, double max) {
+bool baseDatos::subirLoteTiendaNube(int idTienda, int idLocal, const QString &cod, const QString &lote, const QString &fecha, double cantidad) {
   if (!QSqlDatabase::contains(SyncManager::CONEXION_NUBE) ||
       !QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
     return false;
@@ -4200,19 +4254,29 @@ bool baseDatos::subirStockTiendaNube(int idTienda, const QString &cod, double st
 
   QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
   QSqlQuery q(dbNube);
-  q.prepare("INSERT INTO stock_tiendas_nube (id_tienda, cod, stock, min, max) "
-            "VALUES (?, ?, ?, ?, ?) "
-            "ON DUPLICATE KEY UPDATE stock=VALUES(stock), min=VALUES(min), max=VALUES(max)");
+  q.prepare("INSERT INTO stock_tiendas_nube (id_tienda, id_local, cod, lote, fecha, cantidad) "
+            "VALUES (?, ?, ?, ?, ?, ?) "
+            "ON DUPLICATE KEY UPDATE cod=VALUES(cod), lote=VALUES(lote), fecha=VALUES(fecha), cantidad=VALUES(cantidad)");
   q.bindValue(0, idTienda);
-  q.bindValue(1, cod);
-  q.bindValue(2, stock);
-  q.bindValue(3, min);
-  q.bindValue(4, max);
+  q.bindValue(1, idLocal);
+  q.bindValue(2, cod);
+  q.bindValue(3, lote);
+  q.bindValue(4, fecha.isEmpty() ? "2000-01-01" : fecha);
+  q.bindValue(5, cantidad);
   return q.exec();
 }
 
 /**
- * @brief Vuelca todo el histórico de tickets, líneas, arqueos y stock local a la nube.
+ * @brief Sube la foto de stock de un producto en esta tienda a la nube (método de compatibilidad).
+ */
+bool baseDatos::subirStockTiendaNube(int idTienda, const QString &cod, double stock, double min, double max) {
+  Q_UNUSED(min);
+  Q_UNUSED(max);
+  return subirLoteTiendaNube(idTienda, 0, cod, "", "2000-01-01", stock);
+}
+
+/**
+ * @brief Vuelca todo el histórico de tickets, líneas, arqueos y lotes/stock local a la nube.
  */
 bool baseDatos::volcarHistoricoLocalANube(int idTienda, const QString &fechaDesde, QString &resumenResultado) {
   if (!inicializarEsquemaNube()) {
@@ -4228,7 +4292,7 @@ bool baseDatos::volcarHistoricoLocalANube(int idTienda, const QString &fechaDesd
 
   int ticketsSubidos = 0;
   int arqueosSubidos = 0;
-  int articulosSubidos = 0;
+  int lotesSubidos = 0;
 
   // 1. Subir Tickets y sus líneas
   QSqlQuery qTickets(dbLocal);
@@ -4298,28 +4362,27 @@ bool baseDatos::volcarHistoricoLocalANube(int idTienda, const QString &fechaDesd
     }
   }
 
-  // 3. Subir Stock actual
+  // 3. Subir Lotes y Stock actual por tienda
   QSqlQuery qStock(dbLocal);
-  qStock.exec("SELECT a.cod, a.min, a.max, "
-              "(SELECT COALESCE(SUM(l.cantidad), 0) FROM lotes l WHERE l.ean = a.cod) as stock_real "
-              "FROM articulos a");
+  qStock.exec("SELECT id, ean, lote, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha_fmt, cantidad FROM lotes");
   while (qStock.next()) {
-    QString cod = qStock.value("cod").toString();
-    double stk = qStock.value("stock_real").toDouble();
-    double mn = qStock.value("min").toDouble();
-    double mx = qStock.value("max").toDouble();
-    if (subirStockTiendaNube(idTienda, cod, stk, mn, mx)) {
-      articulosSubidos++;
+    int idLote = qStock.value("id").toInt();
+    QString cod = qStock.value("ean").toString();
+    QString lote = qStock.value("lote").toString();
+    QString fecha = qStock.value("fecha_fmt").toString();
+    double cant = qStock.value("cantidad").toDouble();
+    if (subirLoteTiendaNube(idTienda, idLote, cod, lote, fecha, cant)) {
+      lotesSubidos++;
     }
   }
 
   resumenResultado = QString("Sincronización completada con éxito:\n"
                              " • %1 tickets con sus líneas subidos a la nube.\n"
                              " • %2 arqueos de caja subidos a la nube.\n"
-                             " • %3 artículos con stock actualizados en la nube.")
+                             " • %3 lotes de artículos actualizados en la nube.")
                          .arg(ticketsSubidos)
                          .arg(arqueosSubidos)
-                         .arg(articulosSubidos);
+                         .arg(lotesSubidos);
   return true;
 }
 

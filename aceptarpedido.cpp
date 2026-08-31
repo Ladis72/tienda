@@ -3,6 +3,7 @@
 #include <QMessageBox>
 #include <QStandardItemModel>
 #include "ui_aceptarpedido.h"
+#include "syncmanager.h"
 
 AceptarPedido::AceptarPedido(
     QString pedido, QString proveedor, QString nDoc, QString fechaPedido, QWidget *parent)
@@ -400,6 +401,12 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
     base.borrarPedido(conf->getConexionLocal(), idPedido);
 
     db.commit();
+
+    // Disparar sincronización inmediata con la nube para que los lotes y el stock se reflejen al instante
+    if (SyncManager::instance()) {
+        SyncManager::instance()->sincronizar();
+    }
+
     return true;
 }
 
