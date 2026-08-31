@@ -25,6 +25,9 @@ extern Configuracion *conf;
 // Constantes
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Instancia singleton global
+SyncManager *SyncManager::s_instance = nullptr;
+
 /// Nombre de la conexión Qt para la BD en la nube (no "DB", que es la local)
 const QString SyncManager::CONEXION_NUBE = "NUBE";
 
@@ -54,7 +57,8 @@ const QStringList SyncManager::TABLAS_TRANSACCIONALES = {
     "pedidos",
     "lineaspedido",
     "salidaGenero",
-    "entradasSalidas"
+    "entradasSalidas",
+    "lotes"
 };
 
 const QMap<QString, QStringList> SyncManager::CAMPOS_EXCLUIDOS = {
@@ -71,6 +75,8 @@ SyncManager::SyncManager(QObject *parent)
     : QObject(parent), m_timerPing(new QTimer(this)), m_timerSync(new QTimer(this)), 
       m_hayConexion(false), m_idTiendaLocal(0)
 {
+    s_instance = this;
+
     // Comprobación de conexión cada 30 segundos
     m_timerPing->setInterval(30 * 1000);
     connect(m_timerPing, &QTimer::timeout, this, &SyncManager::comprobarConexion);
@@ -85,6 +91,9 @@ SyncManager::SyncManager(QObject *parent)
 
 SyncManager::~SyncManager()
 {
+    if (s_instance == this) {
+        s_instance = nullptr;
+    }
     desconectarNube();
 }
 
@@ -276,8 +285,6 @@ bool SyncManager::conectarNube()
         qDebug() << "SyncManager: Conectado a" << dbNube.hostName() << "Base de Datos:" << qTZ.value(0).toString();
     }
     
-    m_hayConexion = true;
-
     // Asegurar que las tablas de la nube estén inicializadas
     baseDatos::inicializarEsquemaNube();
 
@@ -420,6 +427,7 @@ void SyncManager::sincronizar()
             if (okLocal && okNube) {
                 subidos = self->subirCambios(connLocalClone, connNubeClone, usuario);
                 subUnif = self->subirUnificaciones(connLocalClone, connNubeClone, usuario);
+                self->sincronizarLotesInicial(connLocalClone, connNubeClone, usuario);
                 bajados = self->bajarCambios(connLocalClone, connNubeClone, usuario);
                 qDebug() << "SyncManager: Ciclo completado — Registros subidos:" << subidos
                          << "| Unificaciones subidas:" << subUnif
@@ -497,6 +505,10 @@ int SyncManager::subirCambios(const QString &connLocal, const QString &connNube,
                     del.addBindValue(idReg);
                 } else if (tabla == "entradasSalidas") {
                     del.prepare("DELETE FROM `entradasalida_nube` WHERE `id_tienda` = ? AND `id_local` = ?");
+                    del.addBindValue(m_idTiendaLocal);
+                    del.addBindValue(idReg);
+                } else if (tabla == "lotes") {
+                    del.prepare("DELETE FROM `stock_tiendas_nube` WHERE `id_tienda` = ? AND `id_local` = ?");
                     del.addBindValue(m_idTiendaLocal);
                     del.addBindValue(idReg);
                 }
@@ -629,6 +641,29 @@ int SyncManager::subirCambios(const QString &connLocal, const QString &connNube,
                         ins.addBindValue(rec.value("idTiposRentrada"));
                         ins.addBindValue(rec.value("descripcion"));
                         ins.addBindValue(rec.value("usuario"));
+                        ok = ins.exec();
+                    } else if (tabla == "lotes") {
+                        ins.prepare("INSERT INTO `stock_tiendas_nube` (id_tienda, id_local, cod, lote, fecha, cantidad) "
+                                    "VALUES (?, ?, ?, ?, ?, ?) "
+                                    "ON DUPLICATE KEY UPDATE cod=VALUES(cod), lote=VALUES(lote), fecha=VALUES(fecha), cantidad=VALUES(cantidad)");
+                        ins.addBindValue(m_idTiendaLocal);
+                        ins.addBindValue(rec.value("id"));
+                        ins.addBindValue(rec.value("ean"));
+                        ins.addBindValue(rec.value("lote"));
+
+                        QVariant fVal = rec.value("fecha");
+                        QString fStr = "2000-01-01";
+                        if (!fVal.isNull()) {
+                            if (fVal.userType() == QMetaType::QDate || fVal.userType() == QMetaType::QDateTime) {
+                                QDate d = fVal.toDate();
+                                if (d.isValid()) fStr = d.toString("yyyy-MM-dd");
+                            } else {
+                                QString s = fVal.toString();
+                                if (!s.isEmpty()) fStr = s;
+                            }
+                        }
+                        ins.addBindValue(fStr);
+                        ins.addBindValue(rec.value("cantidad"));
                         ok = ins.exec();
                     }
                     if (!ok) {
@@ -1186,6 +1221,108 @@ QDateTime SyncManager::ultimaSync(const QString &tabla, const QString &connLocal
     return QDateTime::fromString("2000-01-01 00:00:00", "yyyy-MM-dd HH:mm:ss");
 }
 
+void SyncManager::sincronizarLotesInicial(const QString &connLocal, const QString &connNube, const QString &usuario)
+{
+    Q_UNUSED(usuario);
+    QSqlDatabase dbLocal = QSqlDatabase::database(connLocal);
+    QSqlDatabase dbNube  = QSqlDatabase::database(connNube);
+
+    if (!dbLocal.isOpen() || !dbNube.isOpen()) return;
+
+    if (m_idTiendaLocal <= 0) {
+        cargarIdTiendaLocal();
+    }
+
+    // Consultar tiendas reales en la base de datos para obtener el id exacto de cada tienda
+    QSqlQuery qTiendas(dbLocal);
+    if (qTiendas.exec("SELECT id, nombre FROM tiendas")) {
+        while (qTiendas.next()) {
+            int idT = qTiendas.value(0).toInt();
+            QString nombreT = qTiendas.value(1).toString().trimmed();
+
+            if (idT == m_idTiendaLocal) {
+                // 1. Sincronizar tienda local
+                QSqlQuery qDel(dbNube);
+                qDel.prepare("DELETE FROM `stock_tiendas_nube` WHERE `id_tienda` = ?");
+                qDel.addBindValue(idT);
+                qDel.exec();
+
+                QSqlQuery qL(dbLocal);
+                if (qL.exec("SELECT id, ean, lote, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha_fmt, cantidad FROM lotes WHERE cantidad <> 0")) {
+                    QStringList rows;
+                    int count = 0;
+                    while (qL.next()) {
+                        int idLocal = qL.value("id").toInt();
+                        QString ean = qL.value("ean").toString().replace("'", "");
+                        QString lote = qL.value("lote").toString().replace("'", "");
+                        QString fecha = qL.value("fecha_fmt").toString();
+                        if (fecha.isEmpty()) fecha = "2000-01-01";
+                        double cant = qL.value("cantidad").toDouble();
+
+                        rows.append(QString("(%1, %2, '%3', '%4', '%5', %6)")
+                                    .arg(idT).arg(idLocal).arg(ean, lote, fecha).arg(cant));
+
+                        if (rows.size() >= 500) {
+                            QSqlQuery ins(dbNube);
+                            ins.exec(QString("INSERT INTO `stock_tiendas_nube` (`id_tienda`, `id_local`, `cod`, `lote`, `fecha`, `cantidad`) VALUES %1")
+                                     .arg(rows.join(",")));
+                            count += rows.size();
+                            rows.clear();
+                        }
+                    }
+                    if (!rows.isEmpty()) {
+                        QSqlQuery ins(dbNube);
+                        ins.exec(QString("INSERT INTO `stock_tiendas_nube` (`id_tienda`, `id_local`, `cod`, `lote`, `fecha`, `cantidad`) VALUES %1")
+                                 .arg(rows.join(",")));
+                        count += rows.size();
+                        rows.clear();
+                    }
+                    qDebug() << "SyncManager: Sincronizado stock en nube para tienda local" << nombreT << "(ID" << idT << ") - Lotes:" << count;
+                }
+            } else if (QSqlDatabase::contains(nombreT) && QSqlDatabase::database(nombreT).isOpen()) {
+                // 2. Sincronizar tienda remota conectada
+                QSqlQuery qDel(dbNube);
+                qDel.prepare("DELETE FROM `stock_tiendas_nube` WHERE `id_tienda` = ?");
+                qDel.addBindValue(idT);
+                qDel.exec();
+
+                QSqlQuery qRemota(QSqlDatabase::database(nombreT));
+                if (qRemota.exec("SELECT id, ean, lote, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha_fmt, cantidad FROM lotes WHERE cantidad <> 0")) {
+                    QStringList rowsR;
+                    int countR = 0;
+                    while (qRemota.next()) {
+                        int idLocal = qRemota.value("id").toInt();
+                        QString ean = qRemota.value("ean").toString().replace("'", "");
+                        QString lote = qRemota.value("lote").toString().replace("'", "");
+                        QString fecha = qRemota.value("fecha_fmt").toString();
+                        if (fecha.isEmpty()) fecha = "2000-01-01";
+                        double cant = qRemota.value("cantidad").toDouble();
+
+                        rowsR.append(QString("(%1, %2, '%3', '%4', '%5', %6)")
+                                     .arg(idT).arg(idLocal).arg(ean, lote, fecha).arg(cant));
+
+                        if (rowsR.size() >= 500) {
+                            QSqlQuery ins(dbNube);
+                            ins.exec(QString("INSERT INTO `stock_tiendas_nube` (`id_tienda`, `id_local`, `cod`, `lote`, `fecha`, `cantidad`) VALUES %1")
+                                     .arg(rowsR.join(",")));
+                            countR += rowsR.size();
+                            rowsR.clear();
+                        }
+                    }
+                    if (!rowsR.isEmpty()) {
+                        QSqlQuery ins(dbNube);
+                        ins.exec(QString("INSERT INTO `stock_tiendas_nube` (`id_tienda`, `id_local`, `cod`, `lote`, `fecha`, `cantidad`) VALUES %1")
+                                 .arg(rowsR.join(",")));
+                        countR += rowsR.size();
+                        rowsR.clear();
+                    }
+                    qDebug() << "SyncManager: Sincronizado stock en nube para tienda remota" << nombreT << "(ID" << idT << ") - Lotes:" << countR;
+                }
+            }
+        }
+    }
+}
+
 QString SyncManager::getPkTabla(const QString &tabla) const
 {
     // Para 'vales' se usa vale_uuid como clave de sincronización global
@@ -1196,7 +1333,8 @@ QString SyncManager::getPkTabla(const QString &tabla) const
         {"formatos","idformato"},{"motivosEntrada","idtiposEntrada"},{"tiendas","id"},{"usuarios","id"},
         {"permisos","id"},{"vales","vale_uuid"},
         {"tickets","ticket"},{"lineasticket","id"},{"arqueos","id"},
-        {"pedidos","id"},{"lineaspedido","id"},{"salidaGenero","id"},{"entradasSalidas","identradasSalidas"}
+        {"pedidos","id"},{"lineaspedido","id"},{"salidaGenero","id"},{"entradasSalidas","identradasSalidas"},
+        {"lotes","id"}
     };
     return m.value(tabla, "");
 }
@@ -1329,6 +1467,101 @@ void SyncManager::prepararTablasRemotas()
                           .arg(tabla, qN.lastError().text());
             qWarning() << "SyncManager:" << err;
             registrarLog(connLocal, "SyncError", conf->getUsuario(), err);
+        }
+    }
+}
+
+void SyncManager::resincronizarTodoElStockNube()
+{
+    if (!QSqlDatabase::contains(CONEXION_NUBE)) return;
+    QSqlDatabase dbNube = QSqlDatabase::database(CONEXION_NUBE);
+    if (!dbNube.isOpen()) return;
+
+    QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
+    if (!dbLocal.isOpen()) return;
+
+    // 1. Obtener todas las tiendas reales de la tabla 'tiendas'
+    QList<int> idsValidos;
+    QMap<int, QString> tiendas;
+    QSqlQuery qT(dbLocal);
+    if (qT.exec("SELECT id, nombre FROM tiendas")) {
+        while (qT.next()) {
+            int id = qT.value(0).toInt();
+            QString nombre = qT.value(1).toString().trimmed();
+            idsValidos << id;
+            tiendas[id] = nombre;
+        }
+    }
+
+    // 2. Limpiar registros espurios en stock_tiendas_nube (ej. id_tienda = 0 o tiendas eliminadas)
+    if (!idsValidos.isEmpty()) {
+        QStringList idStrs;
+        for (int id : idsValidos) idStrs << QString::number(id);
+        QSqlQuery qClean(dbNube);
+        qClean.exec(QString("DELETE FROM stock_tiendas_nube WHERE id_tienda NOT IN (%1) OR id_tienda = 0").arg(idStrs.join(",")));
+    } else {
+        QSqlQuery qClean(dbNube);
+        qClean.exec("DELETE FROM stock_tiendas_nube WHERE id_tienda = 0");
+    }
+
+    int idTiendaLocal = 1;
+    QSqlQuery qLoc(dbLocal);
+    if (qLoc.exec("SELECT id FROM tiendas WHERE local = 1 LIMIT 1") && qLoc.first()) {
+        idTiendaLocal = qLoc.value(0).toInt();
+    }
+
+    // 3. Volcar y sincronizar el stock de cada tienda conectada
+    for (auto it = tiendas.begin(); it != tiendas.end(); ++it) {
+        int idT = it.key();
+        QString nombreT = it.value();
+
+        QSqlDatabase dbTienda;
+        if (idT == idTiendaLocal) {
+            dbTienda = dbLocal;
+        } else if (QSqlDatabase::contains(nombreT) && QSqlDatabase::database(nombreT).isOpen()) {
+            dbTienda = QSqlDatabase::database(nombreT);
+        }
+
+        if (dbTienda.isOpen()) {
+            // Borrar stock anterior de esta tienda en la nube
+            QSqlQuery qDel(dbNube);
+            qDel.prepare("DELETE FROM stock_tiendas_nube WHERE id_tienda = ?");
+            qDel.addBindValue(idT);
+            qDel.exec();
+
+            // Insertar lotes reales de esta tienda
+            QSqlQuery qL(dbTienda);
+            if (qL.exec("SELECT id, ean, lote, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha_fmt, cantidad FROM lotes WHERE cantidad <> 0")) {
+                QStringList rows;
+                int count = 0;
+                while (qL.next()) {
+                    int idLocal = qL.value("id").toInt();
+                    QString ean = qL.value("ean").toString().replace("'", "");
+                    QString lote = qL.value("lote").toString().replace("'", "");
+                    QString fecha = qL.value("fecha_fmt").toString();
+                    if (fecha.isEmpty()) fecha = "2000-01-01";
+                    double cant = qL.value("cantidad").toDouble();
+
+                    rows.append(QString("(%1, %2, '%3', '%4', '%5', %6)")
+                                .arg(idT).arg(idLocal).arg(ean, lote, fecha).arg(cant));
+
+                    if (rows.size() >= 500) {
+                        QSqlQuery ins(dbNube);
+                        ins.exec(QString("INSERT INTO stock_tiendas_nube (id_tienda, id_local, cod, lote, fecha, cantidad) VALUES %1")
+                                 .arg(rows.join(",")));
+                        count += rows.size();
+                        rows.clear();
+                    }
+                }
+                if (!rows.isEmpty()) {
+                    QSqlQuery ins(dbNube);
+                    ins.exec(QString("INSERT INTO stock_tiendas_nube (id_tienda, id_local, cod, lote, fecha, cantidad) VALUES %1")
+                             .arg(rows.join(",")));
+                    count += rows.size();
+                    rows.clear();
+                }
+                qDebug() << "SyncManager: Resincronizado stock en nube para tienda" << nombreT << "(ID" << idT << ") ->" << count << "lotes";
+            }
         }
     }
 }

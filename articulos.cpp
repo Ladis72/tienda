@@ -11,6 +11,8 @@
 #include "dialoganadirasalidas.h"
 #include "dialogcambiocodigo.h"
 #include "dialogcomparararticulos.h"
+#include "dialoggenerardescripcionia.h"
+#include "dialogbuscarfotointernet.h"
 #include <QAction>
 #include <QDate>
 #include <QDir>
@@ -187,23 +189,9 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
             actUnder->setChecked(fmt.fontUnderline());
           });
 
-  // Insertar la toolbar en el gridLayout encima del textEditNotas (fila 9)
-  // Obtenemos el gridLayout del widget General y añadimos la toolbar en fila 8b
-  // La forma más fiable es envolver en un layout vertical dentro de un
-  // contenedor.
-  QWidget *notasContainer = new QWidget(ui->General);
-  QVBoxLayout *notasLayout = new QVBoxLayout(notasContainer);
-  notasLayout->setContentsMargins(0, 0, 0, 0);
-  notasLayout->setSpacing(2);
-  notasLayout->addWidget(tbNotas);
-  notasLayout->addWidget(ui->textEditNotas);
-  // Insertar el contenedor en el gridLayout en la misma posición que el
-  // textEditNotas
-  QGridLayout *grid = qobject_cast<QGridLayout *>(ui->General->layout());
-  if (grid) {
-    // Quitar el textEditNotas del grid (ya fue puesto por el .ui)
-    grid->removeWidget(ui->textEditNotas);
-    grid->addWidget(notasContainer, 9, 0, 1, 10);
+  // Insertar la toolbar de formato en la cabecera de notas
+  if (ui->horizontalLayoutCabeceraNotas) {
+    ui->horizontalLayoutCabeceraNotas->insertWidget(1, tbNotas);
   }
 
   mapper.toFirst();
@@ -237,7 +225,10 @@ void Articulos::aplicarPermisos() {
   ui->pushButtonHistorialPrecios->setEnabled(conf->permisos()->tiene("articulos.historial_precios"));
   ui->pushButtonTrazabilidad->setEnabled(conf->permisos()->tiene("articulos.trazabilidad"));
   ui->pushButtonPonerFoto->setEnabled(conf->permisos()->tiene("articulos.modificar"));
+  ui->pushButtonBuscarFotoInternet->setEnabled(conf->permisos()->tiene("articulos.modificar"));
   ui->pushButtonBorrarFoto->setEnabled(conf->permisos()->tiene("articulos.modificar"));
+  ui->pushButtonGenerarDescripcionIA->setEnabled(
+      conf->permisos()->tiene("articulos.modificar") || conf->permisos()->tiene("articulos.crear"));
 }
 
 void Articulos::refrescarBotones(int i) {
@@ -943,6 +934,36 @@ void Articulos::on_pushButtonPonerFoto_clicked() {
   refrescarBotones(mapper.currentIndex());
 }
 
+/**
+ * @brief Slot para buscar fotos del producto en internet, previsualizarlas y guardarlas en el directorio configurado.
+ */
+void Articulos::on_pushButtonBuscarFotoInternet_clicked() {
+  QString desc = ui->lineEditDesc->text().trimmed();
+  if (desc.isEmpty()) {
+    QMessageBox::warning(this, tr("Buscar foto en Internet"),
+                         tr("Debes introducir la descripción del producto para buscar su foto."));
+    ui->lineEditDesc->setFocus();
+    return;
+  }
+
+  int curr = mapper.currentIndex();
+  QString fabricante = ui->labelFabricante->text().trimmed();
+  QString cod = ui->lineEditCod->text().trimmed();
+
+  // Abrir diálogo modal de búsqueda de fotos
+  DialogBuscarFotoInternet dlg(desc, fabricante, cod, this);
+  if (dlg.exec() == QDialog::Accepted) {
+    QString relativeFile = dlg.getNombreFicheroRelativo();
+    if (!relativeFile.isEmpty()) {
+      qDebug() << "Asignando foto descargada al artículo:" << relativeFile;
+      base.modificarFotoArticulo(relativeFile, cod);
+      recargarTabla();
+      mapper.setCurrentIndex(curr);
+      refrescarBotones(mapper.currentIndex());
+    }
+  }
+}
+
 void Articulos::on_pushButtonBorrarFoto_clicked() {
   int curr = mapper.currentIndex();
   base.modificarFotoArticulo("", ui->lineEditCod->text());
@@ -999,6 +1020,33 @@ void Articulos::on_pushButtonBuscarNotas_clicked() {
     }
   }
   delete buscarNotas;
+}
+
+/**
+ * @brief Slot para generar automáticamente la ficha y descripción del producto actual con IA y búsqueda web.
+ */
+void Articulos::on_pushButtonGenerarDescripcionIA_clicked() {
+  QString descripcion = ui->lineEditDesc->text().trimmed();
+  if (descripcion.isEmpty()) {
+    QMessageBox::warning(this, tr("Generar descripción con IA"),
+                         tr("Debes introducir al menos la descripción o nombre del producto antes de generar su ficha técnica."));
+    ui->lineEditDesc->setFocus();
+    return;
+  }
+
+  QString fabricante = ui->labelFabricante->text().trimmed();
+  QString familia = ui->labelFamilia->text().trimmed();
+  QString formato = ui->comboBoxFormato->currentText().trimmed();
+  QString ean = ui->lineEditCod->text().trimmed();
+
+  // Abrir el diálogo modal de generación con IA
+  DialogGenerarDescripcionIA dlg(descripcion, fabricante, familia, formato, ean, this);
+  if (dlg.exec() == QDialog::Accepted) {
+    QString resultadoHtml = dlg.getDescripcionGenerada();
+    if (!resultadoHtml.isEmpty()) {
+      ui->textEditNotas->setHtml(resultadoHtml);
+    }
+  }
 }
 
 void Articulos::on_lineEditCod_returnPressed() {

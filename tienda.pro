@@ -111,7 +111,10 @@ SOURCES += main.cpp\
     dialoganadirasalidas.cpp \
     asistenteia.cpp \
     dialogasistenteia.cpp \
-    dialogconocimientoia.cpp
+    dialogconocimientoia.cpp \
+    dialoggenerardescripcionia.cpp \
+    dialogbuscarfotointernet.cpp \
+    prepararpedidos.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -206,7 +209,10 @@ HEADERS  += tienda.h \
     dialoganadirasalidas.h \
     asistenteia.h \
     dialogasistenteia.h \
-    dialogconocimientoia.h
+    dialogconocimientoia.h \
+    dialoggenerardescripcionia.h \
+    dialogbuscarfotointernet.h \
+    prepararpedidos.h
 
 FORMS    += tienda.ui \
     generarvales.ui \
@@ -279,7 +285,10 @@ FORMS    += tienda.ui \
     dialogtrazabilidad.ui \
     dialoganadirasalidas.ui \
     dialogasistenteia.ui \
-    dialogconocimientoia.ui
+    dialogconocimientoia.ui \
+    dialoggenerardescripcionia.ui \
+    dialogbuscarfotointernet.ui \
+    prepararpedidos.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 

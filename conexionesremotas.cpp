@@ -1,5 +1,6 @@
 #include "conexionesremotas.h"
 #include "conexion.h"
+#include "syncmanager.h"
 conexionesRemotas::conexionesRemotas(QObject *parent)
     : QObject(parent)
 {}
