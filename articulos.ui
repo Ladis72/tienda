@@ -12,8 +12,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1266</width>
-    <height>696</height>
+    <width>1326</width>
+    <height>730</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -160,7 +160,7 @@
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
         <widget class="QWidget" name="General" native="true">
-         <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,0,0,0,0,0,1">
+         <layout class="QGridLayout" name="gridLayout" rowstretch="0,0,0,0,0,0,0,0,0,1,0">
           <property name="sizeConstraint">
            <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
           </property>
@@ -948,30 +948,30 @@ QPushButton#pushButtonBuscarFotoInternet:pressed {
          </layout>
         </widget>
        </item>
-        <item row="3" column="0">
-         <layout class="QHBoxLayout" name="horizontalLayoutComprasBotones">
-          <item>
-           <widget class="QPushButton" name="pushButtonVerFactura">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Ver factura</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushButtonCambiarProveedor">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Cambiar Proveedor</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
+       <item row="3" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayoutComprasBotones">
+         <item>
+          <widget class="QPushButton" name="pushButtonVerFactura">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Ver factura</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonCambiarProveedor">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Cambiar Proveedor</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
        <item row="2" column="0">
         <widget class="QLabel" name="labelProveedor">
          <property name="text">
@@ -1089,21 +1089,21 @@ QPushButton#pushButtonBuscarFotoInternet:pressed {
   <tabstop>lineEditCod</tabstop>
   <tabstop>lineEditDesc</tabstop>
   <tabstop>lineEditIva</tabstop>
+  <tabstop>lineEditCosto</tabstop>
+  <tabstop>lineEditPvp</tabstop>
   <tabstop>lineEditMinimo</tabstop>
   <tabstop>lineEditMaximo</tabstop>
   <tabstop>lineEditCodFamila</tabstop>
+  <tabstop>pushButtonBuscarFamilia</tabstop>
   <tabstop>lineEditCodFabricante</tabstop>
+  <tabstop>pushButtonBuscarFabricante</tabstop>
   <tabstop>comboBoxFormato</tabstop>
-  <tabstop>pushButtonEtiqueta</tabstop>
+  <tabstop>lineEditCantidad</tabstop>
+  <tabstop>pushButtonBuscarFotoInternet</tabstop>
+  <tabstop>pushButtonPonerFoto</tabstop>
+  <tabstop>pushButtonGenerarDescripcionIA</tabstop>
   <tabstop>pushButtonNuevo</tabstop>
-  <tabstop>pushButtonBorrar</tabstop>
   <tabstop>pushButtonModificar</tabstop>
-  <tabstop>pushButtonRefrescar</tabstop>
-  <tabstop>pushButtonAnterior</tabstop>
-  <tabstop>pushButtonSiguiente</tabstop>
-  <tabstop>pushButtonCerrar</tabstop>
-  <tabstop>pushButtonVer</tabstop>
-  <tabstop>textEditNotas</tabstop>
   <tabstop>treeWidgetStockTiendas</tabstop>
   <tabstop>lineEditPendientes</tabstop>
   <tabstop>tabWidget</tabstop>
@@ -1120,6 +1120,25 @@ QPushButton#pushButtonBuscarFotoInternet:pressed {
   <tabstop>radioButtonMeses</tabstop>
   <tabstop>radioButtonAnos</tabstop>
   <tabstop>pushButtonVerFactura</tabstop>
+  <tabstop>checkBoxRemoto</tabstop>
+  <tabstop>pushButtonCambiarCodigo</tabstop>
+  <tabstop>pushButtonCerrar</tabstop>
+  <tabstop>pushButtonBuscarNotas</tabstop>
+  <tabstop>pushButtonTrazabilidad</tabstop>
+  <tabstop>textEditNotas</tabstop>
+  <tabstop>pushButtonVer</tabstop>
+  <tabstop>lineEditEncargados</tabstop>
+  <tabstop>pushButtonEtiqueta</tabstop>
+  <tabstop>pushButtonBorrar</tabstop>
+  <tabstop>pushButtonRefrescar</tabstop>
+  <tabstop>pushButtonHistorialPrecios</tabstop>
+  <tabstop>pushButtonAnterior</tabstop>
+  <tabstop>pushButtonSiguiente</tabstop>
+  <tabstop>pushButtonBorrarFoto</tabstop>
+  <tabstop>radioButtonProveedores</tabstop>
+  <tabstop>pushButtonCambiarProveedor</tabstop>
+  <tabstop>pushButtonAnadirAPedido</tabstop>
+  <tabstop>pushButtonAnadirASalidas</tabstop>
  </tabstops>
  <resources/>
  <connections>
