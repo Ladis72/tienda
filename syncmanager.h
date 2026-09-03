@@ -85,7 +85,10 @@ private:
 
     // --- ID de la tienda local para trazabilidad ---
     int m_idTiendaLocal;
-    void cargarIdTiendaLocal();
+
+public:
+    /// Recarga el ID de la tienda marcada como local (local = 1)
+    void cargarIdTiendaLocal(const QString &connLocal = QString());
 
     // --- Inicialización de infraestructura SQL ---
 

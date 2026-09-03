@@ -1,4 +1,5 @@
 #include "tiendas.h"
+#include "syncmanager.h"
 #include <QFileDialog>
 #include <QMessageBox>
 #include "ui_tiendas.h"
@@ -148,6 +149,9 @@ void tiendas::on_pushButtonGuardar_clicked()
     }
     
     if (exito) {
+        if (SyncManager::instance()) {
+            SyncManager::instance()->cargarIdTiendaLocal();
+        }
         msgBox.setStandardButtons(QMessageBox::Ok);
         msgBox.exec();
         editandoNuevo = false;

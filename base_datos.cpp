@@ -1209,6 +1209,20 @@ bool baseDatos::modificarTienda(QStringList datos) {
   consulta.bindValue(13, datos.at(14)); // ssl_ca
   consulta.bindValue(14, datos.at(0));  // id
   if (consulta.exec()) {
+    // Si se marcó como local, asegurar que ninguna otra tienda quede como local
+    if (datos.at(10) == "1") {
+      QSqlQuery qReset(QSqlDatabase::database(conf->getConexionLocal()));
+      qReset.prepare("UPDATE tiendas SET local = 0 WHERE id != ?");
+      qReset.bindValue(0, datos.at(0));
+      qReset.exec();
+    }
+    // Si se marcó como master, asegurar que ninguna otra tienda quede como master
+    if (datos.at(9) == "1") {
+      QSqlQuery qResetM(QSqlDatabase::database(conf->getConexionLocal()));
+      qResetM.prepare("UPDATE tiendas SET master = 0 WHERE id != ?");
+      qResetM.bindValue(0, datos.at(0));
+      qResetM.exec();
+    }
     return true;
   }
   m_lastError = consulta.lastError().text();
@@ -2048,6 +2062,155 @@ bool baseDatos::borrarAlbaranTmp(QString idAlbaran) {
     return true;
   qDebug() << consulta.lastError().text();
   return false;
+}
+
+/**
+ * @brief Cambia el proveedor de un documento (factura o albarán) y actualiza pedidos y líneas asociadas.
+ * @param base Nombre de la conexión a la base de datos.
+ * @param nDoc Número del documento o factura.
+ * @param idProveedorViejo ID del proveedor actual (puede estar vacío).
+ * @param idProveedorNuevo ID del nuevo proveedor a asignar.
+ * @return true si se actualizó correctamente bajo transacción, false en caso de error.
+ */
+bool baseDatos::cambiarProveedorFactura(QString base, QString nDoc, QString idProveedorViejo, QString idProveedorNuevo) {
+  QSqlDatabase db = QSqlDatabase::database(base);
+  if (!db.isOpen()) {
+    qDebug() << "Error: Base de datos no abierta en cambiarProveedorFactura";
+    return false;
+  }
+
+  db.transaction();
+
+  // 1. Actualizar tabla facturas
+  QSqlQuery qFacturas(db);
+  if (!idProveedorViejo.isEmpty()) {
+    qFacturas.prepare("UPDATE facturas SET idProveedor = ? WHERE nFactura = ? AND idProveedor = ?");
+    qFacturas.bindValue(0, idProveedorNuevo);
+    qFacturas.bindValue(1, nDoc);
+    qFacturas.bindValue(2, idProveedorViejo);
+  } else {
+    qFacturas.prepare("UPDATE facturas SET idProveedor = ? WHERE nFactura = ?");
+    qFacturas.bindValue(0, idProveedorNuevo);
+    qFacturas.bindValue(1, nDoc);
+  }
+  if (!qFacturas.exec()) {
+    qDebug() << "Error al actualizar facturas:" << qFacturas.lastError().text();
+    db.rollback();
+    return false;
+  }
+
+  // 2. Actualizar tabla albaranes
+  QSqlQuery qAlbaranes(db);
+  if (!idProveedorViejo.isEmpty()) {
+    qAlbaranes.prepare("UPDATE albaranes SET idProveedor = ? WHERE nFactura = ? AND idProveedor = ?");
+    qAlbaranes.bindValue(0, idProveedorNuevo);
+    qAlbaranes.bindValue(1, nDoc);
+    qAlbaranes.bindValue(2, idProveedorViejo);
+  } else {
+    qAlbaranes.prepare("UPDATE albaranes SET idProveedor = ? WHERE nFactura = ?");
+    qAlbaranes.bindValue(0, idProveedorNuevo);
+    qAlbaranes.bindValue(1, nDoc);
+  }
+  if (!qAlbaranes.exec()) {
+    qDebug() << "Error al actualizar albaranes:" << qAlbaranes.lastError().text();
+    db.rollback();
+    return false;
+  }
+
+  // 3. Actualizar tabla pedidos
+  QSqlQuery qPedidos(db);
+  if (!idProveedorViejo.isEmpty()) {
+    qPedidos.prepare("UPDATE pedidos SET idProveedor = ? WHERE (npedido = ? OR nFactura = ?) AND idProveedor = ?");
+    qPedidos.bindValue(0, idProveedorNuevo);
+    qPedidos.bindValue(1, nDoc);
+    qPedidos.bindValue(2, nDoc);
+    qPedidos.bindValue(3, idProveedorViejo);
+  } else {
+    qPedidos.prepare("UPDATE pedidos SET idProveedor = ? WHERE (npedido = ? OR nFactura = ?)");
+    qPedidos.bindValue(0, idProveedorNuevo);
+    qPedidos.bindValue(1, nDoc);
+    qPedidos.bindValue(2, nDoc);
+  }
+  if (!qPedidos.exec()) {
+    qDebug() << "Error al actualizar pedidos:" << qPedidos.lastError().text();
+    db.rollback();
+    return false;
+  }
+
+  // 4. Actualizar tabla lineaspedido (la columna es nDocumento, no tiene npedido)
+  QSqlQuery qLineas(db);
+  if (!idProveedorViejo.isEmpty()) {
+    qLineas.prepare("UPDATE lineaspedido SET idProveedor = ? WHERE nDocumento = ? AND idProveedor = ?");
+    qLineas.bindValue(0, idProveedorNuevo);
+    qLineas.bindValue(1, nDoc);
+    qLineas.bindValue(2, idProveedorViejo);
+  } else {
+    qLineas.prepare("UPDATE lineaspedido SET idProveedor = ? WHERE nDocumento = ?");
+    qLineas.bindValue(0, idProveedorNuevo);
+    qLineas.bindValue(1, nDoc);
+  }
+  if (!qLineas.exec()) {
+    qDebug() << "Error al actualizar lineaspedido:" << qLineas.lastError().text();
+    db.rollback();
+    return false;
+  }
+
+  // 5. Actualizar albaranes_tmp si hubiera albarán temporal pendiente
+  QSqlQuery qAlbaranesTmp(db);
+  if (!idProveedorViejo.isEmpty()) {
+    qAlbaranesTmp.prepare("UPDATE albaranes_tmp SET idProveedor = ? WHERE npedido = ? AND idProveedor = ?");
+    qAlbaranesTmp.bindValue(0, idProveedorNuevo);
+    qAlbaranesTmp.bindValue(1, nDoc);
+    qAlbaranesTmp.bindValue(2, idProveedorViejo);
+  } else {
+    qAlbaranesTmp.prepare("UPDATE albaranes_tmp SET idProveedor = ? WHERE npedido = ?");
+    qAlbaranesTmp.bindValue(0, idProveedorNuevo);
+    qAlbaranesTmp.bindValue(1, nDoc);
+  }
+  qAlbaranesTmp.exec();
+
+  db.commit();
+
+  // 6. Actualizar inmediatamente en la nube si está conectada
+  if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+      QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    
+    QSqlQuery qPedNube(dbNube);
+    if (!idProveedorViejo.isEmpty()) {
+      qPedNube.prepare("UPDATE pedidos_nube SET idProveedor = ? WHERE (npedido = ? OR nFactura = ?) AND idProveedor = ?");
+      qPedNube.bindValue(0, idProveedorNuevo);
+      qPedNube.bindValue(1, nDoc);
+      qPedNube.bindValue(2, nDoc);
+      qPedNube.bindValue(3, idProveedorViejo);
+    } else {
+      qPedNube.prepare("UPDATE pedidos_nube SET idProveedor = ? WHERE (npedido = ? OR nFactura = ?)");
+      qPedNube.bindValue(0, idProveedorNuevo);
+      qPedNube.bindValue(1, nDoc);
+      qPedNube.bindValue(2, nDoc);
+    }
+    qPedNube.exec();
+
+    QSqlQuery qLinNube(dbNube);
+    if (!idProveedorViejo.isEmpty()) {
+      qLinNube.prepare("UPDATE lineaspedido_nube SET idProveedor = ? WHERE nDocumento = ? AND idProveedor = ?");
+      qLinNube.bindValue(0, idProveedorNuevo);
+      qLinNube.bindValue(1, nDoc);
+      qLinNube.bindValue(2, idProveedorViejo);
+    } else {
+      qLinNube.prepare("UPDATE lineaspedido_nube SET idProveedor = ? WHERE nDocumento = ?");
+      qLinNube.bindValue(0, idProveedorNuevo);
+      qLinNube.bindValue(1, nDoc);
+    }
+    qLinNube.exec();
+  }
+
+  // Registrar auditoría en el log de actividades
+  insertarLog(base, "Modificación", conf->getUsuario(),
+              QString("Cambio de proveedor para documento %1 (De ID %2 a ID %3)")
+                  .arg(nDoc, idProveedorViejo, idProveedorNuevo));
+
+  return true;
 }
 
 bool baseDatos::pasarLineaPedidoAHistorico(QString base, QStringList datos) {

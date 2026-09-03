@@ -11,6 +11,7 @@
 #include <QSqlDatabase>
 #include <QSqlError>
 #include "imprimirfacturaproveedor.h"
+#include "dialogcambiarproveedor.h"
 #include "ui_verfacturas.h"
 
 VerFacturas::VerFacturas(QString docType, QWidget *parent)
@@ -28,6 +29,7 @@ VerFacturas::VerFacturas(QString docType, QWidget *parent)
         ui->checkBoxTodosProveedores->hide();
         ui->pushButtonVerFactura->hide();
         ui->pushButtonPagar->hide();
+        ui->pushButtonCambiarProveedor->hide();
     }
 
     llenarProveedores();
@@ -272,6 +274,50 @@ void VerFacturas::on_pushButtonVerFactura_clicked()
     }
 
     imprimirFacturaProveedor factura(conf->getConexionLocal(), datos, idFactura);
+}
+
+/**
+ * @brief Permite a los administradores modificar el proveedor asignado al documento/factura seleccionado.
+ */
+void VerFacturas::on_pushButtonCambiarProveedor_clicked()
+{
+    // Restricción: Solo administradores (Rol 0) pueden modificar proveedores de facturas
+    if (conf->getRol() != 0) {
+        QMessageBox::warning(this, tr("Acceso denegado"),
+                             tr("Solo los administradores pueden cambiar el proveedor de una factura o documento."));
+        return;
+    }
+
+    if (idFactura.isEmpty() || tipoDocumento == "verifactu_logs") {
+        QMessageBox::information(this, tr("Aviso"),
+                                 tr("Seleccione un documento o factura de la tabla primero."));
+        return;
+    }
+
+    // Obtener el proveedor actual a partir de la fila seleccionada (columna 2 es el nombre del proveedor)
+    QString nombreProveedorActual = "";
+    if (datos.size() > 2) {
+        nombreProveedorActual = datos.at(2);
+    }
+    QString idProveedorViejo = base->idProveedor(nombreProveedorActual, conf->getConexionLocal());
+
+    DialogCambiarProveedor dialog(idFactura, nombreProveedorActual, this);
+    if (dialog.exec() == QDialog::Accepted) {
+        QString idNuevo = dialog.getIdProveedorNuevo();
+        QString nombreNuevo = dialog.getNombreProveedorNuevo();
+
+        if (base->cambiarProveedorFactura(conf->getConexionLocal(), idFactura, idProveedorViejo, idNuevo)) {
+            QMessageBox::information(this, tr("Proveedor actualizado"),
+                                     tr("Se ha actualizado el proveedor del documento '%1' a '%2' correctamente.")
+                                         .arg(idFactura, nombreNuevo));
+            idFactura = "";
+            datos.clear();
+            llenarTabla();
+        } else {
+            QMessageBox::critical(this, tr("Error"),
+                                  tr("No se pudo actualizar el proveedor en la base de datos."));
+        }
+    }
 }
 
 void VerFacturas::on_pushButtonCerrar_clicked()

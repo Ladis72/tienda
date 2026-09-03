@@ -115,6 +115,7 @@ private slots:
     void on_pushButtonHistorialPrecios_clicked();
 
     void on_pushButtonVerFactura_clicked();
+    void on_pushButtonCambiarProveedor_clicked();
 
     void on_checkBoxRemoto_stateChanged(int arg1);
 

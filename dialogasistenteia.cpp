@@ -1,11 +1,14 @@
 #include "dialogasistenteia.h"
 #include "ui_dialogasistenteia.h"
 #include "dialogconocimientoia.h"
+#include "dialoglogsia.h"
 #include <QCoreApplication>
 #include <QDate>
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QSettings>
+#include <QInputDialog>
+#include <QUrl>
 
 /**
  * @brief Constructor del diálogo DialogAsistenteIA.
@@ -25,6 +28,10 @@ DialogAsistenteIA::DialogAsistenteIA(QWidget *parent)
     connect(m_asistente, &AsistenteIA::estadoCambiado, this, &DialogAsistenteIA::slotEstadoCambiado);
     connect(m_asistente, &AsistenteIA::errorOcurrido, this, &DialogAsistenteIA::slotErrorOcurrido);
     connect(m_asistente, &AsistenteIA::herramientaEjecutada, this, &DialogAsistenteIA::slotHerramientaEjecutada);
+
+    // Conectar clics de feedback interactivo en el chat
+    ui->textBrowserChat->setOpenLinks(false);
+    connect(ui->textBrowserChat, &QTextBrowser::anchorClicked, this, &DialogAsistenteIA::slotAnchorClicked);
 
     // Mostrar el modelo global configurado
     ui->labelModeloActual->setText("Modelo: <b>" + m_asistente->modelo() + "</b>");
@@ -53,6 +60,8 @@ void DialogAsistenteIA::inicializarChat()
         ".msg-user { background-color: #e3f2fd; border-left: 4px solid #1976d2; color: #0d47a1; margin-left: 40px; }"
         ".msg-assistant { background-color: #f5f5f5; border-left: 4px solid #43a047; color: #212121; margin-right: 40px; }"
         ".msg-tool { background-color: #fff8e1; border: 1px dashed #ffa000; color: #e65100; font-size: 11px; padding: 4px 8px; border-radius: 4px; margin: 4px 20px; }"
+        ".feedback-bar { margin-top: 8px; padding-top: 6px; border-top: 1px dashed #ccc; font-size: 11px; color: #555; }"
+        ".feedback-btn { text-decoration: none; padding: 2px 6px; background-color: #e2e8f0; border-radius: 4px; color: #1e293b; font-weight: bold; margin-left: 4px; }"
         ".author { font-weight: bold; margin-bottom: 4px; font-size: 12px; }"
         "table { border-collapse: collapse; width: 100%; margin-top: 6px; }"
         "th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; }"
@@ -160,22 +169,38 @@ static QString convertirMarkdownAHtml(const QString &markdown)
 }
 
 /**
- * @brief Añade una burbuja de mensaje formateada al chat.
+ * @brief Añade una burbuja de mensaje formateada al chat con enlaces opcionales de feedback.
  */
 void DialogAsistenteIA::agregarBurbuja(const QString &remitente, const QString &texto,
-                                       const QString &colorFondo, const QString &colorBorde, bool esUsuario)
+                                       const QString &colorFondo, const QString &colorBorde,
+                                       bool esUsuario, qint64 idLog)
 {
+    Q_UNUSED(colorFondo);
+    Q_UNUSED(colorBorde);
+
     QString clase = esUsuario ? "msg-user" : "msg-assistant";
     QString icono = esUsuario ? "👤" : "🤖";
 
     QString textoHtml = convertirMarkdownAHtml(texto);
 
+    QString feedbackHtml;
+    if (!esUsuario && idLog > 0) {
+        feedbackHtml = QString(
+            "<div class='feedback-bar'>"
+            "¿Fue útil y correcta esta respuesta? "
+            "<a class='feedback-btn' href='feedback://correcta/%1'>👍 Correcta</a>"
+            "<a class='feedback-btn' href='feedback://incorrecta/%1'>👎 Incorrecta / Mejorable</a>"
+            "</div>"
+        ).arg(idLog);
+    }
+
     QString fragmento = QString(
         "<div class='msg-box %1'>"
         "<div class='author'>%2 %3</div>"
         "%4"
+        "%5"
         "</div>"
-    ).arg(clase, icono, remitente, textoHtml);
+    ).arg(clase, icono, remitente, textoHtml, feedbackHtml);
 
     m_htmlChat += fragmento;
     ui->textBrowserChat->setHtml(m_htmlChat + "</body></html>");
@@ -258,6 +283,15 @@ void DialogAsistenteIA::on_pushButtonConocimiento_clicked()
     dlg.exec();
 }
 
+/**
+ * @brief Abre el diálogo de Historial de Consultas, Auditoría y Feedback de IA.
+ */
+void DialogAsistenteIA::on_pushButtonVerLogs_clicked()
+{
+    DialogLogsIA dlg(this);
+    dlg.exec();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Sugerencias Rápidas
 // ─────────────────────────────────────────────────────────────────────────────
@@ -286,13 +320,13 @@ void DialogAsistenteIA::on_pushButtonCerrar_clicked()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Slots del Motor AsistenteIA
+// Slots del Motor AsistenteIA y Manejo de Enlaces
 // ─────────────────────────────────────────────────────────────────────────────
 
-void DialogAsistenteIA::slotRespuestaRecibida(const QString &respuesta)
+void DialogAsistenteIA::slotRespuestaRecibida(const QString &respuesta, qint64 idLog)
 {
     ui->pushButtonEnviar->setEnabled(true);
-    agregarBurbuja("Asistente IA", respuesta, "#f5f5f5", "#43a047", false);
+    agregarBurbuja("Asistente IA", respuesta, "#f5f5f5", "#43a047", false, idLog);
     ui->lineEditPregunta->setFocus();
 }
 
@@ -315,4 +349,33 @@ void DialogAsistenteIA::slotHerramientaEjecutada(const QString &nombreHerramient
 {
     Q_UNUSED(nombreHerramienta);
     agregarNotificacionTool(resumen);
+}
+
+/**
+ * @brief Procesa los clics en los enlaces de feedback embebidos en el chat.
+ */
+void DialogAsistenteIA::slotAnchorClicked(const QUrl &url)
+{
+    if (url.scheme() == "feedback") {
+        QString host = url.host();
+        QString path = url.path();
+        if (path.startsWith("/")) path.remove(0, 1);
+        qint64 idLog = path.toLongLong();
+
+        if (idLog <= 0) return;
+
+        if (host == "correcta") {
+            AsistenteIA::registrarFeedback(idLog, 1, "Evaluada como correcta desde el chat");
+            ui->labelEstado->setText(QString("✅ Interacción #%1 registrada como correcta.").arg(idLog));
+        } else if (host == "incorrecta") {
+            bool ok = false;
+            QString motivo = QInputDialog::getText(this, "Evaluar Respuesta como Incorrecta",
+                                                   "Describe qué falló o qué herramienta nueva se necesita:",
+                                                   QLineEdit::Normal, "", &ok);
+            if (ok && !motivo.trimmed().isEmpty()) {
+                AsistenteIA::registrarFeedback(idLog, -1, motivo.trimmed());
+                ui->labelEstado->setText(QString("⚠️ Interacción #%1 registrada con feedback.").arg(idLog));
+            }
+        }
+    }
 }

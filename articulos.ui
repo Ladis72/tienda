@@ -948,16 +948,30 @@ QPushButton#pushButtonBuscarFotoInternet:pressed {
          </layout>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QPushButton" name="pushButtonVerFactura">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>Ver factura</string>
-         </property>
-        </widget>
-       </item>
+        <item row="3" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayoutComprasBotones">
+          <item>
+           <widget class="QPushButton" name="pushButtonVerFactura">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Ver factura</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButtonCambiarProveedor">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Cambiar Proveedor</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
        <item row="2" column="0">
         <widget class="QLabel" name="labelProveedor">
          <property name="text">
