@@ -60,9 +60,35 @@ public:
     /// @brief Devuelve true si la IA está procesando una consulta actualmente
     bool estaProcesando() const { return m_procesando; }
 
+    /// @brief Devuelve el ID del último registro de log guardado
+    qint64 ultimoLogId() const { return m_ultimoLogId; }
+
+    // --- Métodos estáticos de Gestión de Logs y Feedback ---
+    /// @brief Asegura que la tabla de logs de peticiones exista en la base local y nube
+    static void asegurarTablaLogs();
+
+    /// @brief Guarda un registro de interacción en la tabla ia_logs_peticiones
+    static qint64 guardarLogPeticion(const QString &peticion, const QString &respuesta,
+                                     const QStringList &herramientas, int tiempoMs,
+                                     int idTienda, const QString &usuario, const QString &modelo,
+                                     int esCorrecta = 0, const QString &comentario = QString(),
+                                     const QString &sugerencia = QString());
+
+    /// @brief Actualiza la evaluación (1: correcta, -1: incorrecta) y comentarios de un log
+    static bool registrarFeedback(qint64 idLog, int evaluacion, const QString &comentario = QString(),
+                                  const QString &sugerencia = QString());
+
+    /// @brief Obtiene la lista de interacciones registradas según filtros
+    static QList<QVariantMap> obtenerLogs(int filtroEvaluacion = 99, const QString &filtroTexto = QString(),
+                                          const QString &fechaInicio = QString(), const QString &fechaFin = QString(),
+                                          int limite = 100);
+
+    /// @brief Exporta un reporte estructurado de fallos y mejoras para desarrollo de nuevas herramientas
+    static QString exportarReporteMejoras(int filtroEvaluacion = -1);
+
 signals:
-    /// @brief Emitido cuando la IA genera una respuesta final de texto para el usuario
-    void respuestaRecibida(const QString &respuesta);
+    /// @brief Emitido cuando la IA genera una respuesta final de texto para el usuario (incluye ID del log)
+    void respuestaRecibida(const QString &respuesta, qint64 idLog = 0);
 
     /// @brief Notifica cambios en el estado del motor (ej. "Pensando...", "Consultando stock...")
     void estadoCambiado(const QString &estado);
@@ -91,11 +117,23 @@ private:
     int m_profundidadToolCalls;
     QJsonArray m_historial;
 
+    // Seguimiento de petición en curso para logging
+    QString m_peticionActual;
+    qint64 m_tiempoInicioMs;
+    QStringList m_herramientasUsadasPeticion;
+    qint64 m_ultimoLogId;
+
     /// @brief Construye el mensaje inicial de sistema con contexto de la tienda y permisos
     QJsonObject construirMensajeSistema();
 
     /// @brief Construye el esquema JSON de herramientas disponibles para Ollama
     QJsonArray construirDefinicionHerramientas();
+
+    /// @brief Obtiene el último texto enviado por el usuario
+    QString obtenerUltimoTextoUsuario() const;
+
+    /// @brief Determina si la petición solicita estrictamente un único registro ("el último", "la última", etc.)
+    bool esPeticionDeUnSoloRegistro(const QString &texto, const QJsonObject &args) const;
 
     /// @brief Envía la petición HTTP a /api/chat con el historial y herramientas actuales
     void enviarPeticionChat();
@@ -124,6 +162,11 @@ private:
     QJsonObject toolVentasPorUsuario(const QJsonObject &args);
     QJsonObject toolActividadUsuario(const QJsonObject &args);
     QJsonObject toolEjecutarConsultaSql(const QJsonObject &args);
+    QJsonObject toolConsultarMovimientosCaja(const QJsonObject &args);
+    QJsonObject toolComparativaStockTiendas(const QJsonObject &args);
+    QJsonObject toolAuditoriaDescuadresCaja(const QJsonObject &args);
+    QJsonObject toolResumenComprasProveedores(const QJsonObject &args);
+    QJsonObject toolConsultarTraspasosIntertiendas(const QJsonObject &args);
 };
 
 #endif // ASISTENTEIA_H

@@ -160,6 +160,7 @@ public:
     bool modificarLineaPedido(QString base, QStringList datos);
     QStringList listadoPrestamistas();
     QStringList datosFactura(QSqlDatabase db, QString nFactura);
+    bool cambiarProveedorFactura(QString base, QString nDoc, QString idProveedorViejo, QString idProveedorNuevo);
 
     //Funciones CAJAS
     QSqlQuery ventas(QString fecha, QString tabla, QString base);

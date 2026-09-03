@@ -239,6 +239,19 @@ QPushButton:hover { background-color: #1565c0; }</string>
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="pushButtonCambiarProveedor">
+       <property name="minimumSize">
+        <size>
+         <width>180</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Cambiar Proveedor</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer name="horizontalSpacerActions">
        <property name="orientation">
         <enum>Qt::Orientation::Horizontal</enum>

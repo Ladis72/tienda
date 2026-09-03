@@ -74,6 +74,16 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="pushButtonVerLogs">
+       <property name="toolTip">
+        <string>Ver el historial de consultas, tiempos de respuesta y auditar si fueron correctas</string>
+       </property>
+       <property name="text">
+        <string>📊 Logs y Auditoría</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="pushButtonLimpiar">
        <property name="toolTip">
         <string>Limpiar historial de conversación</string>

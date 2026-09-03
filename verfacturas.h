@@ -33,6 +33,7 @@ private slots:
     void on_tableView_clicked(const QModelIndex &index);
 
     void on_pushButtonVerFactura_clicked();
+    void on_pushButtonCambiarProveedor_clicked();
     void on_pushButtonCerrar_clicked();
 
 private:

@@ -13,6 +13,7 @@
 #include "dialogcomparararticulos.h"
 #include "dialoggenerardescripcionia.h"
 #include "dialogbuscarfotointernet.h"
+#include "dialogcambiarproveedor.h"
 #include <QAction>
 #include <QDate>
 #include <QDir>
@@ -1329,21 +1330,25 @@ void Articulos::on_radioButtonVentasAno_clicked() { cargarVentas(); }
 void Articulos::on_radioButtonFacturas_clicked() {
   cargarCompras();
   ui->pushButtonVerFactura->setEnabled(true);
+  ui->pushButtonCambiarProveedor->setEnabled(true);
 }
 
 void Articulos::on_radioButtonMeses_clicked() {
   cargarCompras();
   ui->pushButtonVerFactura->setEnabled(false);
+  ui->pushButtonCambiarProveedor->setEnabled(false);
 }
 
 void Articulos::on_radioButtonAnos_clicked() {
   cargarCompras();
   ui->pushButtonVerFactura->setEnabled(false);
+  ui->pushButtonCambiarProveedor->setEnabled(false);
 }
 
 void Articulos::on_radioButtonProveedores_clicked() {
   cargarCompras();
   ui->pushButtonVerFactura->setEnabled(false);
+  ui->pushButtonCambiarProveedor->setEnabled(false);
 }
 
 void Articulos::on_pushButtonVer_clicked() {
@@ -1432,6 +1437,7 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index) {
     nFactura = modeloCompras.data(indice, Qt::EditRole).toString();
 
     ui->pushButtonVerFactura->setEnabled(true);
+    ui->pushButtonCambiarProveedor->setEnabled(true);
     return; // Salimos para no procesar el drill-down
   }
 
@@ -1472,8 +1478,9 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index) {
 
     ui->tableViewCompras->setModel(&modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
-    // En esta vista detalle, habilitamos ver la factura
+    // En esta vista detalle, habilitamos ver la factura y cambiar proveedor
     ui->pushButtonVerFactura->setEnabled(true);
+    ui->pushButtonCambiarProveedor->setEnabled(true);
   }
 }
 
@@ -1484,35 +1491,53 @@ void Articulos::mostrarFoto() {
   visor->showMaximized();
 }
 
-// ClickableLabel::ClickableLabel(QWidget *parent, Qt::WindowFlags f) :
-// QLabel(parent)
-//{
-
-//}
-
-// ClickableLabel::~ClickableLabel()
-//{
-
-//}
-
-// void ClickableLabel::mousePressEvent(QMouseEvent *event)
-//{
-//     emit clicked();
-// }
-
 void Articulos::on_pushButtonVerFactura_clicked() {
   if (nFactura.isEmpty()) {
     QMessageBox::information(
-        this, "No hay factura seleccionada",
-        "Seleccione una factura antes de usar esta opcion");
+        this, tr("No hay factura seleccionada"),
+        tr("Seleccione una factura antes de usar esta opcion"));
     return;
   }
   QStringList datos;
   imprimirFacturaProveedor facturaHtml(conf->getConexionLocal(), datos,
                                        nFactura);
+}
 
-  //    VisorFacturas *factura = new VisorFacturas(nFactura,this);
-  //    factura->show();
+/**
+ * @brief Permite a los administradores cambiar el proveedor asignado a la factura seleccionada.
+ */
+void Articulos::on_pushButtonCambiarProveedor_clicked() {
+  // Restricción: Solo administradores (Rol 0) pueden cambiar proveedores de facturas
+  if (conf->getRol() != 0) {
+    QMessageBox::warning(this, tr("Acceso denegado"),
+                         tr("Solo los administradores pueden cambiar el proveedor de una factura o documento."));
+    return;
+  }
+
+  if (nFactura.isEmpty()) {
+    QMessageBox::information(this, tr("No hay factura seleccionada"),
+                            tr("Seleccione una factura de la lista antes de cambiar su proveedor."));
+    return;
+  }
+
+  QString nombreActual = base.nombreProveedor(idProveedor, conf->getConexionLocal());
+  DialogCambiarProveedor dialog(nFactura, nombreActual, this);
+  if (dialog.exec() == QDialog::Accepted) {
+    QString idNuevo = dialog.getIdProveedorNuevo();
+    QString nombreNuevo = dialog.getNombreProveedorNuevo();
+
+    if (base.cambiarProveedorFactura(conf->getConexionLocal(), nFactura, idProveedor, idNuevo)) {
+      QMessageBox::information(this, tr("Proveedor actualizado"),
+                               tr("Se ha actualizado correctamente el proveedor del documento '%1' a '%2'.")
+                                   .arg(nFactura, nombreNuevo));
+      idProveedor = idNuevo;
+      ui->labelProveedor->setText(nombreNuevo);
+      cargarCompras();
+    } else {
+      QMessageBox::critical(this, tr("Error"),
+                            tr("No se pudo actualizar el proveedor en la base de datos."));
+    }
+  }
 }
 
 void Articulos::on_checkBoxRemoto_stateChanged(int arg1) {

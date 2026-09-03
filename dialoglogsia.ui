@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DialogLogsIA</class>
+ <widget class="QDialog" name="DialogLogsIA">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1050</width>
+    <height>680</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Historial de Peticiones y Auditoría de Respuestas IA</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayoutPrincipal">
+   <property name="spacing">
+    <number>8</number>
+   </property>
+   <property name="leftMargin">
+    <number>12</number>
+   </property>
+   <property name="topMargin">
+    <number>12</number>
+   </property>
+   <property name="rightMargin">
+    <number>12</number>
+   </property>
+   <property name="bottomMargin">
+    <number>12</number>
+   </property>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayoutCabecera">
+     <item>
+      <widget class="QLabel" name="labelTitulo">
+       <property name="font">
+        <font>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>📊 Registro de Peticiones, Rendimiento y Feedback de la IA</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacerCabecera">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonCopiarPortapapeles">
+       <property name="toolTip">
+        <string>Copia el informe directamente al portapapeles en formato Markdown para pegarlo en el chat del asistente Antigravity y solicitar mejoras o nuevas herramientas</string>
+       </property>
+       <property name="text">
+        <string>📋 Copiar para Antigravity / IA</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonExportar">
+       <property name="toolTip">
+        <string>Guarda un archivo .md listo para analizar qué herramientas crear o mejorar</string>
+       </property>
+       <property name="text">
+        <string>📁 Guardar Archivo .md</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayoutFiltros">
+     <property name="spacing">
+      <number>6</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="labelFiltroEstado">
+       <property name="text">
+        <string>Estado:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBoxFiltroEstado">
+       <item>
+        <property name="text">
+         <string>Todas las peticiones</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>❌ Solo Incorrectas / Mejorables (-1)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>✅ Solo Correctas (1)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>⚪ Sin Evaluar (0)</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="labelDesde">
+       <property name="text">
+        <string>Desde:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDateEdit" name="dateEditInicio">
+       <property name="calendarPopup">
+        <bool>true</bool>
+       </property>
+       <property name="displayFormat">
+        <string>yyyy-MM-dd</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="labelHasta">
+       <property name="text">
+        <string>Hasta:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDateEdit" name="dateEditFin">
+       <property name="calendarPopup">
+        <bool>true</bool>
+       </property>
+       <property name="displayFormat">
+        <string>yyyy-MM-dd</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="lineEditBuscar">
+       <property name="placeholderText">
+        <string>Buscar texto en preguntas o respuestas...</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonFiltrar">
+       <property name="text">
+        <string>🔍 Filtrar</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QSplitter" name="splitterPrincipal">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <widget class="QTableWidget" name="tableWidgetLogs">
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectRows</enum>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::SingleSelection</enum>
+      </property>
+      <column>
+       <property name="text">
+        <string>ID</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Fecha</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Hora</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Tienda</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Usuario</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Petición del Usuario</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Herramientas</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Tiempo</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Evaluación</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Feedback / Motivo</string>
+       </property>
+      </column>
+     </widget>
+     <widget class="QGroupBox" name="groupBoxDetalle">
+      <property name="title">
+       <string>Detalle de la Interacción Seleccionada</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayoutDetalle">
+       <property name="spacing">
+        <number>6</number>
+       </property>
+       <property name="leftMargin">
+        <number>8</number>
+       </property>
+       <property name="topMargin">
+        <number>8</number>
+       </property>
+       <property name="rightMargin">
+        <number>8</number>
+       </property>
+       <property name="bottomMargin">
+        <number>8</number>
+       </property>
+       <item>
+        <widget class="QSplitter" name="splitterTextos">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <widget class="QWidget" name="widgetPregunta" native="true">
+          <layout class="QVBoxLayout" name="layoutPreg">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="labelPreguntaTit">
+             <property name="font">
+              <font>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>🗣️ Pregunta del Usuario:</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QTextEdit" name="textEditPregunta">
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="widgetRespuesta" native="true">
+          <layout class="QVBoxLayout" name="layoutResp">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="labelRespuestaTit">
+             <property name="font">
+              <font>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>🤖 Respuesta de la IA:</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QTextEdit" name="textEditRespuesta">
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayoutFeedback">
+         <property name="spacing">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="labelEvaluarTit">
+           <property name="text">
+            <string>Evaluar Respuesta:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonMarcarCorrecta">
+           <property name="toolTip">
+            <string>Marcar respuesta como correcta y precisa</string>
+           </property>
+           <property name="text">
+            <string>👍 Correcta</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonMarcarIncorrecta">
+           <property name="toolTip">
+            <string>Marcar respuesta como errónea, incompleta o con falta de herramienta</string>
+           </property>
+           <property name="text">
+            <string>👎 Incorrecta / Mejorable</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelFeedbackTit">
+           <property name="text">
+            <string>Motivo / Qué faltó:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEditFeedback">
+           <property name="placeholderText">
+            <string>Explica qué falló o qué herramienta nueva se necesita...</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonGuardarFeedback">
+           <property name="text">
+            <string>💾 Guardar Feedback</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayoutInferior">
+     <item>
+      <widget class="QLabel" name="labelContador">
+       <property name="text">
+        <string>Total de consultas registradas: 0</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacerInferior">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonCerrar">
+       <property name="text">
+        <string>Cerrar</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
