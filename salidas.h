@@ -37,17 +37,30 @@ private slots:
 
     void on_comboBoxDestino_currentIndexChanged(int index);
     void on_pushButtonCerrar_clicked();
+    void on_pushButtonComparar_clicked();
+    void on_pushButtonAceptarAmbas_clicked();
 
 private:
     Ui::Salidas *ui;
     baseDatos base;
     QSqlQuery consulta;
     QSqlTableModel *mTablaSalidas;
-    void actualizarTabla();
+    QSqlQueryModel *mTablaRemota;
     Articulos *articulo;
-    void llenarComboTiendas();
     int lineas;
     double productos;
+
+    int m_idTiendaRemotaEnLocal;
+    int m_idTiendaLocalEnRemota;
+    QString m_nombreTiendaRemota;
+    QString m_connRemota;
+
+    void actualizarTabla();
+    void actualizarTablaRemota();
+    void llenarComboTiendas();
+    bool asegurarConexionRemota(const QString &nombreTienda);
+    int obtenerIdLocalEnRemota(const QString &connRemota);
+    bool procesarEntradaRemota(const QString &connRemota, int idLocalEnRemota);
 };
 
 #endif // SALIDAS_H
