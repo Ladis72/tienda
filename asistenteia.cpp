@@ -5663,14 +5663,33 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
 
     QStringList conexiones = resolverConexiones(tiendaFiltro);
 
-    // Pre-resolución: Obtener códigos exactos del producto desde el maestro de artículos (indexados en lineaspedido)
+    // Pre-resolución: Si se pasa un proveedor que en realidad es una marca/fabricante (ej. Bizilur, Natulim),
+    // detectarlo y convertirlo en búsqueda por producto/marca para no bloquear la consulta.
+    QSqlDatabase dbLocal = QSqlDatabase::database(conf ? conf->getConexionLocal() : "DB");
+    if (!proveedor.isEmpty() && producto.isEmpty() && dbLocal.isOpen()) {
+        QSqlQuery qProv(dbLocal);
+        qProv.prepare("SELECT COUNT(*) FROM proveedores WHERE LOWER(nombre) LIKE :p");
+        qProv.bindValue(":p", "%" + proveedor.toLower() + "%");
+        if (qProv.exec() && qProv.next() && qProv.value(0).toInt() == 0) {
+            // No existe como proveedor directo, comprobar si es fabricante/marca
+            QSqlQuery qFab(dbLocal);
+            qFab.prepare("SELECT id, nombre FROM fabricantes WHERE LOWER(nombre) LIKE :f LIMIT 1");
+            qFab.bindValue(":f", "%" + proveedor.toLower() + "%");
+            if (qFab.exec() && qFab.next()) {
+                producto = proveedor;
+                proveedor.clear();
+            }
+        }
+    }
+
+    // Pre-resolución: Obtener códigos exactos del producto/marca desde el maestro de artículos (indexados en lineaspedido)
     QStringList codigosArticulo;
     if (!producto.isEmpty()) {
         codigosArticulo.append(producto.trimmed());
-        QSqlDatabase dbLocal = QSqlDatabase::database(conf ? conf->getConexionLocal() : "DB");
         if (dbLocal.isOpen()) {
             QSqlQuery qArt(dbLocal);
-            qArt.prepare("SELECT cod FROM articulos WHERE LOWER(descripcion) LIKE :d OR cod = :c LIMIT 10");
+            qArt.prepare("SELECT cod FROM articulos WHERE LOWER(descripcion) LIKE :d OR cod = :c "
+                         "OR fabricante IN (SELECT id FROM fabricantes WHERE LOWER(nombre) LIKE :d) LIMIT 50");
             qArt.bindValue(":d", "%" + producto.toLower() + "%");
             qArt.bindValue(":c", producto.trimmed());
             if (qArt.exec()) {
@@ -5876,12 +5895,13 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
             else if (tNorm == "local" || tNorm.contains("sucursal")) idTiendaFiltro = (conf ? conf->getIdTienda() : 4);
 
             QStringList docsMatchingNube;
+            QList<QPair<int, int>> pedidosMatchingNube; // (id_tienda, id_local)
             if (!producto.isEmpty()) {
                 QStringList escapedCodigos;
                 for (const QString &c : codigosArticulo) escapedCodigos.append("'" + c + "'");
 
                 QSqlQuery qFiltro(dbNube);
-                QString sqlFiltro = QString("SELECT DISTINCT nDocumento FROM lineaspedido_nube WHERE (cod IN (%1) "
+                QString sqlFiltro = QString("SELECT DISTINCT id_tienda, id_local, nDocumento FROM lineaspedido_nube WHERE (cod IN (%1) "
                                             "OR LOWER(descripcion) LIKE :desc) ")
                                     .arg(escapedCodigos.join(","));
                 if (idTiendaFiltro > 0) {
@@ -5892,13 +5912,18 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
                 qFiltro.bindValue(":desc", "%" + producto.toLower() + "%");
                 if (qFiltro.exec()) {
                     while (qFiltro.next()) {
-                        QString d = qFiltro.value(0).toString().trimmed();
-                        if (!d.isEmpty()) docsMatchingNube.append("'" + d + "'");
+                        int tId = qFiltro.value("id_tienda").toInt();
+                        int lId = qFiltro.value("id_local").toInt();
+                        QString d = qFiltro.value("nDocumento").toString().trimmed();
+                        pedidosMatchingNube.append(qMakePair(tId, lId));
+                        if (!d.isEmpty() && !docsMatchingNube.contains("'" + d + "'")) {
+                            docsMatchingNube.append("'" + d + "'");
+                        }
                     }
                 }
             }
 
-            if (!producto.isEmpty() && docsMatchingNube.isEmpty()) {
+            if (!producto.isEmpty() && docsMatchingNube.isEmpty() && pedidosMatchingNube.isEmpty()) {
                 // No hay compras registradas con este producto en la nube
                 consultadoNubeAcep = true;
             } else {
@@ -5927,8 +5952,19 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
                 if (!fechaF.isEmpty()) {
                     sql += "AND p.fechaPedido <= :f2 ";
                 }
-                if (!docsMatchingNube.isEmpty()) {
-                    sql += QString("AND (p.npedido IN (%1) OR p.nFactura IN (%1)) ").arg(docsMatchingNube.join(","));
+                if (!docsMatchingNube.isEmpty() || !pedidosMatchingNube.isEmpty()) {
+                    QStringList orParts;
+                    if (!docsMatchingNube.isEmpty()) {
+                        orParts.append(QString("(p.npedido IN (%1) OR p.nFactura IN (%1))").arg(docsMatchingNube.join(",")));
+                    }
+                    if (!pedidosMatchingNube.isEmpty()) {
+                        QStringList tuplePairs;
+                        for (const auto &pair : pedidosMatchingNube) {
+                            tuplePairs.append(QString("(%1, %2)").arg(pair.first).arg(pair.second));
+                        }
+                        orParts.append(QString("(p.id_tienda, p.id_local) IN (%1)").arg(tuplePairs.join(",")));
+                    }
+                    sql += QString("AND (%1) ").arg(orParts.join(" OR "));
                 }
                 sql += QString(" ORDER BY p.fechaPedido DESC, p.id_local DESC LIMIT %1").arg(limite);
 
@@ -5951,7 +5987,6 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
                 while (q.next()) {
                     int idTienda = q.value("id_tienda").toInt();
                     int idLocal = q.value("id_local").toInt();
-                    int idProv = q.value("idProveedor").toInt();
                     QString provNom = q.value("nombre_proveedor").toString();
                     QString numPed = q.value("npedido").toString();
                     QString fPed = q.value("fecha_ped").toString();
@@ -5974,11 +6009,11 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
                                         "COALESCE(DATE_FORMAT(fc, '%Y-%m-%d'), fc, '') AS fecha_cad, "
                                         "costo AS precioCosto, descuento1 AS descuento, base AS baseProducto, "
                                         "tipoIva, totalbase AS baseLinea, iva, re, pvp "
-                                        "FROM lineaspedido_nube WHERE id_tienda = :tId AND idProveedor = :idProv "
-                                        "AND (nDocumento = :doc OR nDocumento = :nFact) "
+                                        "FROM lineaspedido_nube WHERE id_tienda = :tId "
+                                        "AND (id_local = :idLocal OR nDocumento = :doc OR nDocumento = :nFact) "
                                         "ORDER BY id_local ASC");
                         qLineas.bindValue(":tId", idTienda);
-                        qLineas.bindValue(":idProv", idProv);
+                        qLineas.bindValue(":idLocal", idLocal);
                         qLineas.bindValue(":doc", numPed);
                         qLineas.bindValue(":nFact", nFact);
 

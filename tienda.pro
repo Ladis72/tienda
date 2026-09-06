@@ -116,7 +116,8 @@ SOURCES += main.cpp\
     dialoggenerardescripcionia.cpp \
     dialogbuscarfotointernet.cpp \
     prepararpedidos.cpp \
-    dialogcambiarproveedor.cpp
+    dialogcambiarproveedor.cpp \
+    dialogcomparartraspaso.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -216,7 +217,8 @@ HEADERS  += tienda.h \
     dialoggenerardescripcionia.h \
     dialogbuscarfotointernet.h \
     prepararpedidos.h \
-    dialogcambiarproveedor.h
+    dialogcambiarproveedor.h \
+    dialogcomparartraspaso.h
 
 FORMS    += tienda.ui \
     generarvales.ui \
@@ -294,7 +296,8 @@ FORMS    += tienda.ui \
     dialoggenerardescripcionia.ui \
     dialogbuscarfotointernet.ui \
     prepararpedidos.ui \
-    dialogcambiarproveedor.ui
+    dialogcambiarproveedor.ui \
+    dialogcomparartraspaso.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 
