@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QUrlQuery>
+#include <QTextDocument>
 #include <QDebug>
 
 /**
@@ -100,93 +101,30 @@ void DialogBuscarFotoInternet::iniciarBusqueda()
     ui->pushButtonAceptar->setEnabled(false);
     ui->labelEstado->setText(tr("🔍 Conectando con el buscador de imágenes..."));
 
-    obtenerVqdYBuscar(termino);
+    buscarImagenes(termino);
 }
 
 /**
- * @brief Paso 1: Obtiene el token VQD necesario para consultar imágenes en DuckDuckGo.
+ * @brief Envía la consulta HTTP asíncrona al buscador de imágenes.
+ *        Utiliza el endpoint de imágenes sin requerir tokens volátiles que causan errores 403.
+ * @param termino Cadena de texto a buscar (nombre de producto, fabricante, etc.).
  */
-void DialogBuscarFotoInternet::obtenerVqdYBuscar(const QString &termino)
+void DialogBuscarFotoInternet::buscarImagenes(const QString &termino)
 {
-    QUrl url("https://duckduckgo.com/");
+    QUrl url("https://www.bing.com/images/async");
     QUrlQuery query;
     query.addQueryItem("q", termino);
+    query.addQueryItem("async", "1");
+    query.addQueryItem("first", "1");
+    query.addQueryItem("count", "35");
     url.setQuery(query);
 
     QNetworkRequest req(url);
+    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     req.setHeader(QNetworkRequest::UserAgentHeader,
-                  "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0");
-
-    QNetworkReply *reply = m_netManager->get(req);
-    connect(reply, &QNetworkReply::finished, this, [this, reply, termino]() {
-        onVqdReplyFinished(reply, termino);
-    });
-}
-
-/**
- * @brief Procesa el token VQD y ejecuta la consulta de imágenes JSON.
- */
-void DialogBuscarFotoInternet::onVqdReplyFinished(QNetworkReply *reply, const QString &termino)
-{
-    reply->deleteLater();
-
-    if (reply->error() != QNetworkReply::NoError) {
-        ui->labelEstado->setText(tr("❌ Error de red al iniciar la búsqueda: %1").arg(reply->errorString()));
-        ui->progressBar->setRange(0, 100);
-        ui->progressBar->setValue(0);
-        ui->pushButtonBuscar->setEnabled(true);
-        m_buscando = false;
-        return;
-    }
-
-    QString html = QString::fromUtf8(reply->readAll());
-    QString vqd;
-
-    // Extraer token VQD con expresiones regulares
-    QRegularExpression reVqd("vqd=([0-9-]+)");
-    QRegularExpressionMatch m = reVqd.match(html);
-    if (m.hasMatch()) {
-        vqd = m.captured(1);
-    } else {
-        QRegularExpression reVqdQuotes("vqd=[\"']?([^&\"']+)[\"']?");
-        QRegularExpressionMatch m2 = reVqdQuotes.match(html);
-        if (m2.hasMatch()) {
-            vqd = m2.captured(1);
-        }
-    }
-
-    if (vqd.isEmpty()) {
-        ui->labelEstado->setText(tr("⚠️ No se pudo obtener autorización del buscador. Reintenta con otro término."));
-        ui->progressBar->setRange(0, 100);
-        ui->progressBar->setValue(0);
-        ui->pushButtonBuscar->setEnabled(true);
-        m_buscando = false;
-        return;
-    }
-
-    buscarImagenesConVqd(vqd, termino);
-}
-
-/**
- * @brief Paso 2: Consulta el catálogo de imágenes con el token VQD.
- */
-void DialogBuscarFotoInternet::buscarImagenesConVqd(const QString &vqd, const QString &termino)
-{
-    ui->labelEstado->setText(tr("📷 Descargando resultados de imágenes..."));
-
-    QUrl url("https://duckduckgo.com/i.js");
-    QUrlQuery query;
-    query.addQueryItem("q", termino);
-    query.addQueryItem("o", "json");
-    query.addQueryItem("vqd", vqd);
-    query.addQueryItem("f", ",,,");
-    query.addQueryItem("p", "1");
-    url.setQuery(query);
-
-    QNetworkRequest req(url);
-    req.setHeader(QNetworkRequest::UserAgentHeader,
-                  "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0");
-    req.setRawHeader("Accept", "application/json");
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+    req.setRawHeader("Accept", "*/*");
+    req.setRawHeader("Accept-Language", "es-ES,es;q=0.9,en;q=0.8");
 
     QNetworkReply *reply = m_netManager->get(req);
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
@@ -195,7 +133,8 @@ void DialogBuscarFotoInternet::buscarImagenesConVqd(const QString &vqd, const QS
 }
 
 /**
- * @brief Procesa el JSON con las imágenes candidatas devueltas.
+ * @brief Procesa el HTML devuelto por el buscador y extrae las imágenes candidatas.
+ * @param reply Objeto QNetworkReply con la respuesta HTTP.
  */
 void DialogBuscarFotoInternet::onImagesSearchReplyFinished(QNetworkReply *reply)
 {
@@ -209,32 +148,64 @@ void DialogBuscarFotoInternet::onImagesSearchReplyFinished(QNetworkReply *reply)
         return;
     }
 
-    QByteArray data = reply->readAll();
-    QJsonDocument doc = QJsonDocument::fromJson(data);
-    if (!doc.isObject()) {
-        ui->labelEstado->setText(tr("❌ Respuesta no válida del buscador de imágenes."));
-        return;
-    }
+    QString htmlContent = QString::fromUtf8(reply->readAll());
 
-    QJsonArray results = doc.object().value("results").toArray();
-    if (results.isEmpty()) {
-        ui->labelEstado->setText(tr("⚠️ No se encontraron imágenes para este término. Prueba a cambiar el texto."));
-        ui->labelPreviewGrande->setText(tr("Sin resultados."));
-        return;
-    }
+    // Localizar tarjetas de imágenes (etiquetas <a> con clase "iusc" y atributo m="...")
+    QRegularExpression reCard("<a\\b[^>]*?class=\"[^\"]*?\\biusc\\b[^\"]*?\"[^>]*>");
+    QRegularExpressionMatchIterator it = reCard.globalMatch(htmlContent);
 
-    int maxResultados = qMin(results.size(), 24);
-    for (int i = 0; i < maxResultados; ++i) {
-        QJsonObject obj = results[i].toObject();
+    QRegularExpression reM("m=\"([^\"]+)\"");
+    QRegularExpression reH("exph=(\\d+)");
+    QRegularExpression reW("expw=(\\d+)");
+
+    while (it.hasNext() && m_candidatas.size() < 30) {
+        QRegularExpressionMatch matchCard = it.next();
+        QString cardTag = matchCard.captured(0);
+
+        QRegularExpressionMatch matchM = reM.match(cardTag);
+        if (!matchM.hasMatch()) {
+            continue;
+        }
+
+        // El atributo m almacena metadatos JSON con comillas escapadas como &quot;
+        QString rawM = matchM.captured(1);
+        rawM.replace("&quot;", "\"");
+        rawM.replace("&amp;", "&");
+        rawM.replace("&lt;", "<");
+        rawM.replace("&gt;", ">");
+
+        QJsonDocument doc = QJsonDocument::fromJson(rawM.toUtf8());
+        if (!doc.isObject()) {
+            continue;
+        }
+
+        QJsonObject obj = doc.object();
+        QString imgUrl = obj.value("murl").toString();
+        QString thumbUrl = obj.value("turl").toString();
+        QString title = obj.value("t").toString();
+
+        if (imgUrl.isEmpty()) {
+            continue;
+        }
+
+        // Decodificar entidades HTML residuales del título
+        QTextDocument textDoc;
+        textDoc.setHtml(title);
+        title = textDoc.toPlainText().trimmed();
+
         FotoCandidata cand;
-        cand.urlImagen = obj.value("image").toString();
-        cand.urlThumbnail = obj.value("thumbnail").toString();
-        cand.titulo = obj.value("title").toString();
-        cand.ancho = obj.value("width").toInt();
-        cand.alto = obj.value("height").toInt();
+        cand.urlImagen = imgUrl;
+        cand.urlThumbnail = thumbUrl.isEmpty() ? imgUrl : thumbUrl;
+        cand.titulo = title;
 
-        if (cand.urlThumbnail.isEmpty()) {
-            cand.urlThumbnail = cand.urlImagen;
+        // Extraer dimensiones si están presentes en la etiqueta
+        QRegularExpressionMatch matchH = reH.match(cardTag);
+        if (matchH.hasMatch()) {
+            cand.alto = matchH.captured(1).toInt();
+        }
+        QRegularExpressionMatch matchW = reW.match(cardTag);
+        if (matchW.hasMatch()) {
+            cand.ancho = matchW.captured(1).toInt();
         }
 
         m_candidatas.append(cand);
@@ -248,6 +219,12 @@ void DialogBuscarFotoInternet::onImagesSearchReplyFinished(QNetworkReply *reply)
         item->setTextAlignment(Qt::AlignHCenter | Qt::AlignBottom);
         item->setToolTip(cand.titulo + "\n" + cand.urlImagen);
         ui->listWidgetFotos->addItem(item);
+    }
+
+    if (m_candidatas.isEmpty()) {
+        ui->labelEstado->setText(tr("⚠️ No se encontraron imágenes para este término. Prueba a cambiar el texto."));
+        ui->labelPreviewGrande->setText(tr("Sin resultados."));
+        return;
     }
 
     ui->labelEstado->setText(tr("✅ %1 imágenes encontradas. Descargando miniaturas...").arg(m_candidatas.size()));
@@ -264,8 +241,9 @@ void DialogBuscarFotoInternet::descargarMiniaturas()
         if (urlThumb.isEmpty()) continue;
 
         QNetworkRequest req(urlThumb);
+        req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
         req.setHeader(QNetworkRequest::UserAgentHeader,
-                      "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0");
+                      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
         QNetworkReply *reply = m_netManager->get(req);
         connect(reply, &QNetworkReply::finished, this, [this, reply, i]() {
@@ -389,8 +367,9 @@ void DialogBuscarFotoInternet::on_pushButtonAceptar_clicked()
 void DialogBuscarFotoInternet::descargarYGuardarFoto(const QString &url, const QString &rutaDestino)
 {
     QNetworkRequest req(url);
+    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     req.setHeader(QNetworkRequest::UserAgentHeader,
-                  "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0");
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
     QNetworkReply *reply = m_netManager->get(req);
     connect(reply, &QNetworkReply::finished, this, [this, reply, rutaDestino]() {
