@@ -45,10 +45,7 @@ public:
     QString getNombreFicheroRelativo() const;
 
 private slots:
-    /// @brief Procesa el token VQD para la búsqueda de imágenes
-    void onVqdReplyFinished(QNetworkReply *reply, const QString &termino);
-
-    /// @brief Procesa la lista JSON de imágenes devuelta por el buscador
+    /// @brief Procesa los resultados de imágenes devueltos por el buscador
     void onImagesSearchReplyFinished(QNetworkReply *reply);
 
     /// @brief Slot invocado cuando se completa la descarga de una miniatura
@@ -85,11 +82,8 @@ private:
     /// @brief Inicia el ciclo completo de búsqueda de fotos
     void iniciarBusqueda();
 
-    /// @brief Obtiene el token VQD necesario para consultar imágenes en DuckDuckGo
-    void obtenerVqdYBuscar(const QString &termino);
-
-    /// @brief Realiza la petición de catálogo de imágenes con el token VQD
-    void buscarImagenesConVqd(const QString &vqd, const QString &termino);
+    /// @brief Realiza la petición de búsqueda de imágenes en el buscador web
+    void buscarImagenes(const QString &termino);
 
     /// @brief Descarga las miniaturas de las imágenes candidatas en segundo plano
     void descargarMiniaturas();
