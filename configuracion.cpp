@@ -4,6 +4,8 @@
 
 Configuracion::Configuracion() {
   usarPreciosLocales = false;
+  rol = -1;
+  usuario = "";
 }
 
 Configuracion::~Configuracion() {}

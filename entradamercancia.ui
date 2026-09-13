@@ -6,9 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1250</width>
-    <height>750</height>
+    <width>1336</width>
+    <height>698</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Entrada de Mercancía / Almacén</string>
@@ -34,6 +40,12 @@
    </property>
    <item>
     <widget class="QFrame" name="headerFrame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="minimumSize">
       <size>
        <width>0</width>
@@ -85,6 +97,12 @@
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
         </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
        </spacer>
       </item>
       <item>
@@ -108,6 +126,12 @@
    </item>
    <item>
     <widget class="QFrame" name="sourceFrame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="styleSheet">
       <string notr="true">QFrame#sourceFrame { background-color: white; border-radius: 5px; border: 1px solid #e0e0e0; }</string>
      </property>
@@ -133,6 +157,12 @@
        <spacer name="horizontalSpacerSrc">
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
         </property>
        </spacer>
       </item>
@@ -195,6 +225,12 @@
            <spacer name="spacerLocalHeader">
             <property name="orientation">
              <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
             </property>
            </spacer>
           </item>
@@ -293,6 +329,12 @@
             <property name="orientation">
              <enum>Qt::Orientation::Horizontal</enum>
             </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
            </spacer>
           </item>
           <item>
@@ -329,14 +371,23 @@
    </item>
    <item>
     <widget class="QFrame" name="entryFrame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="styleSheet">
       <string notr="true">QFrame#entryFrame { background-color: #f1f8e9; border-radius: 5px; border: 1px solid #c8e6c9; }</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_Entry">
-      <item row="0" column="0">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Cod.</string>
+      <item row="1" column="2">
+       <widget class="QLineEdit" name="lineEditUds">
+        <property name="maximumSize">
+         <size>
+          <width>60</width>
+          <height>16777215</height>
+         </size>
         </property>
        </widget>
       </item>
@@ -347,10 +398,16 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="2">
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>Cant.</string>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="lineEditDesc"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLineEdit" name="lineEditCod">
+        <property name="maximumSize">
+         <size>
+          <width>150</width>
+          <height>16777215</height>
+         </size>
         </property>
        </widget>
       </item>
@@ -368,24 +425,25 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QLineEdit" name="lineEditCod">
-        <property name="maximumSize">
-         <size>
-          <width>150</width>
-          <height>16777215</height>
-         </size>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Cod.</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="lineEditDesc"/>
+      <item row="0" column="2">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Cant.</string>
+        </property>
+       </widget>
       </item>
-      <item row="1" column="2">
-       <widget class="QLineEdit" name="lineEditUds">
+      <item row="1" column="4">
+       <widget class="QLineEdit" name="lineEditPVP">
         <property name="maximumSize">
          <size>
-          <width>60</width>
+          <width>100</width>
           <height>16777215</height>
          </size>
         </property>
@@ -401,137 +459,190 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="4">
-       <widget class="QLineEdit" name="lineEditPVP">
-        <property name="maximumSize">
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="botonesFrame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayoutActions">
+      <item>
+       <widget class="QPushButton" name="pushButtonAgregarLinea">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton { background-color: #43a047; color: white; font-weight: bold; }</string>
+        </property>
+        <property name="text">
+         <string>Añadir Línea</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonBorrar">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Borrar Línea</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonAceptar">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>160</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="toolTip">
+         <string>Acepta y consolida las entradas únicamente en la tienda local</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton { background-color: #2e7d32; color: white; font-weight: bold; }</string>
+        </property>
+        <property name="text">
+         <string>Aceptar Entradas</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonComparar">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="toolTip">
+         <string>Abre la comparativa detallada entre la tienda local y la remota para solventar diferencias</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton { background-color: #1565c0; color: white; font-weight: bold; }
+QPushButton:hover { background-color: #0d47a1; }</string>
+        </property>
+        <property name="text">
+         <string>Comparar Tablas</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonAceptarAmbas">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>200</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="toolTip">
+         <string>Acepta la entrada local y descuenta la salida remota simultáneamente (Exclusivo Administradores)</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton { background-color: #6a1b9a; color: white; font-weight: bold; border: 1px solid #4a148c; }
+QPushButton:hover { background-color: #4a148c; }
+QPushButton:disabled { background-color: #b0bec5; color: #78909c; border: none; }</string>
+        </property>
+        <property name="text">
+         <string>Aceptar en Ambas Tiendas</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacerActions">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Policy::MinimumExpanding</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonSalir">
+        <property name="minimumSize">
          <size>
           <width>100</width>
-          <height>16777215</height>
+          <height>40</height>
          </size>
+        </property>
+        <property name="text">
+         <string>Salir</string>
+        </property>
+        <property name="shortcut">
+         <string>Esc</string>
         </property>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayoutActions">
-     <item>
-      <widget class="QPushButton" name="pushButtonAgregarLinea">
-       <property name="minimumSize">
-        <size>
-         <width>120</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Añadir Línea</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton { background-color: #43a047; color: white; font-weight: bold; }</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonBorrar">
-       <property name="minimumSize">
-        <size>
-         <width>120</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Borrar Línea</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonAceptar">
-       <property name="minimumSize">
-        <size>
-         <width>160</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Aceptar Entradas</string>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton { background-color: #2e7d32; color: white; font-weight: bold; }</string>
-       </property>
-       <property name="toolTip">
-        <string>Acepta y consolida las entradas únicamente en la tienda local</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonComparar">
-       <property name="minimumSize">
-        <size>
-         <width>150</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton { background-color: #1565c0; color: white; font-weight: bold; }
-QPushButton:hover { background-color: #0d47a1; }</string>
-       </property>
-       <property name="text">
-        <string>Comparar Tablas</string>
-       </property>
-       <property name="toolTip">
-        <string>Abre la comparativa detallada entre la tienda local y la remota para solventar diferencias</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonAceptarAmbas">
-       <property name="minimumSize">
-        <size>
-         <width>200</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QPushButton { background-color: #6a1b9a; color: white; font-weight: bold; border: 1px solid #4a148c; }
-QPushButton:hover { background-color: #4a148c; }
-QPushButton:disabled { background-color: #b0bec5; color: #78909c; border: none; }</string>
-       </property>
-       <property name="text">
-        <string>Aceptar en Ambas Tiendas</string>
-       </property>
-       <property name="toolTip">
-        <string>Acepta la entrada local y descuenta la salida remota simultáneamente (Exclusivo Administradores)</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacerActions">
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonSalir">
-       <property name="minimumSize">
-        <size>
-         <width>100</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Salir</string>
-       </property>
-       <property name="shortcut">
-        <string>Esc</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>comboBoxProcedencia</tabstop>
+  <tabstop>lineEditCod</tabstop>
+  <tabstop>lineEditDesc</tabstop>
+  <tabstop>lineEditUds</tabstop>
+  <tabstop>dateEditCaducidad</tabstop>
+  <tabstop>lineEditPVP</tabstop>
+  <tabstop>pushButtonAgregarLinea</tabstop>
+  <tabstop>pushButtonBorrar</tabstop>
+  <tabstop>pushButtonAceptar</tabstop>
+  <tabstop>pushButtonComparar</tabstop>
+  <tabstop>pushButtonAceptarAmbas</tabstop>
+  <tabstop>pushButtonSalir</tabstop>
+  <tabstop>tableView</tabstop>
+  <tabstop>tableViewRemota</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

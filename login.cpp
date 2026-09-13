@@ -312,4 +312,12 @@ void Login::on_comboBoxTienda_currentIndexChanged(int index)
     m_prevTiendaIndex = index;
 }
 
+/**
+ * @brief Cancela el inicio de sesión y rechaza el diálogo.
+ */
+void Login::on_pushButtonCancelar_clicked()
+{
+    reject();
+}
+
 

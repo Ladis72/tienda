@@ -31,6 +31,7 @@ public:
                                         const QString &familia = QString(),
                                         const QString &formato = QString(),
                                         const QString &ean = QString(),
+                                        const QString &notasPrevias = QString(),
                                         QWidget *parent = nullptr);
     ~DialogGenerarDescripcionIA();
 
@@ -66,6 +67,7 @@ private:
     QString m_familia;
     QString m_formato;
     QString m_ean;
+    QString m_notasPrevias;
 
     // Configuración de Ollama
     QString m_baseUrlOllama;

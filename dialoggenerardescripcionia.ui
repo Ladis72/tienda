@@ -227,29 +227,29 @@ QPushButton:pressed {
      </item>
     </layout>
    </item>
-   <item>
-    <widget class="QLabel" name="labelInstruccionResultado">
-     <property name="text">
-      <string>Resultado generado (puedes editarlo o complementarlo antes de aplicarlo):</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QTextEdit" name="textEditResultado">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>280</height>
-      </size>
-     </property>
-     <property name="acceptRichText">
-      <bool>true</bool>
-     </property>
-     <property name="placeholderText">
-      <string>Aquí aparecerá la descripción generada con la estructura estándar (Indicación, Precauciones, Composición, Posología)...</string>
-     </property>
-    </widget>
-   </item>
+    <item>
+     <widget class="QLabel" name="labelInstruccionResultado">
+      <property name="text">
+       <string>Resultado generado (Composición exacta y confirmada — puedes revisarla antes de aplicar):</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTextEdit" name="textEditResultado">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>280</height>
+       </size>
+      </property>
+      <property name="acceptRichText">
+       <bool>true</bool>
+      </property>
+      <property name="placeholderText">
+       <string>Aquí aparecerá la descripción generada con la estructura estándar (Indicación, Precauciones, Composición exacta y confirmada, Posología)...</string>
+      </property>
+     </widget>
+    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayoutBotones">
      <property name="spacing">

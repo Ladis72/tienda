@@ -510,7 +510,9 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   QShortcut *shortcutCtrlI = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_I), this);
   connect(shortcutCtrlI, &QShortcut::activated, this, &Tienda::onBtnAsistenteIAClicked);
 
-  login();
+  // Aplicar usuario autenticado y permisos granulares de inicio
+  usuario->setText(conf->getUsuario());
+  permisos(conf->getRol());
 }
 
 /******************************************************************************
@@ -1070,15 +1072,19 @@ void Tienda::on_pushButtonCopia_clicked() {
 }
 
 void Tienda::on_pushButtonSesion_clicked() {
-  conf->setUsuario(NULL);
+  conf->setUsuario("");
   conf->setRol(-1);
+  permisos(-1); // Bloqueo preventivo de todos los controles
   login();
 }
 
 void Tienda::login() {
-  Login login;
+  Login login(this);
   if (login.exec() != QDialog::Accepted) {
+    // Si se cancela o pulsa Escape, bloquear completamente y cerrar la aplicación
+    permisos(-1);
     this->close();
+    QCoreApplication::quit();
     return;
   }
   usuario->setText(conf->getUsuario());
@@ -1298,8 +1304,8 @@ void Tienda::onMonitorCaducidadesError(QString msg) {
 void Tienda::onBtnAsistenteIAClicked() {
     if (!m_dialogAsistenteIA) {
         m_dialogAsistenteIA = new DialogAsistenteIA(nullptr); // Sin parent para que sea ventana independiente de primer nivel
+        m_dialogAsistenteIA->setWindowFlags(Qt::Window);
     }
-    m_dialogAsistenteIA->setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
     m_dialogAsistenteIA->show();
     m_dialogAsistenteIA->raise();
     m_dialogAsistenteIA->activateWindow();

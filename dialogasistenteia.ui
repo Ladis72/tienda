@@ -84,6 +84,16 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="pushButtonCopiar">
+       <property name="toolTip">
+        <string>Copiar última respuesta o conversación al portapapeles</string>
+       </property>
+       <property name="text">
+        <string>📋 Copiar</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="pushButtonLimpiar">
        <property name="toolTip">
         <string>Limpiar historial de conversación</string>
@@ -122,16 +132,22 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButtonSugerenciaStock">
+      <widget class="QPushButton" name="pushButtonSugerenciaArticulosHoy">
+       <property name="toolTip">
+        <string>Consultar los artículos y productos vendidos hoy</string>
+       </property>
        <property name="text">
-        <string>Stock bajo mínimo</string>
+        <string>Venta de artículos de hoy</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButtonSugerenciaArqueos">
+      <widget class="QPushButton" name="pushButtonSugerenciaEstadisticasProducto">
+       <property name="toolTip">
+        <string>Consultar las estadísticas del producto escrito previamente en el campo de texto</string>
+       </property>
        <property name="text">
-        <string>Últimos arqueos</string>
+        <string>Estadísticas de producto</string>
        </property>
       </widget>
      </item>
@@ -169,6 +185,19 @@
        </property>
        <property name="default">
         <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonDetener">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="toolTip">
+        <string>Detener o cancelar la consulta actual en curso</string>
+       </property>
+       <property name="text">
+        <string>⏹️ Detener</string>
        </property>
       </widget>
      </item>

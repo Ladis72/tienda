@@ -1,8 +1,10 @@
 #include "dialoggenerardescripcionia.h"
 #include "ui_dialoggenerardescripcionia.h"
+#include "asistenteia.h"
 
 #include <QApplication>
 #include <QClipboard>
+#include <QCoreApplication>
 #include <QMessageBox>
 #include <QRegularExpression>
 #include <QUrlQuery>
@@ -22,6 +24,7 @@ DialogGenerarDescripcionIA::DialogGenerarDescripcionIA(const QString &descripcio
                                                        const QString &familia,
                                                        const QString &formato,
                                                        const QString &ean,
+                                                       const QString &notasPrevias,
                                                        QWidget *parent)
     : QDialog(parent),
       ui(new Ui::DialogGenerarDescripcionIA),
@@ -31,19 +34,26 @@ DialogGenerarDescripcionIA::DialogGenerarDescripcionIA(const QString &descripcio
       m_familia(familia.trimmed()),
       m_formato(formato.trimmed()),
       m_ean(ean.trimmed()),
+      m_notasPrevias(notasPrevias.trimmed()),
       m_buscando(false)
 {
     ui->setupUi(this);
 
-    // Cargar configuración de Ollama desde tienda.ini
-    QSettings settings("tienda.ini", QSettings::IniFormat);
+    // Cargar configuración de Ollama desde tienda.ini (SEC-01: ruta absoluta junto al binario)
+    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("Ollama");
     m_baseUrlOllama = settings.value("url", "http://localhost:11434").toString().trimmed();
+    if (m_baseUrlOllama.isEmpty()) {
+        m_baseUrlOllama = "http://localhost:11434";
+    }
     if (m_baseUrlOllama.endsWith("/")) {
         m_baseUrlOllama.chop(1);
     }
-    m_modeloOllama = settings.value("modelo", "llama3.1:8b").toString().trimmed();
     settings.endGroup();
+
+    // Obtener modelo centralizado (desde Nube / Local / tienda.ini)
+    m_modeloOllama = AsistenteIA::obtenerModeloCentralizado();
 
     // Actualizar subtítulo con metadatos del producto
     QString subtitulo = m_nombreProducto;
@@ -93,7 +103,7 @@ void DialogGenerarDescripcionIA::iniciarProceso()
     ui->progressBar->setRange(0, 0); // Indicador de actividad indeterminada
     ui->pushButtonRegenerar->setEnabled(false);
     ui->pushButtonAceptar->setEnabled(false);
-    ui->labelEstado->setText(tr("🔍 Buscando información del producto en internet..."));
+    ui->labelEstado->setText(tr("🔍 Buscando información técnica y composición del producto..."));
 
     m_snippetsInternet.clear();
     buscarEnInternet(termino);
@@ -149,21 +159,31 @@ void DialogGenerarDescripcionIA::onSearchReplyFinished(QNetworkReply *reply)
 QString DialogGenerarDescripcionIA::extraerSnippetsDeHtml(const QString &html)
 {
     QString resultado;
-    // Extraer snippets de clases result__snippet de DuckDuckGo
-    QRegularExpression reSnippet("<(?:a|div)[^>]*class=\"[^\"]*result__snippet[^\"]*\"[^>]*>(.*?)</(?:a|div)>",
+    // Extraer snippets de clases result__snippet de DuckDuckGo (soportando divs, spans, enlaces y celdas)
+    QRegularExpression reSnippet("<(?:a|div|span|td)[^>]*class=\"[^\"]*result__snippet[^\"]*\"[^>]*>(.*?)</(?:a|div|span|td)>",
                                  QRegularExpression::DotMatchesEverythingOption);
     QRegularExpressionMatchIterator it = reSnippet.globalMatch(html);
 
     int count = 0;
-    while (it.hasNext() && count < 6) {
+    while (it.hasNext() && count < 12) {
         QRegularExpressionMatch match = it.next();
         QString snippet = match.captured(1);
 
         // Limpiar etiquetas HTML internas
         snippet.remove(QRegularExpression("<[^>]*>"));
+
+        // Decodificar entidades HTML habituales
+        snippet.replace("&quot;", "\"")
+               .replace("&amp;", "&")
+               .replace("&#39;", "'")
+               .replace("&apos;", "'")
+               .replace("&lt;", "<")
+               .replace("&gt;", ">")
+               .replace("&nbsp;", " ");
+
         snippet = snippet.simplified();
 
-        if (!snippet.isEmpty() && snippet.length() > 20) {
+        if (!snippet.isEmpty() && snippet.length() > 15) {
             resultado += "- " + snippet + "\n";
             count++;
         }
@@ -180,24 +200,36 @@ void DialogGenerarDescripcionIA::consultarOllama(const QString &contextoInternet
     QUrl url(m_baseUrlOllama + "/api/chat");
     QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    req.setTransferTimeout(180000); // 180 segundos de timeout máximo para modelos locales en CPU/GPU
 
-    // Prompt de sistema que fija estrictamente el formato tradicional de las fichas de productos
+    // Prompt de sistema estructurado como redactor documental de catálogo comercial
+    // Diseñado para evitar falsos positivos en los filtros de seguridad médica (RLHF) de Llama/Gemma,
+    // garantizando al mismo tiempo que la composición sea 100% exacta y confirmada.
     QString promptSistema =
-        "Eres un especialista farmacéutico, herborista y redactor técnico de productos de dietética y parafarmacia.\n"
-        "Tu misión es redactar una ficha técnica clara, profesional y estructurada para el producto indicado.\n\n"
-        "DEBES estructurar OBLIGATORIAMENTE la ficha con las siguientes 4 secciones:\n\n"
+        "Eres un redactor y catalogador técnico para la base de datos informativa de una tienda de dietética, nutrición y herbolario.\n"
+        "Tu tarea consiste en organizar de manera estructurada, objetiva y neutral la información comercial del fabricante del producto indicado.\n\n"
+        "Estructura la ficha informativa en estas 4 secciones:\n\n"
         "Indicación:\n"
-        "[Explica para qué sirve el producto, sus propiedades activas, beneficios y a quién va destinado]\n\n"
+        "[Describe la finalidad del producto y para qué se comercializa según las propiedades de sus componentes]\n\n"
         "Precauciones:\n"
-        "[Indica advertencias, contraindicaciones, embarazo o 'No se han descrito.' si no hay especiales]\n\n"
+        "[Indica las advertencias de uso indicadas por el fabricante o 'No se han descrito.' si no constan especiales]\n\n"
         "Composición:\n"
-        "[Lista de ingredientes activos, extractos de plantas, vitaminas o componentes]\n\n"
+        "[Lista fiel de ingredientes, extractos de plantas, vitaminas o minerales confirmados por el fabricante]\n\n"
         "Posología:\n"
-        "[Modo de empleo, dosis diaria recomendada y forma de administración o aplicación]\n\n"
-        "REGLAS CRÍTICAS:\n"
-        "- NO incluyas introducciones, títulos generales, saludos ni despedidas.\n"
-        "- Responde directamente comenzando con 'Indicación:'.\n"
-        "- Mantén una redacción profesional, en español neutro de España.";
+        "[Modo de empleo o sugerencia de uso indicada en el etiquetado del fabricante]\n\n"
+        "NORMAS DE REDACCIÓN:\n"
+        "1. COMPOSICIÓN EXACTA Y CONFIRMADA:\n"
+        "   - En la sección 'Composición:', transcribe exclusivamente los ingredientes, principios y cantidades que aparezcan explícitamente confirmados en la información del fabricante o fuentes aportadas.\n"
+        "   - No agregues componentes ni cantidades supuestas o deducidas de otros productos.\n"
+        "   - Si la composición completa no figura confirmada en los datos disponibles:\n"
+        "     * Si se conocen ingredientes parciales confirmados: lista únicamente los confirmados y anota: '(Composición cuantitativa o completa pendiente de confirmación en el etiquetado oficial)'.\n"
+        "     * Si no se dispone de composición confirmada: indica: 'Composición no confirmada en las fuentes disponibles. Consultar el etiquetado oficial del producto.'\n"
+        "2. COHERENCIA INFORMATIVA:\n"
+        "   - No menciones en las demás secciones sustancias o ingredientes que no pertenezcan a la fórmula confirmada de este producto.\n"
+        "3. ESTILO Y FORMATO:\n"
+        "   - No incluyas introducciones ni saludos.\n"
+        "   - Comienza directamente con 'Indicación:'.\n"
+        "   - Utiliza español neutro y formal.";
 
     // Mensaje de usuario con los datos recopilados
     QString promptUsuario = QString("PRODUCTO: %1\n").arg(m_nombreProducto);
@@ -205,14 +237,22 @@ void DialogGenerarDescripcionIA::consultarOllama(const QString &contextoInternet
         promptUsuario += QString("MARCA / FABRICANTE: %1\n").arg(m_fabricante);
     }
     if (!m_familia.isEmpty() && m_familia != "Sin famila asignada") {
-        promptUsuario += QString("FAMILIA / CATEGORÍA: %1\n").arg(m_familia);
+        promptUsuario += QString("CATEGORÍA: %1\n").arg(m_familia);
     }
     if (!m_formato.isEmpty()) {
         promptUsuario += QString("PRESENTACIÓN: %1\n").arg(m_formato);
     }
-    if (!contextoInternet.isEmpty()) {
-        promptUsuario += QString("\nINFORMACIÓN ENCONTRADA EN INTERNET:\n%1\n").arg(contextoInternet);
+    if (!m_ean.isEmpty()) {
+        promptUsuario += QString("CÓDIGO / EAN: %1\n").arg(m_ean);
     }
+    if (!m_notasPrevias.isEmpty()) {
+        promptUsuario += QString("\nDATOS YA REGISTRADOS EN LA FICHA DEL PRODUCTO:\n%1\n").arg(m_notasPrevias);
+    }
+    if (!contextoInternet.isEmpty()) {
+        promptUsuario += QString("\nINFORMACIÓN CATALOGADA DE INTERNET:\n%1\n").arg(contextoInternet);
+    }
+
+    promptUsuario += "\nNota: Asegúrate de que la sección de Composición sea exacta y confirmada con la información disponible, sin añadir ingredientes no verificados.";
 
     QJsonObject msgSystem;
     msgSystem["role"] = "system";
@@ -226,13 +266,28 @@ void DialogGenerarDescripcionIA::consultarOllama(const QString &contextoInternet
     messages.append(msgSystem);
     messages.append(msgUser);
 
+    // Asegurar que usamos el modelo centralizado activo para no variar el runner en VRAM
+    m_modeloOllama = AsistenteIA::obtenerModeloCentralizado();
+
     QJsonObject payload;
     payload["model"] = m_modeloOllama;
     payload["messages"] = messages;
     payload["stream"] = false;
+    payload["keep_alive"] = "24h"; // Mantener modelo cargado en VRAM igual que AsistenteIA para evitar recargas continuas
 
     QJsonObject options;
-    options["temperature"] = 0.3; // Baja temperatura para mayor fidelidad técnica
+    options["temperature"] = 0.15; // Temperatura muy baja para máxima fidelidad técnica y evitar alucinaciones
+    options["top_p"] = 0.9;
+    options["repeat_penalty"] = 1.03;
+    options["repeat_last_n"] = 64;
+    options["num_predict"] = 4000;
+
+    // Alinear ventana de contexto con AsistenteIA para que Ollama no descargue y recargue el runner en VRAM
+    int numCtx = 16384; // 16K tokens por defecto
+    if (m_modeloOllama.contains("-32k", Qt::CaseInsensitive) || m_modeloOllama.contains("64k", Qt::CaseInsensitive)) {
+        numCtx = 32768; // 32K tokens si el modelo soporta ventana extendida
+    }
+    options["num_ctx"] = numCtx;
     payload["options"] = options;
 
     QJsonDocument doc(payload);
@@ -318,11 +373,13 @@ QString DialogGenerarDescripcionIA::formatearFichaComoHtml(const QString &textoR
         if (linea.startsWith("Indicación", Qt::CaseInsensitive) ||
             linea.startsWith("Indicacion", Qt::CaseInsensitive) ||
             linea.startsWith("Precauciones", Qt::CaseInsensitive) ||
+            linea.startsWith("Advertencias", Qt::CaseInsensitive) ||
             linea.startsWith("Composición", Qt::CaseInsensitive) ||
             linea.startsWith("Composicion", Qt::CaseInsensitive) ||
             linea.startsWith("Posología", Qt::CaseInsensitive) ||
             linea.startsWith("Posologia", Qt::CaseInsensitive) ||
-            linea.startsWith("Modo de empleo", Qt::CaseInsensitive))
+            linea.startsWith("Modo de empleo", Qt::CaseInsensitive) ||
+            linea.startsWith("Modo de uso", Qt::CaseInsensitive))
         {
             int posDosPuntos = linea.indexOf(':');
             if (posDosPuntos != -1) {

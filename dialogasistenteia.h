@@ -26,13 +26,15 @@ public:
 
 private slots:
     void on_pushButtonEnviar_clicked();
+    void on_pushButtonDetener_clicked();
+    void on_pushButtonCopiar_clicked();
     void on_lineEditPregunta_returnPressed();
     void on_pushButtonLimpiar_clicked();
     void on_pushButtonConocimiento_clicked();
     void on_pushButtonVerLogs_clicked();
     void on_pushButtonSugerenciaVentas_clicked();
-    void on_pushButtonSugerenciaStock_clicked();
-    void on_pushButtonSugerenciaArqueos_clicked();
+    void on_pushButtonSugerenciaArticulosHoy_clicked();
+    void on_pushButtonSugerenciaEstadisticasProducto_clicked();
     void on_pushButtonCerrar_clicked();
 
     // --- Slots conectados al motor AsistenteIA y UI ---
@@ -46,8 +48,10 @@ private:
     Ui::DialogAsistenteIA *ui;
     AsistenteIA *m_asistente;
     QString m_htmlChat;
+    QString m_ultimaRespuestaIA;
 
     void inicializarChat();
+    void inicializarAutocompletado();
     void agregarBurbuja(const QString &remitente, const QString &texto, const QString &colorFondo, const QString &colorBorde, bool esUsuario, qint64 idLog = 0);
     void agregarNotificacionTool(const QString &resumen);
     void desplazarChatAlFinal();
