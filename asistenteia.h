@@ -10,6 +10,7 @@
 #include <QStringList>
 #include <QDateTime>
 #include <QSqlDatabase>
+#include <QPointer>
 
 /**
  * @brief Motor de Asistente de IA local para el TPV (usando Ollama REST API).
@@ -48,6 +49,16 @@ public:
     /// @brief Consulta la lista de modelos instalados en Ollama (/api/tags)
     void consultarModelosDisponibles();
 
+    /// @brief Obtiene el modelo de IA centralizado guardado en la base de datos (Nube / Local) o en tienda.ini como fallback.
+    static QString obtenerModeloCentralizado();
+
+    /// @brief Guarda el modelo de IA centralizado en la base de datos (Nube / Local) y en tienda.ini.
+    /// Solo se permite la modificación si el usuario actual tiene privilegios de Administrador (rol == 0).
+    static bool guardarModeloCentralizado(const QString &nuevoModelo);
+
+    /// @brief Asegura la existencia de la tabla ia_config en la base de datos.
+    static void asegurarTablaIaConfig();
+
     /// @brief Envía un mensaje del usuario a la IA y procesa posibles llamadas a herramientas
     void enviarMensaje(const QString &mensajeUsuario);
 
@@ -59,6 +70,9 @@ public:
 
     /// @brief Devuelve true si la IA está procesando una consulta actualmente
     bool estaProcesando() const { return m_procesando; }
+
+    /// @brief Cancela la petición HTTP en curso hacia Ollama si estuviera activa
+    void cancelarConsulta();
 
     /// @brief Devuelve el ID del último registro de log guardado
     qint64 ultimoLogId() const { return m_ultimoLogId; }
@@ -111,6 +125,7 @@ private slots:
 
 private:
     QNetworkAccessManager *m_netManager;
+    QPointer<QNetworkReply> m_replyActual;
     QString m_baseUrl;
     QString m_modelo;
     bool m_procesando;
@@ -143,6 +158,7 @@ private:
 
     // --- Herramientas de negocio ---
     QSqlDatabase obtenerBaseDatos();
+    static QSqlDatabase obtenerBaseDatosNube();
     QJsonObject toolConsultarStock(const QJsonObject &args);
     QJsonObject toolArticulosBajoMinimo(const QJsonObject &args);
     QJsonObject toolResumenVentas(const QJsonObject &args);
@@ -167,6 +183,7 @@ private:
     QJsonObject toolAuditoriaDescuadresCaja(const QJsonObject &args);
     QJsonObject toolResumenComprasProveedores(const QJsonObject &args);
     QJsonObject toolConsultarTraspasosIntertiendas(const QJsonObject &args);
+    QJsonObject toolBuscarFacturasCompraArticulo(const QJsonObject &args);
 };
 
 #endif // ASISTENTEIA_H

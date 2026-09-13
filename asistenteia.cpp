@@ -38,11 +38,10 @@ AsistenteIA::AsistenteIA(QObject *parent)
     if (m_baseUrl.isEmpty()) {
         m_baseUrl = "http://localhost:11434";
     }
-    m_modelo = settings.value("modelo", "llama3.1:8b").toString().trimmed();
-    if (m_modelo.isEmpty()) {
-        m_modelo = "llama3.1:8b";
-    }
     settings.endGroup();
+
+    // Obtener modelo centralizado (desde Nube / Local / tienda.ini)
+    m_modelo = obtenerModeloCentralizado();
 
     // Asegurar existencia de tabla de logs de peticiones y evaluaciones
     asegurarTablaLogs();
@@ -136,6 +135,156 @@ QString AsistenteIA::modelo() const
 }
 
 /**
+ * @brief Asegura la existencia de la tabla ia_config tanto en base de datos local como en la nube.
+ */
+void AsistenteIA::asegurarTablaIaConfig()
+{
+    auto crearEnDb = [](QSqlDatabase &db) {
+        if (!db.isOpen()) return;
+        QSqlQuery q(db);
+        QString sql;
+        if (db.driverName().contains("SQLITE", Qt::CaseInsensitive)) {
+            sql = "CREATE TABLE IF NOT EXISTS ia_config ("
+                  "id INTEGER PRIMARY KEY, "
+                  "modelo TEXT NOT NULL, "
+                  "url_servidor TEXT DEFAULT '', "
+                  "updated_at TEXT"
+                  ");";
+        } else {
+            sql = "CREATE TABLE IF NOT EXISTS `ia_config` ("
+                  "`id` INT PRIMARY KEY, "
+                  "`modelo` VARCHAR(100) NOT NULL, "
+                  "`url_servidor` VARCHAR(255) DEFAULT '', "
+                  "`updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+                  ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+        }
+        q.exec(sql);
+    };
+
+    // 1. En la base de datos local
+    QString conn = conf ? conf->getConexionLocal() : "DB";
+    if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
+    if (QSqlDatabase::contains(conn)) {
+        QSqlDatabase dbLocal = QSqlDatabase::database(conn);
+        crearEnDb(dbLocal);
+    }
+
+    // 2. En la nube si la conexión sincronizada está abierta
+    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        crearEnDb(dbNube);
+    }
+}
+
+/**
+ * @brief Obtiene el modelo de IA centralizado guardado en la base de datos (Nube / Local) o en tienda.ini como fallback.
+ */
+QString AsistenteIA::obtenerModeloCentralizado()
+{
+    asegurarTablaIaConfig();
+
+    QString modelo;
+
+    // 1. Intentar consultar en la base de datos de la Nube si está disponible
+    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlQuery qNube(QSqlDatabase::database(SyncManager::CONEXION_NUBE));
+        if (qNube.exec("SELECT modelo FROM ia_config WHERE id = 1 LIMIT 1") && qNube.next()) {
+            modelo = qNube.value(0).toString().trimmed();
+        }
+    }
+
+    // 2. Si no hay conexión a la nube o no se obtuvo registro, intentar en la base local
+    if (modelo.isEmpty()) {
+        QString conn = conf ? conf->getConexionLocal() : "DB";
+        if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
+        if (QSqlDatabase::contains(conn)) {
+            QSqlDatabase dbLocal = QSqlDatabase::database(conn);
+            if (dbLocal.isOpen()) {
+                QSqlQuery qLocal(dbLocal);
+                if (qLocal.exec("SELECT modelo FROM ia_config WHERE id = 1 LIMIT 1") && qLocal.next()) {
+                    modelo = qLocal.value(0).toString().trimmed();
+                }
+            }
+        }
+    }
+
+    // 3. Si aún está vacío, leer de tienda.ini como respaldo
+    if (modelo.isEmpty()) {
+        QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+        QSettings settings(iniPath, QSettings::IniFormat);
+        settings.beginGroup("Ollama");
+        modelo = settings.value("modelo", "llama3.1:8b").toString().trimmed();
+        settings.endGroup();
+        if (modelo.isEmpty()) {
+            modelo = "llama3.1:8b";
+        }
+    }
+
+    return modelo;
+}
+
+/**
+ * @brief Guarda el modelo de IA centralizado en la base de datos (Nube / Local) y en tienda.ini.
+ *        Solo se permite la modificación si el usuario actual tiene privilegios de Administrador (rol == 0).
+ */
+bool AsistenteIA::guardarModeloCentralizado(const QString &nuevoModelo)
+{
+    QString mod = nuevoModelo.trimmed();
+    if (mod.isEmpty()) return false;
+
+    // Control de seguridad: Requerir privilegios de Administrador (Rol 0)
+    if (!conf || conf->getRol() != 0) {
+        qWarning() << "AsistenteIA: Intento no autorizado de cambiar el modelo central de IA. Se requiere Administrador (Rol 0).";
+        return false;
+    }
+
+    asegurarTablaIaConfig();
+
+    auto guardarEnDb = [&mod](QSqlDatabase &db) -> bool {
+        if (!db.isOpen()) return false;
+        QSqlQuery q(db);
+        if (db.driverName().contains("SQLITE", Qt::CaseInsensitive)) {
+            q.prepare("INSERT OR REPLACE INTO ia_config (id, modelo) VALUES (1, :modelo)");
+            q.bindValue(":modelo", mod);
+        } else {
+            q.prepare("INSERT INTO ia_config (id, modelo) VALUES (1, :modelo) "
+                      "ON DUPLICATE KEY UPDATE modelo = :modeloUpdate");
+            q.bindValue(":modelo", mod);
+            q.bindValue(":modeloUpdate", mod);
+        }
+        return q.exec();
+    };
+
+    // 1. Guardar en la base de datos de la Nube (para propagar a todas las tiendas)
+    bool guardadoNube = false;
+    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        guardadoNube = guardarEnDb(dbNube);
+    }
+
+    // 2. Guardar en la base de datos local
+    QString conn = conf ? conf->getConexionLocal() : "DB";
+    if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
+    bool guardadoLocal = false;
+    if (QSqlDatabase::contains(conn)) {
+        QSqlDatabase dbLocal = QSqlDatabase::database(conn);
+        guardadoLocal = guardarEnDb(dbLocal);
+    }
+
+    // 3. Guardar también en tienda.ini local como respaldo
+    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QSettings settings(iniPath, QSettings::IniFormat);
+    settings.beginGroup("Ollama");
+    settings.setValue("modelo", mod);
+    settings.endGroup();
+
+    qDebug() << "AsistenteIA: Modelo centralizado guardado:" << mod
+             << "(Nube:" << guardadoNube << ", Local:" << guardadoLocal << ")";
+
+    return guardadoNube || guardadoLocal;
+}
+
+/**
  * @brief Obtiene la conexión activa y abierta a la base de datos local.
  */
 QSqlDatabase AsistenteIA::obtenerBaseDatos()
@@ -148,6 +297,23 @@ QSqlDatabase AsistenteIA::obtenerBaseDatos()
         return QSqlDatabase::database(conn);
     }
     return QSqlDatabase::database();
+}
+
+/**
+ * @brief Obtiene la conexión activa y abierta a la base de datos de la nube (nubeCervantes).
+ *        Si la conexión está cerrada o inactiva, intenta reconectar a través de SyncManager.
+ * @return Objeto QSqlDatabase conectado a la nube o inválido si no hay conexión posible.
+ */
+QSqlDatabase AsistenteIA::obtenerBaseDatosNube()
+{
+    // 1. Si la conexión a la nube ya está abierta y lista, devolverla directamente
+    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        return QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    }
+
+    // 2. Si no está abierta, NO intentar conectar sincronamente aquí para no bloquear el hilo de la interfaz.
+    // SyncManager ya gestiona la conexión y reintentos de forma controlada en segundo plano.
+    return QSqlDatabase();
 }
 
 /**
@@ -244,7 +410,9 @@ QJsonObject AsistenteIA::construirMensajeSistema()
         "   - NUNCA mezcles pedidos aceptados con borradores sin aceptar.\n\n"
         "B) TRASPASOS Y SALIDAS DE GÉNERO ENTRE TIENDAS -> 'consultar_salidas_tiendas', 'consultar_traspasos_intertiendas'.\n"
         "   - Son envíos internos de mercancía ENTRE LAS TIENDAS FÍSICAS de la red (ej. de Casablanca a Cervantes) o mermas/salidas internas.\n"
-        "   - Tienen tienda de origen y tienda de destino. NUNCA uses herramientas de pedidos a proveedores para traspasos entre tiendas.\n\n"
+        "   - Tienen tienda de origen y tienda de destino. NUNCA uses herramientas de pedidos a proveedores para traspasos entre tiendas.\n"
+        "   - SALIDAS PENDIENTES / EN PREPARACIÓN (COMPORTAMIENTO POR DEFECTO): Ante preguntas en presente como 'hay productos en salidas', 'qué salidas hay', 'salidas pendientes', se consultan EXCLUSIVAMENTE las salidas pendientes sin aceptar / en preparación ('salidaGenero_tmp'). NUNCA devuelvas cientos de líneas históricas antiguas para una consulta de salidas actuales.\n"
+        "   - SALIDAS ENVIADAS / PROCESADAS (HISTÓRICO): Solo consulta salidas ya enviadas/procesadas si el usuario pide expresamente 'salidas enviadas', 'histórico' o aporta fechas.\n\n"
         "C) MOVIMIENTOS DE CAJA CHICA Y EFECTIVO -> 'consultar_movimientos_caja'.\n"
         "   - Son entradas y salidas de DINERO EN METÁLICO de la caja (gastos menores, pagos de portes, aportaciones de fondo de cambio, retiradas de efectivo).\n"
         "   - NO es mercancía ni productos.\n\n"
@@ -253,11 +421,13 @@ QJsonObject AsistenteIA::construirMensajeSistema()
         "E) AUDITORÍA DE ARQUEOS Y DESCUADRES -> 'auditoria_descuadres_caja', 'ultimos_arqueos'.\n"
         "   - Audita los cierres diarios de caja para detectar faltantes o sobrantes de efectivo (descuadres != 0).\n\n"
         "MAPEO COMPLETO DE HERRAMIENTAS:\n"
-        "1. Stock y Precios -> 'consultar_stock' (ej. término: 'Colestia', 'Lecidol').\n"
+        "1. Stock, Precios y Catálogo -> 'consultar_stock' (ej. término: 'Colestia', familia: 'Alimentación bio', fabricante: 'Nova Diet', proveedor: 'Nova Diet', orden: 'precio_desc' para los más caros o 'precio_asc' para los más baratos, tienda: 'todas'). Úsalo SIEMPRE para consultar existencias, PVP, familias o marcas.\n"
+        "   - PREGUNTAS DE CANTIDAD ('¿Cuántos artículos hay de X marca o familia?'): En 'consultar_stock', el campo 'total_coincidencias' contiene la cantidad total REAL existente en la base de datos (ej. 639 artículos de Nova Diet, 2054 de Cosmética). Responde SIEMPRE usando ese número total real, indicando que se muestra una lista parcial si procede.\n"
+        "   - PRODUCTO MÁS CARO / MÁS BARATO: Si preguntan por 'el más caro', 'precio más alto', 'más barato', etc., usa 'consultar_stock' con orden: 'precio_desc' o 'precio_asc' (sin poner 'más caro' en el término de búsqueda).\n"
         "2. Comparativa y Rebalanceo de Stock Multi-Tienda -> 'comparativa_stock_tiendas' (producto: 'nombre', fabricante: 'marca', familia: 'categoria').\n"
         "3. Fitoterapia, Dolencias y Síntomas -> 'buscar_por_indicacion' (ej. indicacion: 'colesterol', 'articulaciones', 'dormir'). Presenta SIEMPRE formato TABLA Markdown (| Código | Producto | Marca | Stock | PVP |).\n"
         "4. Ventas y Facturación -> 'resumen_ventas' (fecha_inicio, fecha_fin, tienda: 'todas', desglosar_por_dia: true, familia, fabricante, producto).\n"
-        "5. Ranking de Productos Más Vendidos y Top Ventas -> 'productos_mas_vendidos' (fecha_inicio: '2026-08-01', fecha_fin: '2026-08-31', limite: 10, familia: 'no alimentacion', fabricante: 'Kenoi'). NUNCA uses 'ejecutar_consulta_sql' para rankings de ventas ni productos más vendidos cuando existe 'productos_mas_vendidos'.\n"
+        "5. Ranking de Productos Más Vendidos y Top Ventas -> 'productos_mas_vendidos' (fecha_inicio: '2026-08-01', fecha_fin: '2026-08-31', limite: 10, familia: 'no alimentacion', fabricante: 'Kenoi'). SIEMPRE que pidan 'productos más vendidos', 'top ventas' o un ranking de artículos (incluso si filtran por familia como 'alimentación', por marca o por mes/año), usa OBLIGATORIAMENTE 'productos_mas_vendidos', NUNCA 'resumen_ventas' ni 'ejecutar_consulta_sql'.\n"
         "6. Comparativas Temporales (vs año pasado) -> 'comparativa_ventas' (calcula periodo homólogo exacto).\n"
         "7. Clientes y Compras -> 'ultimas_compras_cliente' (cliente: 'Sonsoles', producto: 'Lecidol', fabricante: 'Kenoi', cliente: 'top').\n"
         "8. Previsión, Cobertura y Venta Media Mensual -> 'prevision_cobertura_stock' (producto: 'Deneurome').\n"
@@ -266,21 +436,29 @@ QJsonObject AsistenteIA::construirMensajeSistema()
         "11. Estadísticas Globales de Compras a Proveedores -> 'resumen_compras_proveedores' (proveedor: 'nombre', fecha_inicio, fecha_fin, tienda).\n"
         "12. Salidas y Traspasos entre Tiendas Físicas -> 'consultar_salidas_tiendas' (tienda_origen: 'Casablanca', tienda_destino: 'Cervantes', producto: 'nombre', estado: 'pendientes' o 'enviadas').\n"
         "13. Histórico de Traspasos Intertiendas -> 'consultar_traspasos_intertiendas' (tienda_origen, tienda_destino, fecha_inicio, fecha_fin, producto).\n"
-        "14. Pedidos y Facturas de Compra a Proveedores -> 'consultar_pedidos' (id_pedido: 'NF26/419', proveedor: 'Nutrinat', producto: 'Citrobiotic', estado: 'aceptados'). Permite buscar facturas de compra o pedidos tanto por número de factura/albarán (ej. 'NF26/419'), por proveedor, o por producto comprado.\n"
-        "15. Movimientos de Dinero y Caja Chica -> 'consultar_movimientos_caja' (tienda: 'todas', fecha_inicio, fecha_fin, tipo: 'entradas'/'salidas', concepto: 'porte').\n"
-        "16. Auditoría de Descuadres de Caja -> 'auditoria_descuadres_caja' (tienda: 'todas', fecha_inicio, fecha_fin, solo_con_descuadre: true).\n"
-        "17. Arqueos Diarios -> 'ultimos_arqueos' (tienda: 'todas', limite: 10).\n"
-        "18. Horas Pico o Mejor Día de la Semana -> 'facturacion_por_horas' (agrupar_por: 'dia_semana' o 'horas', fecha_inicio, fecha_fin, tienda).\n"
-        "19. Usuarios y Rendimiento -> 'consultar_usuarios', 'ventas_por_usuario' (usuario: 'nombre' o 'todos', agrupar_por: 'ranking'/'dia'/'mes'), 'actividad_usuario'.\n"
-        "20. Consultas SQL Especiales a Medida -> 'ejecutar_consulta_sql' (SELECT sobre 'vista_ventas_detalladas', 'vista_stock_tiendas', 'vista_compras_clientes', 'vista_arqueos_diarios').\n\n"
+        "14. Facturas y Albaranes de Compra de un Producto -> 'buscar_facturas_compra_articulo' (codigo: '8428532230061', producto: 'Ecomil almendra', proveedor: 'Biomafer', tienda: 'todas', limite: 1 si piden 'la última factura'). Úsalo SIEMPRE que pregunten por 'facturas de compra de un artículo', 'en qué factura entró', 'cuándo se compró X producto', o compras históricas detalladas de un artículo a un proveedor.\n"
+        "15. Pedidos de Compra a Proveedores -> 'consultar_pedidos' (id_pedido: 'NF26/419', proveedor: 'Nutrinat', producto: 'Citrobiotic', estado: 'aceptados'). Permite buscar pedidos o albaranes aceptados o borradores sin aceptar.\n"
+        "16. Movimientos de Dinero y Caja Chica -> 'consultar_movimientos_caja' (tienda: 'todas', fecha_inicio, fecha_fin, tipo: 'entradas'/'salidas', concepto: 'porte').\n"
+        "17. Auditoría de Descuadres de Caja -> 'auditoria_descuadres_caja' (tienda: 'todas', fecha_inicio, fecha_fin, solo_con_descuadre: true).\n"
+        "18. Arqueos Diarios -> 'ultimos_arqueos' (tienda: 'todas', limite: 10).\n"
+        "19. Horas Pico o Mejor Día de la Semana -> 'facturacion_por_horas' (agrupar_por: 'dia_semana' o 'horas', fecha_inicio, fecha_fin, tienda).\n"
+        "20. Usuarios y Rendimiento -> 'consultar_usuarios', 'ventas_por_usuario' (usuario: 'nombre' o 'todos', agrupar_por: 'ranking'/'dia'/'mes'), 'actividad_usuario'.\n"
+        "21. Consultas SQL Especiales a Medida -> 'ejecutar_consulta_sql' (SELECT sobre vistas o tablas. NOTA: 'articulos' usa 'cod' y 'descripcion', 'lineaspedido' usa 'nDocumento', 'cod', 'descripcion', 'idProveedor'. En 'articulos', 'familia' y 'fabricante' son IDs numéricos que enlazan con 'familias' y 'fabricantes').\n\n"
         "REGLAS CRÍTICAS DE CONVERSACIÓN Y FORMATO:\n"
         "- Responde siempre en español, de forma concisa, educada y profesional.\n"
         "- Fechas siempre en formato 'yyyy-MM-dd'.\n"
+        "- DESAMBIGUACIÓN ACTIVA (FAMILIAS, PROVEEDORES Y ARTÍCULOS):\n"
+        "  1. FAMILIAS AGRUPADAS: Cuando una consulta ('productos_mas_vendidos' o 'resumen_ventas') devuelva 'familias_coincidentes' con varias subfamilias agrupadas (ej. 'Alimentación bio', 'Alimentación sin gluten', etc.), explica brevemente al usuario qué subfamilias se han sumado y pregúntale educadamente si desea ver el desglose de alguna de ellas en concreto.\n"
+        "  2. FAMILIA NO ENCONTRADA: Si la herramienta indica 'requiere_aclaracion: true' de tipo 'familia', informa amablemente de que no se ha encontrado esa familia exacta, sugiere las 'familias_disponibles_sugeridas' y pregunta al usuario a cuál de ellas se refiere.\n"
+        "  3. PROVEEDOR SIN COMPRAS DE UN ARTÍCULO: Si consultas 'buscar_facturas_compra_articulo' con un proveedor y este no tiene compras registradas ('aviso_proveedor'), indícalo claramente en 1-2 líneas, menciona los proveedores reales habituales con la última compra registrada ('referencia_ultima_compra_general'), y formula la 'pregunta_desambiguacion' preguntando al usuario si desea ver el detalle de compras de dichos proveedores reales. NUNCA vuelques tablas largas de otros proveedores sin que el usuario lo confirme.\n"
+        "  4. ARTÍCULOS AMBIGUOS: Si el nombre o código de un artículo no existe o tiene múltiples coincidencias, pregunta al usuario cuál es el que busca ofreciendo las alternativas sugeridas.\n"
         "- SIN RESULTADOS: Si una herramienta devuelve 0 registros (ej. 0 pedidos pendientes, 0 salidas, sin existencias), informa DIRECTAMENTE de que no existen registros en el sistema de forma clara y breve (ej. 'Actualmente no hay ningún pedido pendiente de aceptar').\n"
+        "- SALIDAS ENTRE TIENDAS: Con 'consultar_salidas_tiendas', muestra primero el resumen por tienda y después la tabla de líneas con columnas esenciales (| Cantidad | Producto | Origen -> Destino | Fecha | PVP |), evitando columnas redundantes para asegurar que la tabla se complete sin truncamientos.\n"
         "- PROHIBIDO DISCURSOS DE BIENVENIDA INOPORTUNOS: Solo saluda si el usuario te saluda con 'Hola' o 'Buenos días'. En cualquier otra consulta, ve directo al grano con los datos.\n"
         "- TABLAS COMPLETAS: Cuando presentes rankings, resúmenes de ventas o catálogos, DEBES incluir TODOS los elementos solicitados en una tabla Markdown continua.\n"
         "- PROHIBIDO RESPUESTAS EVASIVAS: Muestra siempre la información y los datos solicitados.\n"
         "- CONTINUACIÓN: Si el usuario te pide 'sigue' o 'continúa', muestra los datos siguientes o repite la consulta.\n"
+        "- ENLACES INTERACTIVOS DEL TPV: Cuando menciones artículos específicos o códigos en el texto o tablas, usa SIEMPRE formato de enlace Markdown para permitir abrir su ficha con un clic: [Nombre o Código](articulo://CODIGO). Si mencionas un cliente, usa [Nombre Cliente](cliente://CODIGO).\n"
     ).arg(fechaActual, inicioMesActual, finMesActual, horaActual, usuarioActual).arg(rolActual).arg(strTiendas).arg(hoy.year());
 
     QJsonObject obj;
@@ -300,23 +478,47 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas()
     {
         QJsonObject func;
         func["name"] = "consultar_stock";
-        func["description"] = "Consulta información de artículos (código, descripción, PVP, precio de compra, stock actual, mínimos y fabricante) en la tienda local, en otra tienda específica o en todas las tiendas.";
+        func["description"] = "Consulta información de artículos (código, descripción, PVP, precio de compra, stock actual, mínimos, familia y fabricante) en la tienda local o en todas las tiendas. Permite filtrar por término, familia, fabricante o proveedor, ordenar por precio ('precio_desc' / 'precio_asc') y devuelve 'total_coincidencias' con la cantidad real total de artículos.";
         
         QJsonObject props;
         QJsonObject propTermino;
         propTermino["type"] = "string";
-        propTermino["description"] = "Texto a buscar en el nombre, descripción o código del producto";
+        propTermino["description"] = "Texto o palabras clave a buscar en el nombre, descripción o código del producto (ej. 'espirales', 'Colestia', '8425652062046')";
         props["termino"] = propTermino;
+
+        QJsonObject propFamilia;
+        propFamilia["type"] = "string";
+        propFamilia["description"] = "Filtrar por nombre de familia o categoría (ej. 'Alimentación bio', 'Infusiones', 'Nutricosmética', 'Cosmética')";
+        props["familia"] = propFamilia;
+
+        QJsonObject propFabricante;
+        propFabricante["type"] = "string";
+        propFabricante["description"] = "Filtrar por fabricante, marca o laboratorio (ej. 'Nova Diet', 'Soria Natural', 'Santiveri')";
+        props["fabricante"] = propFabricante;
+
+        QJsonObject propProveedor;
+        propProveedor["type"] = "string";
+        propProveedor["description"] = "Filtrar por nombre del proveedor de compra (ej. 'Nova Diet', 'Bizi Lur', 'Dispronat')";
+        props["proveedor"] = propProveedor;
+
+        QJsonObject propOrden;
+        propOrden["type"] = "string";
+        propOrden["description"] = "Criterio de ordenación: 'precio_desc' (artículos más caros / precio más alto primero), 'precio_asc' (más baratos primero), 'stock_desc' (mayor stock primero), 'nombre_asc' (alfabético).";
+        props["orden"] = propOrden;
+
+        QJsonObject propLimite;
+        propLimite["type"] = "integer";
+        propLimite["description"] = "Límite máximo de artículos a devolver en la lista (por defecto 25, máx 100).";
+        props["limite"] = propLimite;
 
         QJsonObject propTienda;
         propTienda["type"] = "string";
-        propTienda["description"] = "Tienda a consultar: 'local', 'todas', o el nombre específico (ej. 'Casablanca', 'Cervantes', 'Emeicjac'). Por defecto 'local'.";
+        propTienda["description"] = "Tienda a consultar: 'local', 'todas', o el nombre específico (ej. 'Casablanca', 'Cervantes', 'Emeicjac'). Por defecto 'todas'.";
         props["tienda"] = propTienda;
 
         QJsonObject params;
         params["type"] = "object";
         params["properties"] = props;
-        params["required"] = QJsonArray({"termino"});
 
         QJsonObject tool;
         tool["type"] = "function";
@@ -823,8 +1025,13 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas()
 
         QJsonObject propEstado;
         propEstado["type"] = "string";
-        propEstado["description"] = "Estado de las salidas: 'pendientes' / 'en_preparacion' (género preparado en borrador), 'enviadas' / 'procesadas' (género ya traspasado), o 'todas' (ambas). Por defecto 'todas'.";
+        propEstado["description"] = "Estado de las salidas: 'pendientes' / 'sin_aceptar' (género en preparación pendiente de traspaso, por defecto ante preguntas en presente), 'enviadas' / 'procesadas' (histórico de salidas ya traspasadas), o 'todas'.";
         props["estado"] = propEstado;
+
+        QJsonObject propSoloPend;
+        propSoloPend["type"] = "boolean";
+        propSoloPend["description"] = "Si es true, busca exclusivamente salidas pendientes sin aceptar o en preparación (salidaGenero_tmp).";
+        props["solo_pendientes"] = propSoloPend;
 
         QJsonObject propFechaI;
         propFechaI["type"] = "string";
@@ -1267,6 +1474,64 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas()
         tools.append(tool);
     }
 
+    // 22. Tool: buscar_facturas_compra_articulo
+    {
+        QJsonObject func;
+        func["name"] = "buscar_facturas_compra_articulo";
+        func["description"] = "Busca facturas y albaranes de compra a proveedores de un producto o artículo específico por su código de barras (EAN), descripción o proveedor. Muestra el número de factura/albarán, fecha, proveedor, cantidad comprada, precio de costo, descuento, PVP y caducidad en cualquier tienda.";
+
+        QJsonObject props;
+
+        QJsonObject propCod;
+        propCod["type"] = "string";
+        propCod["description"] = "Código de barras / EAN del artículo a buscar en las facturas de compra (ej. '8428532230061').";
+        props["codigo"] = propCod;
+
+        QJsonObject propProd;
+        propProd["type"] = "string";
+        propProd["description"] = "Nombre o descripción del producto si no se conoce el código exacto (ej. 'Ecomil almendra nature').";
+        props["producto"] = propProd;
+
+        QJsonObject propProv;
+        propProv["type"] = "string";
+        propProv["description"] = "Nombre o ID del proveedor (ej. 'Biomafer', 'Bizi-Lur', 'Dispronat'). Opcional.";
+        props["proveedor"] = propProv;
+
+        QJsonObject propNumDoc;
+        propNumDoc["type"] = "string";
+        propNumDoc["description"] = "Número exacto o parcial de factura o albarán de compra (ej. 'B26/1793'). Opcional.";
+        props["numero_documento"] = propNumDoc;
+
+        QJsonObject propTienda;
+        propTienda["type"] = "string";
+        propTienda["description"] = "Tienda a consultar ('todas', 'local', o nombre específico como 'Casablanca', 'Cervantes', 'Emeicjac'). Por defecto 'todas'.";
+        props["tienda"] = propTienda;
+
+        QJsonObject propFechaI;
+        propFechaI["type"] = "string";
+        propFechaI["description"] = "Fecha inicial de factura en formato 'yyyy-MM-dd' (opcional).";
+        props["fecha_inicio"] = propFechaI;
+
+        QJsonObject propFechaF;
+        propFechaF["type"] = "string";
+        propFechaF["description"] = "Fecha final de factura en formato 'yyyy-MM-dd' (opcional).";
+        props["fecha_fin"] = propFechaF;
+
+        QJsonObject propLim;
+        propLim["type"] = "integer";
+        propLim["description"] = "Número máximo de líneas/facturas a recuperar (por defecto 20, o 1 si se pide 'la última').";
+        props["limite"] = propLim;
+
+        QJsonObject params;
+        params["type"] = "object";
+        params["properties"] = props;
+
+        QJsonObject tool;
+        tool["type"] = "function";
+        tool["function"] = func;
+        tools.append(tool);
+    }
+
     return tools;
 }
 
@@ -1392,6 +1657,12 @@ void AsistenteIA::enviarPeticionChat()
         historialSano.append(m);
     }
 
+    // Asegurar que usamos el modelo centralizado activo
+    QString modeloCentral = obtenerModeloCentralizado();
+    if (!modeloCentral.isEmpty()) {
+        m_modelo = modeloCentral;
+    }
+
     QJsonObject payload;
     payload["model"] = m_modelo;
     payload["messages"] = historialSano;
@@ -1408,16 +1679,39 @@ void AsistenteIA::enviarPeticionChat()
     options["top_p"] = 0.9;
     options["repeat_penalty"] = 1.03; // repeat_penalty bajo (1.03) para NO penalizar tablas largas ni códigos/marcas repetidos
     options["repeat_last_n"] = 64;
-    options["num_predict"] = 3500; // 3500 tokens: Permite tablas de 20-30 productos completas sin cortes
-    options["num_ctx"] = 8192; // 8K tokens de contexto equilibrado y rápido
+    options["num_predict"] = 6000; // 6000 tokens: Permite respuestas extensas y tablas completas sin cortes
+
+    // Contexto extendido aprovechando los 16 GB de VRAM de la GPU RTX 4060 Ti
+    int numCtx = 16384; // 16K tokens por defecto
+    if (m_modelo.contains("-32k", Qt::CaseInsensitive) || m_modelo.contains("64k", Qt::CaseInsensitive)) {
+        numCtx = 32768; // 32K tokens si el modelo soporta ventana extendida
+    }
+    options["num_ctx"] = numCtx;
     payload["options"] = options;
 
     QByteArray jsonData = QJsonDocument(payload).toJson(QJsonDocument::Compact);
 
-    QNetworkReply *reply = m_netManager->post(request, jsonData);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        onChatReplyFinished(reply);
+    m_replyActual = m_netManager->post(request, jsonData);
+    connect(m_replyActual.data(), &QNetworkReply::finished, this, [this]() {
+        if (m_replyActual) {
+            onChatReplyFinished(m_replyActual.data());
+        }
     });
+}
+
+/**
+ * @brief Cancela la petición HTTP en curso hacia Ollama si estuviera activa y libera el estado de procesamiento.
+ */
+void AsistenteIA::cancelarConsulta()
+{
+    if (m_replyActual) {
+        if (m_replyActual->isRunning()) {
+            m_replyActual->abort();
+        }
+        m_replyActual = nullptr;
+    }
+    m_procesando = false;
+    emit estadoCambiado("Consulta cancelada");
 }
 
 /**
@@ -1425,7 +1719,16 @@ void AsistenteIA::enviarPeticionChat()
  */
 void AsistenteIA::onChatReplyFinished(QNetworkReply *reply)
 {
+    if (m_replyActual == reply) {
+        m_replyActual = nullptr;
+    }
     reply->deleteLater();
+
+    if (reply->error() == QNetworkReply::OperationCanceledError) {
+        m_procesando = false;
+        emit estadoCambiado("Listo");
+        return;
+    }
 
     if (reply->error() != QNetworkReply::NoError) {
         m_procesando = false;
@@ -1776,6 +2079,8 @@ QJsonObject AsistenteIA::ejecutarHerramienta(const QString &nombre, const QJsonO
         return toolResumenComprasProveedores(argumentos);
     } else if (nombre == "consultar_traspasos_intertiendas" || nombre == "traspasos_intertiendas" || nombre == "traspasos_entre_tiendas" || nombre == "envios_tiendas" || nombre == "recepcion_traspasos") {
         return toolConsultarTraspasosIntertiendas(argumentos);
+    } else if (nombre == "buscar_facturas_compra_articulo" || nombre == "facturas_compra" || nombre == "buscar_facturas" || nombre == "lineas_factura_compra" || nombre == "compras_articulo" || nombre == "buscar_albaranes_compra") {
+        return toolBuscarFacturasCompraArticulo(argumentos);
     } else if (nombre == "ejecutar_consulta_sql") {
         return toolEjecutarConsultaSql(argumentos);
     }
@@ -1824,7 +2129,10 @@ static QStringList resolverConexiones(const QString &tiendaFiltro)
         conexiones.append(localConn);
         for (const QString &c : activas) {
             if (c != localConn && !conexiones.contains(c)) {
-                conexiones.append(c);
+                // Solo incluir tiendas remotas cuya conexión esté actualmente abierta
+                if (QSqlDatabase::contains(c) && QSqlDatabase::database(c).isOpen()) {
+                    conexiones.append(c);
+                }
             }
         }
     } else {
@@ -1836,12 +2144,14 @@ static QStringList resolverConexiones(const QString &tiendaFiltro)
         }
         for (const QString &c : activas) {
             if (c.toLower().contains(t)) {
-                if (!conexiones.contains(c)) conexiones.append(c);
-                encontrada = true;
+                if (QSqlDatabase::contains(c) && QSqlDatabase::database(c).isOpen()) {
+                    if (!conexiones.contains(c)) conexiones.append(c);
+                    encontrada = true;
+                }
             }
         }
         if (!encontrada) {
-            if (QSqlDatabase::contains(tiendaFiltro)) {
+            if (QSqlDatabase::contains(tiendaFiltro) && QSqlDatabase::database(tiendaFiltro).isOpen()) {
                 conexiones.append(tiendaFiltro);
             } else {
                 conexiones.append(localConn);
@@ -1867,14 +2177,25 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
     if (termino.isEmpty()) termino = args.value("query").toString().trimmed();
     if (termino.isEmpty()) termino = args.value("search").toString().trimmed();
     if (termino.isEmpty()) termino = args.value("nombre").toString().trimmed();
-    if (termino.isEmpty()) termino = args.value("fabricante").toString().trimmed();
-    if (termino.isEmpty()) termino = args.value("marca").toString().trimmed();
     if (termino.isEmpty()) termino = args.value("text").toString().trimmed();
+
+    QString familiaFiltro = args.value("familia").toString().trimmed();
+    if (familiaFiltro.isEmpty()) familiaFiltro = args.value("categoria").toString().trimmed();
+
+    QString fabricanteFiltro = args.value("fabricante").toString().trimmed();
+    if (fabricanteFiltro.isEmpty()) fabricanteFiltro = args.value("marca").toString().trimmed();
+    if (fabricanteFiltro.isEmpty()) fabricanteFiltro = args.value("laboratorio").toString().trimmed();
+
+    QString proveedorFiltro = args.value("proveedor").toString().trimmed();
+    if (proveedorFiltro.isEmpty()) proveedorFiltro = args.value("distribuidor").toString().trimmed();
 
     // Fallback universal: si la IA usa cualquier otra clave desconocida para el nombre/producto
     if (termino.isEmpty()) {
         for (auto it = args.begin(); it != args.end(); ++it) {
-            if (it.key() != "tienda" && it.key() != "store" && it.value().isString()) {
+            QString k = it.key().toLower();
+            if (k != "tienda" && k != "store" && k != "familia" && k != "categoria" &&
+                k != "fabricante" && k != "marca" && k != "laboratorio" &&
+                k != "proveedor" && k != "distribuidor" && it.value().isString()) {
                 QString val = it.value().toString().trimmed();
                 if (!val.isEmpty()) {
                     termino = val;
@@ -1930,36 +2251,138 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
     QJsonObject res;
     QJsonArray articulosArray;
 
-    if (termino.isEmpty()) {
-        res["error"] = "Término de búsqueda vacío";
+    QString orden = args.value("orden").toString().trimmed().toLower();
+    int limite = args.value("limite").toInt();
+    if (limite <= 0) limite = 25;
+    if (limite > 100) limite = 100;
+
+    // Detectar automáticamente intenciones de ordenación por precio en el término
+    QString terminoMinus = termino.toLower();
+    if (terminoMinus.contains("mas caro") || terminoMinus.contains("más caro") ||
+        terminoMinus.contains("precio mas alto") || terminoMinus.contains("precio más alto") ||
+        terminoMinus.contains("mayor precio") || terminoMinus.contains("mas costoso") ||
+        terminoMinus.contains("más costoso")) {
+        if (orden.isEmpty()) orden = "precio_desc";
+        termino.remove(QRegularExpression("m[aá]s\\s+caro[s]?", QRegularExpression::CaseInsensitiveOption));
+        termino.remove(QRegularExpression("precio\\s+m[aá]s\\s+alto", QRegularExpression::CaseInsensitiveOption));
+        termino.remove(QRegularExpression("mayor\\s+precio", QRegularExpression::CaseInsensitiveOption));
+        termino.remove(QRegularExpression("m[aá]s\\s+costoso[s]?", QRegularExpression::CaseInsensitiveOption));
+        termino = termino.trimmed();
+    } else if (terminoMinus.contains("mas barato") || terminoMinus.contains("más barato") ||
+               terminoMinus.contains("precio mas bajo") || terminoMinus.contains("precio más bajo") ||
+               terminoMinus.contains("menor precio") || terminoMinus.contains("mas economico") ||
+               terminoMinus.contains("más económico")) {
+        if (orden.isEmpty()) orden = "precio_asc";
+        termino.remove(QRegularExpression("m[aá]s\\s+barato[s]?", QRegularExpression::CaseInsensitiveOption));
+        termino.remove(QRegularExpression("precio\\s+m[aá]s\\s+bajo", QRegularExpression::CaseInsensitiveOption));
+        termino.remove(QRegularExpression("menor\\s+precio", QRegularExpression::CaseInsensitiveOption));
+        termino.remove(QRegularExpression("m[aá]s\\s+econ[oó]mico[s]?", QRegularExpression::CaseInsensitiveOption));
+        termino = termino.trimmed();
+    }
+
+    if (termino.isEmpty() && familiaFiltro.isEmpty() && fabricanteFiltro.isEmpty() && proveedorFiltro.isEmpty() && orden.isEmpty()) {
+        res["error"] = "Debe especificar al menos un término, familia, fabricante o proveedor, o un criterio de ordenación (ej. precio_desc) para consultar el catálogo o stock.";
         return res;
     }
 
-    bool consultadoNube = false;
+    // Extraer palabras clave (tokens) para permitir coincidencias intercaladas (ej. 'espirales novadiet' -> 'Espirales int. 500gr. Nova Diet')
+    QStringList palabras;
+    static const QStringList stopWords = {"de", "del", "la", "el", "los", "las", "un", "una", "unos", "unas", "y", "en", "con", "por", "para", "que", "hay", "articulos", "artículos", "productos", "cuantos", "cuántos", "busca", "buscar"};
+    if (!termino.isEmpty()) {
+        for (const QString &w : termino.split(QRegularExpression("[\\s,;+]+"), Qt::SkipEmptyParts)) {
+            QString wClean = w.trimmed();
+            if (wClean.length() >= 2 && !stopWords.contains(wClean.toLower())) {
+                palabras.append(wClean);
+            }
+        }
+    }
 
-    // 1. Si la nube está disponible, consultar stock_tiendas_nube con filtro de tienda opcional
+    bool consultadoNube = false;
+    int totalCoincidencias = 0;
+
+    // 1. Priorizar NUBE si está disponible (consulta unificada de todas las tiendas en stock_tiendas_nube)
     if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
-        QSqlQuery q(dbNube);
+        
+        QString whereClauseNube = "WHERE 1=1 ";
+        if (idTiendaFiltro > 0) {
+            whereClauseNube += QString("AND s.id_tienda = %1 ").arg(idTiendaFiltro);
+        }
+
+        for (int i = 0; i < palabras.size(); ++i) {
+            int tokenIdx = i + 1;
+            whereClauseNube += QString("AND (a.descripcion LIKE :tok%1 OR a.cod = :tok_exact%1 OR b.nombre LIKE :tok%1 OR f.descripcion LIKE :tok%1) ").arg(tokenIdx);
+        }
+
+        if (!familiaFiltro.isEmpty()) {
+            whereClauseNube += "AND f.descripcion LIKE :fam ";
+        }
+        if (!fabricanteFiltro.isEmpty()) {
+            whereClauseNube += "AND (b.nombre LIKE :fab OR a.descripcion LIKE :fab) ";
+        }
+        if (!proveedorFiltro.isEmpty()) {
+            whereClauseNube += "AND a.cod IN (SELECT lp.cod FROM lineaspedido_nube lp JOIN proveedores prov ON lp.idProveedor = prov.idProveedor WHERE prov.nombre LIKE :prov) ";
+        }
+
+        // Conteo total real de artículos coincidentes en catálogo
+        QString sqlCountNube = "SELECT COUNT(DISTINCT a.cod) "
+                               "FROM stock_tiendas_nube s "
+                               "JOIN articulos a ON s.cod = a.cod "
+                               "LEFT JOIN tiendas t ON s.id_tienda = t.id "
+                               "LEFT JOIN fabricantes b ON a.fabricante = b.id "
+                               "LEFT JOIN familias f ON a.familia = f.id " + whereClauseNube;
+        QSqlQuery qCountNube(dbNube);
+        qCountNube.prepare(sqlCountNube);
+        for (int i = 0; i < palabras.size(); ++i) {
+            int tokenIdx = i + 1;
+            qCountNube.bindValue(QString(":tok%1").arg(tokenIdx), "%" + palabras[i] + "%");
+            qCountNube.bindValue(QString(":tok_exact%1").arg(tokenIdx), palabras[i]);
+        }
+        if (!familiaFiltro.isEmpty()) qCountNube.bindValue(":fam", "%" + familiaFiltro + "%");
+        if (!fabricanteFiltro.isEmpty()) qCountNube.bindValue(":fab", "%" + fabricanteFiltro + "%");
+        if (!proveedorFiltro.isEmpty()) qCountNube.bindValue(":prov", "%" + proveedorFiltro + "%");
+        if (qCountNube.exec() && qCountNube.next()) {
+            totalCoincidencias = qCountNube.value(0).toInt();
+        }
+
         QString sql = "SELECT s.id_tienda, COALESCE(t.nombre, CONCAT('Tienda ', s.id_tienda)) as nombre_tienda, "
-                      "a.cod, a.descripcion, a.pvp, a.precio_compra, s.stock, a.min as stock_min, a.max as stock_max, a.notas, "
+                      "a.cod, a.descripcion, a.pvp, a.precio_compra, s.stock, 0 as stock_min, 0 as stock_max, a.notas, "
                       "COALESCE(b.nombre, '') as fabricante, COALESCE(f.descripcion, '') as familia "
                       "FROM stock_tiendas_nube s "
                       "JOIN articulos a ON s.cod = a.cod "
                       "LEFT JOIN tiendas t ON s.id_tienda = t.id "
                       "LEFT JOIN fabricantes b ON a.fabricante = b.id "
-                      "LEFT JOIN familias f ON a.familia = f.id "
-                      "WHERE (a.descripcion LIKE :t1 OR a.cod = :t2 OR b.nombre LIKE :t3 OR f.descripcion LIKE :t4) ";
-        if (idTiendaFiltro > 0) {
-            sql += QString("AND s.id_tienda = %1 ").arg(idTiendaFiltro);
-        }
-        sql += "ORDER BY s.id_tienda ASC, s.stock DESC LIMIT 30";
+                      "LEFT JOIN familias f ON a.familia = f.id " + whereClauseNube;
 
+        if (orden.contains("precio_desc") || orden.contains("caro")) {
+            sql += "ORDER BY a.pvp DESC, s.stock DESC ";
+        } else if (orden.contains("precio_asc") || orden.contains("barato")) {
+            sql += "ORDER BY a.pvp ASC, s.stock DESC ";
+        } else if (orden.contains("stock_desc")) {
+            sql += "ORDER BY s.stock DESC ";
+        } else if (orden.contains("stock_asc")) {
+            sql += "ORDER BY s.stock ASC ";
+        } else {
+            sql += "ORDER BY s.id_tienda ASC, s.stock DESC ";
+        }
+        sql += QString("LIMIT %1").arg(limite);
+
+        QSqlQuery q(dbNube);
         q.prepare(sql);
-        q.bindValue(":t1", "%" + termino + "%");
-        q.bindValue(":t2", termino);
-        q.bindValue(":t3", "%" + termino + "%");
-        q.bindValue(":t4", "%" + termino + "%");
+        for (int i = 0; i < palabras.size(); ++i) {
+            int tokenIdx = i + 1;
+            q.bindValue(QString(":tok%1").arg(tokenIdx), "%" + palabras[i] + "%");
+            q.bindValue(QString(":tok_exact%1").arg(tokenIdx), palabras[i]);
+        }
+        if (!familiaFiltro.isEmpty()) {
+            q.bindValue(":fam", "%" + familiaFiltro + "%");
+        }
+        if (!fabricanteFiltro.isEmpty()) {
+            q.bindValue(":fab", "%" + fabricanteFiltro + "%");
+        }
+        if (!proveedorFiltro.isEmpty()) {
+            q.bindValue(":prov", "%" + proveedorFiltro + "%");
+        }
 
         if (q.exec()) {
             consultadoNube = true;
@@ -1982,9 +2405,12 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
                 art["fabricante"] = q.value("fabricante").toString();
                 articulosArray.append(art);
             }
+        } else {
+            qDebug() << "toolConsultarStock: Error SQL Nube:" << q.lastError().text();
         }
     }
 
+    // 2. Si la nube no está abierta o no devolvió datos, consultar bases locales/remotas
     if (!consultadoNube) {
         QStringList conexiones = resolverConexiones(tiendaFiltro);
 
@@ -1994,21 +2420,80 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
             }
 
             QSqlDatabase db = QSqlDatabase::database(connName);
+            
+            QString whereClauseLocal = "WHERE 1=1 ";
+            for (int i = 0; i < palabras.size(); ++i) {
+                int tokenIdx = i + 1;
+                whereClauseLocal += QString("AND (a.descripcion LIKE :tok%1 OR a.cod = :tok_exact%1 OR b.nombre LIKE :tok%1 OR f.descripcion LIKE :tok%1 "
+                                           "OR a.cod IN (SELECT c.cod FROM codaux c WHERE c.aux = :tok_exact%1)) ").arg(tokenIdx);
+            }
+
+            if (!familiaFiltro.isEmpty()) {
+                whereClauseLocal += "AND f.descripcion LIKE :fam ";
+            }
+            if (!fabricanteFiltro.isEmpty()) {
+                whereClauseLocal += "AND (b.nombre LIKE :fab OR a.descripcion LIKE :fab) ";
+            }
+            if (!proveedorFiltro.isEmpty()) {
+                whereClauseLocal += "AND a.cod IN (SELECT lp.cod FROM lineaspedido lp JOIN proveedores prov ON lp.idProveedor = prov.idProveedor WHERE prov.nombre LIKE :prov) ";
+            }
+
+            // Conteo total real de artículos en catálogo local
+            if (totalCoincidencias == 0) {
+                QSqlQuery qCountLocal(db);
+                qCountLocal.prepare("SELECT COUNT(DISTINCT a.cod) FROM articulos a "
+                                    "LEFT JOIN familias f ON a.familia = f.id "
+                                    "LEFT JOIN fabricantes b ON a.fabricante = b.id " + whereClauseLocal);
+                for (int i = 0; i < palabras.size(); ++i) {
+                    int tokenIdx = i + 1;
+                    qCountLocal.bindValue(QString(":tok%1").arg(tokenIdx), "%" + palabras[i] + "%");
+                    qCountLocal.bindValue(QString(":tok_exact%1").arg(tokenIdx), palabras[i]);
+                }
+                if (!familiaFiltro.isEmpty()) qCountLocal.bindValue(":fam", "%" + familiaFiltro + "%");
+                if (!fabricanteFiltro.isEmpty()) qCountLocal.bindValue(":fab", "%" + fabricanteFiltro + "%");
+                if (!proveedorFiltro.isEmpty()) qCountLocal.bindValue(":prov", "%" + proveedorFiltro + "%");
+                if (qCountLocal.exec() && qCountLocal.next()) {
+                    totalCoincidencias = qCountLocal.value(0).toInt();
+                }
+            }
+
+            QString sql = "SELECT a.cod, a.descripcion, a.pvp, a.precio_compra, a.min, a.max, "
+                          "a.notas, COALESCE(f.descripcion, '') as familia, COALESCE(b.nombre, '') as fabricante, "
+                          "(SELECT COALESCE(SUM(l.cantidad), 0) FROM lotes l WHERE l.ean = a.cod) as stock_real "
+                          "FROM articulos a "
+                          "LEFT JOIN familias f ON a.familia = f.id "
+                          "LEFT JOIN fabricantes b ON a.fabricante = b.id " + whereClauseLocal;
+
+            if (orden.contains("precio_desc") || orden.contains("caro")) {
+                sql += "ORDER BY a.pvp DESC ";
+            } else if (orden.contains("precio_asc") || orden.contains("barato")) {
+                sql += "ORDER BY a.pvp ASC ";
+            } else if (orden.contains("stock_desc")) {
+                sql += "ORDER BY stock_real DESC ";
+            } else if (orden.contains("stock_asc")) {
+                sql += "ORDER BY stock_real ASC ";
+            } else {
+                sql += "ORDER BY a.descripcion ASC ";
+            }
+
+            sql += QString("LIMIT %1").arg(limite);
+
             QSqlQuery q(db);
-            q.prepare("SELECT a.cod, a.descripcion, a.pvp, a.precio_compra, a.min, a.max, "
-                      "a.notas, f.descripcion as familia, b.nombre as fabricante, "
-                      "(SELECT COALESCE(SUM(l.cantidad), 0) FROM lotes l WHERE l.ean = a.cod) as stock_real "
-                      "FROM articulos a "
-                      "LEFT JOIN familias f ON a.familia = f.id "
-                      "LEFT JOIN fabricantes b ON a.fabricante = b.id "
-                      "WHERE a.descripcion LIKE :t1 OR a.cod = :t2 OR b.nombre LIKE :t3 OR f.descripcion LIKE :t4 OR a.cod IN "
-                      "(SELECT c.cod FROM codaux c WHERE c.aux = :t5) "
-                      "LIMIT 15");
-            q.bindValue(":t1", "%" + termino + "%");
-            q.bindValue(":t2", termino);
-            q.bindValue(":t3", "%" + termino + "%");
-            q.bindValue(":t4", "%" + termino + "%");
-            q.bindValue(":t5", termino);
+            q.prepare(sql);
+            for (int i = 0; i < palabras.size(); ++i) {
+                int tokenIdx = i + 1;
+                q.bindValue(QString(":tok%1").arg(tokenIdx), "%" + palabras[i] + "%");
+                q.bindValue(QString(":tok_exact%1").arg(tokenIdx), palabras[i]);
+            }
+            if (!familiaFiltro.isEmpty()) {
+                q.bindValue(":fam", "%" + familiaFiltro + "%");
+            }
+            if (!fabricanteFiltro.isEmpty()) {
+                q.bindValue(":fab", "%" + fabricanteFiltro + "%");
+            }
+            if (!proveedorFiltro.isEmpty()) {
+                q.bindValue(":prov", "%" + proveedorFiltro + "%");
+            }
 
             if (q.exec()) {
                 while (q.next()) {
@@ -2037,7 +2522,13 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
         }
     }
 
-    res["total_encontrados"] = articulosArray.size();
+    res["total_coincidencias"] = (totalCoincidencias > 0) ? totalCoincidencias : articulosArray.size();
+    res["total_encontrados"] = (totalCoincidencias > 0) ? totalCoincidencias : articulosArray.size();
+    res["mostrados"] = articulosArray.size();
+    if (!familiaFiltro.isEmpty()) res["filtro_familia"] = familiaFiltro;
+    if (!fabricanteFiltro.isEmpty()) res["filtro_fabricante"] = fabricanteFiltro;
+    if (!proveedorFiltro.isEmpty()) res["filtro_proveedor"] = proveedorFiltro;
+    if (!orden.isEmpty()) res["criterio_orden"] = orden;
     res["articulos"] = articulosArray;
     return res;
 }
@@ -2206,6 +2697,29 @@ QJsonObject AsistenteIA::toolResumenVentas(const QJsonObject &args)
         familia = "Alimentaci";
     }
 
+    // Pre-resolución inteligente de familias:
+    // Si el usuario especifica una familia (ej. 'alimentación', 'cosmética'), buscamos todas las familias
+    // que coincidan en la tabla familias para incluir todas sus subfamilias (ej. Alimentación bio, sin gluten, etc.)
+    QStringList nombresFamiliasCoincidentes;
+    QStringList idsFamiliasCoincidentes;
+    if (!familia.isEmpty()) {
+        QSqlDatabase dbFam = obtenerBaseDatos();
+        if (dbFam.isOpen()) {
+            QSqlQuery qFam(dbFam);
+            QString famLimpia = familia;
+            famLimpia.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u");
+            qFam.prepare("SELECT id, descripcion FROM familias WHERE LOWER(descripcion) LIKE :f1 OR LOWER(descripcion) LIKE :f2");
+            qFam.bindValue(":f1", "%" + familia.toLower() + "%");
+            qFam.bindValue(":f2", "%" + famLimpia.toLower() + "%");
+            if (qFam.exec()) {
+                while (qFam.next()) {
+                    idsFamiliasCoincidentes.append(qFam.value("id").toString());
+                    nombresFamiliasCoincidentes.append(qFam.value("descripcion").toString());
+                }
+            }
+        }
+    }
+
     QString fabricante = args.value("fabricante").toString().trimmed();
     if (fabricante.isEmpty()) fabricante = args.value("marca").toString().trimmed();
 
@@ -2226,8 +2740,8 @@ QJsonObject AsistenteIA::toolResumenVentas(const QJsonObject &args)
     bool consultadoNube = false;
 
     // 1. Priorizar consulta directa a la base consolidada en la nube si está disponible
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    QSqlDatabase dbNube = obtenerBaseDatosNube();
+    if (dbNube.isOpen()) {
 
         // Cláusula WHERE común
         QString whereSql = "WHERE v.fecha >= :f1 AND v.fecha <= :f2 ";
@@ -2238,8 +2752,31 @@ QJsonObject AsistenteIA::toolResumenVentas(const QJsonObject &args)
         }
         if (!fabricante.isEmpty()) whereSql += "AND (v.fabricante LIKE :fab OR v.producto LIKE :fab2) ";
         if (!familia.isEmpty()) {
-            if (familiaNegativa) whereSql += "AND (v.familia NOT LIKE :fam OR v.familia IS NULL) ";
-            else whereSql += "AND (v.familia LIKE :fam OR v.producto LIKE :fam2) ";
+            if (familiaNegativa) {
+                if (!nombresFamiliasCoincidentes.isEmpty()) {
+                    QStringList escapedNames;
+                    for (const QString &fn : nombresFamiliasCoincidentes) {
+                        QString safe = fn;
+                        safe.replace("'", "''");
+                        escapedNames.append("'" + safe + "'");
+                    }
+                    whereSql += QString("AND (v.familia NOT IN (%1) OR v.familia IS NULL) ").arg(escapedNames.join(","));
+                } else {
+                    whereSql += "AND (v.familia NOT LIKE :fam OR v.familia IS NULL) ";
+                }
+            } else {
+                if (!nombresFamiliasCoincidentes.isEmpty()) {
+                    QStringList escapedNames;
+                    for (const QString &fn : nombresFamiliasCoincidentes) {
+                        QString safe = fn;
+                        safe.replace("'", "''");
+                        escapedNames.append("'" + safe + "'");
+                    }
+                    whereSql += QString("AND (v.familia IN (%1) OR v.familia LIKE :fam OR v.producto LIKE :fam2) ").arg(escapedNames.join(","));
+                } else {
+                    whereSql += "AND (v.familia LIKE :fam OR v.producto LIKE :fam2) ";
+                }
+            }
         }
         if (!producto.isEmpty()) whereSql += "AND (v.producto LIKE :prod OR v.codigo_articulo = :prod2) ";
 
@@ -2392,8 +2929,19 @@ QJsonObject AsistenteIA::toolResumenVentas(const QJsonObject &args)
                                    "WHERE l.fecha >= :f1 AND l.fecha <= :f2 ";
                 if (!fabricante.isEmpty()) sqlLocal += "AND (b.nombre LIKE :fab OR l.descripcion LIKE :fab2) ";
                 if (!familia.isEmpty()) {
-                    if (familiaNegativa) sqlLocal += "AND (f.descripcion NOT LIKE :fam OR f.descripcion IS NULL) ";
-                    else sqlLocal += "AND (f.descripcion LIKE :fam OR l.descripcion LIKE :fam2) ";
+                    if (familiaNegativa) {
+                        if (!idsFamiliasCoincidentes.isEmpty()) {
+                            sqlLocal += QString("AND (a.familia NOT IN (%1) OR a.familia IS NULL) ").arg(idsFamiliasCoincidentes.join(","));
+                        } else {
+                            sqlLocal += "AND (f.descripcion NOT LIKE :fam OR f.descripcion IS NULL) ";
+                        }
+                    } else {
+                        if (!idsFamiliasCoincidentes.isEmpty()) {
+                            sqlLocal += QString("AND (a.familia IN (%1) OR f.descripcion LIKE :fam OR l.descripcion LIKE :fam2) ").arg(idsFamiliasCoincidentes.join(","));
+                        } else {
+                            sqlLocal += "AND (f.descripcion LIKE :fam OR l.descripcion LIKE :fam2) ";
+                        }
+                    }
                 }
                 if (!producto.isEmpty()) sqlLocal += "AND (l.descripcion LIKE :prod OR l.cod = :prod2) ";
 
@@ -2470,6 +3018,30 @@ QJsonObject AsistenteIA::toolResumenVentas(const QJsonObject &args)
     if (!fabricante.isEmpty()) res["fabricante_filtrado"] = fabricante;
     if (!familia.isEmpty()) res["familia_filtrada"] = (familiaNegativa ? "No Alimentación" : familia);
     if (!producto.isEmpty()) res["producto_filtrado"] = producto;
+
+    // Desambiguación y aclaración de familias:
+    if (!nombresFamiliasCoincidentes.isEmpty()) {
+        res["familias_coincidentes"] = QJsonArray::fromStringList(nombresFamiliasCoincidentes);
+        if (nombresFamiliasCoincidentes.size() > 1 && !familiaNegativa) {
+            res["nota_aclaracion_familias"] = QString("Se han sumado conjuntamente las %1 familias que coinciden con '%2': %3. "
+                                                      "Informa al usuario de qué familias se han sumado e indícale que si desea el desglose de una sola en concreto, puede solicitarla.")
+                                                      .arg(QString::number(nombresFamiliasCoincidentes.size()), familia, nombresFamiliasCoincidentes.join(", "));
+        }
+    } else if (!familia.isEmpty() && !familiaNegativa) {
+        QStringList sugerencias;
+        QSqlDatabase dbSug = obtenerBaseDatos();
+        if (dbSug.isOpen()) {
+            QSqlQuery qSug(dbSug);
+            qSug.prepare("SELECT descripcion FROM familias ORDER BY descripcion ASC LIMIT 15");
+            if (qSug.exec()) {
+                while (qSug.next()) sugerencias.append(qSug.value(0).toString());
+            }
+        }
+        res["requiere_aclaracion"] = true;
+        res["tipo_aclaracion"] = "familia";
+        res["mensaje_aclaracion"] = QString("No se encontró ninguna familia llamada '%1'. Pregunta al usuario a cuál de las familias disponibles se refiere.").arg(familia);
+        res["familias_disponibles_sugeridas"] = QJsonArray::fromStringList(sugerencias);
+    }
 
     res["total_facturado"] = QString::number(totalGlobalVentas, 'f', 2) + " €";
     res["total_tickets"] = totalGlobalTickets;
@@ -3558,6 +4130,29 @@ QJsonObject AsistenteIA::toolProductosMasVendidos(const QJsonObject &args)
         }
     }
 
+    // Pre-resolución inteligente de familias:
+    // Si el usuario especifica una familia (ej. 'alimentación', 'cosmética'), buscamos todas las familias
+    // que coincidan en la tabla familias para incluir todas sus subfamilias (ej. Alimentación bio, sin gluten, etc.)
+    QStringList nombresFamiliasCoincidentes;
+    QStringList idsFamiliasCoincidentes;
+    if (!familia.isEmpty()) {
+        QSqlDatabase dbFam = obtenerBaseDatos();
+        if (dbFam.isOpen()) {
+            QSqlQuery qFam(dbFam);
+            QString famLimpia = familia;
+            famLimpia.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u");
+            qFam.prepare("SELECT id, descripcion FROM familias WHERE LOWER(descripcion) LIKE :f1 OR LOWER(descripcion) LIKE :f2");
+            qFam.bindValue(":f1", "%" + familia.toLower() + "%");
+            qFam.bindValue(":f2", "%" + famLimpia.toLower() + "%");
+            if (qFam.exec()) {
+                while (qFam.next()) {
+                    idsFamiliasCoincidentes.append(qFam.value("id").toString());
+                    nombresFamiliasCoincidentes.append(qFam.value("descripcion").toString());
+                }
+            }
+        }
+    }
+
     QString termino = args.value("termino").toString().trimmed();
     if (termino.isEmpty()) termino = args.value("producto").toString().trimmed();
     if (termino.isEmpty()) termino = args.value("articulo").toString().trimmed();
@@ -3600,8 +4195,8 @@ QJsonObject AsistenteIA::toolProductosMasVendidos(const QJsonObject &args)
     QJsonArray totalesTiendasArray;
 
     // 1. Intentar consultar directamente la base consolidada en la nube si está conectada
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    QSqlDatabase dbNube = obtenerBaseDatosNube();
+    if (dbNube.isOpen()) {
         
         // 1.1 Si se solicita o detecta desglose mensual (ej. 'cada mes de 2025')
         if (desglosarMeses) {
@@ -3669,22 +4264,37 @@ QJsonObject AsistenteIA::toolProductosMasVendidos(const QJsonObject &args)
         // 1.2 Totales globales del filtro (sin límite de ranking)
         {
             QSqlQuery qTot(dbNube);
-            QString sqlTot = "SELECT SUM(l.cantidad) as total_unidades, SUM(l.totallinea) as total_euros, "
-                             "COUNT(DISTINCT l.cod) as total_refs "
-                             "FROM lineasticket_nube l "
-                             "LEFT JOIN articulos a ON l.cod = a.cod "
-                             "LEFT JOIN fabricantes b ON a.fabricante = b.id "
-                             "LEFT JOIN familias f ON a.familia = f.id "
-                             "WHERE l.fecha >= :f1 AND l.fecha <= :f2 ";
-            if (idTiendaFiltro > 0) {
-                sqlTot += QString("AND l.id_tienda = %1 ").arg(idTiendaFiltro);
+            QString sqlTot;
+            bool necesitaJoins = (!fabricante.isEmpty() || !familia.isEmpty());
+            if (necesitaJoins) {
+                sqlTot = "SELECT COALESCE(SUM(l.cantidad), 0) as total_unidades, "
+                         "COALESCE(SUM(l.totallinea), 0) as total_euros, "
+                         "COUNT(DISTINCT l.cod) as total_refs "
+                         "FROM lineasticket_nube l "
+                         "LEFT JOIN articulos a ON l.cod = a.cod "
+                         "LEFT JOIN fabricantes b ON a.fabricante = b.id "
+                         "LEFT JOIN familias f ON a.familia = f.id "
+                         "WHERE l.fecha >= :f1 AND l.fecha <= :f2 ";
+                if (idTiendaFiltro > 0) {
+                    sqlTot += QString("AND l.id_tienda = %1 ").arg(idTiendaFiltro);
+                }
+                if (!fabricante.isEmpty()) sqlTot += "AND (b.nombre LIKE :fab OR l.descripcion LIKE :fab2) ";
+                if (!familia.isEmpty()) {
+                    if (familiaNegativa) sqlTot += "AND (f.descripcion NOT LIKE :fam OR f.descripcion IS NULL) ";
+                    else sqlTot += "AND (f.descripcion LIKE :fam OR l.descripcion LIKE :fam2) ";
+                }
+                if (!termino.isEmpty()) sqlTot += "AND (l.descripcion LIKE :term OR l.cod = :term2) ";
+            } else {
+                sqlTot = "SELECT COALESCE(SUM(l.cantidad), 0) as total_unidades, "
+                         "COALESCE(SUM(l.totallinea), 0) as total_euros, "
+                         "COUNT(DISTINCT l.cod) as total_refs "
+                         "FROM lineasticket_nube l "
+                         "WHERE l.fecha >= :f1 AND l.fecha <= :f2 ";
+                if (idTiendaFiltro > 0) {
+                    sqlTot += QString("AND l.id_tienda = %1 ").arg(idTiendaFiltro);
+                }
+                if (!termino.isEmpty()) sqlTot += "AND (l.descripcion LIKE :term OR l.cod = :term2) ";
             }
-            if (!fabricante.isEmpty()) sqlTot += "AND (b.nombre LIKE :fab OR l.descripcion LIKE :fab2) ";
-            if (!familia.isEmpty()) {
-                if (familiaNegativa) sqlTot += "AND (f.descripcion NOT LIKE :fam OR f.descripcion IS NULL) ";
-                else sqlTot += "AND (f.descripcion LIKE :fam OR l.descripcion LIKE :fam2) ";
-            }
-            if (!termino.isEmpty()) sqlTot += "AND (l.descripcion LIKE :term OR l.cod = :term2) ";
 
             qTot.prepare(sqlTot);
             qTot.bindValue(":f1", fechaI);
@@ -3705,6 +4315,8 @@ QJsonObject AsistenteIA::toolProductosMasVendidos(const QJsonObject &args)
                 totalUnidadesGlobal = qTot.value("total_unidades").toDouble();
                 totalEurosGlobal = qTot.value("total_euros").toDouble();
                 totalReferenciasGlobal = qTot.value("total_refs").toInt();
+            } else {
+                qDebug() << "toolProductosMasVendidos qTot error:" << qTot.lastError().text();
             }
         }
 
@@ -3922,7 +4534,21 @@ QJsonObject AsistenteIA::toolProductosMasVendidos(const QJsonObject &args)
                           "LEFT JOIN familias f ON a.familia = f.id "
                           "WHERE l.fecha >= :f1 AND l.fecha <= :f2 ";
             if (!fabricante.isEmpty()) sql += "AND (b.nombre LIKE :fab OR l.descripcion LIKE :fab2) ";
-            if (!familia.isEmpty()) sql += "AND (f.descripcion LIKE :fam OR l.descripcion LIKE :fam2) ";
+            if (!familia.isEmpty()) {
+                if (familiaNegativa) {
+                    if (!idsFamiliasCoincidentes.isEmpty()) {
+                        sql += QString("AND (a.familia NOT IN (%1) OR a.familia IS NULL) ").arg(idsFamiliasCoincidentes.join(","));
+                    } else {
+                        sql += "AND (f.descripcion NOT LIKE :fam OR f.descripcion IS NULL) ";
+                    }
+                } else {
+                    if (!idsFamiliasCoincidentes.isEmpty()) {
+                        sql += QString("AND (a.familia IN (%1) OR f.descripcion LIKE :fam OR l.descripcion LIKE :fam2) ").arg(idsFamiliasCoincidentes.join(","));
+                    } else {
+                        sql += "AND (f.descripcion LIKE :fam OR l.descripcion LIKE :fam2) ";
+                    }
+                }
+            }
             if (!termino.isEmpty()) sql += "AND (l.descripcion LIKE :term OR l.cod = :term2) ";
             sql += "GROUP BY l.cod, l.descripcion, b.nombre, f.descripcion";
 
@@ -3964,6 +4590,15 @@ QJsonObject AsistenteIA::toolProductosMasVendidos(const QJsonObject &args)
             return a.unidades > b.unidades;
         });
 
+        // Acumular totales de todas las referencias encontradas en la consulta local
+        totalReferenciasGlobal = acumulado.size();
+        totalUnidadesGlobal = 0.0;
+        totalEurosGlobal = 0.0;
+        for (const ProdVendido &pv : lista) {
+            totalUnidadesGlobal += pv.unidades;
+            totalEurosGlobal += pv.euros;
+        }
+
         int n = qMin(limite, lista.size());
         for (int i = 0; i < n; ++i) {
             QJsonObject item;
@@ -3978,12 +4613,58 @@ QJsonObject AsistenteIA::toolProductosMasVendidos(const QJsonObject &args)
         }
     }
 
+    // Salvaguarda: calcular la suma de unidades e importe de los productos que componen el ranking
+    double unidadesRanking = 0.0;
+    double eurosRanking = 0.0;
+    for (const QJsonValue &val : rankingArray) {
+        QJsonObject itObj = val.toObject();
+        unidadesRanking += itObj.value("unidades_vendidas").toDouble();
+        QString eurStr = itObj.value("total_facturado").toString();
+        eurStr.remove("€");
+        eurStr = eurStr.trimmed();
+        eurStr.replace(",", ".");
+        eurosRanking += eurStr.toDouble();
+    }
+    // Si la consulta global devolvió 0 o falló, pero el ranking tiene productos vendidos,
+    // utilizar los acumulados del ranking para que el informe no muestre 0.00 € erróneamente
+    if ((totalUnidadesGlobal <= 0.0 || totalEurosGlobal <= 0.0) && !rankingArray.isEmpty()) {
+        totalUnidadesGlobal = unidadesRanking;
+        totalEurosGlobal = eurosRanking;
+        if (totalReferenciasGlobal <= 0) totalReferenciasGlobal = rankingArray.size();
+    }
+
     res["tipo_resultado"] = "ranking_productos_mas_vendidos";
     res["tienda"] = tiendaFiltro;
     res["fecha_inicio"] = fechaI;
     res["fecha_fin"] = fechaF;
-    if (!fabricante.isEmpty()) res["fabricante_filtrado"] = fabricante;
     if (!familia.isEmpty()) res["familia_filtrada"] = familia;
+
+    // Desambiguación y aclaración de familias:
+    if (!nombresFamiliasCoincidentes.isEmpty()) {
+        res["familias_coincidentes"] = QJsonArray::fromStringList(nombresFamiliasCoincidentes);
+        if (nombresFamiliasCoincidentes.size() > 1 && !familiaNegativa) {
+            res["nota_aclaracion_familias"] = QString("Se han sumado conjuntamente las %1 familias que coinciden con '%2': %3. "
+                                                      "Informa al usuario de qué familias se han sumado e indícale que si desea el desglose de una sola en concreto, puede solicitarla.")
+                                                      .arg(QString::number(nombresFamiliasCoincidentes.size()), familia, nombresFamiliasCoincidentes.join(", "));
+        }
+    } else if (!familia.isEmpty() && !familiaNegativa) {
+        // Si no se encontró ninguna familia que coincida, buscar sugerencias para preguntar al usuario
+        QStringList sugerencias;
+        QSqlDatabase dbSug = obtenerBaseDatos();
+        if (dbSug.isOpen()) {
+            QSqlQuery qSug(dbSug);
+            qSug.prepare("SELECT descripcion FROM familias ORDER BY descripcion ASC LIMIT 15");
+            if (qSug.exec()) {
+                while (qSug.next()) sugerencias.append(qSug.value(0).toString());
+            }
+        }
+        res["requiere_aclaracion"] = true;
+        res["tipo_aclaracion"] = "familia";
+        res["mensaje_aclaracion"] = QString("No se encontró ninguna familia llamada '%1'. Pregunta al usuario a cuál de las familias disponibles se refiere.").arg(familia);
+        res["familias_disponibles_sugeridas"] = QJsonArray::fromStringList(sugerencias);
+    }
+    res["unidades_vendidas_en_top_ranking"] = unidadesRanking;
+    res["facturado_en_top_ranking"] = QString::number(eurosRanking, 'f', 2) + " €";
     res["total_unidades_acumuladas_todas_referencias"] = totalUnidadesGlobal;
     res["total_facturado_acumulado_todas_referencias"] = QString::number(totalEurosGlobal, 'f', 2) + " €";
     res["total_referencias_vendidas"] = totalReferenciasGlobal;
@@ -4522,12 +5203,62 @@ QJsonObject AsistenteIA::toolEjecutarConsultaSql(const QJsonObject &args)
         return res;
     }
 
-    // Corregir automáticamente alias comunes que los LLM suelen confundir en las vistas
+    // Corregir automáticamente alias comunes que los LLM suelen confundir en las vistas y tablas
     QString queryAjustada = queryStr;
     queryAjustada.replace(QRegularExpression("\\bmarca\\b", QRegularExpression::CaseInsensitiveOption), "fabricante");
     queryAjustada.replace(QRegularExpression("\\bcliente_nombre\\b", QRegularExpression::CaseInsensitiveOption), "cliente");
     queryAjustada.replace(QRegularExpression("\\bfecha_venta\\b", QRegularExpression::CaseInsensitiveOption), "fecha");
     queryAjustada.replace(QRegularExpression("\\bimporte_total\\b", QRegularExpression::CaseInsensitiveOption), "total");
+
+    // Mapeos en tablas de artículos, compras y facturas:
+    queryAjustada.replace(QRegularExpression("\\bid_proveedor\\b", QRegularExpression::CaseInsensitiveOption), "idProveedor");
+    queryAjustada.replace(QRegularExpression("\\bfecha_factura\\b", QRegularExpression::CaseInsensitiveOption), "fechaFactura");
+    queryAjustada.replace(QRegularExpression("\\bfecha_pedido\\b", QRegularExpression::CaseInsensitiveOption), "fechaPedido");
+    queryAjustada.replace(QRegularExpression("\\bnumero_factura\\b", QRegularExpression::CaseInsensitiveOption), "nFactura");
+    queryAjustada.replace(QRegularExpression("\\bnum_factura\\b", QRegularExpression::CaseInsensitiveOption), "nFactura");
+    queryAjustada.replace(QRegularExpression("\\bnumero_documento\\b", QRegularExpression::CaseInsensitiveOption), "nDocumento");
+    queryAjustada.replace(QRegularExpression("\\bnum_documento\\b", QRegularExpression::CaseInsensitiveOption), "nDocumento");
+    queryAjustada.replace(QRegularExpression("\\btotal_base\\b", QRegularExpression::CaseInsensitiveOption), "totalBase");
+    queryAjustada.replace(QRegularExpression("\\btotal_iva\\b", QRegularExpression::CaseInsensitiveOption), "totalIva");
+    queryAjustada.replace(QRegularExpression("\\btotal_re\\b", QRegularExpression::CaseInsensitiveOption), "totalRe");
+
+    // Correcciones en articulos y lineaspedido (donde el código es 'cod' y el nombre es 'descripcion')
+    queryAjustada.replace(QRegularExpression("\\b(articulos|lineaspedido|lotes|salidagenero|salidagenero_tmp)\\.codigo\\b", QRegularExpression::CaseInsensitiveOption), "\\1.cod");
+    queryAjustada.replace(QRegularExpression("\\b(articulos|lineaspedido)\\.id_articulo\\b", QRegularExpression::CaseInsensitiveOption), "\\1.cod");
+    queryAjustada.replace(QRegularExpression("\\b(articulos|lineaspedido)\\.nombre\\b", QRegularExpression::CaseInsensitiveOption), "\\1.descripcion");
+    queryAjustada.replace(QRegularExpression("\\b(articulos|lineaspedido)\\.nombre_producto\\b", QRegularExpression::CaseInsensitiveOption), "\\1.descripcion");
+    queryAjustada.replace(QRegularExpression("\\b(a|lp)\\.codigo\\b", QRegularExpression::CaseInsensitiveOption), "\\1.cod");
+    queryAjustada.replace(QRegularExpression("\\b(a|lp)\\.id_articulo\\b", QRegularExpression::CaseInsensitiveOption), "\\1.cod");
+    queryAjustada.replace(QRegularExpression("\\b(a|lp)\\.nombre\\b", QRegularExpression::CaseInsensitiveOption), "\\1.descripcion");
+    queryAjustada.replace(QRegularExpression("\\ba\\.id\\b", QRegularExpression::CaseInsensitiveOption), "a.cod");
+    queryAjustada.replace(QRegularExpression("\\barticulos\\.id\\b", QRegularExpression::CaseInsensitiveOption), "articulos.cod");
+    queryAjustada.replace(QRegularExpression("\\blineaspedido\\.nFactura\\b", QRegularExpression::CaseInsensitiveOption), "lineaspedido.nDocumento");
+    queryAjustada.replace(QRegularExpression("\\blp\\.nFactura\\b", QRegularExpression::CaseInsensitiveOption), "lp.nDocumento");
+
+    // Corrección genérica si no tienen prefijo de tabla cuando se consulta articulos o lineaspedido
+    if (queryAjustada.contains("articulos", Qt::CaseInsensitive) || queryAjustada.contains("lineaspedido", Qt::CaseInsensitive)) {
+        queryAjustada.replace(QRegularExpression("\\bcodigo\\b", QRegularExpression::CaseInsensitiveOption), "cod");
+        queryAjustada.replace(QRegularExpression("\\bnombre_producto\\b", QRegularExpression::CaseInsensitiveOption), "descripcion");
+    }
+
+    // Corrección de consultas donde el LLM filtra familia por texto en vez de su ID numérico
+    queryAjustada.replace(QRegularExpression("\\b(articulos\\.|a\\.)?familia\\s*LIKE\\s*'([^']+)'", QRegularExpression::CaseInsensitiveOption),
+                          "articulos.familia IN (SELECT id FROM familias WHERE descripcion LIKE '\\2')");
+    queryAjustada.replace(QRegularExpression("\\b(articulos\\.|a\\.)?familia\\s*=\\s*'([^']+)'", QRegularExpression::CaseInsensitiveOption),
+                          "articulos.familia IN (SELECT id FROM familias WHERE descripcion LIKE '%\\2%')");
+
+    // Corrección de consultas donde el LLM filtra fabricante/marca por texto en vez de su ID numérico
+    queryAjustada.replace(QRegularExpression("\\b(articulos\\.|a\\.)?fabricante\\s*LIKE\\s*'([^']+)'", QRegularExpression::CaseInsensitiveOption),
+                          "articulos.fabricante IN (SELECT id FROM fabricantes WHERE nombre LIKE '\\2')");
+    queryAjustada.replace(QRegularExpression("\\b(articulos\\.|a\\.)?fabricante\\s*=\\s*'([^']+)'", QRegularExpression::CaseInsensitiveOption),
+                          "articulos.fabricante IN (SELECT id FROM fabricantes WHERE nombre LIKE '%\\2%')");
+
+    // Corrección de consultas donde el LLM filtra proveedor en articulos (columna virtual a través de compras en lineaspedido)
+    QString tablaLineasProv = (db.databaseName().contains("nube", Qt::CaseInsensitive)) ? "lineaspedido_nube" : "lineaspedido";
+    queryAjustada.replace(QRegularExpression("\\b(articulos\\.|a\\.)?proveedor\\s*LIKE\\s*'([^']+)'", QRegularExpression::CaseInsensitiveOption),
+                          QString("articulos.cod IN (SELECT lp.cod FROM %1 lp JOIN proveedores prov ON lp.idProveedor = prov.idProveedor WHERE prov.nombre LIKE '\\2')").arg(tablaLineasProv));
+    queryAjustada.replace(QRegularExpression("\\b(articulos\\.|a\\.)?proveedor\\s*=\\s*'([^']+)'", QRegularExpression::CaseInsensitiveOption),
+                          QString("articulos.cod IN (SELECT lp.cod FROM %1 lp JOIN proveedores prov ON lp.idProveedor = prov.idProveedor WHERE prov.nombre LIKE '%\\2%')").arg(tablaLineasProv));
 
     QSqlQuery q(db);
     if (!q.exec(queryAjustada)) {
@@ -5313,8 +6044,30 @@ QJsonObject AsistenteIA::toolConsultarSalidasTiendas(const QJsonObject &args)
         limite = 30;
     }
 
-    bool consultarPendientes = (estado.isEmpty() || estado.contains("toda") || estado.contains("pend") || estado.contains("prep") || estado.contains("borr"));
-    bool consultarEnviadas = (estado.isEmpty() || estado.contains("toda") || estado.contains("envi") || estado.contains("proc") || estado.contains("hist"));
+    // Regla de negocio: si el usuario pregunta en presente ("hay productos en salidas", "¿qué salidas hay?", "salidas a Casablanca")
+    // y no aporta fechas ni pide explícitamente "enviadas"/"histórico", se consultan las salidas pendientes sin aceptar / en preparación
+    // (salidaGenero_tmp) en vez de retornar cientos de líneas históricas antiguas.
+    bool soloPendientesArg = args.value("solo_pendientes").toBool();
+    bool pideEnviadasExplicitamente = (estado.contains("envi") || estado.contains("proc") || estado.contains("hist") ||
+                                       userText.contains("enviad") || userText.contains("procesad") || userText.contains("histór") ||
+                                       userText.contains("histor") || userText.contains("recibid") ||
+                                       !fechaI.isEmpty() || !fechaF.isEmpty());
+
+    if (soloPendientesArg) {
+        estado = "pendientes";
+    } else if (estado.isEmpty()) {
+        if (pideEnviadasExplicitamente) {
+            estado = "enviadas";
+        } else {
+            // Regla amigable: consultar tanto borradores/pendientes como envíos recientes para no omitir mercancía en tránsito
+            estado = "todas";
+        }
+    } else if (estado.contains("toda") && !pideEnviadasExplicitamente) {
+        estado = "todas";
+    }
+
+    bool consultarPendientes = (estado.contains("pend") || estado.contains("prep") || estado.contains("borr") || estado.contains("sin_aceptar") || estado.contains("toda"));
+    bool consultarEnviadas = (estado.contains("envi") || estado.contains("proc") || estado.contains("hist") || estado.contains("toda"));
 
     QJsonObject res;
     QJsonArray arrayPendientes;
@@ -5403,8 +6156,8 @@ QJsonObject AsistenteIA::toolConsultarSalidasTiendas(const QJsonObject &args)
         bool consultadoNube = false;
 
         // Opción A: Consultar en la base de datos de la Nube si está activa
-        if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-            QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        QSqlDatabase dbNube = obtenerBaseDatosNube();
+        if (dbNube.isOpen()) {
             QString sql = "SELECT s.id_local, s.id_tienda_origen, COALESCE(t_orig.nombre, CONCAT('Tienda ', s.id_tienda_origen)) AS nombre_origen, "
                           "s.idTienda_destino, COALESCE(t_dest.nombre, CONCAT('Tienda ', s.idTienda_destino)) AS nombre_destino, "
                           "s.cod, DATE_FORMAT(s.fechaEntrada, '%Y-%m-%d') AS fecha_ent, s.descripcion, s.cantidad, "
@@ -5580,6 +6333,11 @@ QJsonObject AsistenteIA::toolConsultarSalidasTiendas(const QJsonObject &args)
     res["salidas_enviadas_procesadas"] = arrayEnviadas;
     res["resumen_por_destino"] = resumenDestinoObj;
     res["resumen_por_origen"] = resumenOrigenObj;
+
+    if (consultarPendientes && !consultarEnviadas && arrayPendientes.isEmpty()) {
+        res["mensaje"] = "No hay salidas ni traspasos pendientes sin aceptar o en preparación en estos momentos.";
+        res["aviso"] = "Para consultar el histórico de traspasos ya enviados y recibidos anteriormente, indique estado: 'enviadas' o un rango de fechas.";
+    }
 
     return res;
 }
@@ -7769,6 +8527,504 @@ QJsonObject AsistenteIA::toolConsultarTraspasosIntertiendas(const QJsonObject &a
     return res;
 }
 
+/**
+ * @brief Busca facturas y albaranes de compra a proveedores para un producto o artículo específico.
+ * 
+ * Permite buscar por código de barras (EAN), descripción del producto, proveedor o número de documento
+ * a lo largo de las distintas tiendas configuradas.
+ * Si el usuario filtra por un proveedor específico y no hay coincidencias pero el artículo sí
+ * fue comprado a otros proveedores, detecta y reporta automáticamente los proveedores reales
+ * con sus correspondientes facturas y fechas de compra.
+ * 
+ * Cumple estrictamente con el formato de fechas "yyyy-MM-dd" y el estilo global del proyecto.
+ * 
+ * @param args Objeto JSON con los filtros de búsqueda
+ * @return QJsonObject con las líneas de compra, albaranes, facturas y resumen
+ */
+QJsonObject AsistenteIA::toolBuscarFacturasCompraArticulo(const QJsonObject &args)
+{
+    QJsonObject res;
+
+    QString codigo = args.value("codigo").toString().trimmed();
+    if (codigo.isEmpty()) codigo = args.value("cod").toString().trimmed();
+    if (codigo.isEmpty()) codigo = args.value("ean").toString().trimmed();
+
+    QString producto = args.value("producto").toString().trimmed();
+    if (producto.isEmpty()) producto = args.value("termino").toString().trimmed();
+    if (producto.isEmpty()) producto = args.value("descripcion").toString().trimmed();
+
+    QString proveedor = args.value("proveedor").toString().trimmed();
+
+    QString numDoc = args.value("numero_documento").toString().trimmed();
+    if (numDoc.isEmpty()) numDoc = args.value("factura").toString().trimmed();
+    if (numDoc.isEmpty()) numDoc = args.value("albaran").toString().trimmed();
+    if (numDoc.isEmpty()) numDoc = args.value("documento").toString().trimmed();
+    if (numDoc.isEmpty()) numDoc = args.value("ndocumento").toString().trimmed();
+
+    QString tiendaFiltro = args.value("tienda").toString().trimmed();
+    if (tiendaFiltro.isEmpty()) tiendaFiltro = "todas";
+
+    QString fechaI = args.value("fecha_inicio").toString().trimmed();
+    if (fechaI.isEmpty()) fechaI = args.value("fecha").toString().trimmed();
+    QString fechaF = args.value("fecha_fin").toString().trimmed();
+
+    QString userText = obtenerUltimoTextoUsuario();
+    int limite = args.value("limite").toInt();
+    if (limite <= 0) limite = args.value("limit").toInt();
+    if (esPeticionDeUnSoloRegistro(userText, args)) {
+        limite = 1;
+    } else if (limite <= 0 || limite > 50) {
+        limite = 20;
+    }
+
+    if (codigo.isEmpty() && producto.isEmpty() && numDoc.isEmpty() && proveedor.isEmpty()) {
+        res["error"] = "Debe proporcionar al menos un código, descripción de producto, proveedor o número de documento.";
+        return res;
+    }
+
+    // Pre-resolución de códigos auxiliares y productos similares
+    QStringList codigosRelacionados;
+    if (!codigo.isEmpty()) {
+        codigosRelacionados.append(codigo);
+        // Buscar si hay códigos auxiliares asociados
+        QSqlDatabase dbLocal = obtenerBaseDatos();
+        if (dbLocal.isOpen()) {
+            QSqlQuery qAux(dbLocal);
+            qAux.prepare("SELECT aux FROM codaux WHERE cod = :c UNION SELECT cod FROM codaux WHERE aux = :c2");
+            qAux.bindValue(":c", codigo);
+            qAux.bindValue(":c2", codigo);
+            if (qAux.exec()) {
+                while (qAux.next()) {
+                    QString a = qAux.value(0).toString().trimmed();
+                    if (!a.isEmpty() && !codigosRelacionados.contains(a)) codigosRelacionados.append(a);
+                }
+            }
+        }
+    } else if (!producto.isEmpty()) {
+        QSqlDatabase dbLocal = obtenerBaseDatos();
+        if (dbLocal.isOpen()) {
+            QSqlQuery qProd(dbLocal);
+            qProd.prepare("SELECT cod FROM articulos WHERE descripcion LIKE :desc LIMIT 10");
+            qProd.bindValue(":desc", "%" + producto + "%");
+            if (qProd.exec()) {
+                while (qProd.next()) {
+                    QString c = qProd.value(0).toString().trimmed();
+                    if (!c.isEmpty() && !codigosRelacionados.contains(c)) codigosRelacionados.append(c);
+                }
+            }
+        }
+    }
+
+    QStringList conexiones = resolverConexiones(tiendaFiltro);
+    QJsonArray arrayLineas;
+    QStringList proveedoresAlternativos;
+    bool huboAvisoProveedor = false;
+
+    // Función auxiliar para buscar facturas en la base de datos centralizada de la Nube (nubeCervantes)
+    auto ejecutarBusquedaNube = [&](const QString &filtroProveedor) -> QJsonArray {
+        QJsonArray lineasEncontradas;
+        QSqlDatabase dbNube = obtenerBaseDatosNube();
+        if (!dbNube.isOpen()) return lineasEncontradas;
+
+        QString provClean = filtroProveedor.toLower().trimmed();
+        provClean.replace("-", " ").replace("_", " ").replace(".", " ");
+        QStringList tokensProv = provClean.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
+
+        QString sql = "SELECT lp.id_local AS id_linea, lp.id_tienda, lp.nDocumento, lp.idProveedor, "
+                      "COALESCE(pr.nombre, 'Proveedor Desconocido') AS nombre_proveedor, "
+                      "lp.cod, lp.descripcion, lp.cantidad, lp.bonificacion, lp.costo, lp.descuento1, "
+                      "lp.base, lp.tipoIva, lp.totalbase, lp.iva, lp.re, lp.pvp, "
+                      "COALESCE(DATE_FORMAT(p.fechaPedido, '%Y-%m-%d'), '') AS fecha_doc, "
+                      "COALESCE(DATE_FORMAT(lp.fc, '%Y-%m-%d'), '') AS fecha_cad, "
+                      "'Pedido / Factura Compra' AS tipo_documento, "
+                      "COALESCE(t.nombre, CONCAT('Tienda ', lp.id_tienda)) AS nombre_tienda, "
+                      "COALESCE(p.nFactura, '') AS factura_asociada "
+                      "FROM lineaspedido_nube lp "
+                      "LEFT JOIN proveedores pr ON lp.idProveedor = pr.idProveedor "
+                      "LEFT JOIN pedidos_nube p ON (lp.nDocumento = p.npedido OR lp.nDocumento = p.nFactura) "
+                      "     AND lp.idProveedor = p.idProveedor AND lp.id_tienda = p.id_tienda "
+                      "LEFT JOIN tiendas t ON lp.id_tienda = t.id "
+                      "WHERE 1=1 ";
+
+        if (!codigosRelacionados.isEmpty()) {
+            QStringList escaped;
+            for (const QString &c : codigosRelacionados) escaped.append("'" + c + "'");
+            sql += QString("AND (lp.cod IN (%1) ").arg(escaped.join(","));
+            if (!producto.isEmpty()) sql += "OR LOWER(lp.descripcion) LIKE :prodDesc) ";
+            else sql += ") ";
+        } else if (!producto.isEmpty()) {
+            sql += "AND LOWER(lp.descripcion) LIKE :prodDesc ";
+        }
+
+        if (!filtroProveedor.isEmpty()) {
+            sql += "AND (LOWER(REPLACE(REPLACE(pr.nombre, '-', ' '), '_', ' ')) LIKE :provClean "
+                   "     OR LOWER(pr.nombre) LIKE :provRaw ";
+            if (tokensProv.size() > 1) {
+                sql += " OR (";
+                for (int ti = 0; ti < tokensProv.size(); ++ti) {
+                    if (ti > 0) sql += " AND ";
+                    sql += QString("LOWER(pr.nombre) LIKE :provTok%1").arg(ti);
+                }
+                sql += ") ";
+            }
+            if (filtroProveedor.toInt() > 0) {
+                sql += " OR lp.idProveedor = :idProv ";
+            }
+            sql += ") ";
+        }
+
+        if (!numDoc.isEmpty()) {
+            sql += "AND (lp.nDocumento LIKE :numDoc OR p.nFactura LIKE :numDoc2) ";
+        }
+
+        if (!fechaI.isEmpty()) {
+            sql += "AND p.fechaPedido >= :f1 ";
+        }
+        if (!fechaF.isEmpty()) {
+            sql += "AND p.fechaPedido <= :f2 ";
+        }
+
+        sql += QString("ORDER BY COALESCE(p.fechaPedido, '1970-01-01') DESC, lp.id_local DESC LIMIT %1").arg(limite);
+
+        QSqlQuery q(dbNube);
+        q.prepare(sql);
+        if (!producto.isEmpty()) {
+            q.bindValue(":prodDesc", "%" + producto.toLower() + "%");
+        }
+        if (!filtroProveedor.isEmpty()) {
+            q.bindValue(":provClean", "%" + provClean + "%");
+            q.bindValue(":provRaw", "%" + filtroProveedor.toLower() + "%");
+            for (int ti = 0; ti < tokensProv.size(); ++ti) {
+                q.bindValue(QString(":provTok%1").arg(ti), "%" + tokensProv[ti] + "%");
+            }
+            if (filtroProveedor.toInt() > 0) {
+                q.bindValue(":idProv", filtroProveedor.toInt());
+            }
+        }
+        if (!numDoc.isEmpty()) {
+            q.bindValue(":numDoc", "%" + numDoc + "%");
+            q.bindValue(":numDoc2", "%" + numDoc + "%");
+        }
+        if (!fechaI.isEmpty()) q.bindValue(":f1", fechaI);
+        if (!fechaF.isEmpty()) q.bindValue(":f2", fechaF);
+
+        if (q.exec()) {
+            while (q.next()) {
+                QJsonObject item;
+                item["id_linea"] = q.value("id_linea").toInt();
+                item["tienda"] = q.value("nombre_tienda").toString();
+                item["numero_documento"] = q.value("nDocumento").toString();
+                item["tipo_documento"] = q.value("tipo_documento").toString();
+                QString fDoc = q.value("fecha_doc").toString();
+                item["fecha_documento"] = fDoc.isEmpty() ? "Sin fecha" : fDoc;
+                item["id_proveedor"] = q.value("idProveedor").toInt();
+                item["proveedor"] = q.value("nombre_proveedor").toString();
+                item["codigo"] = q.value("cod").toString();
+                item["descripcion"] = q.value("descripcion").toString();
+                item["cantidad"] = q.value("cantidad").toInt();
+                item["bonificacion"] = q.value("bonificacion").toInt();
+                item["costo"] = QString::number(q.value("costo").toDouble(), 'f', 2) + " €";
+                item["descuento"] = QString::number(q.value("descuento1").toDouble(), 'f', 2) + " %";
+                item["base_unitaria"] = QString::number(q.value("base").toDouble(), 'f', 4) + " €";
+                item["total_base"] = QString::number(q.value("totalbase").toDouble(), 'f', 2) + " €";
+                item["iva"] = QString::number(q.value("tipoIva").toDouble(), 'f', 1) + " %";
+                item["pvp"] = QString::number(q.value("pvp").toDouble(), 'f', 2) + " €";
+
+                QString fCad = q.value("fecha_cad").toString();
+                if (!fCad.isEmpty() && fCad != "2000-01-01" && fCad != "1970-01-01") {
+                    item["fecha_caducidad"] = fCad;
+                }
+                QString fAsoc = q.value("factura_asociada").toString();
+                if (!fAsoc.isEmpty()) item["factura_asociada"] = fAsoc;
+
+                lineasEncontradas.append(item);
+                if (lineasEncontradas.size() >= limite) break;
+            }
+        } else {
+            qDebug() << "toolBuscarFacturasCompraArticulo error en Nube:" << q.lastError().text();
+        }
+        return lineasEncontradas;
+    };
+
+    // Función auxiliar para buscar facturas en bases de datos locales o VPN
+    auto ejecutarBusquedaFacturas = [&](const QString &filtroProveedor) -> QJsonArray {
+        QJsonArray lineasEncontradas;
+        QString provClean = filtroProveedor.toLower().trimmed();
+        provClean.replace("-", " ").replace("_", " ").replace(".", " ");
+        QStringList tokensProv = provClean.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
+
+        for (const QString &connName : conexiones) {
+            if (!QSqlDatabase::contains(connName) || !QSqlDatabase::database(connName).isOpen()) {
+                continue;
+            }
+
+            QSqlDatabase db = QSqlDatabase::database(connName);
+            QString nombreTienda = (connName == "DB" || (conf && connName == conf->getConexionLocal()))
+                                  ? "Tienda Local"
+                                  : connName;
+
+            QString sql = "SELECT lp.id AS id_linea, lp.nDocumento, lp.idProveedor, "
+                          "COALESCE(pr.nombre, 'Proveedor Desconocido') AS nombre_proveedor, "
+                          "lp.cod, lp.descripcion, lp.cantidad, lp.bonificacion, lp.costo, lp.descuento1, "
+                          "lp.base, lp.tipoIva, lp.totalbase, lp.iva, lp.re, lp.pvp, "
+                          "COALESCE(DATE_FORMAT(f.fechaFactura, '%Y-%m-%d'), DATE_FORMAT(a.fechaFactura, '%Y-%m-%d'), DATE_FORMAT(p.fechaPedido, '%Y-%m-%d'), '') AS fecha_doc, "
+                          "COALESCE(DATE_FORMAT(lp.fc, '%Y-%m-%d'), '') AS fecha_cad, "
+                          "CASE "
+                          "  WHEN f.id IS NOT NULL THEN 'Factura' "
+                          "  WHEN a.id IS NOT NULL THEN 'Albarán' "
+                          "  WHEN p.id IS NOT NULL THEN 'Pedido' "
+                          "  ELSE 'Documento de Compra' "
+                          "END AS tipo_documento, "
+                          "COALESCE(f.pagada, 0) AS pagada, "
+                          "COALESCE(a.facturada, 0) AS facturada, "
+                          "COALESCE(a.idFactura, '') AS factura_asociada "
+                          "FROM lineaspedido lp "
+                          "LEFT JOIN proveedores pr ON lp.idProveedor = pr.idProveedor "
+                          "LEFT JOIN facturas f ON lp.nDocumento = f.nFactura AND lp.idProveedor = f.idProveedor "
+                          "LEFT JOIN albaranes a ON lp.nDocumento = a.nFactura AND lp.idProveedor = a.idProveedor "
+                          "LEFT JOIN pedidos p ON (lp.nDocumento = p.npedido OR lp.nDocumento = p.nFactura) AND lp.idProveedor = p.idProveedor "
+                          "WHERE 1=1 ";
+
+            if (!codigosRelacionados.isEmpty()) {
+                QStringList escaped;
+                for (const QString &c : codigosRelacionados) escaped.append("'" + c + "'");
+                sql += QString("AND (lp.cod IN (%1) ").arg(escaped.join(","));
+                if (!producto.isEmpty()) {
+                    sql += "OR LOWER(lp.descripcion) LIKE :prodDesc) ";
+                } else {
+                    sql += ") ";
+                }
+            } else if (!producto.isEmpty()) {
+                sql += "AND LOWER(lp.descripcion) LIKE :prodDesc ";
+            }
+
+            if (!filtroProveedor.isEmpty()) {
+                sql += "AND (LOWER(REPLACE(REPLACE(pr.nombre, '-', ' '), '_', ' ')) LIKE :provClean "
+                       "     OR LOWER(pr.nombre) LIKE :provRaw ";
+                if (tokensProv.size() > 1) {
+                    sql += " OR (";
+                    for (int ti = 0; ti < tokensProv.size(); ++ti) {
+                        if (ti > 0) sql += " AND ";
+                        sql += QString("LOWER(pr.nombre) LIKE :provTok%1").arg(ti);
+                    }
+                    sql += ") ";
+                }
+                if (filtroProveedor.toInt() > 0) {
+                    sql += " OR lp.idProveedor = :idProv ";
+                }
+                sql += ") ";
+            }
+
+            if (!numDoc.isEmpty()) {
+                sql += "AND (lp.nDocumento LIKE :numDoc OR a.idFactura LIKE :numDoc2) ";
+            }
+
+            if (!fechaI.isEmpty()) {
+                sql += "AND (f.fechaFactura >= :f1 OR a.fechaFactura >= :f1 OR p.fechaPedido >= :f1) ";
+            }
+
+            if (!fechaF.isEmpty()) {
+                sql += "AND (f.fechaFactura <= :f2 OR a.fechaFactura <= :f2 OR p.fechaPedido <= :f2) ";
+            }
+
+            sql += QString("ORDER BY COALESCE(f.fechaFactura, a.fechaFactura, p.fechaPedido, '1970-01-01') DESC, lp.id DESC LIMIT %1").arg(limite);
+
+            QSqlQuery q(db);
+            q.prepare(sql);
+
+            if (!producto.isEmpty()) {
+                q.bindValue(":prodDesc", "%" + producto.toLower() + "%");
+            }
+            if (!filtroProveedor.isEmpty()) {
+                q.bindValue(":provClean", "%" + provClean + "%");
+                q.bindValue(":provRaw", "%" + filtroProveedor.toLower() + "%");
+                for (int ti = 0; ti < tokensProv.size(); ++ti) {
+                    q.bindValue(QString(":provTok%1").arg(ti), "%" + tokensProv[ti] + "%");
+                }
+                if (filtroProveedor.toInt() > 0) {
+                    q.bindValue(":idProv", filtroProveedor.toInt());
+                }
+            }
+            if (!numDoc.isEmpty()) {
+                q.bindValue(":numDoc", "%" + numDoc + "%");
+                q.bindValue(":numDoc2", "%" + numDoc + "%");
+            }
+            if (!fechaI.isEmpty()) q.bindValue(":f1", fechaI);
+            if (!fechaF.isEmpty()) q.bindValue(":f2", fechaF);
+
+            if (q.exec()) {
+                while (q.next()) {
+                    QJsonObject item;
+                    item["id_linea"] = q.value("id_linea").toInt();
+                    item["tienda"] = nombreTienda;
+                    item["numero_documento"] = q.value("nDocumento").toString();
+                    item["tipo_documento"] = q.value("tipo_documento").toString();
+                    QString fDoc = q.value("fecha_doc").toString();
+                    item["fecha_documento"] = fDoc.isEmpty() ? "Sin fecha" : fDoc;
+                    item["id_proveedor"] = q.value("idProveedor").toInt();
+                    item["proveedor"] = q.value("nombre_proveedor").toString();
+                    item["codigo"] = q.value("cod").toString();
+                    item["descripcion"] = q.value("descripcion").toString();
+                    item["cantidad"] = q.value("cantidad").toInt();
+                    item["bonificacion"] = q.value("bonificacion").toInt();
+                    item["costo"] = QString::number(q.value("costo").toDouble(), 'f', 2) + " €";
+                    item["descuento"] = QString::number(q.value("descuento1").toDouble(), 'f', 2) + " %";
+                    item["base_unitaria"] = QString::number(q.value("base").toDouble(), 'f', 4) + " €";
+                    item["total_base"] = QString::number(q.value("totalbase").toDouble(), 'f', 2) + " €";
+                    item["iva"] = QString::number(q.value("tipoIva").toDouble(), 'f', 1) + " %";
+                    item["pvp"] = QString::number(q.value("pvp").toDouble(), 'f', 2) + " €";
+
+                    QString fCad = q.value("fecha_cad").toString();
+                    if (!fCad.isEmpty() && fCad != "2000-01-01" && fCad != "1970-01-01") {
+                        item["fecha_caducidad"] = fCad;
+                    }
+
+                    QString fAsoc = q.value("factura_asociada").toString();
+                    if (!fAsoc.isEmpty()) item["factura_asociada"] = fAsoc;
+
+                    lineasEncontradas.append(item);
+                    if (lineasEncontradas.size() >= limite) break;
+                }
+            } else {
+                qDebug() << "toolBuscarFacturasCompraArticulo error en" << connName << ":" << q.lastError().text();
+            }
+
+            if (lineasEncontradas.size() >= limite) break;
+        }
+        return lineasEncontradas;
+    };
+
+    // 1. Priorizar consulta directa a la base consolidada de la Nube si está disponible
+    arrayLineas = ejecutarBusquedaNube(proveedor);
+
+    // 2. Si no se encontraron líneas en la Nube (o la Nube no estaba conectada), consultar en local / VPN
+    if (arrayLineas.isEmpty()) {
+        arrayLineas = ejecutarBusquedaFacturas(proveedor);
+    }
+
+    // 3. Si no se encontraron líneas y el usuario había especificado un proveedor,
+    // comprobar si el producto fue comprado a otros proveedores para evitar respuestas vacías falsas
+    if (arrayLineas.isEmpty() && !proveedor.isEmpty()) {
+        // A) Buscar proveedores alternativos en la base consolidada de la Nube
+        QSqlDatabase dbNube = obtenerBaseDatosNube();
+        if (dbNube.isOpen()) {
+            QString sqlOtros = "SELECT DISTINCT COALESCE(pr.nombre, CONCAT('Proveedor ', lp.idProveedor)) AS prov_nom "
+                               "FROM lineaspedido_nube lp "
+                               "LEFT JOIN proveedores pr ON lp.idProveedor = pr.idProveedor "
+                               "WHERE 1=1 ";
+            if (!codigosRelacionados.isEmpty()) {
+                QStringList escaped;
+                for (const QString &c : codigosRelacionados) escaped.append("'" + c + "'");
+                sqlOtros += QString("AND lp.cod IN (%1) ").arg(escaped.join(","));
+            } else if (!producto.isEmpty()) {
+                sqlOtros += "AND LOWER(lp.descripcion) LIKE :desc ";
+            }
+            sqlOtros += "LIMIT 5";
+            QSqlQuery qOtros(dbNube);
+            qOtros.prepare(sqlOtros);
+            if (!producto.isEmpty() && codigosRelacionados.isEmpty()) {
+                qOtros.bindValue(":desc", "%" + producto.toLower() + "%");
+            }
+            if (qOtros.exec()) {
+                while (qOtros.next()) {
+                    QString pNom = qOtros.value(0).toString().trimmed();
+                    if (!pNom.isEmpty() && !proveedoresAlternativos.contains(pNom)) {
+                        proveedoresAlternativos.append(pNom);
+                    }
+                }
+            }
+        }
+
+        // B) Si aún no hay proveedores alternativos, buscar en conexiones locales
+        if (proveedoresAlternativos.isEmpty()) {
+            for (const QString &connName : conexiones) {
+                if (!QSqlDatabase::contains(connName) || !QSqlDatabase::database(connName).isOpen()) continue;
+                QSqlDatabase db = QSqlDatabase::database(connName);
+
+                QString sqlOtros = "SELECT DISTINCT COALESCE(pr.nombre, CONCAT('Proveedor ', lp.idProveedor)) AS prov_nom "
+                                   "FROM lineaspedido lp "
+                                   "LEFT JOIN proveedores pr ON lp.idProveedor = pr.idProveedor "
+                                   "WHERE 1=1 ";
+                if (!codigosRelacionados.isEmpty()) {
+                    QStringList escaped;
+                    for (const QString &c : codigosRelacionados) escaped.append("'" + c + "'");
+                    sqlOtros += QString("AND lp.cod IN (%1) ").arg(escaped.join(","));
+                } else if (!producto.isEmpty()) {
+                    sqlOtros += "AND LOWER(lp.descripcion) LIKE :desc ";
+                }
+                sqlOtros += "LIMIT 5";
+
+                QSqlQuery qOtros(db);
+                qOtros.prepare(sqlOtros);
+                if (!producto.isEmpty() && codigosRelacionados.isEmpty()) {
+                    qOtros.bindValue(":desc", "%" + producto.toLower() + "%");
+                }
+                if (qOtros.exec()) {
+                    while (qOtros.next()) {
+                        QString pNom = qOtros.value(0).toString().trimmed();
+                        if (!pNom.isEmpty() && !proveedoresAlternativos.contains(pNom)) {
+                            proveedoresAlternativos.append(pNom);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Si se encontraron compras con otros proveedores, registrar el aviso conciso
+        if (!proveedoresAlternativos.isEmpty()) {
+            huboAvisoProveedor = true;
+            int limGuardado = limite;
+            limite = 1;
+            QJsonArray ultimaGeneral = ejecutarBusquedaNube("");
+            if (ultimaGeneral.isEmpty()) ultimaGeneral = ejecutarBusquedaFacturas("");
+            limite = limGuardado;
+            if (!ultimaGeneral.isEmpty()) {
+                QJsonObject ug = ultimaGeneral.first().toObject();
+                QJsonObject refUltima;
+                refUltima["fecha"] = ug.value("fecha_documento").toString();
+                refUltima["proveedor_habitual"] = ug.value("proveedor").toString();
+                refUltima["numero_documento"] = ug.value("numero_documento").toString();
+                res["referencia_ultima_compra_general"] = refUltima;
+            }
+        }
+    }
+
+    res["tipo_resultado"] = "facturas_compra_articulo";
+    if (!codigo.isEmpty()) res["filtro_codigo"] = codigo;
+    if (!producto.isEmpty()) res["filtro_producto"] = producto;
+    if (!proveedor.isEmpty()) res["filtro_proveedor_solicitado"] = proveedor;
+    res["tienda_consultada"] = tiendaFiltro;
+    res["total_lineas_encontradas"] = arrayLineas.size();
+
+    if (huboAvisoProveedor) {
+        res["requiere_aclaracion"] = true;
+        res["tipo_aclaracion"] = "proveedor";
+        res["aviso_proveedor"] = QString("No se encontraron facturas o compras registradas con el proveedor '%1' para este producto. "
+                                         "Sin embargo, el producto tiene compras registradas con los siguientes proveedores: %2.")
+                                         .arg(proveedor, proveedoresAlternativos.join(", "));
+        res["proveedores_alternativos_encontrados"] = QJsonArray::fromStringList(proveedoresAlternativos);
+        res["pregunta_desambiguacion"] = QString("¿Deseas que te muestre el detalle de las compras realizadas a %1?").arg(proveedoresAlternativos.join(" o "));
+    }
+
+    if (!arrayLineas.isEmpty()) {
+        QJsonObject ultimaCompra = arrayLineas.first().toObject();
+        QJsonObject resumenUltima;
+        resumenUltima["fecha"] = ultimaCompra.value("fecha_documento").toString();
+        resumenUltima["documento"] = ultimaCompra.value("numero_documento").toString();
+        resumenUltima["tipo"] = ultimaCompra.value("tipo_documento").toString();
+        resumenUltima["proveedor"] = ultimaCompra.value("proveedor").toString();
+        resumenUltima["precio_costo"] = ultimaCompra.value("costo").toString();
+        resumenUltima["pvp"] = ultimaCompra.value("pvp").toString();
+        resumenUltima["tienda"] = ultimaCompra.value("tienda").toString();
+        res["ultima_compra_registrada"] = resumenUltima;
+    } else {
+        res["mensaje"] = "No se encontraron facturas ni albaranes de compra con los criterios especificados.";
+    }
+
+    res["lineas_factura"] = arrayLineas;
+    return res;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Gestión de Logs de Peticiones, Auditoría y Feedback de Respuestas
 // ─────────────────────────────────────────────────────────────────────────────
@@ -7891,9 +9147,9 @@ qint64 AsistenteIA::guardarLogPeticion(const QString &peticion, const QString &r
         }
     }
 
-    // Si la base de datos de la nube está conectada, guardar también en la nube
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    // Si la base de datos de la nube está disponible, guardar también en la nube
+    QSqlDatabase dbNube = obtenerBaseDatosNube();
+    if (dbNube.isOpen()) {
         QSqlQuery qN(dbNube);
         qN.prepare("INSERT INTO ia_logs_peticiones "
                    "(id_tienda, usuario, modelo, peticion, respuesta, herramientas_usadas, tiempo_ms, fecha, hora, es_correcta, comentario_feedback, sugerencia_mejora) "
@@ -7921,15 +9177,29 @@ qint64 AsistenteIA::guardarLogPeticion(const QString &peticion, const QString &r
 }
 
 /**
- * @brief Actualiza la evaluación (1: correcta, -1: incorrecta) y comentarios de un log de IA.
+ * @brief Actualiza la evaluación (1: correcta, -1: incorrecta) y comentarios de un log de IA
+ *        tanto en la base de datos local como en la nube central.
  */
 bool AsistenteIA::registrarFeedback(qint64 idLog, int evaluacion, const QString &comentario, const QString &sugerencia)
 {
     if (idLog <= 0) return false;
     bool exito = false;
 
+    int idTienda = 0;
+    QString fechaLog, horaLog;
+
     QSqlDatabase dbLocal = QSqlDatabase::database(conf ? conf->getConexionLocal() : "DB");
     if (dbLocal.isOpen()) {
+        // Recuperar metadatos para correlacionar exactamente con la nube
+        QSqlQuery qSel(dbLocal);
+        qSel.prepare("SELECT id_tienda, DATE_FORMAT(fecha, '%Y-%m-%d'), hora FROM ia_logs_peticiones WHERE id = :id");
+        qSel.bindValue(":id", idLog);
+        if (qSel.exec() && qSel.next()) {
+            idTienda = qSel.value(0).toInt();
+            fechaLog = qSel.value(1).toString();
+            horaLog = qSel.value(2).toString();
+        }
+
         QSqlQuery q(dbLocal);
         q.prepare("UPDATE ia_logs_peticiones SET es_correcta = :eval, comentario_feedback = :com, sugerencia_mejora = :sug WHERE id = :id");
         q.bindValue(":eval", evaluacion);
@@ -7941,14 +9211,27 @@ bool AsistenteIA::registrarFeedback(qint64 idLog, int evaluacion, const QString 
         }
     }
 
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    QSqlDatabase dbNube = obtenerBaseDatosNube();
+    if (dbNube.isOpen()) {
         QSqlQuery qN(dbNube);
-        qN.prepare("UPDATE ia_logs_peticiones SET es_correcta = :eval, comentario_feedback = :com, sugerencia_mejora = :sug WHERE id = :id");
-        qN.bindValue(":eval", evaluacion);
-        qN.bindValue(":com", comentario);
-        qN.bindValue(":sug", sugerencia);
-        qN.bindValue(":id", idLog);
+        if (idTienda > 0 && !fechaLog.isEmpty() && !horaLog.isEmpty()) {
+            qN.prepare("UPDATE ia_logs_peticiones SET es_correcta = :eval, comentario_feedback = :com, sugerencia_mejora = :sug "
+                       "WHERE (id = :id AND id_tienda = :t) OR (id_tienda = :t2 AND fecha = :fec AND hora = :hor)");
+            qN.bindValue(":eval", evaluacion);
+            qN.bindValue(":com", comentario);
+            qN.bindValue(":sug", sugerencia);
+            qN.bindValue(":id", idLog);
+            qN.bindValue(":t", idTienda);
+            qN.bindValue(":t2", idTienda);
+            qN.bindValue(":fec", fechaLog);
+            qN.bindValue(":hor", horaLog);
+        } else {
+            qN.prepare("UPDATE ia_logs_peticiones SET es_correcta = :eval, comentario_feedback = :com, sugerencia_mejora = :sug WHERE id = :id");
+            qN.bindValue(":eval", evaluacion);
+            qN.bindValue(":com", comentario);
+            qN.bindValue(":sug", sugerencia);
+            qN.bindValue(":id", idLog);
+        }
         if (qN.exec() && qN.numRowsAffected() > 0) {
             exito = true;
         }

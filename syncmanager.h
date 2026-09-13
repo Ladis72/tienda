@@ -44,6 +44,9 @@ public:
     /// Resincroniza limpiamente todo el stock de las tiendas conectadas a la tabla stock_tiendas_nube
     static void resincronizarTodoElStockNube();
 
+    /// Abre la conexión a la nube usando los datos de config_nube (reconecta si está cerrada)
+    bool conectarNube();
+
 public slots:
     /// Ejecuta la sincronización completa (inmediata o programada)
     void sincronizar();
@@ -103,10 +106,6 @@ public:
                       const QString &clavePrimaria,
                       const QString &evento); // "INSERT" o "UPDATE"
 
-    // --- Conexión a la nube ---
-
-    /// Abre la conexión a la nube usando los datos de config_nube
-    bool conectarNube();
 
     /// Cierra y elimina la conexión a la nube
     void desconectarNube();

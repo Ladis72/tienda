@@ -21,6 +21,7 @@ public:
 
 private slots:
     void on_pushButton_clicked();
+    void on_pushButtonCancelar_clicked();
     void on_comboBoxTienda_currentIndexChanged(int index);
 
 private:

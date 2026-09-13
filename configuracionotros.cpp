@@ -1,5 +1,6 @@
 #include "configuracionotros.h"
 #include "ui_configuracionotros.h"
+#include "asistenteia.h"
 #include <QCoreApplication>
 #include <QSettings>
 #include <QFileDialog>
@@ -59,15 +60,27 @@ ConfiguracionOtros::ConfiguracionOtros(QWidget *parent)
     ui->lineEditUrlGoogleSheets->setText(settings.value("urlGoogleSheets", "").toString());
     settings.endGroup();
 
-    // Cargar configuración de Ollama desde tienda.ini
+    // Control de permisos: solo los Administradores (rol == 0) pueden modificar la configuración de IA
+    bool esAdmin = (conf && conf->getRol() == 0);
+    ui->comboBoxModeloOllama->setEnabled(esAdmin);
+    ui->lineEditUrlOllama->setEnabled(esAdmin);
+    ui->pushButtonProbarOllama->setEnabled(esAdmin);
+    if (!esAdmin) {
+        ui->labelEstadoOllama->setText(tr("🔒 Configuración de IA reservada a Administradores"));
+        ui->comboBoxModeloOllama->setToolTip(tr("Solo los administradores pueden cambiar el modelo central de IA"));
+        ui->lineEditUrlOllama->setToolTip(tr("Solo los administradores pueden cambiar la URL de Ollama"));
+    }
+
+    // Cargar configuración de Ollama: URL desde tienda.ini y modelo centralizado desde Nube / Local
     settings.beginGroup("Ollama");
     ui->lineEditUrlOllama->setText(settings.value("url", "http://localhost:11434").toString());
-    QString modeloGuardado = settings.value("modelo", "qwen3-vl:8b").toString();
+    settings.endGroup();
+
+    QString modeloGuardado = AsistenteIA::obtenerModeloCentralizado();
     if (!modeloGuardado.isEmpty()) {
         ui->comboBoxModeloOllama->addItem(modeloGuardado);
         ui->comboBoxModeloOllama->setCurrentText(modeloGuardado);
     }
-    settings.endGroup();
 
     // Consultar automáticamente los modelos disponibles de Ollama en segundo plano
     QTimer::singleShot(50, this, &ConfiguracionOtros::on_pushButtonProbarOllama_clicked);
@@ -109,30 +122,37 @@ void ConfiguracionOtros::on_pushButtonAceptar_clicked()
     settings.setValue("urlGoogleSheets", ui->lineEditUrlGoogleSheets->text().trimmed());
     settings.endGroup();
 
-    settings.beginGroup("Ollama");
-    QString urlOllama = ui->lineEditUrlOllama->text().trimmed();
-    QString modeloAnterior = settings.value("modelo", "").toString().trimmed();
-    QString nuevoModelo = ui->comboBoxModeloOllama->currentText().trimmed();
-    settings.setValue("url", urlOllama);
-    settings.setValue("modelo", nuevoModelo);
-    settings.endGroup();
+    // Guardar configuración de Ollama (exclusivo para Administradores con Rol 0)
+    bool esAdmin = (conf && conf->getRol() == 0);
+    if (esAdmin) {
+        settings.beginGroup("Ollama");
+        QString urlOllama = ui->lineEditUrlOllama->text().trimmed();
+        settings.setValue("url", urlOllama);
+        settings.endGroup();
 
-    // Si el modelo ha cambiado, descargar el modelo anterior de la memoria VRAM
-    if (!modeloAnterior.isEmpty() && modeloAnterior != nuevoModelo) {
-        if (urlOllama.isEmpty()) urlOllama = "http://localhost:11434";
-        if (urlOllama.endsWith("/")) urlOllama.chop(1);
+        QString modeloAnterior = AsistenteIA::obtenerModeloCentralizado();
+        QString nuevoModelo = ui->comboBoxModeloOllama->currentText().trimmed();
 
-        QNetworkAccessManager *mgr = new QNetworkAccessManager(this);
-        QNetworkRequest req((QUrl(urlOllama + "/api/generate")));
-        req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-        QJsonObject obj;
-        obj["model"] = modeloAnterior;
-        obj["keep_alive"] = 0;
-        QNetworkReply *reply = mgr->post(req, QJsonDocument(obj).toJson(QJsonDocument::Compact));
-        connect(reply, &QNetworkReply::finished, [reply, mgr]() {
-            reply->deleteLater();
-            mgr->deleteLater();
-        });
+        // Guardar modelo en base de datos centralizada (Nube / Local / tienda.ini)
+        AsistenteIA::guardarModeloCentralizado(nuevoModelo);
+
+        // Si el modelo ha cambiado, descargar el modelo anterior de la memoria VRAM
+        if (!modeloAnterior.isEmpty() && modeloAnterior != nuevoModelo) {
+            if (urlOllama.isEmpty()) urlOllama = "http://localhost:11434";
+            if (urlOllama.endsWith("/")) urlOllama.chop(1);
+
+            QNetworkAccessManager *mgr = new QNetworkAccessManager(this);
+            QNetworkRequest req((QUrl(urlOllama + "/api/generate")));
+            req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+            QJsonObject obj;
+            obj["model"] = modeloAnterior;
+            obj["keep_alive"] = 0;
+            QNetworkReply *reply = mgr->post(req, QJsonDocument(obj).toJson(QJsonDocument::Compact));
+            connect(reply, &QNetworkReply::finished, [reply, mgr]() {
+                reply->deleteLater();
+                mgr->deleteLater();
+            });
+        }
     }
 
     emit accept();

@@ -2,6 +2,9 @@
 #include "ui_dialogasistenteia.h"
 #include "dialogconocimientoia.h"
 #include "dialoglogsia.h"
+#include "articulos.h"
+#include "clientes.h"
+#include "configuracion.h"
 #include <QCoreApplication>
 #include <QDate>
 #include <QMessageBox>
@@ -9,6 +12,12 @@
 #include <QSettings>
 #include <QInputDialog>
 #include <QUrl>
+#include <QCompleter>
+#include <QSqlQuery>
+#include <QClipboard>
+#include <QGuiApplication>
+
+extern Configuracion *conf;
 
 /**
  * @brief Constructor del diálogo DialogAsistenteIA.
@@ -20,8 +29,8 @@ DialogAsistenteIA::DialogAsistenteIA(QWidget *parent)
 {
     ui->setupUi(this);
 
-    // Permitir que el diálogo esté siempre al frente y accesible desde cualquier ventana o modal
-    setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
+    // Configurar como ventana independiente estándar (no bloquea el TPV ni compite por foco)
+    setWindowFlags(Qt::Window);
 
     // Conectar señales del motor AsistenteIA
     connect(m_asistente, &AsistenteIA::respuestaRecibida, this, &DialogAsistenteIA::slotRespuestaRecibida);
@@ -29,12 +38,18 @@ DialogAsistenteIA::DialogAsistenteIA(QWidget *parent)
     connect(m_asistente, &AsistenteIA::errorOcurrido, this, &DialogAsistenteIA::slotErrorOcurrido);
     connect(m_asistente, &AsistenteIA::herramientaEjecutada, this, &DialogAsistenteIA::slotHerramientaEjecutada);
 
-    // Conectar clics de feedback interactivo en el chat
+    // Conectar clics de feedback interactivo y enlaces en el chat
     ui->textBrowserChat->setOpenLinks(false);
     connect(ui->textBrowserChat, &QTextBrowser::anchorClicked, this, &DialogAsistenteIA::slotAnchorClicked);
 
     // Mostrar el modelo global configurado
     ui->labelModeloActual->setText("Modelo: <b>" + m_asistente->modelo() + "</b>");
+
+    // Inicializar autocompletado en el campo de entrada
+    inicializarAutocompletado();
+
+    // Estado inicial de botones
+    ui->pushButtonDetener->setEnabled(false);
 
     // Inicializar la vista del chat con mensaje de bienvenida
     inicializarChat();
@@ -66,6 +81,8 @@ void DialogAsistenteIA::inicializarChat()
         "table { border-collapse: collapse; width: 100%; margin-top: 6px; }"
         "th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; }"
         "th { background-color: #e0e0e0; }"
+        "a { color: #1565c0; text-decoration: none; font-weight: bold; }"
+        "a:hover { text-decoration: underline; color: #0d47a1; }"
         "</style></head><body>";
 
     m_htmlChat +=
@@ -81,6 +98,36 @@ void DialogAsistenteIA::inicializarChat()
 }
 
 /**
+ * @brief Inicializa el autocompletado en el campo de texto con descripciones de la base de datos local.
+ */
+void DialogAsistenteIA::inicializarAutocompletado()
+{
+    if (!conf) return;
+
+    QString conexion = conf->getConexionLocal();
+    QSqlDatabase db = QSqlDatabase::database(conexion);
+    if (!db.isOpen()) return;
+
+    QStringList listaCompletar;
+    QSqlQuery q(db);
+    if (q.exec("SELECT DISTINCT `desc` FROM articulos WHERE `desc` IS NOT NULL AND `desc` != '' ORDER BY `desc` ASC")) {
+        while (q.next()) {
+            QString desc = q.value(0).toString().trimmed();
+            if (!desc.isEmpty()) {
+                listaCompletar << desc;
+            }
+        }
+    }
+
+    if (!listaCompletar.isEmpty()) {
+        QCompleter *completer = new QCompleter(listaCompletar, this);
+        completer->setCaseSensitivity(Qt::CaseInsensitive);
+        completer->setFilterMode(Qt::MatchStartsWith);
+        ui->lineEditPregunta->setCompleter(completer);
+    }
+}
+
+/**
  * @brief Convierte texto con sintaxis Markdown (tablas, negritas, listas) a HTML renderizable.
  */
 static QString convertirMarkdownAHtml(const QString &markdown)
@@ -93,6 +140,16 @@ static QString convertirMarkdownAHtml(const QString &markdown)
 
     static const QRegularExpression regexBold("\\*\\*(.*?)\\*\\*");
     static const QRegularExpression regexItalic("\\*(.*?)\\*");
+    static const QRegularExpression regexLink("\\[(.*?)\\]\\((.*?)\\)");
+    static const QRegularExpression regexArtDirect("\\[(?:art|articulo):\\s*([a-zA-Z0-9_-]+)\\]", QRegularExpression::CaseInsensitiveOption);
+
+    auto formatearTexto = [&](QString txt) -> QString {
+        txt.replace(regexBold, "<b>\\1</b>");
+        txt.replace(regexItalic, "<i>\\1</i>");
+        txt.replace(regexLink, "<a href='\\2' style='color:#1565c0;font-weight:bold;text-decoration:underline;'>\\1</a>");
+        txt.replace(regexArtDirect, "<a href='articulo://\\1' style='color:#1565c0;font-weight:bold;text-decoration:underline;'>📦 \\1</a>");
+        return txt;
+    };
 
     for (int i = 0; i < lineas.size(); ++i) {
         QString linea = lineas[i].trimmed();
@@ -117,9 +174,7 @@ static QString convertirMarkdownAHtml(const QString &markdown)
 
             resultadoHtml += "<tr>";
             for (const QString &c : celdas) {
-                QString contenido = c.trimmed();
-                contenido.replace(regexBold, "<b>\\1</b>");
-                contenido.replace(regexItalic, "<i>\\1</i>");
+                QString contenido = formatearTexto(c.trimmed());
                 if (primeraFilaTabla) {
                     resultadoHtml += "<th style='background-color:#e2e8f0;color:#1e293b;padding:6px;border:1px solid #cbd5e1;text-align:left;font-weight:bold;'>" + contenido + "</th>";
                 } else {
@@ -140,9 +195,7 @@ static QString convertirMarkdownAHtml(const QString &markdown)
                 resultadoHtml += "<ul style='margin:4px 0 6px 18px;padding:0;'>";
                 enLista = true;
             }
-            QString contenido = linea.mid(2).trimmed();
-            contenido.replace(regexBold, "<b>\\1</b>");
-            contenido.replace(regexItalic, "<i>\\1</i>");
+            QString contenido = formatearTexto(linea.mid(2).trimmed());
             resultadoHtml += "<li style='margin-bottom:3px;'>" + contenido + "</li>";
             continue;
         } else if (enLista) {
@@ -156,9 +209,7 @@ static QString convertirMarkdownAHtml(const QString &markdown)
         }
 
         // Línea normal de texto
-        QString lineaFmt = linea;
-        lineaFmt.replace(regexBold, "<b>\\1</b>");
-        lineaFmt.replace(regexItalic, "<i>\\1</i>");
+        QString lineaFmt = formatearTexto(linea);
         resultadoHtml += lineaFmt + "<br>";
     }
 
@@ -251,11 +302,44 @@ void DialogAsistenteIA::on_pushButtonEnviar_clicked()
     // Limpiar campo de texto
     ui->lineEditPregunta->clear();
 
-    // Deshabilitar botón mientras procesa
+    // Deshabilitar botón enviar y activar detener mientras procesa
     ui->pushButtonEnviar->setEnabled(false);
+    ui->pushButtonDetener->setEnabled(true);
 
     // Enviar al motor
     m_asistente->enviarMensaje(pregunta);
+}
+
+/**
+ * @brief Detiene o cancela la petición HTTP en curso hacia la IA.
+ */
+void DialogAsistenteIA::on_pushButtonDetener_clicked()
+{
+    m_asistente->cancelarConsulta();
+    ui->pushButtonDetener->setEnabled(false);
+    ui->pushButtonEnviar->setEnabled(true);
+    ui->labelEstado->setText("Consulta cancelada por el usuario.");
+}
+
+/**
+ * @brief Copia al portapapeles la última respuesta del asistente o todo el historial.
+ */
+void DialogAsistenteIA::on_pushButtonCopiar_clicked()
+{
+    QString textoACopiar = m_ultimaRespuestaIA.trimmed();
+    if (textoACopiar.isEmpty()) {
+        textoACopiar = ui->textBrowserChat->toPlainText().trimmed();
+    }
+
+    if (!textoACopiar.isEmpty()) {
+        QClipboard *clipboard = QGuiApplication::clipboard();
+        if (clipboard) {
+            clipboard->setText(textoACopiar);
+            ui->labelEstado->setText("📋 Copiado al portapapeles con éxito.");
+        }
+    } else {
+        ui->labelEstado->setText("No hay texto para copiar.");
+    }
 }
 
 void DialogAsistenteIA::on_lineEditPregunta_returnPressed()
@@ -302,15 +386,31 @@ void DialogAsistenteIA::on_pushButtonSugerenciaVentas_clicked()
     on_pushButtonEnviar_clicked();
 }
 
-void DialogAsistenteIA::on_pushButtonSugerenciaStock_clicked()
+/**
+ * @brief Envía la consulta sobre la venta de artículos y productos realizada hoy.
+ */
+void DialogAsistenteIA::on_pushButtonSugerenciaArticulosHoy_clicked()
 {
-    ui->lineEditPregunta->setText("¿Qué productos están actualmente bajo mínimos de stock?");
+    ui->lineEditPregunta->setText("¿Cuáles son los artículos y productos más vendidos hoy? Muéstrame el listado de ventas de hoy con unidades y facturación.");
     on_pushButtonEnviar_clicked();
 }
 
-void DialogAsistenteIA::on_pushButtonSugerenciaArqueos_clicked()
+/**
+ * @brief Envía una consulta para obtener los datos estadísticos del producto indicado previamente en el lineEdit.
+ */
+void DialogAsistenteIA::on_pushButtonSugerenciaEstadisticasProducto_clicked()
 {
-    ui->lineEditPregunta->setText("Muéstrame el resumen de los últimos arqueos de caja.");
+    QString producto = ui->lineEditPregunta->text().trimmed();
+    if (producto.isEmpty()) {
+        QMessageBox::information(this, "Producto no indicado",
+                                 "Escribe primero en el campo de texto el nombre o código del producto para consultar sus estadísticas.");
+        ui->lineEditPregunta->setFocus();
+        return;
+    }
+
+    // Formular la pregunta con el producto ingresado previamente
+    QString pregunta = QString("Muéstrame todos los datos estadísticos del producto '%1': histórico de ventas, unidades vendidas, evolución mensual y cobertura de stock.").arg(producto);
+    ui->lineEditPregunta->setText(pregunta);
     on_pushButtonEnviar_clicked();
 }
 
@@ -325,7 +425,9 @@ void DialogAsistenteIA::on_pushButtonCerrar_clicked()
 
 void DialogAsistenteIA::slotRespuestaRecibida(const QString &respuesta, qint64 idLog)
 {
+    m_ultimaRespuestaIA = respuesta;
     ui->pushButtonEnviar->setEnabled(true);
+    ui->pushButtonDetener->setEnabled(false);
     agregarBurbuja("Asistente IA", respuesta, "#f5f5f5", "#43a047", false, idLog);
     ui->lineEditPregunta->setFocus();
 }
@@ -333,14 +435,16 @@ void DialogAsistenteIA::slotRespuestaRecibida(const QString &respuesta, qint64 i
 void DialogAsistenteIA::slotEstadoCambiado(const QString &estado)
 {
     ui->labelEstado->setText(estado);
-    if (estado == "Listo" || estado == "Error") {
+    if (estado == "Listo" || estado == "Error" || estado.contains("cancelada", Qt::CaseInsensitive)) {
         ui->pushButtonEnviar->setEnabled(true);
+        ui->pushButtonDetener->setEnabled(false);
     }
 }
 
 void DialogAsistenteIA::slotErrorOcurrido(const QString &mensajeError)
 {
     ui->pushButtonEnviar->setEnabled(true);
+    ui->pushButtonDetener->setEnabled(false);
     agregarNotificacionTool("Error: " + mensajeError);
     ui->labelEstado->setText("Error en comunicación");
 }
@@ -352,11 +456,30 @@ void DialogAsistenteIA::slotHerramientaEjecutada(const QString &nombreHerramient
 }
 
 /**
- * @brief Procesa los clics en los enlaces de feedback embebidos en el chat.
+ * @brief Procesa los clics en los enlaces interactivos (artículos, clientes, feedback) embebidos en el chat.
  */
 void DialogAsistenteIA::slotAnchorClicked(const QUrl &url)
 {
-    if (url.scheme() == "feedback") {
+    if (url.scheme() == "articulo") {
+        QString codigo = url.host().isEmpty() ? url.path() : url.host();
+        while (codigo.startsWith("/")) codigo.remove(0, 1);
+        codigo = codigo.trimmed();
+        if (!codigo.isEmpty()) {
+            Articulos *artDlg = new Articulos(this);
+            artDlg->cargarArticuloPorCodigo(codigo);
+            artDlg->exec();
+            delete artDlg;
+        }
+    } else if (url.scheme() == "cliente") {
+        QString codCliente = url.host().isEmpty() ? url.path() : url.host();
+        while (codCliente.startsWith("/")) codCliente.remove(0, 1);
+        codCliente = codCliente.trimmed();
+        if (!codCliente.isEmpty()) {
+            Clientes *cliDlg = new Clientes(this, codCliente);
+            cliDlg->exec();
+            delete cliDlg;
+        }
+    } else if (url.scheme() == "feedback") {
         QString host = url.host();
         QString path = url.path();
         if (path.startsWith("/")) path.remove(0, 1);

@@ -43,6 +43,7 @@ public:
     ~Articulos();
     void borrarFormulario();
     void aplicarPermisos();
+    void cargarArticuloPorCodigo(const QString &codigo);
 
 private slots:
     void on_pushButtonAnterior_clicked();
@@ -109,7 +110,6 @@ private slots:
 
 
 
-    void on_pushButtonVer_2_clicked();
     void mostrarFoto();
 
     void on_pushButtonHistorialPrecios_clicked();

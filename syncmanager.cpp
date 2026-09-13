@@ -254,7 +254,7 @@ void SyncManager::crearTrigger(const QString &nombreTabla,
 }
 
 bool SyncManager::conectarNube() {
-  if (QSqlDatabase::database(CONEXION_NUBE).isOpen())
+  if (QSqlDatabase::contains(CONEXION_NUBE) && QSqlDatabase::database(CONEXION_NUBE).isOpen())
     return true;
 
   QSqlQuery q(QSqlDatabase::database(conf->getConexionLocal()));
@@ -263,9 +263,37 @@ bool SyncManager::conectarNube() {
   if (!q.first())
     return false;
 
-  QSqlDatabase dbNube = QSqlDatabase::addDatabase("QMYSQL", CONEXION_NUBE);
-  dbNube.setHostName(q.value(0).toString());
-  dbNube.setPort(q.value(1).toInt() > 0 ? q.value(1).toInt() : 3306);
+  QString host = q.value(0).toString();
+  int port = q.value(1).toInt() > 0 ? q.value(1).toInt() : 3306;
+
+  // Fallback transparente: si el host configurado no responde rápido, probar Tailscale (100.89.11.2)
+  QTcpSocket sockTest;
+  sockTest.connectToHost(host, port);
+  bool socketOk = sockTest.waitForConnected(600);
+  if (!socketOk) {
+    sockTest.connectToHost("100.89.11.2", port);
+    if (sockTest.waitForConnected(600)) {
+      host = "100.89.11.2";
+      socketOk = true;
+    }
+  }
+  sockTest.disconnectFromHost();
+
+  if (!socketOk) {
+    // Si ningún host responde en el puerto 3306, abortar inmediatamente sin llamar a dbNube.open()
+    // para evitar congelaciones de interfaz por timeout del driver MySQL
+    return false;
+  }
+
+  QSqlDatabase dbNube;
+  if (QSqlDatabase::contains(CONEXION_NUBE)) {
+    dbNube = QSqlDatabase::database(CONEXION_NUBE);
+  } else {
+    dbNube = QSqlDatabase::addDatabase("QMYSQL", CONEXION_NUBE);
+  }
+
+  dbNube.setHostName(host);
+  dbNube.setPort(port);
   dbNube.setDatabaseName(q.value(2).toString());
   dbNube.setUserName(q.value(3).toString());
   dbNube.setPassword(q.value(4).toString());
@@ -283,7 +311,7 @@ bool SyncManager::conectarNube() {
   }
 
   if (!dbNube.open()) {
-    QSqlDatabase::removeDatabase(CONEXION_NUBE);
+    qDebug() << "SyncManager: No se pudo abrir conexión con" << host << ":" << dbNube.lastError().text();
     return false;
   }
 
@@ -294,7 +322,7 @@ bool SyncManager::conectarNube() {
   // Verificar conexión real
   qTZ.exec("SELECT DATABASE()");
   if (qTZ.next()) {
-    qDebug() << "SyncManager: Conectado a" << dbNube.hostName()
+    qDebug() << "SyncManager: Conectado con éxito a" << dbNube.hostName()
              << "Base de Datos:" << qTZ.value(0).toString();
   }
 
@@ -306,8 +334,9 @@ bool SyncManager::conectarNube() {
 
 void SyncManager::desconectarNube() {
   if (QSqlDatabase::contains(CONEXION_NUBE)) {
+    // Cerrar la conexión sin destruirla con removeDatabase para evitar invalidar
+    // punteros de QSqlQueryModel/QTableView activos que provocarían SIGSEGV en mysql_stmt_fetch
     QSqlDatabase::database(CONEXION_NUBE).close();
-    QSqlDatabase::removeDatabase(CONEXION_NUBE);
   }
   m_hayConexion = false;
 }
@@ -329,12 +358,16 @@ void SyncManager::comprobarConexion() {
 
   if (!anterior) {
     // Solo hacemos el ping TCP si no estamos conectados, para evitar bloqueos
-    // largos de la UI si la BD está apagada. Si este ping tiene éxito,
-    // conectarNube() establecerá una conexión real que reseteará el contador de
-    // errores de conexión (max_connect_errors) en MariaDB.
+    // largos de la UI si la BD está apagada.
     QTcpSocket socket;
     socket.connectToHost(host, port);
-    if (!socket.waitForConnected(1500)) {
+    bool ok = socket.waitForConnected(1500);
+    if (!ok && (host.contains("cervantes19", Qt::CaseInsensitive) || host.contains("ddns", Qt::CaseInsensitive))) {
+      // Fallback a Tailscale
+      socket.connectToHost("100.89.11.2", port);
+      ok = socket.waitForConnected(1500);
+    }
+    if (!ok) {
       // Sigue sin haber conexión o el puerto está cerrado, no bloqueamos la UI
       return;
     }
@@ -349,8 +382,7 @@ void SyncManager::comprobarConexion() {
     }
   } else {
     // Ya estabamos conectados; hacer ping rápido a la BD a través de la
-    // conexión existente. Esto NO incrementa el contador de errores de conexión
-    // de MariaDB.
+    // conexión existente.
     QSqlDatabase dbNube = QSqlDatabase::database(CONEXION_NUBE);
     if (dbNube.isOpen()) {
       QSqlQuery qPing(dbNube);

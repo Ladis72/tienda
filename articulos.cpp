@@ -213,6 +213,16 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
 Articulos::~Articulos() { delete ui; }
 
 /**
+ * @brief Carga y visualiza directamente la ficha del artículo correspondiente al código indicado.
+ * @param codigo Código principal o auxiliar/EAN del artículo a visualizar.
+ */
+void Articulos::cargarArticuloPorCodigo(const QString &codigo) {
+  if (codigo.trimmed().isEmpty()) return;
+  ui->lineEditCod->setText(codigo.trimmed());
+  on_lineEditCod_returnPressed();
+}
+
+/**
  * @brief Aplica las restricciones de permisos a los botones del formulario de artículos.
  */
 void Articulos::aplicarPermisos() {
@@ -1039,9 +1049,10 @@ void Articulos::on_pushButtonGenerarDescripcionIA_clicked() {
   QString familia = ui->labelFamilia->text().trimmed();
   QString formato = ui->comboBoxFormato->currentText().trimmed();
   QString ean = ui->lineEditCod->text().trimmed();
+  QString notasPrevias = ui->textEditNotas->toPlainText().trimmed();
 
-  // Abrir el diálogo modal de generación con IA
-  DialogGenerarDescripcionIA dlg(descripcion, fabricante, familia, formato, ean, this);
+  // Abrir el diálogo modal de generación con IA asegurando composición exacta y confirmada
+  DialogGenerarDescripcionIA dlg(descripcion, fabricante, familia, formato, ean, notasPrevias, this);
   if (dlg.exec() == QDialog::Accepted) {
     QString resultadoHtml = dlg.getDescripcionGenerada();
     if (!resultadoHtml.isEmpty()) {
@@ -1483,8 +1494,6 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index) {
     ui->pushButtonCambiarProveedor->setEnabled(true);
   }
 }
-
-void Articulos::on_pushButtonVer_2_clicked() {}
 
 void Articulos::mostrarFoto() {
   VisorImagenes *visor = new VisorImagenes(ui->lineEditFoto->text());

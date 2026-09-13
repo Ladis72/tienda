@@ -32,6 +32,12 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Requerir autenticación previa antes de abrir la aplicación
+    Login login;
+    if (login.exec() != QDialog::Accepted) {
+        return 0; // Si se pulsa Escape, Cancelar o se cierra la ventana, salir inmediatamente
+    }
+
     Tienda w;
     w.show();
 
