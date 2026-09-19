@@ -11,6 +11,8 @@
 
 #include "facturaralbaranes.h"
 #include "gestorpermisos.h"
+#include "dialogenriquecimientomasivo.h"
+#include "dialogfotosmasivo.h"
 #include <QDebug>
 #include <QEvent>
 #include <QFileDialog>
@@ -85,13 +87,17 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   genVales = nullptr;
   editatImpuestos = nullptr;
 
-  /******************************************************************************
-   * CONEXIÓN A BASE DE DATOS
-   * Intenta primero obtener la configuración local de la tabla 'tiendas'
-   * Si no existe, usa valores por defecto: localhost / tiendaNueva / root
-   ******************************************************************************/
-  // SEC-01: Mantener siempre la conexión local abierta en main.cpp desde tienda.ini
-  conf->setConexionLocal("DB");
+  // SEC-01: Mantener la conexión seleccionada en Login (o "DB" por defecto si está vacía)
+  if (conf->getConexionLocal().isEmpty()) {
+      conf->setConexionLocal("DB");
+  }
+
+  // Reflejar en el título de la ventana la tienda conectada actualmente
+  QString nombreTiendaActiva = base.nombreConexionLocal();
+  if (nombreTiendaActiva.isEmpty() || nombreTiendaActiva == "DB") {
+      nombreTiendaActiva = conf->getConexionLocal();
+  }
+  setWindowTitle(tr("Tienda — %1").arg(nombreTiendaActiva));
 
   /******************************************************************************
    * CARGAR CONFIGURACIÓN GLOBAL
@@ -694,6 +700,16 @@ void Tienda::on_pushButtonArticulos_clicked() {
   A->show();
 }
 
+void Tienda::on_pushButtonCatalogadorIA_clicked() {
+  DialogEnriquecimientoMasivo dlg(this);
+  dlg.exec();
+}
+
+void Tienda::on_pushButtonFotosMasivo_clicked() {
+  DialogFotosMasivo dlg(this);
+  dlg.exec();
+}
+
 void Tienda::on_pushButtonFamilias_clicked() {
   F = new Familias(this);
   F->show();
@@ -1090,6 +1106,13 @@ void Tienda::login() {
   usuario->setText(conf->getUsuario());
   // SEC-07: No imprimir usuario/rol en la salida de debug
   permisos(conf->getRol());
+
+  QString nombreTiendaActiva = base.nombreConexionLocal();
+  if (nombreTiendaActiva.isEmpty() || nombreTiendaActiva == "DB") {
+      nombreTiendaActiva = conf->getConexionLocal();
+  }
+  setWindowTitle(tr("Tienda — %1").arg(nombreTiendaActiva));
+  refrescarConexiones();
 }
 
 void Tienda::on_pushButtonImpuestos_clicked() {

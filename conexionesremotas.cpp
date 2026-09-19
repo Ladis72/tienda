@@ -9,9 +9,15 @@ QStringList conexionesRemotas::crear(const QStringList &filtroNombres)
 {
     listaConexionesRemotas.clear();
     if (!base) return listaConexionesRemotas;
+    QString localActivo = base->nombreConexionLocal();
     QSqlQuery conexiones = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
     while (conexiones.next()) {
         QString nombreConexion = conexiones.value("nombre").toString();
+        // Omitir la tienda que actúa actualmente como local
+        if (nombreConexion.compare(localActivo, Qt::CaseInsensitive) == 0 ||
+            nombreConexion.compare(conf->getConexionLocal(), Qt::CaseInsensitive) == 0) {
+            continue;
+        }
         if (!filtroNombres.isEmpty() && !filtroNombres.contains(nombreConexion)) {
             continue;
         }
@@ -46,9 +52,14 @@ QStringList conexionesRemotas::lista()
 {
     listaOrdenadoresRemotos.clear();
     if (!base) return listaOrdenadoresRemotos;
+    QString localActivo = base->nombreConexionLocal();
     QSqlQuery tiendas = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
     while (tiendas.next()) {
-        listaOrdenadoresRemotos.append(tiendas.value("nombre").toString());
+        QString nombre = tiendas.value("nombre").toString();
+        if (nombre.compare(localActivo, Qt::CaseInsensitive) != 0 &&
+            nombre.compare(conf->getConexionLocal(), Qt::CaseInsensitive) != 0) {
+            listaOrdenadoresRemotos.append(nombre);
+        }
     }
     qDebug() << "Lista ordenadores remotos :" << listaOrdenadoresRemotos;
     return listaOrdenadoresRemotos;
@@ -58,8 +69,14 @@ QStringList conexionesRemotas::listaOnLine()
 {
     listaConexionesActivas.clear();
     if (!base) return listaConexionesActivas;
+    QString localActivo = base->nombreConexionLocal();
     QSqlQuery conexiones = base->tiendas(QSqlDatabase::database(conf->getConexionLocal()));
     while (conexiones.next()) {
+        QString nombreConexion = conexiones.value("nombre").toString();
+        if (nombreConexion.compare(localActivo, Qt::CaseInsensitive) == 0 ||
+            nombreConexion.compare(conf->getConexionLocal(), Qt::CaseInsensitive) == 0) {
+            continue;
+        }
         QString host = conexiones.value("ip").toString();
         // Leer el puerto desde la BD; si está vacío o es 0, usar 3306 por defecto
         QString puerto = conexiones.value("puerto").toString();
@@ -72,7 +89,6 @@ QStringList conexionesRemotas::listaOnLine()
         }
         QString usuario = conexiones.value("usuario").toString();
         QString constrasena = conexiones.value("password").toString();
-        QString nombreConexion = conexiones.value("nombre").toString();
         // Leer el certificado CA para SSL (vacío = sin SSL)
         QString sslCa = conexiones.value("ssl_ca").toString();
         if (createConnection(host, puerto, baseDatos, usuario, constrasena, nombreConexion, sslCa)) {

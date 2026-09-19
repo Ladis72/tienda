@@ -192,6 +192,26 @@
           </property>
          </widget>
         </item>
+        <item row="1" column="3">
+         <widget class="QPushButton" name="pushButtonFotosMasivo">
+          <property name="styleSheet">
+           <string notr="true">background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; font-weight: bold;</string>
+          </property>
+          <property name="text">
+           <string>🖼️ Fotos Masivo</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="5">
+         <widget class="QPushButton" name="pushButtonCatalogadorIA">
+          <property name="styleSheet">
+           <string notr="true">background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; font-weight: bold;</string>
+          </property>
+          <property name="text">
+           <string>🌿 Catalogador IA</string>
+          </property>
+         </widget>
+        </item>
         <item row="2" column="0">
          <spacer name="verticalSpacer_tabFicheros">
           <property name="orientation">

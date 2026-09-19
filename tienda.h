@@ -80,6 +80,8 @@ private slots:
 
     void on_pushButtonUsuarios_clicked();
     void on_pushButtonArticulos_clicked();
+    void on_pushButtonCatalogadorIA_clicked();
+    void on_pushButtonFotosMasivo_clicked();
     void on_pushButtonFamilias_clicked();
     void on_pushButtonFabricantes_clicked();
     void on_pushButtonFormasPago_clicked();

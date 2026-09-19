@@ -1,4 +1,5 @@
 #include "asistenteia.h"
+#include "indexadorembeddings.h"
 #include "configuracion.h"
 #include "base_datos.h"
 #include "syncmanager.h"
@@ -147,6 +148,7 @@ void AsistenteIA::asegurarTablaIaConfig()
             sql = "CREATE TABLE IF NOT EXISTS ia_config ("
                   "id INTEGER PRIMARY KEY, "
                   "modelo TEXT NOT NULL, "
+                  "num_ctx INTEGER DEFAULT 32768, "
                   "url_servidor TEXT DEFAULT '', "
                   "updated_at TEXT"
                   ");";
@@ -154,11 +156,19 @@ void AsistenteIA::asegurarTablaIaConfig()
             sql = "CREATE TABLE IF NOT EXISTS `ia_config` ("
                   "`id` INT PRIMARY KEY, "
                   "`modelo` VARCHAR(100) NOT NULL, "
+                  "`num_ctx` INT DEFAULT 32768, "
                   "`url_servidor` VARCHAR(255) DEFAULT '', "
                   "`updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
                   ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
         }
         q.exec(sql);
+
+        // Si la tabla ya existía previamente sin la columna num_ctx, la añadimos de forma segura
+        if (db.driverName().contains("SQLITE", Qt::CaseInsensitive)) {
+            q.exec("ALTER TABLE ia_config ADD COLUMN num_ctx INTEGER DEFAULT 32768;");
+        } else {
+            q.exec("ALTER TABLE `ia_config` ADD COLUMN `num_ctx` INT DEFAULT 32768;");
+        }
     };
 
     // 1. En la base de datos local
@@ -213,10 +223,10 @@ QString AsistenteIA::obtenerModeloCentralizado()
         QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
         QSettings settings(iniPath, QSettings::IniFormat);
         settings.beginGroup("Ollama");
-        modelo = settings.value("modelo", "llama3.1:8b").toString().trimmed();
+        modelo = settings.value("modelo", "qwen3:14b-64k").toString().trimmed();
         settings.endGroup();
         if (modelo.isEmpty()) {
-            modelo = "llama3.1:8b";
+            modelo = "qwen3:14b-64k";
         }
     }
 
@@ -279,6 +289,117 @@ bool AsistenteIA::guardarModeloCentralizado(const QString &nuevoModelo)
     settings.endGroup();
 
     qDebug() << "AsistenteIA: Modelo centralizado guardado:" << mod
+             << "(Nube:" << guardadoNube << ", Local:" << guardadoLocal << ")";
+
+    return guardadoNube || guardadoLocal;
+}
+
+/**
+ * @brief Obtiene el tamaño de ventana de contexto (num_ctx) configurado de forma centralizada en BD o tienda.ini.
+ * Por defecto devuelve 32768 (32K tokens).
+ */
+int AsistenteIA::obtenerNumCtxCentralizado()
+{
+    asegurarTablaIaConfig();
+
+    int numCtx = 0;
+
+    // 1. Intentar consultar en la base de datos de la Nube
+    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlQuery qNube(QSqlDatabase::database(SyncManager::CONEXION_NUBE));
+        if (qNube.exec("SELECT num_ctx FROM ia_config WHERE id = 1 LIMIT 1") && qNube.next()) {
+            numCtx = qNube.value(0).toInt();
+        }
+    }
+
+    // 2. Si no hay conexión a la nube o fue 0, consultar base local
+    if (numCtx <= 0) {
+        QString conn = conf ? conf->getConexionLocal() : "DB";
+        if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
+        if (QSqlDatabase::contains(conn)) {
+            QSqlDatabase dbLocal = QSqlDatabase::database(conn);
+            if (dbLocal.isOpen()) {
+                QSqlQuery qLocal(dbLocal);
+                if (qLocal.exec("SELECT num_ctx FROM ia_config WHERE id = 1 LIMIT 1") && qLocal.next()) {
+                    numCtx = qLocal.value(0).toInt();
+                }
+            }
+        }
+    }
+
+    // 3. Si no está en BD, consultar tienda.ini
+    if (numCtx <= 0) {
+        QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+        QSettings settings(iniPath, QSettings::IniFormat);
+        settings.beginGroup("Ollama");
+        numCtx = settings.value("num_ctx", 32768).toInt();
+        settings.endGroup();
+    }
+
+    if (numCtx < 2048) {
+        numCtx = 32768; // 32K tokens óptimos por defecto
+    }
+
+    return numCtx;
+}
+
+/**
+ * @brief Guarda el tamaño de ventana de contexto (num_ctx) en la base de datos (Nube / Local) y en tienda.ini.
+ * Requiere rol de Administrador (rol == 0).
+ */
+bool AsistenteIA::guardarNumCtxCentralizado(int nuevoNumCtx)
+{
+    if (nuevoNumCtx < 2048) nuevoNumCtx = 32768;
+
+    // Control de seguridad: Requerir privilegios de Administrador (Rol 0)
+    if (!conf || conf->getRol() != 0) {
+        qWarning() << "AsistenteIA: Intento no autorizado de cambiar num_ctx central de IA. Se requiere Administrador (Rol 0).";
+        return false;
+    }
+
+    asegurarTablaIaConfig();
+
+    auto guardarEnDb = [nuevoNumCtx](QSqlDatabase &db) -> bool {
+        if (!db.isOpen()) return false;
+        QSqlQuery q(db);
+        if (db.driverName().contains("SQLITE", Qt::CaseInsensitive)) {
+            q.prepare("INSERT INTO ia_config (id, modelo, num_ctx) VALUES (1, 'qwen3:14b-64k', :num_ctx) "
+                      "ON CONFLICT(id) DO UPDATE SET num_ctx = :num_ctxUpdate");
+            q.bindValue(":num_ctx", nuevoNumCtx);
+            q.bindValue(":num_ctxUpdate", nuevoNumCtx);
+        } else {
+            q.prepare("INSERT INTO ia_config (id, modelo, num_ctx) VALUES (1, 'qwen3:14b-64k', :num_ctx) "
+                      "ON DUPLICATE KEY UPDATE num_ctx = :num_ctxUpdate");
+            q.bindValue(":num_ctx", nuevoNumCtx);
+            q.bindValue(":num_ctxUpdate", nuevoNumCtx);
+        }
+        return q.exec();
+    };
+
+    // 1. Guardar en Nube
+    bool guardadoNube = false;
+    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        guardadoNube = guardarEnDb(dbNube);
+    }
+
+    // 2. Guardar en Local
+    QString conn = conf ? conf->getConexionLocal() : "DB";
+    if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
+    bool guardadoLocal = false;
+    if (QSqlDatabase::contains(conn)) {
+        QSqlDatabase dbLocal = QSqlDatabase::database(conn);
+        guardadoLocal = guardarEnDb(dbLocal);
+    }
+
+    // 3. Guardar en tienda.ini
+    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QSettings settings(iniPath, QSettings::IniFormat);
+    settings.beginGroup("Ollama");
+    settings.setValue("num_ctx", nuevoNumCtx);
+    settings.endGroup();
+
+    qDebug() << "AsistenteIA: num_ctx centralizado guardado:" << nuevoNumCtx
              << "(Nube:" << guardadoNube << ", Local:" << guardadoLocal << ")";
 
     return guardadoNube || guardadoLocal;
@@ -425,7 +546,8 @@ QJsonObject AsistenteIA::construirMensajeSistema()
         "   - PREGUNTAS DE CANTIDAD ('¿Cuántos artículos hay de X marca o familia?'): En 'consultar_stock', el campo 'total_coincidencias' contiene la cantidad total REAL existente en la base de datos (ej. 639 artículos de Nova Diet, 2054 de Cosmética). Responde SIEMPRE usando ese número total real, indicando que se muestra una lista parcial si procede.\n"
         "   - PRODUCTO MÁS CARO / MÁS BARATO: Si preguntan por 'el más caro', 'precio más alto', 'más barato', etc., usa 'consultar_stock' con orden: 'precio_desc' o 'precio_asc' (sin poner 'más caro' en el término de búsqueda).\n"
         "2. Comparativa y Rebalanceo de Stock Multi-Tienda -> 'comparativa_stock_tiendas' (producto: 'nombre', fabricante: 'marca', familia: 'categoria').\n"
-        "3. Fitoterapia, Dolencias y Síntomas -> 'buscar_por_indicacion' (ej. indicacion: 'colesterol', 'articulaciones', 'dormir'). Presenta SIEMPRE formato TABLA Markdown (| Código | Producto | Marca | Stock | PVP |).\n"
+        "3. Fitoterapia, Dolencias, Ingredientes y Principios Activos -> 'buscar_por_indicacion' (ej. indicacion: 'monacolina', 'levadura de arroz rojo', 'colesterol', 'articulaciones', 'dormir', 'silimarina', 'berberina'). Presenta SIEMPRE formato TABLA Markdown (| Código | Producto | Marca | Stock | PVP |).\n"
+        "   - PRINCIPIOS ACTIVOS Y COMPOSICIÓN: Si el usuario pregunta qué productos llevan o contienen un principio activo (ej. 'monacolina', 'harpagósidos', 'curcumina', 'silimarina', 'isoflavonas', 'melatonina', 'berberina', 'ginsenósidos'), invoca SIEMPRE 'buscar_por_indicacion' con ese ingrediente o con su planta medicinal habitual (ej. monacolina -> levadura de arroz rojo). Esta herramienta busca en la composición profunda (notas técnicas) y en las relaciones de fitoterapia del herbolario.\n"
         "4. Ventas y Facturación -> 'resumen_ventas' (fecha_inicio, fecha_fin, tienda: 'todas', desglosar_por_dia: true, familia, fabricante, producto).\n"
         "5. Ranking de Productos Más Vendidos y Top Ventas -> 'productos_mas_vendidos' (fecha_inicio: '2026-08-01', fecha_fin: '2026-08-31', limite: 10, familia: 'no alimentacion', fabricante: 'Kenoi'). SIEMPRE que pidan 'productos más vendidos', 'top ventas' o un ranking de artículos (incluso si filtran por familia como 'alimentación', por marca o por mes/año), usa OBLIGATORIAMENTE 'productos_mas_vendidos', NUNCA 'resumen_ventas' ni 'ejecutar_consulta_sql'.\n"
         "6. Comparativas Temporales (vs año pasado) -> 'comparativa_ventas' (calcula periodo homólogo exacto).\n"
@@ -469,10 +591,123 @@ QJsonObject AsistenteIA::construirMensajeSistema()
 
 /**
  * @brief Define el catálogo de herramientas (Tool Calling) en formato JSON Schema.
+ *        Aplica un enrutador inteligente de intenciones para filtrar solo las herramientas relevantes
+ *        a la petición del usuario, reduciendo el prompt de 5K tokens a ~1K tokens.
  */
-QJsonArray AsistenteIA::construirDefinicionHerramientas()
+QJsonArray AsistenteIA::construirDefinicionHerramientas(const QString &peticionUsuario)
 {
     QJsonArray tools;
+
+    // Clasificación semántica de intenciones para filtrado dinámico de herramientas
+    QSet<QString> herramientasPermitidas;
+    QString txt = peticionUsuario.toLower().trimmed();
+    txt.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u");
+
+    if (!txt.isEmpty()) {
+        bool pideVentas = txt.contains("venta") || txt.contains("vend") || txt.contains("factur") || 
+                          txt.contains("ingreso") || txt.contains("ticket") || txt.contains("cobr") ||
+                          txt.contains("cuanto hemos") || txt.contains("cuanto se ha") || txt.contains("caja del dia") ||
+                          txt.contains("top") || txt.contains("ranking") || txt.contains("mas vendido");
+
+        bool pideStock = txt.contains("stock") || txt.contains("articulo") || txt.contains("producto") ||
+                         txt.contains("precio") || txt.contains("cuanto vale") || txt.contains("cuanto cuesta") ||
+                         txt.contains("pvp") || txt.contains("quedan") || txt.contains("hay de") ||
+                         txt.contains("cuantos hay") || txt.contains("cuantas hay") || txt.contains("marca") ||
+                         txt.contains("familia") || txt.contains("fabricante") || txt.contains("laboratorio") ||
+                         txt.contains("minimo") || txt.contains("bajo minimo") || txt.contains("caduc") ||
+                         txt.contains("cobertura") || txt.contains("caro") || txt.contains("barato");
+
+        bool pideCaja = txt.contains("arqueo") || txt.contains("cierre") || txt.contains("descuadre") ||
+                        txt.contains("efectivo") || txt.contains("retirada") || txt.contains("ingreso de caja") ||
+                        txt.contains("movimiento") || txt.contains("apertura");
+
+        bool pideClientes = txt.contains("cliente") || txt.contains("comprador") || txt.contains("telefono") ||
+                            txt.contains("dni") || txt.contains("nif") || txt.contains("compras de");
+
+        bool pideCompras = txt.contains("proveedor") || txt.contains("compra") || txt.contains("pedido") ||
+                           txt.contains("albaran") || txt.contains("factura de compra") || txt.contains("facturas compra") ||
+                           txt.contains("recibido") || txt.contains("distribuidor");
+
+        bool pideUsuarios = txt.contains("usuario") || txt.contains("emplead") || txt.contains("dependient") ||
+                            txt.contains("vendedor") || txt.contains("sesion") || txt.contains("login") ||
+                            txt.contains("quien vendio") || txt.contains("quien ha vendido");
+
+        bool pideTraspasos = txt.contains("traspaso") || txt.contains("intertienda") || txt.contains("otra tienda") ||
+                             txt.contains("salida") || txt.contains("enviar a") || txt.contains("envio a") ||
+                             txt.contains("emeicjac") || txt.contains("casablanca") || txt.contains("cervantes");
+
+        bool pideSalud = txt.contains("dolor") || txt.contains("tos") || txt.contains("garganta") ||
+                         txt.contains("resfriado") || txt.contains("gripe") || txt.contains("colesterol") ||
+                         txt.contains("tension") || txt.contains("dormir") || txt.contains("insomnio") ||
+                         txt.contains("nervios") || txt.contains("estres") || txt.contains("ansiedad") ||
+                         txt.contains("digestion") || txt.contains("estomago") || txt.contains("adelgazar") ||
+                         txt.contains("peso") || txt.contains("defensas") || txt.contains("inmuno") ||
+                         txt.contains("articulacion") || txt.contains("artrosis") || txt.contains("vitamina") ||
+                         txt.contains("omega") || txt.contains("probiotico") || txt.contains("infusion") ||
+                         txt.contains("propoleo") || txt.contains("planta") || txt.contains("hierba") ||
+                         txt.contains("recomiend") || txt.contains("recomendar") || txt.contains("que puedo tomar") ||
+                         txt.contains("que es bueno") || txt.contains("lleva") || txt.contains("llevan") ||
+                         txt.contains("contiene") || txt.contains("contienen") || txt.contains("ingrediente") ||
+                         txt.contains("composicion") || txt.contains("composición") || txt.contains("principio activo") ||
+                         txt.contains("extracto") || txt.contains("fitoterapia") || txt.contains("monacolina") ||
+                         txt.contains("arroz rojo") || txt.contains("silimarina") || txt.contains("cardo mariano") ||
+                         txt.contains("curcuma") || txt.contains("cúrcuma") || txt.contains("harpagofit") ||
+                         txt.contains("colagen") || txt.contains("colágeno") || txt.contains("magnesio") ||
+                         txt.contains("melatonina") || txt.contains("valeriana") || txt.contains("pasiflora") ||
+                         txt.contains("isoflavona") || txt.contains("berberina") || txt.contains("ashwagandha");
+
+        bool pideSql = (conf && conf->getRol() == 0) && (txt.contains("sql") || txt.contains("select ") || txt.contains("query"));
+
+        if (pideVentas) {
+            herramientasPermitidas.insert("resumen_ventas");
+            herramientasPermitidas.insert("productos_mas_vendidos");
+            herramientasPermitidas.insert("comparativa_ventas");
+            herramientasPermitidas.insert("facturacion_por_horas");
+            herramientasPermitidas.insert("ventas_por_usuario");
+        }
+        if (pideStock) {
+            herramientasPermitidas.insert("consultar_stock");
+            herramientasPermitidas.insert("articulos_bajo_minimo");
+            herramientasPermitidas.insert("comparativa_stock_tiendas");
+            herramientasPermitidas.insert("prevision_cobertura_stock");
+            herramientasPermitidas.insert("consultar_caducidades");
+        }
+        if (pideCaja) {
+            herramientasPermitidas.insert("ultimos_arqueos");
+            herramientasPermitidas.insert("consultar_movimientos_caja");
+            herramientasPermitidas.insert("auditoria_descuadres_caja");
+        }
+        if (pideClientes) {
+            herramientasPermitidas.insert("buscar_clientes");
+            herramientasPermitidas.insert("ultimas_compras_cliente");
+            herramientasPermitidas.insert("resumen_ventas");
+        }
+        if (pideCompras) {
+            herramientasPermitidas.insert("consultar_pedidos");
+            herramientasPermitidas.insert("consultar_compras_proveedor");
+            herramientasPermitidas.insert("resumen_compras_proveedores");
+            herramientasPermitidas.insert("buscar_facturas_compra_articulo");
+            herramientasPermitidas.insert("consultar_salidas_tiendas");
+        }
+        if (pideUsuarios) {
+            herramientasPermitidas.insert("consultar_usuarios");
+            herramientasPermitidas.insert("ventas_por_usuario");
+            herramientasPermitidas.insert("actividad_usuario");
+        }
+        if (pideTraspasos) {
+            herramientasPermitidas.insert("consultar_traspasos_intertiendas");
+            herramientasPermitidas.insert("consultar_salidas_tiendas");
+            herramientasPermitidas.insert("comparativa_stock_tiendas");
+            herramientasPermitidas.insert("consultar_stock");
+        }
+        if (pideSalud) {
+            herramientasPermitidas.insert("buscar_por_indicacion");
+            herramientasPermitidas.insert("consultar_stock");
+        }
+        if (pideSql) {
+            herramientasPermitidas.insert("ejecutar_consulta_sql");
+        }
+    }
 
     // 1. Tool: consultar_stock
     {
@@ -717,12 +952,12 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas()
     {
         QJsonObject func;
         func["name"] = "buscar_por_indicacion";
-        func["description"] = "Busca productos recomendados o indicados para un síntoma, necesidad o dolencia específica.";
+        func["description"] = "Busca productos de herbolario recomendados para un síntoma o necesidad, o que contengan un principio activo o ingrediente específico (ej. monacolina, levadura de arroz rojo, silimarina, colesterol, insomnio, articulaciones). Cruza indicaciones, composición y botánica.";
         
         QJsonObject props;
         QJsonObject propSintoma;
         propSintoma["type"] = "string";
-        propSintoma["description"] = "Síntoma o indicación (ej. insomnio, articulaciones, memoria, digestión)";
+        propSintoma["description"] = "Síntoma, dolencia, principio activo o ingrediente de fitoterapia (ej. monacolina, levadura arroz, colesterol, insomnio, silimarina, cúrcuma, articulaciones)";
         props["indicacion"] = propSintoma;
 
         QJsonObject params;
@@ -1532,7 +1767,24 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas()
         tools.append(tool);
     }
 
-    return tools;
+    // Si no hubo coincidencia temática específica o la consulta era genérica, devolver todas las herramientas
+    if (herramientasPermitidas.isEmpty()) {
+        return tools;
+    }
+
+    // Filtrar únicamente los esquemas de herramientas autorizados por el router de intenciones
+    QJsonArray toolsFiltradas;
+    for (const QJsonValue &tv : tools) {
+        QString nom = tv.toObject().value("function").toObject().value("name").toString();
+        if (herramientasPermitidas.contains(nom)) {
+            toolsFiltradas.append(tv);
+        }
+    }
+
+    qDebug() << "AsistenteIA: Router semántico activó" << toolsFiltradas.size()
+             << "de" << tools.size() << "herramientas para petición:" << peticionUsuario.left(45);
+
+    return toolsFiltradas.isEmpty() ? tools : toolsFiltradas;
 }
 
 /**
@@ -1669,7 +1921,7 @@ void AsistenteIA::enviarPeticionChat()
     payload["stream"] = false;
     // Solo enviar herramientas en el primer turno; en el segundo paso forzar síntesis de respuesta
     if (m_profundidadToolCalls == 0) {
-        payload["tools"] = construirDefinicionHerramientas();
+        payload["tools"] = construirDefinicionHerramientas(m_peticionActual);
     }
     payload["keep_alive"] = "24h"; // Mantiene el modelo cargado en memoria RAM/VRAM para responder al instante
 
@@ -1681,12 +1933,8 @@ void AsistenteIA::enviarPeticionChat()
     options["repeat_last_n"] = 64;
     options["num_predict"] = 6000; // 6000 tokens: Permite respuestas extensas y tablas completas sin cortes
 
-    // Contexto extendido aprovechando los 16 GB de VRAM de la GPU RTX 4060 Ti
-    int numCtx = 16384; // 16K tokens por defecto
-    if (m_modelo.contains("-32k", Qt::CaseInsensitive) || m_modelo.contains("64k", Qt::CaseInsensitive)) {
-        numCtx = 32768; // 32K tokens si el modelo soporta ventana extendida
-    }
-    options["num_ctx"] = numCtx;
+    // Tamaño de contexto configurado de forma centralizada (por defecto 32768 tokens)
+    options["num_ctx"] = obtenerNumCtxCentralizado();
     payload["options"] = options;
 
     QByteArray jsonData = QJsonDocument(payload).toJson(QJsonDocument::Compact);
@@ -1762,39 +2010,139 @@ void AsistenteIA::onChatReplyFinished(QNetworkReply *reply)
     QString content = message.value("content").toString();
     QJsonArray toolCalls = message.value("tool_calls").toArray();
 
-    // Fallback inteligente: si Ollama devolvió el tool call embebido en texto (ej. {"name": "...", "arguments": ...})
+    // Fallback inteligente: si Ollama devolvió el tool call embebido en texto
+    // Soporta:
+    // 1. Sintaxis de función: iNdExing tool_name({"arg": ...}) iNdEx, <tool_call>tool_name({...})</tool_call>, tool_name({...})
+    // 2. Sintaxis JSON: {"name": "...", "arguments": {...}} o {"function": {"name": ...}}
     if (toolCalls.isEmpty() && !content.isEmpty()) {
-        int idxJson = content.indexOf("{\"name\"");
-        if (idxJson == -1) idxJson = content.indexOf("{\"function\"");
-        if (idxJson == -1) idxJson = content.indexOf("{\"tool\"");
-        
-        if (idxJson != -1) {
-            int finJson = content.lastIndexOf("}");
-            if (finJson > idxJson) {
-                QString jsonSub = content.mid(idxJson, finJson - idxJson + 1);
-                QJsonDocument subDoc = QJsonDocument::fromJson(jsonSub.toUtf8());
-                if (subDoc.isObject()) {
-                    QJsonObject subObj = subDoc.object();
-                    QString toolName = subObj.value("name").toString();
-                    if (toolName.isEmpty() && subObj.contains("function")) {
-                        toolName = subObj.value("function").toObject().value("name").toString();
-                    }
-                    if (!toolName.isEmpty()) {
-                        QJsonObject parsedArgs = subObj.value("arguments").toObject();
-                        if (parsedArgs.isEmpty() && subObj.value("arguments").isString()) {
-                            parsedArgs = QJsonDocument::fromJson(subObj.value("arguments").toString().toUtf8()).object();
+        // 1. Intentar formato function-call: ej. iNdExing tool_name({"arg": "val"}) iNdEx
+        static const QRegularExpression rxFunc(
+            R"((?:iNdExing|<tool_call>|\[TOOL_CALL\]|call:)?\s*([a-zA-Z0-9_]{3,})\s*\(\s*(\{))",
+            QRegularExpression::MultilineOption
+        );
+
+        QRegularExpressionMatchIterator it = rxFunc.globalMatch(content);
+        while (it.hasNext()) {
+            QRegularExpressionMatch m = it.next();
+            QString toolName = m.captured(1).trimmed();
+            int startBrace = m.capturedStart(2);
+
+            // Buscar la llave de cierre balanceada considerando cadenas entrecomilladas y escapes
+            int depth = 0;
+            bool inStr = false;
+            bool escape = false;
+            int endBrace = -1;
+            for (int i = startBrace; i < content.length(); ++i) {
+                QChar ch = content.at(i);
+                if (escape) {
+                    escape = false;
+                    continue;
+                }
+                if (ch == '\\') {
+                    escape = true;
+                    continue;
+                }
+                if (ch == '"') {
+                    inStr = !inStr;
+                    continue;
+                }
+                if (!inStr) {
+                    if (ch == '{') {
+                        depth++;
+                    } else if (ch == '}') {
+                        depth--;
+                        if (depth == 0) {
+                            endBrace = i;
+                            break;
                         }
-                        QJsonObject synthFunc;
-                        synthFunc["name"] = toolName;
-                        synthFunc["arguments"] = parsedArgs;
-                        QJsonObject synthTc;
-                        synthTc["function"] = synthFunc;
-                        toolCalls.append(synthTc);
-                        message["tool_calls"] = toolCalls;
-                        message["content"] = "";
                     }
                 }
             }
+
+            if (endBrace != -1) {
+                QString jsonSub = content.mid(startBrace, endBrace - startBrace + 1);
+                QJsonDocument subDoc = QJsonDocument::fromJson(jsonSub.toUtf8());
+                if (subDoc.isObject()) {
+                    QJsonObject parsedArgs = subDoc.object();
+                    QJsonObject synthFunc;
+                    synthFunc["name"] = toolName;
+                    synthFunc["arguments"] = parsedArgs;
+                    QJsonObject synthTc;
+                    synthTc["function"] = synthFunc;
+                    toolCalls.append(synthTc);
+                }
+            }
+        }
+
+        // 2. Si no se detectó llamada a función, intentar JSON embebido (ej. {"name": "...", "arguments": ...})
+        if (toolCalls.isEmpty()) {
+            int idxJson = content.indexOf("{\"name\"");
+            if (idxJson == -1) idxJson = content.indexOf("{\"function\"");
+            if (idxJson == -1) idxJson = content.indexOf("{\"tool\"");
+
+            if (idxJson != -1) {
+                // Balancear llaves desde idxJson
+                int depth = 0;
+                bool inStr = false;
+                bool escape = false;
+                int endBrace = -1;
+                for (int i = idxJson; i < content.length(); ++i) {
+                    QChar ch = content.at(i);
+                    if (escape) {
+                        escape = false;
+                        continue;
+                    }
+                    if (ch == '\\') {
+                        escape = true;
+                        continue;
+                    }
+                    if (ch == '"') {
+                        inStr = !inStr;
+                        continue;
+                    }
+                    if (!inStr) {
+                        if (ch == '{') {
+                            depth++;
+                        } else if (ch == '}') {
+                            depth--;
+                            if (depth == 0) {
+                                endBrace = i;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (endBrace != -1) {
+                    QString jsonSub = content.mid(idxJson, endBrace - idxJson + 1);
+                    QJsonDocument subDoc = QJsonDocument::fromJson(jsonSub.toUtf8());
+                    if (subDoc.isObject()) {
+                        QJsonObject subObj = subDoc.object();
+                        QString toolName = subObj.value("name").toString();
+                        if (toolName.isEmpty() && subObj.contains("function")) {
+                            toolName = subObj.value("function").toObject().value("name").toString();
+                        }
+                        if (!toolName.isEmpty()) {
+                            QJsonObject parsedArgs = subObj.value("arguments").toObject();
+                            if (parsedArgs.isEmpty() && subObj.value("arguments").isString()) {
+                                parsedArgs = QJsonDocument::fromJson(subObj.value("arguments").toString().toUtf8()).object();
+                            }
+                            QJsonObject synthFunc;
+                            synthFunc["name"] = toolName;
+                            synthFunc["arguments"] = parsedArgs;
+                            QJsonObject synthTc;
+                            synthTc["function"] = synthFunc;
+                            toolCalls.append(synthTc);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Si se recuperaron tool calls sintetizados, limpiar el content en crudo para ejecutar la herramienta
+        if (!toolCalls.isEmpty()) {
+            message["tool_calls"] = toolCalls;
+            message["content"] = "";
         }
     }
 
@@ -1834,12 +2182,11 @@ void AsistenteIA::onChatReplyFinished(QNetworkReply *reply)
             QJsonObject resultado = ejecutarHerramienta(funcName, args);
             qDebug() << "AsistenteIA: Resultado Tool:" << resultado;
 
-            // Inyectar el resultado como mensaje de contexto universal (100% compatible con todos los modelos de Ollama)
+            // Inyectar el resultado como mensaje con rol nativo 'tool' (estándar Ollama y óptimo para Qwen)
             QJsonObject toolMsg;
-            toolMsg["role"] = "user";
+            toolMsg["role"] = "tool";
             toolMsg["name"] = funcName;
-            toolMsg["content"] = QString("Resultado de la consulta a la base de datos para '%1':\n```json\n%2\n```\nSintetiza estos datos y responde directamente al usuario mostrando las tablas y listas correspondientes sin discursos de bienvenida ni confirmaciones vacías.")
-                                 .arg(funcName, QString::fromUtf8(QJsonDocument(resultado).toJson(QJsonDocument::Compact)));
+            toolMsg["content"] = QString::fromUtf8(QJsonDocument(resultado).toJson(QJsonDocument::Compact));
             m_historial.append(toolMsg);
             ejecutadas++;
         }
@@ -2162,6 +2509,100 @@ static QStringList resolverConexiones(const QString &tiendaFiltro)
     return conexiones;
 }
 
+struct AreaSaludNatural {
+    int id = 0;
+    QString categoria;
+    QStringList detonantes;
+    QStringList terminosClave;
+};
+
+static QList<AreaSaludNatural> g_cacheConocimiento;
+static bool g_conocimientoCargado = false;
+
+/**
+ * @brief Obtiene la base de conocimiento activa desde la base de datos (con caché y fallback).
+ */
+static QList<AreaSaludNatural> obtenerConocimientoFitoterapia()
+{
+    if (g_conocimientoCargado && !g_cacheConocimiento.isEmpty()) {
+        return g_cacheConocimiento;
+    }
+
+    g_cacheConocimiento.clear();
+
+    QSqlDatabase db = QSqlDatabase::database();
+    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        db = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    } else {
+        QString connLocal = conf ? conf->getConexionLocal() : "DB";
+        if (connLocal.isEmpty()) connLocal = "DB";
+        if (QSqlDatabase::contains(connLocal)) {
+            db = QSqlDatabase::database(connLocal);
+        }
+    }
+
+    if (db.isOpen()) {
+        QSqlQuery q(db);
+        if (q.exec("SELECT id, categoria, detonantes, terminos_clave FROM ia_conocimiento WHERE activo = 1 ORDER BY id ASC")) {
+            while (q.next()) {
+                AreaSaludNatural a;
+                a.id = q.value("id").toInt();
+                a.categoria = q.value("categoria").toString();
+
+                QString detStr = q.value("detonantes").toString();
+                for (const QString &d : detStr.split(",", Qt::SkipEmptyParts)) {
+                    QString limpio = d.trimmed().toLower();
+                    if (!limpio.isEmpty()) a.detonantes.append(limpio);
+                }
+
+                QString termStr = q.value("terminos_clave").toString();
+                for (const QString &t : termStr.split(",", Qt::SkipEmptyParts)) {
+                    QString limpio = t.trimmed().toLower();
+                    if (!limpio.isEmpty()) a.terminosClave.append(limpio);
+                }
+
+                if (!a.detonantes.isEmpty() && !a.terminosClave.isEmpty()) {
+                    g_cacheConocimiento.append(a);
+                }
+            }
+        }
+    }
+
+    // Fallback con valores predeterminados de fitoterapia si la BD está vacía
+    if (g_cacheConocimiento.isEmpty()) {
+        struct DefaultEntry { const char *cat; const char *det; const char *term; };
+        static const DefaultEntry DEFAULTS[] = {
+            {"Articulaciones", "articul, hueso, dolor, rodilla, espalda, lumbar, artrosis, artritis, cartilag, reuma, tendon, bursitis, tendinitis, fascitis, ciatica, esguince", "colamag, curcurina, artripol, cannalges, colagen, curcuma, harpagofit, harpagofito, glucosamin, msm, condroitina, membrana, silici, magnesi"},
+            {"Colesterol", "colesterol, triglicerid, lipido, cardio, corazon, arterial, tension", "colestia, lecidol, ometrix, nivelcol, cardiepa, monacolina, levadura, arroz rojo, bergamota, omega, fitosterol, ajo negro, berberina"},
+            {"Digestión", "digest, pesadez, gas, vientre, hinchazon, higado, hepatic, vesicula, reflujo, ardor, acidez, estomago, transito, estrenimient", "carbomag, despatic, drenadiet, alivia tus gases, como un reloj, vientre plano, alcachofa, cardo mariano, silimarina, desmodium, boldo, hinojo, probiotico, carbon vegetal, plantago"},
+            {"Inmunidad / Garganta", "resfriad, gripe, tos, garganta, mucus, mucosidad, congestion, defensa, inmune, inmunidad, catarro, afon", "propol, echinacea, equinacea, tomillo, drosera, malvavisco, eucalipt, llanten, vitamina c, reishi, inmuno, bronpul"},
+            {"Sueño / Nervios", "dormir, insomni, sueno, nervio, ansiedad, estres, relaj, depres, animo", "sedaner, nervaplant, melatonina, valeriana, pasiflora, amapola, ashwagandha, triptofano, gaba, melisa, hiperico"},
+            {"Circulación", "circulac, piernas cansadas, pesadez piernas, varices, hemorroid, retencion, celulit", "circular, flebodiet, ginkgo, castaño de indias, vid roja, rusco, hamamelis, centella, cola caballo, drenadiet"},
+            {"Vías Urinarias", "cistitis, orina, urinari, prostata, infeccion orina, arandano", "arandano rojo, cranberry, d-manosa, gayuba, sabal, epilobio, calabaza"},
+            {"Control de Peso", "adelgazar, peso, grasa, quemagrasa, sacian, dieta, retencion liquidos", "drenadiet, controla tu peso, carnitina, glucomanano, garcinia, te verde, fucus, chitosan"},
+            {"Memoria / Energía", "memoria, estudio, concentrac, cansanci, fatiga, agotamient, energia, vitalidad", "aktiner, jalea, ginseng, eleuterococo, bacopa, fosfatidilserina, coenzima q10, guarana, maca"},
+            {"Menopausia", "menopaus, sofocos, regla, menstrua, ciclo, hormon", "isoflavonas, cimicifuga, onagra, salvia, sauzgatillo, probidiet intimo"}
+        };
+        for (const auto &d : DEFAULTS) {
+            AreaSaludNatural a;
+            a.categoria = QString::fromUtf8(d.cat);
+            for (const QString &det : QString::fromUtf8(d.det).split(",", Qt::SkipEmptyParts)) a.detonantes.append(det.trimmed().toLower());
+            for (const QString &term : QString::fromUtf8(d.term).split(",", Qt::SkipEmptyParts)) a.terminosClave.append(term.trimmed().toLower());
+            g_cacheConocimiento.append(a);
+        }
+    }
+
+    g_conocimientoCargado = true;
+    return g_cacheConocimiento;
+}
+
+void AsistenteIA::recargarConocimiento()
+{
+    g_conocimientoCargado = false;
+    obtenerConocimientoFitoterapia();
+    qDebug() << "AsistenteIA: Base de conocimiento recargada con" << g_cacheConocimiento.size() << "categorías activas.";
+}
+
 /**
  * @brief Consulta información detallada de stock y precios de artículos en una o varias tiendas.
  */
@@ -2259,35 +2700,54 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
     // Detectar automáticamente intenciones de ordenación por precio en el término
     QString terminoMinus = termino.toLower();
     if (terminoMinus.contains("mas caro") || terminoMinus.contains("más caro") ||
+        terminoMinus.contains("mas caros") || terminoMinus.contains("más caros") ||
         terminoMinus.contains("precio mas alto") || terminoMinus.contains("precio más alto") ||
+        terminoMinus.contains("precios mas altos") || terminoMinus.contains("precios más altos") ||
+        terminoMinus.contains("mas alto") || terminoMinus.contains("más alto") ||
+        terminoMinus.contains("mas altos") || terminoMinus.contains("más altos") ||
         terminoMinus.contains("mayor precio") || terminoMinus.contains("mas costoso") ||
-        terminoMinus.contains("más costoso")) {
+        terminoMinus.contains("más costoso") || terminoMinus.contains("mas costosos") ||
+        terminoMinus.contains("más costosos")) {
         if (orden.isEmpty()) orden = "precio_desc";
         termino.remove(QRegularExpression("m[aá]s\\s+caro[s]?", QRegularExpression::CaseInsensitiveOption));
-        termino.remove(QRegularExpression("precio\\s+m[aá]s\\s+alto", QRegularExpression::CaseInsensitiveOption));
+        termino.remove(QRegularExpression("precio[s]?\\s+m[aá]s\\s+alto[s]?", QRegularExpression::CaseInsensitiveOption));
+        termino.remove(QRegularExpression("m[aá]s\\s+alto[s]?", QRegularExpression::CaseInsensitiveOption));
         termino.remove(QRegularExpression("mayor\\s+precio", QRegularExpression::CaseInsensitiveOption));
         termino.remove(QRegularExpression("m[aá]s\\s+costoso[s]?", QRegularExpression::CaseInsensitiveOption));
         termino = termino.trimmed();
     } else if (terminoMinus.contains("mas barato") || terminoMinus.contains("más barato") ||
+               terminoMinus.contains("mas baratos") || terminoMinus.contains("más baratos") ||
                terminoMinus.contains("precio mas bajo") || terminoMinus.contains("precio más bajo") ||
+               terminoMinus.contains("precios mas bajos") || terminoMinus.contains("precios más bajos") ||
+               terminoMinus.contains("mas bajo") || terminoMinus.contains("más bajo") ||
+               terminoMinus.contains("mas bajos") || terminoMinus.contains("más bajos") ||
                terminoMinus.contains("menor precio") || terminoMinus.contains("mas economico") ||
-               terminoMinus.contains("más económico")) {
+               terminoMinus.contains("más económico") || terminoMinus.contains("mas economicos") ||
+               terminoMinus.contains("más económicos")) {
         if (orden.isEmpty()) orden = "precio_asc";
         termino.remove(QRegularExpression("m[aá]s\\s+barato[s]?", QRegularExpression::CaseInsensitiveOption));
-        termino.remove(QRegularExpression("precio\\s+m[aá]s\\s+bajo", QRegularExpression::CaseInsensitiveOption));
+        termino.remove(QRegularExpression("precio[s]?\\s+m[aá]s\\s+bajo[s]?", QRegularExpression::CaseInsensitiveOption));
+        termino.remove(QRegularExpression("m[aá]s\\s+bajo[s]?", QRegularExpression::CaseInsensitiveOption));
         termino.remove(QRegularExpression("menor\\s+precio", QRegularExpression::CaseInsensitiveOption));
         termino.remove(QRegularExpression("m[aá]s\\s+econ[oó]mico[s]?", QRegularExpression::CaseInsensitiveOption));
         termino = termino.trimmed();
     }
 
-    if (termino.isEmpty() && familiaFiltro.isEmpty() && fabricanteFiltro.isEmpty() && proveedorFiltro.isEmpty() && orden.isEmpty()) {
-        res["error"] = "Debe especificar al menos un término, familia, fabricante o proveedor, o un criterio de ordenación (ej. precio_desc) para consultar el catálogo o stock.";
-        return res;
-    }
-
-    // Extraer palabras clave (tokens) para permitir coincidencias intercaladas (ej. 'espirales novadiet' -> 'Espirales int. 500gr. Nova Diet')
+    // Extraer palabras clave (tokens) para permitir coincidencias intercaladas
+    // Lista completa de stopWords en español para no filtrar por palabras conversacionales o genéricas
     QStringList palabras;
-    static const QStringList stopWords = {"de", "del", "la", "el", "los", "las", "un", "una", "unos", "unas", "y", "en", "con", "por", "para", "que", "hay", "articulos", "artículos", "productos", "cuantos", "cuántos", "busca", "buscar"};
+    static const QStringList stopWords = {
+        "de", "del", "la", "el", "los", "las", "un", "uno", "una", "unos", "unas",
+        "y", "en", "con", "por", "para", "que", "qué", "al", "sobre", "entre",
+        "hay", "articulos", "artículos", "articulo", "artículo", "productos", "producto",
+        "item", "items", "precio", "precios", "pvp", "coste", "costes", "costoso", "costosos",
+        "caro", "caros", "barato", "baratos", "alto", "altos", "bajo", "bajos",
+        "economico", "económico", "economicos", "económicos",
+        "cual", "cuál", "cuales", "cuáles", "es", "son", "cuanto", "cuánto", "cuanta", "cuánta",
+        "cuantos", "cuántos", "cuantas", "cuántas", "busca", "buscar", "buscame", "búscame",
+        "dime", "dame", "mostrar", "ver", "listar", "tener", "tenemos", "disponemos", "existe", "existen"
+    };
+
     if (!termino.isEmpty()) {
         for (const QString &w : termino.split(QRegularExpression("[\\s,;+]+"), Qt::SkipEmptyParts)) {
             QString wClean = w.trimmed();
@@ -2295,6 +2755,12 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
                 palabras.append(wClean);
             }
         }
+    }
+
+    // Si no quedan palabras clave pero se especificó orden, familia, marca o proveedor, es una consulta válida
+    if (palabras.isEmpty() && termino.isEmpty() && familiaFiltro.isEmpty() && fabricanteFiltro.isEmpty() && proveedorFiltro.isEmpty() && orden.isEmpty()) {
+        res["error"] = "Debe especificar al menos un término, familia, fabricante o proveedor, o un criterio de ordenación (ej. precio_desc) para consultar el catálogo o stock.";
+        return res;
     }
 
     bool consultadoNube = false;
@@ -2311,7 +2777,7 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
 
         for (int i = 0; i < palabras.size(); ++i) {
             int tokenIdx = i + 1;
-            whereClauseNube += QString("AND (a.descripcion LIKE :tok%1 OR a.cod = :tok_exact%1 OR b.nombre LIKE :tok%1 OR f.descripcion LIKE :tok%1) ").arg(tokenIdx);
+            whereClauseNube += QString("AND (a.descripcion LIKE :tok%1 OR a.cod = :tok_exact%1 OR b.nombre LIKE :tok%1 OR f.descripcion LIKE :tok%1 OR a.notas LIKE :tok%1) ").arg(tokenIdx);
         }
 
         if (!familiaFiltro.isEmpty()) {
@@ -2385,7 +2851,6 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
         }
 
         if (q.exec()) {
-            consultadoNube = true;
             while (q.next()) {
                 QJsonObject art;
                 art["tienda"] = q.value("nombre_tienda").toString();
@@ -2404,6 +2869,9 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
                 art["familia"] = q.value("familia").toString();
                 art["fabricante"] = q.value("fabricante").toString();
                 articulosArray.append(art);
+            }
+            if (!articulosArray.isEmpty()) {
+                consultadoNube = true;
             }
         } else {
             qDebug() << "toolConsultarStock: Error SQL Nube:" << q.lastError().text();
@@ -2425,7 +2893,7 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
             for (int i = 0; i < palabras.size(); ++i) {
                 int tokenIdx = i + 1;
                 whereClauseLocal += QString("AND (a.descripcion LIKE :tok%1 OR a.cod = :tok_exact%1 OR b.nombre LIKE :tok%1 OR f.descripcion LIKE :tok%1 "
-                                           "OR a.cod IN (SELECT c.cod FROM codaux c WHERE c.aux = :tok_exact%1)) ").arg(tokenIdx);
+                                           "OR a.notas LIKE :tok%1 OR a.cod IN (SELECT c.cod FROM codaux c WHERE c.aux = :tok_exact%1)) ").arg(tokenIdx);
             }
 
             if (!familiaFiltro.isEmpty()) {
@@ -2522,9 +2990,183 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
         }
     }
 
-    res["total_coincidencias"] = (totalCoincidencias > 0) ? totalCoincidencias : articulosArray.size();
-    res["total_encontrados"] = (totalCoincidencias > 0) ? totalCoincidencias : articulosArray.size();
+    // 3. Fallback inteligente en Composición / Notas Técnicas:
+    // Si la búsqueda directa por descripción/marca/familia no arrojó ningún resultado (0 artículos),
+    // y tenemos palabras clave, reintentamos buscando si los términos aparecen en 'a.notas'
+    // (composición, principios activos como monacolina, silimarina, harpagofito, etc.).
+    if (articulosArray.isEmpty() && !palabras.isEmpty()) {
+        // A) Intentar fallback en la nube si estaba disponible
+        if (consultadoNube || (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen())) {
+            QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+            QString whereNotasNube = "WHERE 1=1 ";
+            if (idTiendaFiltro > 0) whereNotasNube += QString("AND s.id_tienda = %1 ").arg(idTiendaFiltro);
+            for (int i = 0; i < palabras.size(); ++i) {
+                whereNotasNube += QString("AND a.notas LIKE :tok_n%1 ").arg(i + 1);
+            }
+            if (!familiaFiltro.isEmpty()) whereNotasNube += "AND f.descripcion LIKE :fam ";
+            if (!fabricanteFiltro.isEmpty()) whereNotasNube += "AND (b.nombre LIKE :fab OR a.descripcion LIKE :fab) ";
+
+            QString sqlNotasNube = "SELECT s.id_tienda, COALESCE(t.nombre, 'Tienda') as nombre_tienda, "
+                                  "a.cod, a.descripcion, a.pvp, a.precio_compra, s.stock, a.min as stock_min, "
+                                  "a.max as stock_max, a.notas, COALESCE(f.descripcion, '') as familia, "
+                                  "COALESCE(b.nombre, '') as fabricante "
+                                  "FROM stock_tiendas_nube s "
+                                  "JOIN articulos a ON s.cod = a.cod "
+                                  "LEFT JOIN tiendas t ON s.id_tienda = t.id "
+                                  "LEFT JOIN fabricantes b ON a.fabricante = b.id "
+                                  "LEFT JOIN familias f ON a.familia = f.id " + whereNotasNube;
+            if (orden.contains("precio_desc")) sqlNotasNube += "ORDER BY a.pvp DESC ";
+            else if (orden.contains("precio_asc")) sqlNotasNube += "ORDER BY a.pvp ASC ";
+            else sqlNotasNube += "ORDER BY s.stock DESC, a.descripcion ASC ";
+            sqlNotasNube += QString("LIMIT %1").arg(limite);
+
+            QSqlQuery qNN(dbNube);
+            qNN.prepare(sqlNotasNube);
+            for (int i = 0; i < palabras.size(); ++i) {
+                qNN.bindValue(QString(":tok_n%1").arg(i + 1), "%" + palabras[i] + "%");
+            }
+            if (!familiaFiltro.isEmpty()) qNN.bindValue(":fam", "%" + familiaFiltro + "%");
+            if (!fabricanteFiltro.isEmpty()) qNN.bindValue(":fab", "%" + fabricanteFiltro + "%");
+
+            if (qNN.exec()) {
+                while (qNN.next()) {
+                    QJsonObject art;
+                    art["tienda"] = qNN.value("nombre_tienda").toString();
+                    art["codigo"] = qNN.value("cod").toString();
+                    art["nombre"] = qNN.value("descripcion").toString();
+                    art["pvp"] = QString::number(qNN.value("pvp").toDouble(), 'f', 2) + " €";
+                    if (conf && conf->permisos() && conf->permisos()->tiene("articulos.coste")) {
+                        art["coste_pvd"] = QString::number(qNN.value("precio_compra").toDouble(), 'f', 2) + " €";
+                    }
+                    art["stock_actual"] = qNN.value("stock").toDouble();
+                    art["stock_minimo"] = qNN.value("stock_min").toDouble();
+                    art["stock_maximo"] = qNN.value("stock_max").toDouble();
+                    art["notas"] = limpiarTextoHtml(qNN.value("notas").toString());
+                    art["familia"] = qNN.value("familia").toString();
+                    art["fabricante"] = qNN.value("fabricante").toString();
+                    art["coincidencia"] = "Encontrado en composición / ingredientes (notas técnicas)";
+                    articulosArray.append(art);
+                }
+            }
+        }
+
+        // B) Intentar fallback en bases locales si aún no hay resultados
+        if (articulosArray.isEmpty()) {
+            QStringList conexiones = resolverConexiones(tiendaFiltro);
+            for (const QString &connName : conexiones) {
+                if (!QSqlDatabase::contains(connName) || !QSqlDatabase::database(connName).isOpen()) continue;
+                QSqlDatabase db = QSqlDatabase::database(connName);
+
+                QString whereNotasLocal = "WHERE 1=1 ";
+                for (int i = 0; i < palabras.size(); ++i) {
+                    whereNotasLocal += QString("AND a.notas LIKE :tok_n%1 ").arg(i + 1);
+                }
+                if (!familiaFiltro.isEmpty()) whereNotasLocal += "AND f.descripcion LIKE :fam ";
+                if (!fabricanteFiltro.isEmpty()) whereNotasLocal += "AND (b.nombre LIKE :fab OR a.descripcion LIKE :fab) ";
+
+                QString sqlNotasLocal = "SELECT a.cod, a.descripcion, a.pvp, a.precio_compra, a.min, a.max, "
+                                       "a.notas, COALESCE(f.descripcion, '') as familia, COALESCE(b.nombre, '') as fabricante, "
+                                       "(SELECT COALESCE(SUM(l.cantidad), 0) FROM lotes l WHERE l.ean = a.cod) as stock_real "
+                                       "FROM articulos a "
+                                       "LEFT JOIN familias f ON a.familia = f.id "
+                                       "LEFT JOIN fabricantes b ON a.fabricante = b.id " + whereNotasLocal;
+                if (orden.contains("precio_desc")) sqlNotasLocal += "ORDER BY a.pvp DESC ";
+                else if (orden.contains("precio_asc")) sqlNotasLocal += "ORDER BY a.pvp ASC ";
+                else sqlNotasLocal += "ORDER BY stock_real DESC, a.descripcion ASC ";
+                sqlNotasLocal += QString("LIMIT %1").arg(limite);
+
+                QSqlQuery qNL(db);
+                qNL.prepare(sqlNotasLocal);
+                for (int i = 0; i < palabras.size(); ++i) {
+                    qNL.bindValue(QString(":tok_n%1").arg(i + 1), "%" + palabras[i] + "%");
+                }
+                if (!familiaFiltro.isEmpty()) qNL.bindValue(":fam", "%" + familiaFiltro + "%");
+                if (!fabricanteFiltro.isEmpty()) qNL.bindValue(":fab", "%" + fabricanteFiltro + "%");
+
+                if (qNL.exec()) {
+                    while (qNL.next()) {
+                        QJsonObject art;
+                        art["tienda"] = (connName == "DB" || (conf && connName == conf->getConexionLocal())) ? "Tienda Local" : connName;
+                        art["codigo"] = qNL.value("cod").toString();
+                        art["nombre"] = qNL.value("descripcion").toString();
+                        art["pvp"] = QString::number(qNL.value("pvp").toDouble(), 'f', 2) + " €";
+                        if (conf && conf->permisos() && conf->permisos()->tiene("articulos.coste")) {
+                            art["coste_pvd"] = QString::number(qNL.value("precio_compra").toDouble(), 'f', 2) + " €";
+                        }
+                        art["stock_actual"] = qNL.value("stock_real").toDouble();
+                        art["stock_minimo"] = qNL.value("min").toDouble();
+                        art["stock_maximo"] = qNL.value("max").toDouble();
+                        art["notas"] = limpiarTextoHtml(qNL.value("notas").toString());
+                        art["familia"] = qNL.value("familia").toString();
+                        art["fabricante"] = qNL.value("fabricante").toString();
+                        art["coincidencia"] = "Encontrado en composición / ingredientes (notas técnicas)";
+                        articulosArray.append(art);
+                    }
+                }
+                if (!articulosArray.isEmpty()) break;
+            }
+        }
+        if (!articulosArray.isEmpty()) {
+            totalCoincidencias = articulosArray.size();
+            res["aviso_busqueda"] = "Los artículos se han localizado buscando dentro de la composición e ingredientes (notas técnicas) al no figurar en el nombre comercial.";
+        }
+    }
+
+    // C) Sugerencia cruzada de fitoterapia si aún no hay resultados:
+    // Si la búsqueda sigue vacía, comprobar si el término consultado es un principio activo conocido
+    // en la base de fitoterapia (ej. monacolina -> levadura de arroz rojo / colestia) para orientar a la IA
+    if (articulosArray.isEmpty() && !palabras.isEmpty()) {
+        QList<AreaSaludNatural> areasFito = obtenerConocimientoFitoterapia();
+        QStringList terminosRelacionados;
+        QString categoriaDetectada;
+        for (const AreaSaludNatural &a : areasFito) {
+            bool coincide = false;
+            for (const QString &tk : a.terminosClave) {
+                for (const QString &p : palabras) {
+                    if (tk.contains(p) || p.contains(tk)) {
+                        coincide = true;
+                        break;
+                    }
+                }
+                if (coincide) break;
+            }
+            if (!coincide) {
+                for (const QString &det : a.detonantes) {
+                    for (const QString &p : palabras) {
+                        if (det.contains(p) || p.contains(det)) {
+                            coincide = true;
+                            break;
+                        }
+                    }
+                    if (coincide) break;
+                }
+            }
+            if (coincide) {
+                categoriaDetectada = a.categoria;
+                for (const QString &tk : a.terminosClave) {
+                    if (!terminosRelacionados.contains(tk) && !palabras.contains(tk)) {
+                        terminosRelacionados.append(tk);
+                    }
+                }
+                break;
+            }
+        }
+        if (!terminosRelacionados.isEmpty()) {
+            res["sugerencia_fitoterapia"] = QString("No se hallaron artículos con el nombre exacto '%1', pero en fitoterapia (%2) suele asociarse con los siguientes nombres de planta, marcas o principios: %3. Sugiere estos productos o consulta mediante 'buscar_por_indicacion'.")
+                .arg(termino, categoriaDetectada, terminosRelacionados.mid(0, 6).join(", "));
+        }
+    }
+
+    int totalReal = (totalCoincidencias > 0) ? totalCoincidencias : articulosArray.size();
+    res["total_coincidencias"] = totalReal;
+    res["total_encontrados"] = totalReal;
     res["mostrados"] = articulosArray.size();
+    if (totalReal > articulosArray.size()) {
+        res["mensaje"] = QString("Se han encontrado %1 artículos en total en el catálogo (mostrando los primeros %2 según el criterio solicitado).")
+                             .arg(totalReal).arg(articulosArray.size());
+    } else {
+        res["mensaje"] = QString("Se han encontrado %1 artículos en total.").arg(totalReal);
+    }
     if (!familiaFiltro.isEmpty()) res["filtro_familia"] = familiaFiltro;
     if (!fabricanteFiltro.isEmpty()) res["filtro_fabricante"] = fabricanteFiltro;
     if (!proveedorFiltro.isEmpty()) res["filtro_proveedor"] = proveedorFiltro;
@@ -3785,98 +4427,6 @@ QJsonObject AsistenteIA::toolUltimasComprasCliente(const QJsonObject &args)
     return res;
 }
 
-struct AreaSaludNatural {
-    QString categoria;
-    QStringList detonantes;
-    QStringList terminosClave;
-};
-
-static QList<AreaSaludNatural> g_cacheConocimiento;
-static bool g_conocimientoCargado = false;
-
-/**
- * @brief Obtiene la base de conocimiento activa desde la base de datos (con caché y fallback).
- */
-static QList<AreaSaludNatural> obtenerConocimientoFitoterapia()
-{
-    if (g_conocimientoCargado && !g_cacheConocimiento.isEmpty()) {
-        return g_cacheConocimiento;
-    }
-
-    g_cacheConocimiento.clear();
-
-    QSqlDatabase db = QSqlDatabase::database();
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-        db = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
-    } else {
-        QString connLocal = conf ? conf->getConexionLocal() : "DB";
-        if (connLocal.isEmpty()) connLocal = "DB";
-        if (QSqlDatabase::contains(connLocal)) {
-            db = QSqlDatabase::database(connLocal);
-        }
-    }
-
-    if (db.isOpen()) {
-        QSqlQuery q(db);
-        if (q.exec("SELECT categoria, detonantes, terminos_clave FROM ia_conocimiento WHERE activo = 1 ORDER BY id ASC")) {
-            while (q.next()) {
-                AreaSaludNatural a;
-                a.categoria = q.value("categoria").toString();
-
-                QString detStr = q.value("detonantes").toString();
-                for (const QString &d : detStr.split(",", Qt::SkipEmptyParts)) {
-                    QString limpio = d.trimmed().toLower();
-                    if (!limpio.isEmpty()) a.detonantes.append(limpio);
-                }
-
-                QString termStr = q.value("terminos_clave").toString();
-                for (const QString &t : termStr.split(",", Qt::SkipEmptyParts)) {
-                    QString limpio = t.trimmed().toLower();
-                    if (!limpio.isEmpty()) a.terminosClave.append(limpio);
-                }
-
-                if (!a.detonantes.isEmpty() && !a.terminosClave.isEmpty()) {
-                    g_cacheConocimiento.append(a);
-                }
-            }
-        }
-    }
-
-    // Fallback con valores predeterminados de fitoterapia si la BD está vacía
-    if (g_cacheConocimiento.isEmpty()) {
-        struct DefaultEntry { const char *cat; const char *det; const char *term; };
-        static const DefaultEntry DEFAULTS[] = {
-            {"Articulaciones", "articul, hueso, dolor, rodilla, espalda, lumbar, artrosis, artritis, cartilag, reuma, tendon, bursitis, tendinitis, fascitis, ciatica, esguince", "colamag, curcurina, artripol, cannalges, colagen, curcuma, harpagofit, glucosamin, msm, membrana, silici, magnesi"},
-            {"Colesterol", "colesterol, triglicerid, lipido, cardio, corazon, arterial, tension", "colestia, lecidol, ometrix, nivelcol, cardiepa, monacolina, levadura, arroz rojo, bergamota, omega, fitosterol, ajo negro"},
-            {"Digestión", "digest, pesadez, gas, vientre, hinchazon, higado, hepatic, vesicula, reflujo, ardor, acidez, estomago, transito, estrenimient", "carbomag, despatic, drenadiet, alivia tus gases, como un reloj, vientre plano, alcachofa, cardo mariano, desmodium, boldo, hinojo, probiotico, carbon vegetal, plantago"},
-            {"Inmunidad / Garganta", "resfriad, gripe, tos, garganta, mucus, mucosidad, congestion, defensa, inmune, inmunidad, catarro, afon", "propol, echinacea, equinacea, tomillo, drosera, malvavisco, eucalipt, llanten, vitamina c, reishi, inmuno, bronpul"},
-            {"Sueño / Nervios", "dormir, insomni, sueno, nervio, ansiedad, estres, relaj, depres, animo", "sedaner, nervaplant, melatonina, valeriana, pasiflora, amapola, ashwagandha, triptofano, gaba, melisa, hiperico"},
-            {"Circulación", "circulac, piernas cansadas, pesadez piernas, varices, hemorroid, retencion, celulit", "circular, flebodiet, ginkgo, castaño de indias, vid roja, rusco, hamamelis, centella, cola caballo, drenadiet"},
-            {"Vías Urinarias", "cistitis, orina, urinari, prostata, infeccion orina, arandano", "arandano rojo, cranberry, d-manosa, gayuba, sabal, epilobio, calabaza"},
-            {"Control de Peso", "adelgazar, peso, grasa, quemagrasa, sacian, dieta, retencion liquidos", "drenadiet, controla tu peso, carnitina, glucomanano, garcinia, te verde, fucus, chitosan"},
-            {"Memoria / Energía", "memoria, estudio, concentrac, cansanci, fatiga, agotamient, energia, vitalidad", "aktiner, jalea, ginseng, eleuterococo, bacopa, fosfatidilserina, coenzima q10, guarana, maca"},
-            {"Menopausia", "menopaus, sofocos, regla, menstrua, ciclo, hormon", "isoflavonas, cimicifuga, onagra, salvia, sauzgatillo, probidiet intimo"}
-        };
-        for (const auto &d : DEFAULTS) {
-            AreaSaludNatural a;
-            a.categoria = QString::fromUtf8(d.cat);
-            for (const QString &det : QString::fromUtf8(d.det).split(",", Qt::SkipEmptyParts)) a.detonantes.append(det.trimmed().toLower());
-            for (const QString &term : QString::fromUtf8(d.term).split(",", Qt::SkipEmptyParts)) a.terminosClave.append(term.trimmed().toLower());
-            g_cacheConocimiento.append(a);
-        }
-    }
-
-    g_conocimientoCargado = true;
-    return g_cacheConocimiento;
-}
-
-void AsistenteIA::recargarConocimiento()
-{
-    g_conocimientoCargado = false;
-    obtenerConocimientoFitoterapia();
-    qDebug() << "AsistenteIA: Base de conocimiento recargada con" << g_cacheConocimiento.size() << "categorías activas.";
-}
-
 QJsonObject AsistenteIA::toolBuscarPorSintoma(const QJsonObject &args)
 {
     QString indicacion = args.value("indicacion").toString().trimmed();
@@ -3944,6 +4494,7 @@ QJsonObject AsistenteIA::toolBuscarPorSintoma(const QJsonObject &args)
     QList<AreaSaludNatural> areas = obtenerConocimientoFitoterapia();
     for (const AreaSaludNatural &area : areas) {
         bool areaActiva = false;
+        // 1. Comprobar si coincide con detonantes de dolencia o síntoma
         for (const QString &det : area.detonantes) {
             for (const QString &t : tokens) {
                 if (t.contains(det) || det.contains(t)) {
@@ -3953,10 +4504,49 @@ QJsonObject AsistenteIA::toolBuscarPorSintoma(const QJsonObject &args)
             }
             if (areaActiva) break;
         }
+        // 2. Comprobar bidireccionalmente si coincide con principios activos o plantas clave del área
+        if (!areaActiva) {
+            for (const QString &tk : area.terminosClave) {
+                for (const QString &t : tokens) {
+                    if (t.contains(tk) || tk.contains(t)) {
+                        areaActiva = true;
+                        break;
+                    }
+                }
+                if (areaActiva) break;
+            }
+        }
         if (areaActiva) {
             for (const QString &tk : area.terminosClave) {
                 if (!areaBonusTerms.contains(tk)) areaBonusTerms.append(tk);
             }
+        }
+    }
+
+    // 3. Activación semántica de Áreas de Fitoterapia mediante Embeddings
+    QList<ResultadoSimilitud> areasSemanticas = IndexadorEmbeddings::instancia()->buscarAreasSimilares(indicacion, 0.40f);
+    for (const ResultadoSimilitud &as : areasSemanticas) {
+        if (as.cod.startsWith("AREA_")) {
+            int areaId = as.cod.mid(5).toInt();
+            for (const AreaSaludNatural &area : areas) {
+                if (area.id == areaId) {
+                    for (const QString &tk : area.terminosClave) {
+                        if (!areaBonusTerms.contains(tk)) areaBonusTerms.append(tk);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // 4. Búsqueda semántica de Artículos mediante Embeddings (Top 50)
+    QList<ResultadoSimilitud> articulosSemanticos = IndexadorEmbeddings::instancia()->buscarArticulosSimilares(indicacion, 50, 0.35f);
+    QStringList codigosSemanticos;
+    for (const ResultadoSimilitud &resSem : articulosSemanticos) {
+        if (!resSem.cod.isEmpty()) {
+            QString codLimpio = resSem.cod;
+            codLimpio.replace("'", "''");
+            codigosSemanticos.append(QString("'%1'").arg(codLimpio));
         }
     }
 
@@ -3974,6 +4564,13 @@ QJsonObject AsistenteIA::toolBuscarPorSintoma(const QJsonObject &args)
     for (int j = 0; j < areaBonusTerms.size(); ++j) {
         whereConditions.append(QString("(a.descripcion LIKE :ab_desc_%1 OR a.notas LIKE :ab_notas_%1)").arg(j));
         scoreExpressions.append(QString("(CASE WHEN a.descripcion LIKE :ab_s_desc_%1 THEN 15 WHEN a.notas LIKE :ab_s_notas_%1 THEN 10 ELSE 0 END)").arg(j));
+    }
+
+    // Si hay coincidencias semánticas vectoriales, sumamos un bono de +100 puntos y aseguramos su inclusión en WHERE
+    if (!codigosSemanticos.isEmpty()) {
+        QString inList = codigosSemanticos.join(",");
+        whereConditions.append(QString("(a.cod IN (%1))").arg(inList));
+        scoreExpressions.append(QString("(CASE WHEN a.cod IN (%1) THEN 100 ELSE 0 END)").arg(inList));
     }
 
     QString sql = QString(
@@ -6028,7 +6625,9 @@ QJsonObject AsistenteIA::toolConsultarSalidasTiendas(const QJsonObject &args)
 
     QString estado = args.value("estado").toString().trimmed().toLower();
     if (estado.isEmpty()) estado = args.value("tipo").toString().trimmed().toLower();
-    if (userText.contains("salidagenero_tmp") || userText.contains("saligagenero_tmp") || userText.contains("salidas_tmp") || userText.contains("pendiente") || userText.contains("preparaci")) {
+    if (userText.contains("salidagenero_tmp") || userText.contains("saligagenero_tmp") || userText.contains("salidas_tmp") ||
+        userText.contains("pendiente") || userText.contains("preparaci") || userText.contains("en salidas") ||
+        userText.contains("hay salidas") || userText.contains("sin aceptar")) {
         estado = "pendientes";
     }
 
@@ -6059,8 +6658,8 @@ QJsonObject AsistenteIA::toolConsultarSalidasTiendas(const QJsonObject &args)
         if (pideEnviadasExplicitamente) {
             estado = "enviadas";
         } else {
-            // Regla amigable: consultar tanto borradores/pendientes como envíos recientes para no omitir mercancía en tránsito
-            estado = "todas";
+            // Por defecto en tienda, consultar salidas sin aceptar / borradores para resolver qué género está pendiente
+            estado = "pendientes";
         }
     } else if (estado.contains("toda") && !pideEnviadasExplicitamente) {
         estado = "todas";
@@ -6762,18 +7361,23 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
                     bool pedidoContieneProducto = producto.isEmpty();
 
                     if (incluirLineas || !producto.isEmpty()) {
+                        QString sqlL = "SELECT cod, descripcion, cantidad, bonificacion, lote, "
+                                       "COALESCE(DATE_FORMAT(fc, '%Y-%m-%d'), fc, '') AS fecha_cad, "
+                                       "costo AS precioCosto, descuento1 AS descuento, base AS baseProducto, "
+                                       "tipoIva, totalbase AS baseLinea, iva, re, pvp "
+                                       "FROM lineaspedido_nube WHERE id_tienda = :tId AND (nDocumento = :doc";
+                        if (!nFact.trimmed().isEmpty()) {
+                            sqlL += " OR nDocumento = :nFact";
+                        }
+                        sqlL += ") ORDER BY id_local ASC";
+
                         QSqlQuery qLineas(dbNube);
-                        qLineas.prepare("SELECT cod, descripcion, cantidad, bonificacion, lote, "
-                                        "COALESCE(DATE_FORMAT(fc, '%Y-%m-%d'), fc, '') AS fecha_cad, "
-                                        "costo AS precioCosto, descuento1 AS descuento, base AS baseProducto, "
-                                        "tipoIva, totalbase AS baseLinea, iva, re, pvp "
-                                        "FROM lineaspedido_nube WHERE id_tienda = :tId "
-                                        "AND (id_local = :idLocal OR nDocumento = :doc OR nDocumento = :nFact) "
-                                        "ORDER BY id_local ASC");
+                        qLineas.prepare(sqlL);
                         qLineas.bindValue(":tId", idTienda);
-                        qLineas.bindValue(":idLocal", idLocal);
                         qLineas.bindValue(":doc", numPed);
-                        qLineas.bindValue(":nFact", nFact);
+                        if (!nFact.trimmed().isEmpty()) {
+                            qLineas.bindValue(":nFact", nFact);
+                        }
 
                         if (qLineas.exec()) {
                             while (qLineas.next()) {
@@ -6932,18 +7536,35 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
                         bool pedidoContieneProducto = producto.isEmpty();
 
                         if (incluirLineas || !producto.isEmpty()) {
+                            QString sqlL = "SELECT id, cod, descripcion, cantidad, bonificacion, lote, "
+                                           "COALESCE(DATE_FORMAT(fc, '%Y-%m-%d'), fc, '') AS fecha_cad, "
+                                           "costo AS precioCosto, descuento1 AS descuento, base AS baseProducto, "
+                                           "tipoIva, totalbase AS baseLinea, iva, re, pvp "
+                                           "FROM lineaspedido WHERE (nDocumento = :doc";
+                            if (!nFact.trimmed().isEmpty()) {
+                                sqlL += " OR nDocumento = :nFact";
+                            }
+                            if (!idPedidoFiltro.trimmed().isEmpty() && idPedidoFiltro != numPed && idPedidoFiltro != nFact) {
+                                sqlL += " OR nDocumento = :filtro";
+                            }
+                            sqlL += ") ";
+                            if (idProv > 0) {
+                                sqlL += "AND idProveedor = :prov ";
+                            }
+                            sqlL += "ORDER BY id ASC";
+
                             QSqlQuery qLineas(db);
-                            qLineas.prepare("SELECT id, cod, descripcion, cantidad, bonificacion, lote, "
-                                            "COALESCE(DATE_FORMAT(fc, '%Y-%m-%d'), fc, '') AS fecha_cad, "
-                                            "costo AS precioCosto, descuento1 AS descuento, base AS baseProducto, "
-                                            "tipoIva, totalbase AS baseLinea, iva, re, pvp "
-                                            "FROM lineaspedido WHERE (nDocumento = :doc OR nDocumento = :nFact OR nDocumento = :filtro OR nDocumento = :idPed) "
-                                            "AND (idProveedor = :prov OR idProveedor = 0 OR :prov = 0) ORDER BY id ASC");
+                            qLineas.prepare(sqlL);
                             qLineas.bindValue(":doc", numPed);
-                            qLineas.bindValue(":nFact", nFact);
-                            qLineas.bindValue(":filtro", idPedidoFiltro);
-                            qLineas.bindValue(":idPed", QString::number(idPed));
-                            qLineas.bindValue(":prov", idProv);
+                            if (!nFact.trimmed().isEmpty()) {
+                                qLineas.bindValue(":nFact", nFact);
+                            }
+                            if (!idPedidoFiltro.trimmed().isEmpty() && idPedidoFiltro != numPed && idPedidoFiltro != nFact) {
+                                qLineas.bindValue(":filtro", idPedidoFiltro);
+                            }
+                            if (idProv > 0) {
+                                qLineas.bindValue(":prov", idProv);
+                            }
 
                             if (!qLineas.exec()) {
                                 qDebug() << "toolConsultarPedidos lineaspedido error en" << connName << ":" << qLineas.lastError().text();

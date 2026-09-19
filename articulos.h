@@ -70,6 +70,8 @@ private slots:
 
     void on_pushButtonBuscarNotas_clicked();
     void on_pushButtonGenerarDescripcionIA_clicked();
+    void on_pushButtonCatalogadorLote_clicked();
+    void on_pushButtonFotosLote_clicked();
 
     void on_lineEditCod_returnPressed();
 

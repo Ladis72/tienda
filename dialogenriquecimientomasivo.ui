@@ -1,0 +1,732 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DialogEnriquecimientoMasivo</class>
+ <widget class="QDialog" name="DialogEnriquecimientoMasivo">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>950</width>
+    <height>680</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Enriquecimiento Masivo de Fichas de Producto con IA y Fuentes Web</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QDialog { background-color: #f8f9fa; }</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayoutPrincipal">
+   <property name="spacing">
+    <number>10</number>
+   </property>
+   <property name="leftMargin">
+    <number>14</number>
+   </property>
+   <property name="topMargin">
+    <number>14</number>
+   </property>
+   <property name="rightMargin">
+    <number>14</number>
+   </property>
+   <property name="bottomMargin">
+    <number>14</number>
+   </property>
+   <item>
+    <widget class="QFrame" name="frameCabecera">
+     <property name="styleSheet">
+      <string notr="true">QFrame#frameCabecera {
+    background-color: #e8f5e9;
+    border: 1px solid #c8e6c9;
+    border-radius: 8px;
+    padding: 8px;
+}</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayoutCabecera">
+      <item>
+       <widget class="QLabel" name="labelIcono">
+        <property name="maximumSize">
+         <size>
+          <width>40</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>📦</string>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>22</pointsize>
+         </font>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayoutTitulos">
+        <property name="spacing">
+         <number>2</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="labelTitulo">
+          <property name="font">
+           <font>
+            <pointsize>13</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #2e7d32;</string>
+          </property>
+          <property name="text">
+           <string>Catalogador Automático y Verificación Masiva de Fichas</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelSubtitulo">
+          <property name="styleSheet">
+           <string notr="true">color: #555555;</string>
+          </property>
+          <property name="text">
+           <string>Recorre el catálogo del ERP, contrasta en Open Facts y fuentes oficiales, y completa la composición sin alucinaciones</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="horizontalSpacerCabecera">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBoxFiltros">
+     <property name="title">
+      <string>Filtros y Opciones de Catalogación</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayoutFiltros">
+      <property name="spacing">
+       <number>12</number>
+      </property>
+      <item>
+       <widget class="QCheckBox" name="checkBoxSoloSinNotas">
+        <property name="text">
+         <string>Solo artículos sin notas</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBoxAleatorio">
+        <property name="toolTip">
+         <string>Carga una selección aleatoria de artículos del catálogo en vez de los últimos registrados</string>
+        </property>
+        <property name="text">
+         <string>🎲 Aleatorio</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBoxSoloEanValido">
+        <property name="text">
+         <string>Solo con EAN válido</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBoxModoInteractivo">
+        <property name="toolTip">
+         <string>Pausa en cada artículo generado para que puedas revisar, editar, aceptar o rechazar la nota antes de continuar con el siguiente</string>
+        </property>
+        <property name="text">
+         <string>Confirmar cada ficha al generarse</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="checkBoxActualizarBD">
+        <property name="toolTip">
+         <string>Guarda automáticamente en MariaDB las fichas con estado OK sin detenerse a pedir confirmación individual</string>
+        </property>
+        <property name="text">
+         <string>Auto-guardar OK en BD</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayoutLimite">
+        <item>
+         <widget class="QLabel" name="labelLimite">
+          <property name="text">
+           <string>Límite:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="spinBoxLimite">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>50000</number>
+          </property>
+          <property name="value">
+           <number>20</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="horizontalSpacerFiltros">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonCargarLista">
+        <property name="text">
+         <string>🔍 Buscar Artículos</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButtonExcluir">
+        <property name="styleSheet">
+         <string notr="true">QPushButton {
+    background-color: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #fee2e2;
+}</string>
+        </property>
+        <property name="toolTip">
+         <string>Excluye de la lista los artículos seleccionados en la tabla para que no se generen</string>
+        </property>
+        <property name="text">
+         <string>🗑️ Excluir de la lista</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayoutMetricas">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+     <item>
+      <widget class="QFrame" name="frameStatTotal">
+       <property name="styleSheet">
+        <string notr="true">background-color: #e0f2fe; border: 1px solid #bae6fd; border-radius: 6px; padding: 6px;</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayoutStatTotal">
+        <property name="spacing">
+         <number>1</number>
+        </property>
+        <property name="leftMargin">
+         <number>4</number>
+        </property>
+        <property name="topMargin">
+         <number>4</number>
+        </property>
+        <property name="rightMargin">
+         <number>4</number>
+        </property>
+        <property name="bottomMargin">
+         <number>4</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="labelTotalTitulo">
+          <property name="text">
+           <string>Artículos en cola</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelTotalValor">
+          <property name="font">
+           <font>
+            <pointsize>14</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #0369a1;</string>
+          </property>
+          <property name="text">
+           <string>0</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QFrame" name="frameStatOk">
+       <property name="styleSheet">
+        <string notr="true">background-color: #dcfce7; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px;</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayoutStatOk">
+        <property name="spacing">
+         <number>1</number>
+        </property>
+        <property name="leftMargin">
+         <number>4</number>
+        </property>
+        <property name="topMargin">
+         <number>4</number>
+        </property>
+        <property name="rightMargin">
+         <number>4</number>
+        </property>
+        <property name="bottomMargin">
+         <number>4</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="labelOkTitulo">
+          <property name="text">
+           <string>✅ Verificados (OK)</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelOkValor">
+          <property name="font">
+           <font>
+            <pointsize>14</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #15803d;</string>
+          </property>
+          <property name="text">
+           <string>0</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QFrame" name="frameStatRevisar">
+       <property name="styleSheet">
+        <string notr="true">background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; padding: 6px;</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayoutStatRevisar">
+        <property name="spacing">
+         <number>1</number>
+        </property>
+        <property name="leftMargin">
+         <number>4</number>
+        </property>
+        <property name="topMargin">
+         <number>4</number>
+        </property>
+        <property name="rightMargin">
+         <number>4</number>
+        </property>
+        <property name="bottomMargin">
+         <number>4</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="labelRevisarTitulo">
+          <property name="text">
+           <string>⚠️ A Revisar</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelRevisarValor">
+          <property name="font">
+           <font>
+            <pointsize>14</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #b45309;</string>
+          </property>
+          <property name="text">
+           <string>0</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QFrame" name="frameStatError">
+       <property name="styleSheet">
+        <string notr="true">background-color: #fee2e2; border: 1px solid #fecaca; border-radius: 6px; padding: 6px;</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayoutStatError">
+        <property name="spacing">
+         <number>1</number>
+        </property>
+        <property name="leftMargin">
+         <number>4</number>
+        </property>
+        <property name="topMargin">
+         <number>4</number>
+        </property>
+        <property name="rightMargin">
+         <number>4</number>
+        </property>
+        <property name="bottomMargin">
+         <number>4</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="labelErrorTitulo">
+          <property name="text">
+           <string>❌ Errores</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelErrorValor">
+          <property name="font">
+           <font>
+            <pointsize>14</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #b91c1c;</string>
+          </property>
+          <property name="text">
+           <string>0</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayoutProgresoGeneral">
+     <item>
+      <widget class="QLabel" name="labelEstadoGeneral">
+       <property name="font">
+        <font>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Listo para iniciar proceso.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QProgressBar" name="progressBarLote">
+       <property name="value">
+        <number>0</number>
+       </property>
+       <property name="textVisible">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QSplitter" name="splitterResultados">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <widget class="QTableWidget" name="tableWidgetResultados">
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
+      </property>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+      </property>
+      <property name="sortingEnabled">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QGroupBox" name="groupBoxPrevisualizacion">
+      <property name="title">
+       <string>📝 Previsualización y Revisión Individual de la Ficha</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayoutPrevisualizacion">
+       <property name="leftMargin">
+        <number>8</number>
+       </property>
+       <property name="topMargin">
+        <number>8</number>
+       </property>
+       <property name="rightMargin">
+        <number>8</number>
+       </property>
+       <property name="bottomMargin">
+        <number>8</number>
+       </property>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayoutHeaderFicha">
+         <item>
+          <widget class="QLabel" name="labelFichaTitulo">
+           <property name="font">
+            <font>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Selecciona un artículo de la tabla para revisar su ficha.</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacerFichaHeader">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelFichaBadge">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="textEditFichaDetalle">
+         <property name="placeholderText">
+          <string>El contenido de la ficha técnica generada (Indicación, Composición, Posología, Contraindicaciones y Fuentes) aparecerá aquí para que puedas revisarlo y editarlo directamente antes de aceptarlo.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelFuentesFicha">
+         <property name="font">
+          <font>
+           <pointsize>9</pointsize>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">padding: 4px 8px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; color: #475569;</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+         <property name="openExternalLinks">
+          <bool>true</bool>
+         </property>
+         <property name="textInteractionFlags">
+          <set>Qt::TextBrowserInteraction</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayoutBotonesFicha">
+         <item>
+          <widget class="QPushButton" name="pushButtonAceptarFicha">
+           <property name="styleSheet">
+            <string notr="true">QPushButton {
+    background-color: #2e7d32;
+    color: white;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 6px 14px;
+}
+QPushButton:hover {
+    background-color: #388e3c;
+}</string>
+           </property>
+           <property name="text">
+            <string>✅ Aceptar y Guardar en BD</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonRechazarFicha">
+           <property name="styleSheet">
+            <string notr="true">QPushButton {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-weight: bold;
+}
+QPushButton:hover {
+    background-color: #fca5a5;
+}</string>
+           </property>
+           <property name="text">
+            <string>❌ Rechazar Ficha</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonAceptarTodasPendientes">
+           <property name="text">
+            <string>⚡ Aceptar Todas las Fichas OK Pendientes</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacerFichaBtns">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonVerFicha">
+           <property name="text">
+            <string>🔍 Pantalla Completa</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayoutAcciones">
+     <item>
+      <widget class="QPushButton" name="pushButtonIniciar">
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+    background-color: #2e7d32;
+    color: white;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 6px 16px;
+}
+QPushButton:hover {
+    background-color: #388e3c;
+}</string>
+       </property>
+       <property name="text">
+        <string>▶️ Iniciar Catalogación</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonDetener">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+    background-color: #c62828;
+    color: white;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 6px 14px;
+}
+QPushButton:hover {
+    background-color: #d32f2f;
+}</string>
+       </property>
+       <property name="text">
+        <string>⏹️ Detener</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonCerrar">
+       <property name="text">
+        <string>Cerrar</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

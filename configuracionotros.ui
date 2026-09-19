@@ -312,6 +312,49 @@
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBoxSerper">
+         <property name="title">
+          <string>Búsqueda Web de Fichas (Serper Google API)</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayoutSerper">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayoutSerperKey">
+            <item>
+             <widget class="QLabel" name="labelSerperKey">
+              <property name="text">
+               <string>API Key Serper:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditSerperKey">
+              <property name="placeholderText">
+               <string>Clave API de serper.dev para verificación de fichas...</string>
+              </property>
+              <property name="echoMode">
+               <enum>QLineEdit::EchoMode::PasswordEchoOnEdit</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelSerperAyuda">
+            <property name="styleSheet">
+             <string notr="true">color: #666666; font-size: 11px;</string>
+            </property>
+            <property name="text">
+             <string>Permite buscar las fichas técnicas oficiales y composición de productos en Google para evitar alucinaciones en la IA.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBoxConsolidacionNube">
          <property name="title">
           <string>Consolidación de Ventas y Arqueos en la Nube (nubeCervantes)</string>

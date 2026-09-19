@@ -1,6 +1,7 @@
 #include "configuracionotros.h"
 #include "ui_configuracionotros.h"
 #include "asistenteia.h"
+#include "enriquecedorfichasia.h"
 #include <QCoreApplication>
 #include <QSettings>
 #include <QFileDialog>
@@ -82,6 +83,9 @@ ConfiguracionOtros::ConfiguracionOtros(QWidget *parent)
         ui->comboBoxModeloOllama->setCurrentText(modeloGuardado);
     }
 
+    // Cargar clave Serper API para búsqueda web de fichas
+    ui->lineEditSerperKey->setText(EnriquecedorFichasIA::obtenerClaveSerper());
+
     // Consultar automáticamente los modelos disponibles de Ollama en segundo plano
     QTimer::singleShot(50, this, &ConfiguracionOtros::on_pushButtonProbarOllama_clicked);
 
@@ -129,6 +133,9 @@ void ConfiguracionOtros::on_pushButtonAceptar_clicked()
         QString urlOllama = ui->lineEditUrlOllama->text().trimmed();
         settings.setValue("url", urlOllama);
         settings.endGroup();
+
+        // Guardar clave Serper API
+        EnriquecedorFichasIA::guardarClaveSerper(ui->lineEditSerperKey->text().trimmed());
 
         QString modeloAnterior = AsistenteIA::obtenerModeloCentralizado();
         QString nuevoModelo = ui->comboBoxModeloOllama->currentText().trimmed();
