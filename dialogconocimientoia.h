@@ -37,12 +37,16 @@ private slots:
     void on_pushButtonGuardar_clicked();
     void on_pushButtonCerrar_clicked();
     void on_tableWidgetReglas_cellDoubleClicked(int row, int column);
+    void on_pushButtonRegenerarIndice_clicked();
+    void onProgresoIndice(int actual, int total, const QString &mensaje);
+    void onIndexacionFinalizada(bool exito, const QString &resumen);
 
 private:
     Ui::DialogConocimientoIA *ui;
     void cargarDatos();
     void configurarTabla();
     void guardarDatos();
+    void actualizarEstadoIndiceUI();
 };
 
 #endif // DIALOGCONOCIMIENTOIA_H

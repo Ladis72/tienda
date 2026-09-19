@@ -56,6 +56,12 @@ public:
     /// Solo se permite la modificación si el usuario actual tiene privilegios de Administrador (rol == 0).
     static bool guardarModeloCentralizado(const QString &nuevoModelo);
 
+    /// @brief Obtiene el tamaño de contexto de inferencia (num_ctx) centralizado desde BD o tienda.ini.
+    static int obtenerNumCtxCentralizado();
+
+    /// @brief Guarda el tamaño de contexto de inferencia (num_ctx) centralizado en BD y tienda.ini (rol == 0).
+    static bool guardarNumCtxCentralizado(int nuevoNumCtx);
+
     /// @brief Asegura la existencia de la tabla ia_config en la base de datos.
     static void asegurarTablaIaConfig();
 
@@ -141,8 +147,8 @@ private:
     /// @brief Construye el mensaje inicial de sistema con contexto de la tienda y permisos
     QJsonObject construirMensajeSistema();
 
-    /// @brief Construye el esquema JSON de herramientas disponibles para Ollama
-    QJsonArray construirDefinicionHerramientas();
+    /// @brief Construye el esquema JSON de herramientas disponibles para Ollama con enrutado por intención
+    QJsonArray construirDefinicionHerramientas(const QString &peticionUsuario = QString());
 
     /// @brief Obtiene el último texto enviado por el usuario
     QString obtenerUltimoTextoUsuario() const;

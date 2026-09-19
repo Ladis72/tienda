@@ -1,5 +1,6 @@
 #include "dialogconocimientoia.h"
 #include "ui_dialogconocimientoia.h"
+#include "indexadorembeddings.h"
 #include "configuracion.h"
 #include "syncmanager.h"
 #include <QCheckBox>
@@ -24,17 +25,17 @@ static const ReglaDefault REGLAS_POR_DEFECTO[] = {
     {
         "Articulaciones / Huesos / Dolor / Cartílagos",
         "articul, hueso, dolor, rodilla, espalda, lumbar, artrosis, artritis, cartilag, reuma, tendon, bursitis, tendinitis, fascitis, ciatica, esguince",
-        "colamag, curcurina, artripol, cannalges, colagen, curcuma, harpagofit, glucosamin, msm, membrana, silici, magnesi"
+        "colamag, curcurina, artripol, cannalges, colagen, curcuma, harpagofit, harpagofito, glucosamin, msm, condroitina, membrana, silici, magnesi"
     },
     {
         "Colesterol / Salud Cardiovascular / Tensión",
         "colesterol, triglicerid, lipido, cardio, corazon, arterial, tension",
-        "colestia, lecidol, ometrix, nivelcol, cardiepa, monacolina, levadura, arroz rojo, bergamota, omega, fitosterol, ajo negro"
+        "colestia, lecidol, ometrix, nivelcol, cardiepa, monacolina, levadura, arroz rojo, bergamota, omega, fitosterol, ajo negro, berberina"
     },
     {
         "Digestión / Gases / Hígado / Tránsito / Detox",
         "digest, pesadez, gas, vientre, hinchazon, higado, hepatic, vesicula, reflujo, ardor, acidez, estomago, transito, estrenimient",
-        "carbomag, despatic, drenadiet, alivia tus gases, como un reloj, vientre plano, alcachofa, cardo mariano, desmodium, boldo, hinojo, probiotico, carbon vegetal, plantago"
+        "carbomag, despatic, drenadiet, alivia tus gases, como un reloj, vientre plano, alcachofa, cardo mariano, silimarina, desmodium, boldo, hinojo, probiotico, carbon vegetal, plantago"
     },
     {
         "Sistema Inmune / Defensas / Garganta / Tos / Resfriados",
@@ -84,6 +85,13 @@ DialogConocimientoIA::DialogConocimientoIA(QWidget *parent)
     asegurarTablaBaseDatos();
     configurarTabla();
     cargarDatos();
+
+    IndexadorEmbeddings *idx = IndexadorEmbeddings::instancia();
+    connect(idx, &IndexadorEmbeddings::progreso, this, &DialogConocimientoIA::onProgresoIndice);
+    connect(idx, &IndexadorEmbeddings::indexacionFinalizada, this, &DialogConocimientoIA::onIndexacionFinalizada);
+    connect(idx, &IndexadorEmbeddings::cacheActualizada, this, &DialogConocimientoIA::actualizarEstadoIndiceUI);
+
+    actualizarEstadoIndiceUI();
 }
 
 /**
@@ -467,4 +475,86 @@ void DialogConocimientoIA::on_pushButtonGuardar_clicked()
 void DialogConocimientoIA::on_pushButtonCerrar_clicked()
 {
     accept();
+}
+
+/**
+ * @brief Actualiza la etiqueta informativa con el estado de la caché en memoria y su fecha.
+ */
+void DialogConocimientoIA::actualizarEstadoIndiceUI()
+{
+    IndexadorEmbeddings *idx = IndexadorEmbeddings::instancia();
+    int total = idx->totalEnCache();
+    QDateTime f = idx->fechaUltimaActualizacion();
+
+    if (total > 0) {
+        QString fechaStr = f.isValid() ? f.toString("yyyy-MM-dd HH:mm") : "Recién cargado";
+        ui->labelEstadoIndice->setText(QString("🟢 Índice activo en RAM: <b>%1</b> elementos (Última actualización: %2)")
+                                           .arg(total).arg(fechaStr));
+    } else {
+        ui->labelEstadoIndice->setText("⚪ Índice en RAM no inicializado. Pulsa 'Regenerar Índice Semántico'.");
+    }
+
+    if (idx->estaIndexando()) {
+        ui->pushButtonRegenerarIndice->setText("⏹️ Cancelar Indexación");
+        ui->progressBarIndice->setVisible(true);
+    } else {
+        ui->pushButtonRegenerarIndice->setText("⚡ Regenerar Índice Semántico");
+        ui->pushButtonRegenerarIndice->setEnabled(true);
+    }
+}
+
+/**
+ * @brief Inicia o cancela la reindexación semántica vectorial en segundo plano.
+ */
+void DialogConocimientoIA::on_pushButtonRegenerarIndice_clicked()
+{
+    IndexadorEmbeddings *idx = IndexadorEmbeddings::instancia();
+    if (idx->estaIndexando()) {
+        if (QMessageBox::question(this, "Cancelar Indexación",
+                                  "¿Deseas detener el proceso de indexación en segundo plano?",
+                                  QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+            idx->cancelarReindexacion();
+            ui->pushButtonRegenerarIndice->setEnabled(false);
+            ui->labelEstadoIndice->setText("Cancelando proceso...");
+        }
+        return;
+    }
+
+    ui->progressBarIndice->setValue(0);
+    ui->progressBarIndice->setVisible(true);
+    ui->pushButtonRegenerarIndice->setText("⏹️ Cancelar Indexación");
+    ui->labelEstadoIndice->setText("Iniciando indexación vectorial con Ollama...");
+
+    idx->iniciarReindexacionAsync();
+}
+
+/**
+ * @brief Actualiza la barra de progreso y estado conforme avanza el proceso por lotes.
+ */
+void DialogConocimientoIA::onProgresoIndice(int actual, int total, const QString &mensaje)
+{
+    ui->progressBarIndice->setVisible(true);
+    if (total > 0) {
+        ui->progressBarIndice->setMaximum(total);
+        ui->progressBarIndice->setValue(actual);
+    }
+    ui->labelEstadoIndice->setText(mensaje);
+}
+
+/**
+ * @brief Gestiona el término del hilo de indexación.
+ */
+void DialogConocimientoIA::onIndexacionFinalizada(bool exito, const QString &resumen)
+{
+    ui->progressBarIndice->setVisible(false);
+    ui->pushButtonRegenerarIndice->setText("⚡ Regenerar Índice Semántico");
+    ui->pushButtonRegenerarIndice->setEnabled(true);
+
+    actualizarEstadoIndiceUI();
+
+    if (exito) {
+        QMessageBox::information(this, "Índice Semántico Actualizado", resumen);
+    } else {
+        QMessageBox::warning(this, "Aviso de Indexación", resumen);
+    }
 }

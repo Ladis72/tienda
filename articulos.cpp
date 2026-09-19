@@ -12,6 +12,8 @@
 #include "dialogcambiocodigo.h"
 #include "dialogcomparararticulos.h"
 #include "dialoggenerardescripcionia.h"
+#include "dialogenriquecimientomasivo.h"
+#include "dialogfotosmasivo.h"
 #include "dialogbuscarfotointernet.h"
 #include "dialogcambiarproveedor.h"
 #include <QAction>
@@ -246,15 +248,27 @@ void Articulos::refrescarBotones(int i) {
   ui->pushButtonAnterior->setEnabled(i > 0);
   ui->pushButtonSiguiente->setEnabled(i < modeloTabla->rowCount() - 1);
   ui->pushButtonCambiarCodigo->setEnabled(false);
-  QString fichero = base.resolverRutaImagen(ui->lineEditFoto->text());
+
+  QString nombreFoto = ui->lineEditFoto->text().trimmed();
+  if (nombreFoto.isEmpty() && modeloTabla && i >= 0 && i < modeloTabla->rowCount()) {
+    nombreFoto = modeloTabla->record(i).value("foto").toString().trimmed();
+    if (!nombreFoto.isEmpty()) {
+      ui->lineEditFoto->setText(nombreFoto);
+    }
+  }
+
+  QString fichero = base.resolverRutaImagen(nombreFoto);
   QImage foto(fichero);
   if (foto.isNull()) {
-    qDebug() << "Error cargando imagen:" << fichero;
+    if (!nombreFoto.isEmpty()) {
+      qDebug() << "Error cargando imagen:" << fichero << "(foto en BD:" << nombreFoto << ")";
+    }
+    ui->labelFoto->clear();
+  } else {
+    QPixmap imagen = QPixmap::fromImage(foto);
+    QPixmap imagenAjustada = imagen.scaled(200, 200, Qt::KeepAspectRatio);
+    ui->labelFoto->setPixmap(imagenAjustada);
   }
-  QPixmap imagen = QPixmap::fromImage(foto);
-  QPixmap imagenAjustada = imagen.scaled(200, 200, Qt::KeepAspectRatio);
-
-  ui->labelFoto->setPixmap(imagenAjustada);
 
   // ── Cargar notas como HTML en el editor de texto enriquecido ─────────────
   // El campo notas se lee directamente del modelo para esta fila.
@@ -959,15 +973,16 @@ void Articulos::on_pushButtonBuscarFotoInternet_clicked() {
 
   int curr = mapper.currentIndex();
   QString fabricante = ui->labelFabricante->text().trimmed();
-  QString cod = ui->lineEditCod->text().trimmed();
+  QString cod = ui->lineEditCod->text();
 
   // Abrir diálogo modal de búsqueda de fotos
-  DialogBuscarFotoInternet dlg(desc, fabricante, cod, this);
+  DialogBuscarFotoInternet dlg(desc, fabricante, cod.trimmed(), this);
   if (dlg.exec() == QDialog::Accepted) {
     QString relativeFile = dlg.getNombreFicheroRelativo();
     if (!relativeFile.isEmpty()) {
-      qDebug() << "Asignando foto descargada al artículo:" << relativeFile;
+      qDebug() << "Asignando foto descargada al artículo:" << relativeFile << "para código:" << cod;
       base.modificarFotoArticulo(relativeFile, cod);
+      ui->lineEditFoto->setText(relativeFile);
       recargarTabla();
       mapper.setCurrentIndex(curr);
       refrescarBotones(mapper.currentIndex());
@@ -1058,6 +1073,22 @@ void Articulos::on_pushButtonGenerarDescripcionIA_clicked() {
     if (!resultadoHtml.isEmpty()) {
       ui->textEditNotas->setHtml(resultadoHtml);
     }
+  }
+}
+
+void Articulos::on_pushButtonCatalogadorLote_clicked() {
+  DialogEnriquecimientoMasivo dlg(this);
+  dlg.exec();
+}
+
+void Articulos::on_pushButtonFotosLote_clicked() {
+  int curr = mapper.currentIndex();
+  DialogFotosMasivo dlg(this);
+  dlg.exec();
+  recargarTabla();
+  if (curr >= 0 && curr < modeloTabla->rowCount()) {
+    mapper.setCurrentIndex(curr);
+    refrescarBotones(mapper.currentIndex());
   }
 }
 

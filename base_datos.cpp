@@ -715,15 +715,28 @@ bool baseDatos::borrarArticulo(QSqlDatabase db, QString dato) {
 
 bool baseDatos::modificarFotoArticulo(QString foto, QString dato) {
   QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
-  consulta.prepare("UPDATE articulos SET foto=? WHERE cod LIKE ?");
-  consulta.bindValue(0, foto);
-  consulta.bindValue(1, dato);
-  if (consulta.exec()) {
-    return true;
-  } else {
-    qDebug() << consulta.lastError().text();
-    return false;
+  consulta.prepare("UPDATE articulos SET foto=:foto WHERE cod = :c1 OR cod = :c2 OR TRIM(cod) = :c3");
+  consulta.bindValue(":foto", foto);
+  consulta.bindValue(":c1", dato);
+  consulta.bindValue(":c2", dato.trimmed());
+  consulta.bindValue(":c3", dato.trimmed());
+  bool ok = consulta.exec();
+  if (!ok) {
+    qDebug() << "Error en modificarFotoArticulo:" << consulta.lastError().text();
   }
+
+  // Si la conexión a la nube está abierta, actualizar también en la nube
+  if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    QSqlQuery qNube(QSqlDatabase::database(SyncManager::CONEXION_NUBE));
+    qNube.prepare("UPDATE articulos SET foto=:foto WHERE cod = :c1 OR cod = :c2 OR TRIM(cod) = :c3");
+    qNube.bindValue(":foto", foto);
+    qNube.bindValue(":c1", dato);
+    qNube.bindValue(":c2", dato.trimmed());
+    qNube.bindValue(":c3", dato.trimmed());
+    qNube.exec();
+  }
+
+  return ok;
 }
 
 bool baseDatos::propagarCambioCodigoArticulo(QString oldCod, QString newCod) {
@@ -3112,23 +3125,21 @@ QString baseDatos::resolverRutaImagen(QString nombreFoto) {
 }
 
 QString baseDatos::nombreConexionMaster() {
-  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
-  consulta.exec("SELECT * FROM tiendas where master = '1'");
-  if (consulta.numRowsAffected() < 1) {
-    return "";
+  QString conn = (conf && !conf->getConexionLocal().isEmpty()) ? conf->getConexionLocal() : "DB";
+  QSqlQuery consulta(QSqlDatabase::database(conn));
+  if (consulta.exec("SELECT nombre FROM tiendas WHERE master = 1 OR master = '1' LIMIT 1") && consulta.next()) {
+    return consulta.value(0).toString().trimmed();
   }
-  consulta.first();
-  return consulta.record().value("nombre").toString();
+  return "";
 }
 
 QString baseDatos::nombreConexionLocal() {
-  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
-  consulta.exec("SELECT * FROM tiendas where local = '1'");
-  if (consulta.numRowsAffected() < 1) {
-    return "DB";
+  QString conn = (conf && !conf->getConexionLocal().isEmpty()) ? conf->getConexionLocal() : "DB";
+  QSqlQuery consulta(QSqlDatabase::database(conn));
+  if (consulta.exec("SELECT nombre FROM tiendas WHERE local = 1 OR local = '1' LIMIT 1") && consulta.next()) {
+    return consulta.value(0).toString().trimmed();
   }
-  consulta.first();
-  return consulta.record().value("nombre").toString();
+  return conn;
 }
 
 bool baseDatos::copiaSeguridad(QString base, QString nombre) {
@@ -3316,9 +3327,7 @@ QString baseDatos::registrarTickeckVerifactu(
 QStringList baseDatos::datosTiendaLocal(QString db) {
   QStringList datos;
   QSqlQuery consulta(QSqlDatabase::database(db));
-  consulta.exec("SELECT * FROM tiendas WHERE local = '1'");
-  consulta.first();
-  if (consulta.numRowsAffected() < 1) {
+  if (!consulta.exec("SELECT * FROM tiendas WHERE local = 1 OR local = '1'") || !consulta.first()) {
     QMessageBox msg;
     msg.setText("Error");
     msg.setInformativeText("No se ha podido recuperar los datos de la tienda");
@@ -4211,14 +4220,23 @@ bool baseDatos::inicializarEsquemaNube() {
 
   q.exec("CREATE OR REPLACE VIEW vista_stock_tiendas AS "
          "SELECT s.id_tienda, COALESCE(t.nombre, CONCAT('Tienda ', s.id_tienda)) AS tienda, "
-         "a.cod AS codigo, a.descripcion AS producto, s.lote, s.fecha AS caducidad, "
+         "s.cod AS codigo, COALESCE(a.descripcion, 'Sin Descripción') AS producto, s.lote, s.fecha AS caducidad, "
          "COALESCE(b.id, 0) AS id_fabricante, COALESCE(b.nombre, 'Sin Marca') AS fabricante, "
          "COALESCE(f.id, 0) AS id_familia, COALESCE(f.descripcion, 'Sin Familia') AS familia, "
-         "a.pvp, a.precio_compra AS coste_pvd, s.cantidad AS stock_actual, a.min AS stock_minimo, a.max AS stock_maximo, "
-         "CASE WHEN s.cantidad <= 0 THEN 'Agotado' WHEN a.min > 0 AND s.cantidad <= a.min THEN 'Bajo Mínimos' ELSE 'Normal' END AS estado_stock, "
-         "a.notas "
+         "COALESCE(a.pvp, 0.00) AS pvp, COALESCE(a.precio_compra, 0.000) AS coste_pvd, "
+         "s.cantidad AS stock_actual, 0.00 AS stock_minimo, 0.00 AS stock_maximo, "
+         "ROUND(s.cantidad * COALESCE(a.precio_compra, 0.000), 2) AS valor_coste, "
+         "ROUND(s.cantidad * COALESCE(a.pvp, 0.00), 2) AS valor_pvp, "
+         "CASE "
+         "  WHEN s.cantidad <= 0 THEN 'Agotado' "
+         "  WHEN s.fecha > '2000-01-01' AND s.fecha < CURDATE() THEN 'Caducado' "
+         "  WHEN s.fecha > '2000-01-01' AND s.fecha <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'Próximo a caducar' "
+         "  ELSE 'Normal' "
+         "END AS estado_stock, "
+         "COALESCE(a.notas, '') AS notas, "
+         "s.updated_at AS ultima_actualizacion "
          "FROM stock_tiendas_nube s "
-         "JOIN articulos a ON s.cod = a.cod "
+         "LEFT JOIN articulos a ON s.cod = a.cod "
          "LEFT JOIN tiendas t ON s.id_tienda = t.id "
          "LEFT JOIN fabricantes b ON a.fabricante = b.id "
          "LEFT JOIN familias f ON a.familia = f.id");

@@ -114,6 +114,77 @@
     </widget>
    </item>
    <item>
+    <widget class="QGroupBox" name="groupBoxIndice">
+     <property name="title">
+      <string>🔍 Motor Semántico Vectorial (RAG / Embeddings)</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayoutIndice">
+      <property name="spacing">
+       <number>6</number>
+      </property>
+      <property name="leftMargin">
+       <number>8</number>
+      </property>
+      <property name="topMargin">
+       <number>8</number>
+      </property>
+      <property name="rightMargin">
+       <number>8</number>
+      </property>
+      <property name="bottomMargin">
+       <number>8</number>
+      </property>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayoutIndice">
+        <item>
+         <widget class="QPushButton" name="pushButtonRegenerarIndice">
+          <property name="toolTip">
+           <string>Genera o actualiza los embeddings semánticos de todos los artículos y áreas de fitoterapia con Ollama</string>
+          </property>
+          <property name="text">
+           <string>⚡ Regenerar Índice Semántico</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelEstadoIndice">
+          <property name="text">
+           <string>Índice semántico: Comprobando...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_Indice">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QProgressBar" name="progressBarIndice">
+        <property name="value">
+         <number>0</number>
+        </property>
+        <property name="textVisible">
+         <bool>true</bool>
+        </property>
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayoutAcciones">
      <property name="spacing">
       <number>6</number>

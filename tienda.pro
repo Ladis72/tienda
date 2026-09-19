@@ -117,7 +117,11 @@ SOURCES += main.cpp\
     dialogbuscarfotointernet.cpp \
     prepararpedidos.cpp \
     dialogcambiarproveedor.cpp \
-    dialogcomparartraspaso.cpp
+    dialogcomparartraspaso.cpp \
+    indexadorembeddings.cpp \
+    enriquecedorfichasia.cpp \
+    dialogenriquecimientomasivo.cpp \
+    dialogfotosmasivo.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -218,7 +222,11 @@ HEADERS  += tienda.h \
     dialogbuscarfotointernet.h \
     prepararpedidos.h \
     dialogcambiarproveedor.h \
-    dialogcomparartraspaso.h
+    dialogcomparartraspaso.h \
+    indexadorembeddings.h \
+    enriquecedorfichasia.h \
+    dialogenriquecimientomasivo.h \
+    dialogfotosmasivo.h
 
 FORMS    += tienda.ui \
     generarvales.ui \
@@ -297,7 +305,9 @@ FORMS    += tienda.ui \
     dialogbuscarfotointernet.ui \
     prepararpedidos.ui \
     dialogcambiarproveedor.ui \
-    dialogcomparartraspaso.ui
+    dialogcomparartraspaso.ui \
+    dialogenriquecimientomasivo.ui \
+    dialogfotosmasivo.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 

@@ -454,7 +454,36 @@ QPushButton#pushButtonGenerarDescripcionIA:pressed {
 }</string>
               </property>
               <property name="text">
-               <string>✨ Generar descripción con IA</string>
+               <string>✨ Generar ficha con IA</string>
+              </property>
+              <property name="autoDefault">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonCatalogadorLote">
+              <property name="toolTip">
+               <string>Abrir el catalogador masivo para procesar por lotes artículos del catálogo sin notas</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton#pushButtonCatalogadorLote {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-weight: bold;
+}
+QPushButton#pushButtonCatalogadorLote:hover {
+    background-color: #c8e6c9;
+}
+QPushButton#pushButtonCatalogadorLote:pressed {
+    background-color: #a5d6a7;
+}</string>
+              </property>
+              <property name="text">
+               <string>🌿 Catalogador Masivo</string>
               </property>
               <property name="autoDefault">
                <bool>false</bool>
@@ -759,6 +788,35 @@ QPushButton#pushButtonBuscarFotoInternet:pressed {
               </property>
               <property name="text">
                <string>✨ Buscar en Internet</string>
+              </property>
+              <property name="autoDefault">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButtonFotosLote">
+              <property name="toolTip">
+               <string>Abrir el actualizador masivo de fotos para buscar y asignar imágenes por lotes</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton#pushButtonFotosLote {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-weight: bold;
+}
+QPushButton#pushButtonFotosLote:hover {
+    background-color: #c8e6c9;
+}
+QPushButton#pushButtonFotosLote:pressed {
+    background-color: #a5d6a7;
+}</string>
+              </property>
+              <property name="text">
+               <string>🖼️ Fotos Masivo</string>
               </property>
               <property name="autoDefault">
                <bool>false</bool>

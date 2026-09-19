@@ -2,24 +2,21 @@
 #define DIALOGGENERARDESCRIPCIONIA_H
 
 #include <QDialog>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QSettings>
+#include "enriquecedorfichasia.h"
 
 namespace Ui {
 class DialogGenerarDescripcionIA;
 }
 
 /**
- * @brief Diálogo modal para generar y revisar fichas de productos con IA y búsqueda en internet.
+ * @brief Diálogo modal para generar y revisar fichas de productos con IA y fuentes web verificadas.
  *
  * Flujo de ejecución:
- *  1. Búsqueda web de información, composición e indicaciones del producto (DuckDuckGo).
- *  2. Síntesis y estructuración mediante el modelo de IA local de Ollama.
- *  3. Visualización y edición en texto enriquecido para que el usuario pueda aceptarlo o rechazarlo.
+ *  1. Búsqueda de fuentes verificables por EAN (Open Food/Beauty Facts) y Google (Serper API).
+ *  2. Descarga y extracción limpia del texto de fichas oficiales de fabricantes y parafarmacias.
+ *  3. Inferencia rigurosa con modelo de IA local (Ollama) a temperatura 0 (cero alucinación).
+ *  4. Validación algorítmica de solapamiento léxico de ingredientes (exactitud >= 60%).
+ *  5. Visualización de estado de verificación, fuentes oficiales y edición antes de aplicar a la ficha.
  */
 class DialogGenerarDescripcionIA : public QDialog
 {
@@ -39,13 +36,13 @@ public:
     QString getDescripcionGenerada() const;
 
 private slots:
-    /// @brief Slot cuando finaliza la petición de búsqueda en internet
-    void onSearchReplyFinished(QNetworkReply *reply);
+    /// @brief Slot cuando el motor de enriquecimiento notifica un avance
+    void onProgreso(int pasoActual, int totalPasos, const QString &mensaje);
 
-    /// @brief Slot cuando finaliza la petición a la API de Ollama
-    void onOllamaReplyFinished(QNetworkReply *reply);
+    /// @brief Slot cuando el motor de enriquecimiento termina el análisis
+    void onFinalizado(bool exito, const ResultadoFicha &resultado);
 
-    /// @brief Regenera la descripción a partir del término de búsqueda ingresado
+    /// @brief Regenera la descripción a partir del término ingresado
     void on_pushButtonRegenerar_clicked();
 
     /// @brief Copia el contenido del editor al portapapeles
@@ -59,7 +56,7 @@ private slots:
 
 private:
     Ui::DialogGenerarDescripcionIA *ui;
-    QNetworkAccessManager *m_netManager;
+    EnriquecedorFichasIA *m_enriquecedor;
 
     // Metadatos del producto
     QString m_nombreProducto;
@@ -69,28 +66,12 @@ private:
     QString m_ean;
     QString m_notasPrevias;
 
-    // Configuración de Ollama
-    QString m_baseUrlOllama;
-    QString m_modeloOllama;
-
     // Estado del proceso
-    QString m_snippetsInternet;
     bool m_buscando;
+    int m_contadorGeneraciones;
 
-    /// @brief Inicializa y lanza el proceso de búsqueda e inferencia
+    /// @brief Inicializa y lanza el proceso de enriquecimiento
     void iniciarProceso();
-
-    /// @brief Realiza la consulta web asíncrona a través de DuckDuckGo
-    void buscarEnInternet(const QString &termino);
-
-    /// @brief Extrae texto útil y snippets limpios del HTML devuelto por el buscador
-    QString extraerSnippetsDeHtml(const QString &html);
-
-    /// @brief Envía el contexto del producto y la web a Ollama
-    void consultarOllama(const QString &contextoInternet);
-
-    /// @brief Aplica estilo visual HTML estándar a la ficha
-    QString formatearFichaComoHtml(const QString &textoRaw);
 };
 
 #endif // DIALOGGENERARDESCRIPCIONIA_H
