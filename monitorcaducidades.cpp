@@ -1,6 +1,7 @@
 #include "monitorcaducidades.h"
 #include <QSqlRecord>
 #include <QUuid>
+#include <QTcpSocket>
 
 MonitorCaducidades::MonitorCaducidades(QString conexionLocal, QObject *parent)
     : QObject(parent)
@@ -56,26 +57,76 @@ void MonitorCaducidades::ejecutarAnalisis()
         emit finished();
         return;
     }
+    // Obtener id de la tienda local
+    int idTiendaLocal = 1;
+    QSqlQuery qIdTienda(dbLocal);
+    if (qIdTienda.exec("SELECT id FROM tiendas WHERE local = 1 LIMIT 1") && qIdTienda.next()) {
+        idTiendaLocal = qIdTienda.value(0).toInt();
+    }
 
-    // OPTIMIZACIÓN: Pre-conectar a todas las tiendas remotas (una sola vez)
-    // para evitar el delay por timeout en cada lote si una tienda está apagada.
+    // 1. PRIORIZAR NUBE: Si está configurada y accesible, consultar stock y ventas consolidados en la nube
+    bool usarNube = false;
+    QString connNube = "Monitor_Nube_" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QMap<int, QString> nombresTiendasNube;
+    QSqlQuery qConfNube(dbLocal);
+    if (qConfNube.exec("SELECT servidor, puerto, baseDatos, usuario, clave, ssl_ca FROM config_nube WHERE id = 1") && qConfNube.next()) {
+        QString host = qConfNube.value(0).toString();
+        int port = qConfNube.value(1).toInt() > 0 ? qConfNube.value(1).toInt() : 3306;
+        
+        QTcpSocket sockTest;
+        sockTest.connectToHost(host, port);
+        bool sockOk = sockTest.waitForConnected(600);
+        if (!sockOk) {
+            sockTest.connectToHost("100.89.11.2", port);
+            if (sockTest.waitForConnected(600)) {
+                host = "100.89.11.2";
+                sockOk = true;
+            }
+        }
+        sockTest.disconnectFromHost();
+        
+        if (sockOk) {
+            QSqlDatabase dbNube = QSqlDatabase::addDatabase("QMYSQL", connNube);
+            dbNube.setHostName(host);
+            dbNube.setPort(port);
+            dbNube.setDatabaseName(qConfNube.value(2).toString());
+            dbNube.setUserName(qConfNube.value(3).toString());
+            dbNube.setPassword(qConfNube.value(4).toString());
+            dbNube.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=2;MYSQL_OPT_READ_TIMEOUT=5");
+            if (dbNube.open()) {
+                usarNube = true;
+                qDebug() << "MonitorCaducidades: Conectado a la Nube para análisis consolidado rápido.";
+                QSqlQuery qTN(dbNube);
+                if (qTN.exec("SELECT id, nombre FROM tiendas WHERE id != " + QString::number(idTiendaLocal))) {
+                    while (qTN.next()) {
+                        nombresTiendasNube[qTN.value(0).toInt()] = qTN.value(1).toString();
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. FALLBACK: Solo pre-conectar a tiendas remotas individuales si la Nube NO está disponible
     QList<QString> conexionesRemotasActivas;
     QMap<QString, QString> nombresTiendasRemotas;
-    QSqlQuery qTiendas(dbLocal);
-    qTiendas.exec("SELECT id, nombre, baseDatos, usuario, password, ip, puerto FROM tiendas WHERE local = 0");
-    while (qTiendas.next()) {
-        QString connRemote = "Monitor_Remote_" + qTiendas.value("id").toString() + "_" + QUuid::createUuid().toString(QUuid::WithoutBraces);
-        QSqlDatabase dbRemote = QSqlDatabase::addDatabase("QMYSQL", connRemote);
-        dbRemote.setHostName(qTiendas.value("ip").toString());
-        dbRemote.setPort(qTiendas.value("puerto").toInt());
-        dbRemote.setDatabaseName(qTiendas.value("baseDatos").toString());
-        dbRemote.setUserName(qTiendas.value("usuario").toString());
-        dbRemote.setPassword(qTiendas.value("password").toString());
-        dbRemote.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=2"); 
-        
-        if (dbRemote.open()) {
-            conexionesRemotasActivas.append(connRemote);
-            nombresTiendasRemotas[connRemote] = qTiendas.value("nombre").toString();
+    if (!usarNube) {
+        qDebug() << "MonitorCaducidades: Nube no disponible. Pre-conectando a tiendas remotas individuales...";
+        QSqlQuery qTiendas(dbLocal);
+        qTiendas.exec("SELECT id, nombre, baseDatos, usuario, password, ip, puerto FROM tiendas WHERE local = 0");
+        while (qTiendas.next()) {
+            QString connRemote = "Monitor_Remote_" + qTiendas.value("id").toString() + "_" + QUuid::createUuid().toString(QUuid::WithoutBraces);
+            QSqlDatabase dbRemote = QSqlDatabase::addDatabase("QMYSQL", connRemote);
+            dbRemote.setHostName(qTiendas.value("ip").toString());
+            dbRemote.setPort(qTiendas.value("puerto").toInt());
+            dbRemote.setDatabaseName(qTiendas.value("baseDatos").toString());
+            dbRemote.setUserName(qTiendas.value("usuario").toString());
+            dbRemote.setPassword(qTiendas.value("password").toString());
+            dbRemote.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=2"); 
+            
+            if (dbRemote.open()) {
+                conexionesRemotasActivas.append(connRemote);
+                nombresTiendasRemotas[connRemote] = qTiendas.value("nombre").toString();
+            }
         }
     }
 
@@ -148,51 +199,105 @@ void MonitorCaducidades::ejecutarAnalisis()
             QString mejorTienda = "";
             double ventasMesMejorTienda = 0;
 
-            // Usar las conexiones remotas precargadas
-            for (const QString &connRemote : conexionesRemotasActivas) {
-                QSqlDatabase dbRemote = QSqlDatabase::database(connRemote);
-                
-                // 1. Obtener ventas anuales de esta tienda remota
-                QSqlQuery qVentasR(dbRemote);
-                qVentasR.prepare("SELECT SUM(cantidad) FROM lineasticket WHERE cod = ? AND fecha >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)");
-                qVentasR.bindValue(0, rec.ean);
-                int ventasAnualesR = 0;
-                if (qVentasR.exec() && qVentasR.first()) {
-                    ventasAnualesR = qVentasR.value(0).toInt();
-                }
-                
-                double ventasDiariasR = ventasAnualesR / 365.0;
-                
-                // Si la tienda apenas vende este producto, ignorar
-                if (ventasDiariasR <= 0) continue;
-                
-                // 2. Obtener el stock actual remanente de la tienda remota para este EAN
-                QSqlQuery qStockR(dbRemote);
-                qStockR.prepare("SELECT SUM(cantidad) FROM lotes WHERE ean = ? AND cantidad > 0 AND fecha >= CURDATE()");
-                qStockR.bindValue(0, rec.ean);
-                double stockRemoto = 0;
-                if (qStockR.exec() && qStockR.first()) {
-                    stockRemoto = qStockR.value(0).toDouble();
-                }
-                
-                // 3. Capacidad de Absorción
-                // Días que la tienda remota tardará en liquidar su stock actual
-                double diasAgotarPropio = stockRemoto / ventasDiariasR;
-                
-                // Días sobrantes desde que agotan su stock hasta nuestra fecha de caducidad útil
-                double diasSobrantes = diasUtiles - diasAgotarPropio;
-                
-                if (diasSobrantes > 0) {
-                    // Tienen un hueco de X días donde no tienen stock y pueden vender el nuestro
-                    double capacidadAbsorcion = diasSobrantes * ventasDiariasR;
-                    
-                    if (capacidadAbsorcion > mejorCapacidadAbsorcion) {
-                        mejorCapacidadAbsorcion = capacidadAbsorcion;
-                        mejorTienda = nombresTiendasRemotas[connRemote];
-                        ventasMesMejorTienda = ventasAnualesR / 12.0;
+            if (usarNube) {
+                QSqlDatabase dbNube = QSqlDatabase::database(connNube);
+
+                // 1. Obtener ventas anuales de todas las tiendas remotas en una sola consulta
+                QMap<int, int> ventasPorTienda;
+                QSqlQuery qVN(dbNube);
+                qVN.prepare("SELECT id_tienda, COALESCE(SUM(cantidad), 0) FROM lineasticket_nube "
+                            "WHERE cod = :cod AND fecha >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR) AND id_tienda != :idLocal "
+                            "GROUP BY id_tienda");
+                qVN.bindValue(":cod", rec.ean);
+                qVN.bindValue(":idLocal", idTiendaLocal);
+                if (qVN.exec()) {
+                    while (qVN.next()) {
+                        ventasPorTienda[qVN.value(0).toInt()] = qVN.value(1).toInt();
                     }
                 }
-            } // fin búsqueda tiendas remotas
+
+                // 2. Obtener stock actual de tiendas remotas en una sola consulta
+                QMap<int, double> stockPorTienda;
+                QSqlQuery qSN(dbNube);
+                qSN.prepare("SELECT id_tienda, COALESCE(SUM(cantidad), 0) FROM stock_tiendas_nube "
+                            "WHERE cod = :cod AND cantidad > 0 AND fecha >= CURDATE() AND id_tienda != :idLocal "
+                            "GROUP BY id_tienda");
+                qSN.bindValue(":cod", rec.ean);
+                qSN.bindValue(":idLocal", idTiendaLocal);
+                if (qSN.exec()) {
+                    while (qSN.next()) {
+                        stockPorTienda[qSN.value(0).toInt()] = qSN.value(1).toDouble();
+                    }
+                }
+
+                // 3. Evaluar capacidad de absorción para cada tienda remota
+                for (auto it = nombresTiendasNube.begin(); it != nombresTiendasNube.end(); ++it) {
+                    int idTienda = it.key();
+                    QString nombreT = it.value();
+                    int ventasAnualesR = ventasPorTienda.value(idTienda, 0);
+                    double ventasDiariasR = ventasAnualesR / 365.0;
+                    if (ventasDiariasR <= 0) continue;
+
+                    double stockRemoto = stockPorTienda.value(idTienda, 0.0);
+                    double diasAgotarPropio = stockRemoto / ventasDiariasR;
+                    double diasSobrantes = diasUtiles - diasAgotarPropio;
+
+                    if (diasSobrantes > 0) {
+                        double capacidadAbsorcion = diasSobrantes * ventasDiariasR;
+                        if (capacidadAbsorcion > mejorCapacidadAbsorcion) {
+                            mejorCapacidadAbsorcion = capacidadAbsorcion;
+                            mejorTienda = nombreT;
+                            ventasMesMejorTienda = ventasAnualesR / 12.0;
+                        }
+                    }
+                }
+            } else {
+                // Fallback: Usar las conexiones remotas precargadas
+                for (const QString &connRemote : conexionesRemotasActivas) {
+                    QSqlDatabase dbRemote = QSqlDatabase::database(connRemote);
+                    
+                    // 1. Obtener ventas anuales de esta tienda remota
+                    QSqlQuery qVentasR(dbRemote);
+                    qVentasR.prepare("SELECT SUM(cantidad) FROM lineasticket WHERE cod = ? AND fecha >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)");
+                    qVentasR.bindValue(0, rec.ean);
+                    int ventasAnualesR = 0;
+                    if (qVentasR.exec() && qVentasR.first()) {
+                        ventasAnualesR = qVentasR.value(0).toInt();
+                    }
+                    
+                    double ventasDiariasR = ventasAnualesR / 365.0;
+                    
+                    // Si la tienda apenas vende este producto, ignorar
+                    if (ventasDiariasR <= 0) continue;
+                    
+                    // 2. Obtener el stock actual remanente de la tienda remota para este EAN
+                    QSqlQuery qStockR(dbRemote);
+                    qStockR.prepare("SELECT SUM(cantidad) FROM lotes WHERE ean = ? AND cantidad > 0 AND fecha >= CURDATE()");
+                    qStockR.bindValue(0, rec.ean);
+                    double stockRemoto = 0;
+                    if (qStockR.exec() && qStockR.first()) {
+                        stockRemoto = qStockR.value(0).toDouble();
+                    }
+                    
+                    // 3. Capacidad de Absorción
+                    // Días que la tienda remota tardará en liquidar su stock actual
+                    double diasAgotarPropio = stockRemoto / ventasDiariasR;
+                    
+                    // Días sobrantes desde que agotan su stock hasta nuestra fecha de caducidad útil
+                    double diasSobrantes = diasUtiles - diasAgotarPropio;
+                    
+                    if (diasSobrantes > 0) {
+                        // Tienen un hueco de X días donde no tienen stock y pueden vender el nuestro
+                        double capacidadAbsorcion = diasSobrantes * ventasDiariasR;
+                        
+                        if (capacidadAbsorcion > mejorCapacidadAbsorcion) {
+                            mejorCapacidadAbsorcion = capacidadAbsorcion;
+                            mejorTienda = nombresTiendasRemotas[connRemote];
+                            ventasMesMejorTienda = ventasAnualesR / 12.0;
+                        }
+                    }
+                } // fin búsqueda tiendas remotas
+            }
 
             if (!mejorTienda.isEmpty()) {
                 int cantidadMandar = qMin((int)qRound(excedenteLocal), (int)qRound(mejorCapacidadAbsorcion));
@@ -209,7 +314,10 @@ void MonitorCaducidades::ejecutarAnalisis()
         }
     }
     
-    // Limpiar y cerrar las conexiones remotas que abrimos
+    // Limpiar y cerrar las conexiones que abrimos
+    if (usarNube) {
+        QSqlDatabase::database(connNube).close();
+    }
     for (const QString &connRemote : conexionesRemotasActivas) {
         QSqlDatabase::database(connRemote).close();
     }

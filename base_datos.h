@@ -279,6 +279,7 @@ public:
 
     // Funciones de Consolidación y Subida a la NUBE (nubeCervantes)
     static bool inicializarEsquemaNube();
+    static bool crearTablasIA(QSqlDatabase &db);
     static bool subirTicketNube(int idTienda, int nTicket, const QString &fecha, const QString &hora,
                                 double total, int fpago, int cliente, int usuario,
                                 const QList<QVariantMap> &lineas);

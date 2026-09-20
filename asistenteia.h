@@ -159,6 +159,9 @@ private:
     /// @brief Envía la petición HTTP a /api/chat con el historial y herramientas actuales
     void enviarPeticionChat();
 
+    /// @brief Comprueba si el rol de usuario activo tiene permiso para ejecutar una herramienta concreta
+    bool tienePermisoParaTool(const QString &nombreTool) const;
+
     /// @brief Ejecuta una herramienta solicitada por la IA tras validar permisos
     QJsonObject ejecutarHerramienta(const QString &nombre, const QJsonObject &argumentos);
 

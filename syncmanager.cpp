@@ -38,14 +38,16 @@ const QStringList SyncManager::TABLAS_MAESTRAS = {
     "clientes",
     "codaux", // depende de articulos
     "tiendas",   "usuarios",    "permisos",
-    "vales" // vales de fidelidad (estado se propaga via nube)
+    "vales", // vales de fidelidad (estado se propaga via nube)
+    "ia_config", "ia_conocimiento"
 };
 
 /// Tablas transaccionales locales que se consolidan en la nube (tickets,
 /// pedidos, arqueos, etc.)
 const QStringList SyncManager::TABLAS_TRANSACCIONALES = {
     "tickets",      "lineasticket", "arqueos",         "pedidos",
-    "lineaspedido", "salidaGenero", "entradasSalidas", "lotes"};
+    "lineaspedido", "salidaGenero", "entradasSalidas", "lotes",
+    "ia_logs_peticiones"};
 
 const QMap<QString, QStringList> SyncManager::CAMPOS_EXCLUIDOS = {
     {"articulos",
@@ -94,6 +96,9 @@ void SyncManager::iniciar() {
 void SyncManager::crearTablasSyncLocal() {
   QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
   QSqlQuery q(db);
+
+  // Asegurar existencia y columnas de las tablas del subsistema IA en local
+  baseDatos::crearTablasIA(db);
 
   q.exec("CREATE TABLE IF NOT EXISTS sync_cola ("
          "  id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
@@ -588,6 +593,11 @@ int SyncManager::subirCambios(const QString &connLocal, const QString &connNube,
                       "AND `id_local` = ?");
           del.addBindValue(m_idTiendaLocal);
           del.addBindValue(idReg);
+        } else if (tabla == "ia_logs_peticiones") {
+          del.prepare("DELETE FROM `ia_logs_peticiones` WHERE `id_tienda` = ? "
+                      "AND `id_local` = ?");
+          del.addBindValue(m_idTiendaLocal);
+          del.addBindValue(idReg);
         }
         ok = del.exec();
       } else {
@@ -805,6 +815,33 @@ int SyncManager::subirCambios(const QString &connLocal, const QString &connNube,
             }
             ins.addBindValue(fStr);
             ins.addBindValue(rec.value("cantidad"));
+            ok = ins.exec();
+          } else if (tabla == "ia_logs_peticiones") {
+            ins.prepare(
+                "INSERT INTO `ia_logs_peticiones` (id_tienda, id_local, usuario, "
+                "modelo, peticion, respuesta, herramientas_usadas, tiempo_ms, "
+                "fecha, hora, es_correcta, comentario_feedback, sugerencia_mejora) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON DUPLICATE KEY UPDATE "
+                "es_correcta = VALUES(es_correcta), "
+                "comentario_feedback = VALUES(comentario_feedback), "
+                "sugerencia_mejora = VALUES(sugerencia_mejora)");
+            int tiendaId = rec.value("id_tienda").toInt();
+            if (tiendaId <= 0)
+              tiendaId = m_idTiendaLocal;
+            ins.addBindValue(tiendaId);
+            ins.addBindValue(rec.value("id")); // id_local
+            ins.addBindValue(rec.value("usuario"));
+            ins.addBindValue(rec.value("modelo"));
+            ins.addBindValue(rec.value("peticion"));
+            ins.addBindValue(rec.value("respuesta"));
+            ins.addBindValue(rec.value("herramientas_usadas"));
+            ins.addBindValue(rec.value("tiempo_ms"));
+            ins.addBindValue(rec.value("fecha"));
+            ins.addBindValue(rec.value("hora"));
+            ins.addBindValue(rec.value("es_correcta"));
+            ins.addBindValue(rec.value("comentario_feedback"));
+            ins.addBindValue(rec.value("sugerencia_mejora"));
             ok = ins.exec();
           }
           if (!ok) {
@@ -1578,7 +1615,10 @@ QString SyncManager::getPkTabla(const QString &tabla) const {
       {"lineaspedido", "id"},
       {"salidaGenero", "id"},
       {"entradasSalidas", "identradasSalidas"},
-      {"lotes", "id"}};
+      {"lotes", "id"},
+      {"ia_config", "id"},
+      {"ia_conocimiento", "id"},
+      {"ia_logs_peticiones", "id"}};
   return m.value(tabla, "");
 }
 

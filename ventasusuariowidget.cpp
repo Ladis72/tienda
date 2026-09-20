@@ -13,6 +13,7 @@
 #include <QtCharts>
 #include "qsqlerror.h"
 #include "qsqlquery.h"
+#include "syncmanager.h"
 #include "ui_ventasusuariowidget.h"
 
 //using namespace QtCharts;
@@ -166,6 +167,34 @@ void ventasUsuarioWidget::actualizarFechas(const QString &agrupacion,
         }
     }
 
+    // Si se activó modo global y la Nube está disponible, agregar las ventas de las demás tiendas desde tickets_nube
+    if (ui->chkGlobal->isChecked() &&
+        QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        QSqlQuery qNube(dbNube);
+        qNube.prepare(QString("SELECT DATE_FORMAT(fecha, '%1') as mes, SUM(total) as t1, 0 as t2 FROM tickets_nube "
+                              "WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta AND id_tienda != :idLocal "
+                              "GROUP BY mes ORDER BY mes DESC").arg(formatoFechaSQL));
+        qNube.bindValue(":usuario", usuario);
+        qNube.bindValue(":desde", desde);
+        qNube.bindValue(":hasta", hasta);
+        qNube.bindValue(":idLocal", idTiendaLocal);
+        if (qNube.exec()) {
+            while (qNube.next()) {
+                QString periodo = qNube.value(0).toString();
+                double t1 = qNube.value(1).toDouble();
+                if (!acumulado.contains(periodo)) {
+                    acumulado[periodo] = {0, 0};
+                }
+                acumulado[periodo][0] += t1;
+            }
+        } else {
+            qDebug() << "ventasUsuarioWidget::actualizarResumen Nube error:" << qNube.lastError().text();
+        }
+    }
+
     // Crear modelo y llenar con datos acumulados
     QStandardItemModel *modelo = new QStandardItemModel(this);
     QStringList periodos = acumulado.keys();
@@ -244,6 +273,29 @@ void ventasUsuarioWidget::actualizarHoras(const QDate &desde, const QDate &hasta
         }
     }
 
+    // Si se activó modo global y la Nube está disponible, agregar ventas por hora de las demás tiendas desde tickets_nube
+    if (ui->chkGlobal->isChecked() &&
+        QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        QSqlQuery qNube(dbNube);
+        qNube.prepare("SELECT HOUR(hora) as h, SUM(total) as t1, 0 as t2 FROM tickets_nube "
+                      "WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta AND id_tienda != :idLocal "
+                      "GROUP BY h");
+        qNube.bindValue(":usuario", usuario);
+        qNube.bindValue(":desde", desde);
+        qNube.bindValue(":hasta", hasta);
+        qNube.bindValue(":idLocal", idTiendaLocal);
+        if (qNube.exec()) {
+            while (qNube.next()) {
+                int h = qNube.value(0).toInt();
+                if (!acumulado.contains(h)) acumulado[h] = {0, 0};
+                acumulado[h][0] += qNube.value(1).toDouble();
+            }
+        }
+    }
+
     QStandardItemModel *modelo = new QStandardItemModel(this);
     QList<int> horas = acumulado.keys();
     std::sort(horas.begin(), horas.end());
@@ -298,6 +350,29 @@ void ventasUsuarioWidget::actualizarSemana(const QDate &desde, const QDate &hast
                 if (!acumulado.contains(d)) acumulado[d] = {0, 0};
                 acumulado[d][0] += query.value(1).toDouble();
                 acumulado[d][1] += query.value(2).toDouble();
+            }
+        }
+    }
+
+    // Si se activó modo global y la Nube está disponible, agregar ventas por día de semana desde tickets_nube
+    if (ui->chkGlobal->isChecked() &&
+        QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        QSqlQuery qNube(dbNube);
+        qNube.prepare("SELECT DAYOFWEEK(fecha) as d, SUM(total) as t1, 0 as t2 FROM tickets_nube "
+                      "WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta AND id_tienda != :idLocal "
+                      "GROUP BY d");
+        qNube.bindValue(":usuario", usuario);
+        qNube.bindValue(":desde", desde);
+        qNube.bindValue(":hasta", hasta);
+        qNube.bindValue(":idLocal", idTiendaLocal);
+        if (qNube.exec()) {
+            while (qNube.next()) {
+                int d = qNube.value(0).toInt();
+                if (!acumulado.contains(d)) acumulado[d] = {0, 0};
+                acumulado[d][0] += qNube.value(1).toDouble();
             }
         }
     }
@@ -385,6 +460,40 @@ void ventasUsuarioWidget::actualizarTickets(const QDate &desde, const QDate &has
             }
         }
     }
+
+    // Si se activó modo global y la Nube está disponible, agregar tickets de las demás tiendas desde tickets_nube
+    if (ui->chkGlobal->isChecked() &&
+        QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        QSqlQuery qNube(dbNube);
+        qNube.prepare("SELECT COALESCE(ti.nombre, CONCAT('Tienda ', t.id_tienda)) AS tienda, "
+                      "t.ticket, DATE_FORMAT(t.fecha, '%Y-%m-%d') AS fecha_str, t.hora, t.total "
+                      "FROM tickets_nube t "
+                      "LEFT JOIN tiendas ti ON t.id_tienda = ti.id "
+                      "WHERE t.usuario = :usuario AND t.fecha BETWEEN :desde AND :hasta AND t.id_tienda != :idLocal "
+                      "ORDER BY fecha_str DESC, hora DESC LIMIT 200");
+        qNube.bindValue(":usuario", usuario);
+        qNube.bindValue(":desde", desde);
+        qNube.bindValue(":hasta", hasta);
+        qNube.bindValue(":idLocal", idTiendaLocal);
+        if (qNube.exec()) {
+            while (qNube.next()) {
+                modelo->setItem(row, 0, new QStandardItem(qNube.value(0).toString()));
+                QStandardItem *itemTicket = new QStandardItem();
+                itemTicket->setData(qNube.value(1).toInt(), Qt::EditRole);
+                modelo->setItem(row, 1, itemTicket);
+                modelo->setItem(row, 2, new QStandardItem(qNube.value(2).toString()));
+                modelo->setItem(row, 3, new QStandardItem(qNube.value(3).toTime().toString("HH:mm")));
+                QStandardItem *itemTotal = new QStandardItem();
+                itemTotal->setData(qNube.value(4).toDouble(), Qt::EditRole);
+                modelo->setItem(row, 4, itemTotal);
+                row++;
+            }
+        }
+    }
+
     modelo->setHeaderData(0, Qt::Horizontal, "Tienda");
     modelo->setHeaderData(1, Qt::Horizontal, "Nº");
     modelo->setHeaderData(2, Qt::Horizontal, "Fecha");
@@ -423,6 +532,32 @@ void ventasUsuarioWidget::actualizarProductos(const QDate &desde, const QDate &h
         }
     }
 
+    // Si se activó modo global y la Nube está disponible, agregar ventas de productos de las demás tiendas desde lineasticket_nube
+    if (ui->chkGlobal->isChecked() &&
+        QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        QSqlQuery qNube(dbNube);
+        qNube.prepare("SELECT l.descripcion, SUM(l.cantidad) as c, SUM(l.totallinea) as t "
+                      "FROM lineasticket_nube l "
+                      "JOIN tickets_nube t ON l.id_tienda = t.id_tienda AND l.nticket = t.ticket "
+                      "WHERE t.usuario = :usuario AND l.fecha BETWEEN :desde AND :hasta AND l.id_tienda != :idLocal "
+                      "GROUP BY l.descripcion ORDER BY c DESC LIMIT 100");
+        qNube.bindValue(":usuario", usuario);
+        qNube.bindValue(":desde", desde);
+        qNube.bindValue(":hasta", hasta);
+        qNube.bindValue(":idLocal", idTiendaLocal);
+        if (qNube.exec()) {
+            while (qNube.next()) {
+                QString d = qNube.value(0).toString();
+                if (!acumulado.contains(d)) acumulado[d] = {0, 0};
+                acumulado[d][0] += qNube.value(1).toDouble();
+                acumulado[d][1] += qNube.value(2).toDouble();
+            }
+        }
+    }
+
     QStandardItemModel *modelo = new QStandardItemModel(this);
     QList<QString> prods = acumulado.keys();
     std::sort(prods.begin(), prods.end(), [&](const QString &a, const QString &b){
@@ -455,7 +590,10 @@ QStringList ventasUsuarioWidget::getListaConexiones()
     QStringList conexiones;
     conexiones << conf->getConexionLocal(); // "DB"
 
-    if (ui->chkGlobal->isChecked()) {
+    // Si se activó ver todas las tiendas pero la Nube NO está disponible, usar conexiones remotas directas como fallback
+    if (ui->chkGlobal->isChecked() &&
+        (!QSqlDatabase::contains(SyncManager::CONEXION_NUBE) ||
+         !QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen())) {
         QString nombreTiendaLocal;
         QSqlQuery qT(QSqlDatabase::database(conf->getConexionLocal()));
         if (qT.exec("SELECT nombre FROM tiendas WHERE local = 1") && qT.next()) {
@@ -498,6 +636,25 @@ void ventasUsuarioWidget::actualizarEstadisticas(const QDate &desde, const QDate
                 totalTickets += query.value(0).toInt();
                 totalVentas += query.value(1).toDouble();
             }
+        }
+    }
+
+    // Si se activó modo global y la Nube está disponible, agregar estadísticas de las demás tiendas desde tickets_nube
+    if (ui->chkGlobal->isChecked() &&
+        QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        QSqlQuery qNube(dbNube);
+        qNube.prepare("SELECT COUNT(*), COALESCE(SUM(total), 0) FROM tickets_nube "
+                      "WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta AND id_tienda != :idLocal");
+        qNube.bindValue(":usuario", usuario);
+        qNube.bindValue(":desde", desde);
+        qNube.bindValue(":hasta", hasta);
+        qNube.bindValue(":idLocal", idTiendaLocal);
+        if (qNube.exec() && qNube.next()) {
+            totalTickets += qNube.value(0).toInt();
+            totalVentas += qNube.value(1).toDouble();
         }
     }
 

@@ -233,6 +233,9 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
       {"articulos.historial_precios", {0, 1, 2, 4}},
       {"articulos.trazabilidad", {0, 1, 4}},
       {"articulos.unificar", {0, 1}},
+      {"articulos.coste", {0, 1}},            // Visualización de precios de coste/compra y márgenes
+      {"articulos.catalogador_ia", {0, 1}},   // Enriquecimiento masivo con IA
+      {"articulos.fotos_masivo", {0, 1}},     // Asignación y descarga masiva de fotos
 
       // ── Familias ──
       {"familias", {0, 1}},
@@ -337,6 +340,8 @@ void GestorPermisos::insertarPermisosPorDefecto(const QString &conexion) {
       {"cajas.abrir", {0, 1, 3}},
       {"cajas.cerrar", {0, 1, 3}},
       {"cajas.retirar", {0, 1}},
+      {"cajas.ver_arqueos", {0, 1}},          // Consulta de arqueos de caja y descuadres
+      {"cajas.entradas_salidas", {0, 1, 3}},  // Movimientos de entradas/salidas de efectivo
 
       // ── Saneador / Alineación Global ──
       {"saneador_global", {0}},
