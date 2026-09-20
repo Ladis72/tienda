@@ -10,6 +10,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkRequest>
+#include <QRegularExpression>
+#include <QSet>
 #include <QSettings>
 #include <QSqlDatabase>
 #include <QSqlError>
@@ -136,58 +138,20 @@ QString AsistenteIA::modelo() const
 }
 
 /**
- * @brief Asegura la existencia de la tabla ia_config tanto en base de datos local como en la nube.
+ * @brief Asegura la existencia de la tabla ia_config y el resto de tablas IA delegando en baseDatos::crearTablasIA.
  */
 void AsistenteIA::asegurarTablaIaConfig()
 {
-    auto crearEnDb = [](QSqlDatabase &db) {
-        if (!db.isOpen()) return;
-        QSqlQuery q(db);
-        QString sql;
-        if (db.driverName().contains("SQLITE", Qt::CaseInsensitive)) {
-            sql = "CREATE TABLE IF NOT EXISTS ia_config ("
-                  "id INTEGER PRIMARY KEY, "
-                  "modelo TEXT NOT NULL, "
-                  "num_ctx INTEGER DEFAULT 32768, "
-                  "url_servidor TEXT DEFAULT '', "
-                  "updated_at TEXT"
-                  ");";
-        } else {
-            sql = "CREATE TABLE IF NOT EXISTS `ia_config` ("
-                  "`id` INT PRIMARY KEY, "
-                  "`modelo` VARCHAR(100) NOT NULL, "
-                  "`num_ctx` INT DEFAULT 32768, "
-                  "`url_servidor` VARCHAR(255) DEFAULT '', "
-                  "`updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-                  ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-        }
-        q.exec(sql);
-
-        // Si la tabla ya existía previamente sin la columna num_ctx, la añadimos de forma segura
-        if (db.driverName().contains("SQLITE", Qt::CaseInsensitive)) {
-            q.exec("ALTER TABLE ia_config ADD COLUMN num_ctx INTEGER DEFAULT 32768;");
-        } else {
-            q.exec("ALTER TABLE `ia_config` ADD COLUMN `num_ctx` INT DEFAULT 32768;");
-        }
-    };
-
-    // 1. En la base de datos local
     QString conn = conf ? conf->getConexionLocal() : "DB";
     if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
     if (QSqlDatabase::contains(conn)) {
         QSqlDatabase dbLocal = QSqlDatabase::database(conn);
-        crearEnDb(dbLocal);
-    }
-
-    // 2. En la nube si la conexión sincronizada está abierta
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
-        crearEnDb(dbNube);
+        baseDatos::crearTablasIA(dbLocal);
     }
 }
 
 /**
- * @brief Obtiene el modelo de IA centralizado guardado en la base de datos (Nube / Local) o en tienda.ini como fallback.
+ * @brief Obtiene el modelo de IA centralizado guardado en la base de datos local o en tienda.ini como fallback.
  */
 QString AsistenteIA::obtenerModeloCentralizado()
 {
@@ -195,30 +159,20 @@ QString AsistenteIA::obtenerModeloCentralizado()
 
     QString modelo;
 
-    // 1. Intentar consultar en la base de datos de la Nube si está disponible
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-        QSqlQuery qNube(QSqlDatabase::database(SyncManager::CONEXION_NUBE));
-        if (qNube.exec("SELECT modelo FROM ia_config WHERE id = 1 LIMIT 1") && qNube.next()) {
-            modelo = qNube.value(0).toString().trimmed();
-        }
-    }
-
-    // 2. Si no hay conexión a la nube o no se obtuvo registro, intentar en la base local
-    if (modelo.isEmpty()) {
-        QString conn = conf ? conf->getConexionLocal() : "DB";
-        if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
-        if (QSqlDatabase::contains(conn)) {
-            QSqlDatabase dbLocal = QSqlDatabase::database(conn);
-            if (dbLocal.isOpen()) {
-                QSqlQuery qLocal(dbLocal);
-                if (qLocal.exec("SELECT modelo FROM ia_config WHERE id = 1 LIMIT 1") && qLocal.next()) {
-                    modelo = qLocal.value(0).toString().trimmed();
-                }
+    // 1. Consultar en la base de datos local (Offline-first, sincronizada por SyncManager)
+    QString conn = conf ? conf->getConexionLocal() : "DB";
+    if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
+    if (QSqlDatabase::contains(conn)) {
+        QSqlDatabase dbLocal = QSqlDatabase::database(conn);
+        if (dbLocal.isOpen()) {
+            QSqlQuery qLocal(dbLocal);
+            if (qLocal.exec("SELECT modelo FROM ia_config WHERE id = 1 LIMIT 1") && qLocal.next()) {
+                modelo = qLocal.value(0).toString().trimmed();
             }
         }
     }
 
-    // 3. Si aún está vacío, leer de tienda.ini como respaldo
+    // 2. Si no se halló registro en BD, leer de tienda.ini como respaldo
     if (modelo.isEmpty()) {
         QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
         QSettings settings(iniPath, QSettings::IniFormat);
@@ -234,7 +188,7 @@ QString AsistenteIA::obtenerModeloCentralizado()
 }
 
 /**
- * @brief Guarda el modelo de IA centralizado en la base de datos (Nube / Local) y en tienda.ini.
+ * @brief Guarda el modelo de IA centralizado en la base de datos local (propagado vía SyncManager) y en tienda.ini.
  *        Solo se permite la modificación si el usuario actual tiene privilegios de Administrador (rol == 0).
  */
 bool AsistenteIA::guardarModeloCentralizado(const QString &nuevoModelo)
@@ -250,52 +204,42 @@ bool AsistenteIA::guardarModeloCentralizado(const QString &nuevoModelo)
 
     asegurarTablaIaConfig();
 
-    auto guardarEnDb = [&mod](QSqlDatabase &db) -> bool {
-        if (!db.isOpen()) return false;
-        QSqlQuery q(db);
-        if (db.driverName().contains("SQLITE", Qt::CaseInsensitive)) {
-            q.prepare("INSERT OR REPLACE INTO ia_config (id, modelo) VALUES (1, :modelo)");
-            q.bindValue(":modelo", mod);
-        } else {
-            q.prepare("INSERT INTO ia_config (id, modelo) VALUES (1, :modelo) "
-                      "ON DUPLICATE KEY UPDATE modelo = :modeloUpdate");
-            q.bindValue(":modelo", mod);
-            q.bindValue(":modeloUpdate", mod);
-        }
-        return q.exec();
-    };
-
-    // 1. Guardar en la base de datos de la Nube (para propagar a todas las tiendas)
-    bool guardadoNube = false;
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
-        guardadoNube = guardarEnDb(dbNube);
-    }
-
-    // 2. Guardar en la base de datos local
+    // Guardar en la base de datos local (SyncManager se encarga de subir el cambio a la nube)
     QString conn = conf ? conf->getConexionLocal() : "DB";
     if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
     bool guardadoLocal = false;
     if (QSqlDatabase::contains(conn)) {
         QSqlDatabase dbLocal = QSqlDatabase::database(conn);
-        guardadoLocal = guardarEnDb(dbLocal);
+        if (dbLocal.isOpen()) {
+            QSqlQuery q(dbLocal);
+            if (dbLocal.driverName().contains("SQLITE", Qt::CaseInsensitive)) {
+                q.prepare("INSERT OR REPLACE INTO ia_config (id, modelo) VALUES (1, :modelo)");
+                q.bindValue(":modelo", mod);
+            } else {
+                q.prepare("INSERT INTO ia_config (id, modelo) VALUES (1, :modelo) "
+                          "ON DUPLICATE KEY UPDATE modelo = :modeloUpdate");
+                q.bindValue(":modelo", mod);
+                q.bindValue(":modeloUpdate", mod);
+            }
+            guardadoLocal = q.exec();
+        }
     }
 
-    // 3. Guardar también en tienda.ini local como respaldo
+    // Guardar también en tienda.ini local como respaldo
     QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("Ollama");
     settings.setValue("modelo", mod);
     settings.endGroup();
 
-    qDebug() << "AsistenteIA: Modelo centralizado guardado:" << mod
-             << "(Nube:" << guardadoNube << ", Local:" << guardadoLocal << ")";
+    qDebug() << "AsistenteIA: Modelo centralizado guardado localmente:" << mod
+             << "(Local:" << guardadoLocal << ", sincronización automática vía SyncManager)";
 
-    return guardadoNube || guardadoLocal;
+    return guardadoLocal;
 }
 
 /**
- * @brief Obtiene el tamaño de ventana de contexto (num_ctx) configurado de forma centralizada en BD o tienda.ini.
+ * @brief Obtiene el tamaño de ventana de contexto (num_ctx) configurado en BD local o tienda.ini.
  * Por defecto devuelve 32768 (32K tokens).
  */
 int AsistenteIA::obtenerNumCtxCentralizado()
@@ -304,30 +248,20 @@ int AsistenteIA::obtenerNumCtxCentralizado()
 
     int numCtx = 0;
 
-    // 1. Intentar consultar en la base de datos de la Nube
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-        QSqlQuery qNube(QSqlDatabase::database(SyncManager::CONEXION_NUBE));
-        if (qNube.exec("SELECT num_ctx FROM ia_config WHERE id = 1 LIMIT 1") && qNube.next()) {
-            numCtx = qNube.value(0).toInt();
-        }
-    }
-
-    // 2. Si no hay conexión a la nube o fue 0, consultar base local
-    if (numCtx <= 0) {
-        QString conn = conf ? conf->getConexionLocal() : "DB";
-        if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
-        if (QSqlDatabase::contains(conn)) {
-            QSqlDatabase dbLocal = QSqlDatabase::database(conn);
-            if (dbLocal.isOpen()) {
-                QSqlQuery qLocal(dbLocal);
-                if (qLocal.exec("SELECT num_ctx FROM ia_config WHERE id = 1 LIMIT 1") && qLocal.next()) {
-                    numCtx = qLocal.value(0).toInt();
-                }
+    // 1. Consultar base local
+    QString conn = conf ? conf->getConexionLocal() : "DB";
+    if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
+    if (QSqlDatabase::contains(conn)) {
+        QSqlDatabase dbLocal = QSqlDatabase::database(conn);
+        if (dbLocal.isOpen()) {
+            QSqlQuery qLocal(dbLocal);
+            if (qLocal.exec("SELECT num_ctx FROM ia_config WHERE id = 1 LIMIT 1") && qLocal.next()) {
+                numCtx = qLocal.value(0).toInt();
             }
         }
     }
 
-    // 3. Si no está en BD, consultar tienda.ini
+    // 2. Si no está en BD, consultar tienda.ini
     if (numCtx <= 0) {
         QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
         QSettings settings(iniPath, QSettings::IniFormat);
@@ -344,7 +278,7 @@ int AsistenteIA::obtenerNumCtxCentralizado()
 }
 
 /**
- * @brief Guarda el tamaño de ventana de contexto (num_ctx) en la base de datos (Nube / Local) y en tienda.ini.
+ * @brief Guarda el tamaño de ventana de contexto (num_ctx) en la base de datos local y en tienda.ini.
  * Requiere rol de Administrador (rol == 0).
  */
 bool AsistenteIA::guardarNumCtxCentralizado(int nuevoNumCtx)
@@ -359,50 +293,40 @@ bool AsistenteIA::guardarNumCtxCentralizado(int nuevoNumCtx)
 
     asegurarTablaIaConfig();
 
-    auto guardarEnDb = [nuevoNumCtx](QSqlDatabase &db) -> bool {
-        if (!db.isOpen()) return false;
-        QSqlQuery q(db);
-        if (db.driverName().contains("SQLITE", Qt::CaseInsensitive)) {
-            q.prepare("INSERT INTO ia_config (id, modelo, num_ctx) VALUES (1, 'qwen3:14b-64k', :num_ctx) "
-                      "ON CONFLICT(id) DO UPDATE SET num_ctx = :num_ctxUpdate");
-            q.bindValue(":num_ctx", nuevoNumCtx);
-            q.bindValue(":num_ctxUpdate", nuevoNumCtx);
-        } else {
-            q.prepare("INSERT INTO ia_config (id, modelo, num_ctx) VALUES (1, 'qwen3:14b-64k', :num_ctx) "
-                      "ON DUPLICATE KEY UPDATE num_ctx = :num_ctxUpdate");
-            q.bindValue(":num_ctx", nuevoNumCtx);
-            q.bindValue(":num_ctxUpdate", nuevoNumCtx);
-        }
-        return q.exec();
-    };
-
-    // 1. Guardar en Nube
-    bool guardadoNube = false;
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
-        guardadoNube = guardarEnDb(dbNube);
-    }
-
-    // 2. Guardar en Local
+    // Guardar en la base de datos local (SyncManager sube el cambio a la nube)
     QString conn = conf ? conf->getConexionLocal() : "DB";
     if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
     bool guardadoLocal = false;
     if (QSqlDatabase::contains(conn)) {
         QSqlDatabase dbLocal = QSqlDatabase::database(conn);
-        guardadoLocal = guardarEnDb(dbLocal);
+        if (dbLocal.isOpen()) {
+            QSqlQuery q(dbLocal);
+            if (dbLocal.driverName().contains("SQLITE", Qt::CaseInsensitive)) {
+                q.prepare("INSERT INTO ia_config (id, modelo, num_ctx) VALUES (1, 'qwen3:14b-64k', :num_ctx) "
+                          "ON CONFLICT(id) DO UPDATE SET num_ctx = :num_ctxUpdate");
+                q.bindValue(":num_ctx", nuevoNumCtx);
+                q.bindValue(":num_ctxUpdate", nuevoNumCtx);
+            } else {
+                q.prepare("INSERT INTO ia_config (id, modelo, num_ctx) VALUES (1, 'qwen3:14b-64k', :num_ctx) "
+                          "ON DUPLICATE KEY UPDATE num_ctx = :num_ctxUpdate");
+                q.bindValue(":num_ctx", nuevoNumCtx);
+                q.bindValue(":num_ctxUpdate", nuevoNumCtx);
+            }
+            guardadoLocal = q.exec();
+        }
     }
 
-    // 3. Guardar en tienda.ini
+    // Guardar también en tienda.ini local
     QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("Ollama");
     settings.setValue("num_ctx", nuevoNumCtx);
     settings.endGroup();
 
-    qDebug() << "AsistenteIA: num_ctx centralizado guardado:" << nuevoNumCtx
-             << "(Nube:" << guardadoNube << ", Local:" << guardadoLocal << ")";
+    qDebug() << "AsistenteIA: Contexto centralizado guardado localmente:" << nuevoNumCtx
+             << "(Local:" << guardadoLocal << ", sincronización automática vía SyncManager)";
 
-    return guardadoNube || guardadoLocal;
+    return guardadoLocal;
 }
 
 /**
@@ -1767,14 +1691,23 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas(const QString &peticionU
         tools.append(tool);
     }
 
-    // Si no hubo coincidencia temática específica o la consulta era genérica, devolver todas las herramientas
-    if (herramientasPermitidas.isEmpty()) {
-        return tools;
+    // 1. Filtrar las herramientas según los permisos del usuario activo
+    QJsonArray toolsAutorizadas;
+    for (const QJsonValue &tv : tools) {
+        QString nom = tv.toObject().value("function").toObject().value("name").toString();
+        if (tienePermisoParaTool(nom)) {
+            toolsAutorizadas.append(tv);
+        }
     }
 
-    // Filtrar únicamente los esquemas de herramientas autorizados por el router de intenciones
+    // 2. Si no hubo coincidencia temática específica o la consulta era genérica, devolver todas las herramientas autorizadas
+    if (herramientasPermitidas.isEmpty()) {
+        return toolsAutorizadas;
+    }
+
+    // 3. Filtrar únicamente los esquemas de herramientas autorizados por permisos y por el router de intenciones
     QJsonArray toolsFiltradas;
-    for (const QJsonValue &tv : tools) {
+    for (const QJsonValue &tv : toolsAutorizadas) {
         QString nom = tv.toObject().value("function").toObject().value("name").toString();
         if (herramientasPermitidas.contains(nom)) {
             toolsFiltradas.append(tv);
@@ -1782,9 +1715,9 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas(const QString &peticionU
     }
 
     qDebug() << "AsistenteIA: Router semántico activó" << toolsFiltradas.size()
-             << "de" << tools.size() << "herramientas para petición:" << peticionUsuario.left(45);
+             << "de" << toolsAutorizadas.size() << "herramientas autorizadas para petición:" << peticionUsuario.left(45);
 
-    return toolsFiltradas.isEmpty() ? tools : toolsFiltradas;
+    return toolsFiltradas.isEmpty() ? toolsAutorizadas : toolsFiltradas;
 }
 
 /**
@@ -2376,10 +2309,140 @@ void AsistenteIA::onChatReplyFinished(QNetworkReply *reply)
 }
 
 /**
- * @brief Despacha la ejecución de herramientas a los métodos correspondientes.
+ * @brief Comprueba si el rol de usuario activo tiene permiso para ejecutar una herramienta concreta.
+ *
+ * Mapeo exhaustivo según la matriz de permisos por tool:
+ * - Admin (rol 0) siempre tiene acceso total.
+ * - Sin sesión activa (rol < 0) o sin conf -> denegado.
+ *
+ * @param nombreTool Nombre o alias de la herramienta solicitada
+ * @return true si el usuario actual tiene autorización, false en caso contrario.
+ */
+bool AsistenteIA::tienePermisoParaTool(const QString &nombreTool) const
+{
+    if (!conf || !conf->permisos()) {
+        return false;
+    }
+
+    // Sin sesión de usuario activa
+    if (conf->getRol() < 0) {
+        return false;
+    }
+
+    // El rol 0 (Administrador) siempre tiene permiso para todo
+    if (conf->getRol() == 0) {
+        return true;
+    }
+
+    // 1. Consulta SQL directa: estrictamente reservada a Administrador
+    if (nombreTool == "ejecutar_consulta_sql") {
+        return false;
+    }
+
+    // 2. Artículos y Stock
+    if (nombreTool == "consultar_stock" || nombreTool == "buscar_por_indicacion") {
+        return conf->permisos()->tiene("articulos") || conf->permisos()->tiene("ventas");
+    }
+    if (nombreTool == "articulos_bajo_minimo" || nombreTool == "prevision_cobertura_stock" ||
+        nombreTool == "comparativa_stock_tiendas" || nombreTool == "rebalanceo_stock" ||
+        nombreTool == "comparativa_stock" || nombreTool == "stock_intertiendas" ||
+        nombreTool == "distribucion_stock") {
+        return conf->permisos()->tiene("articulos");
+    }
+
+    // 3. Caducidades
+    if (nombreTool == "consultar_caducidades" || nombreTool == "consultar_caducidades_lotes") {
+        return conf->permisos()->tiene("caducidades") || conf->permisos()->tiene("articulos");
+    }
+
+    // 4. Clientes y PII protegida (GDPR / LOPD)
+    if (nombreTool == "buscar_clientes" || nombreTool == "ultimas_compras_cliente") {
+        return conf->permisos()->tiene("clientes");
+    }
+
+    // 5. Estadísticas y Métricas de Facturación
+    if (nombreTool == "resumen_ventas" || nombreTool == "ventas_periodo" ||
+        nombreTool == "ventas_filtradas" || nombreTool == "consultar_ventas" ||
+        nombreTool == "ventas_fechas" || nombreTool == "ventas_dia" ||
+        nombreTool == "productos_mas_vendidos" || nombreTool == "facturacion_por_horas" ||
+        nombreTool == "horas_mas_ventas" || nombreTool == "horas_pico_ventas") {
+        return conf->permisos()->tiene("estadisticas") || conf->permisos()->tiene("listado_ventas");
+    }
+    if (nombreTool == "comparativa_ventas" || nombreTool == "ventas_por_usuario" ||
+        nombreTool == "ventas_usuario" || nombreTool == "ventas_empleado" ||
+        nombreTool == "ranking_vendedores" || nombreTool == "ranking_usuarios" ||
+        nombreTool == "ventas_empleados") {
+        return conf->permisos()->tiene("estadisticas");
+    }
+
+    // 6. Cajas y Arqueos
+    if (nombreTool == "ultimos_arqueos" || nombreTool == "auditoria_descuadres_caja" ||
+        nombreTool == "descuadres_caja" || nombreTool == "auditoria_arqueos" ||
+        nombreTool == "descuadres_arqueos" || nombreTool == "arqueos_descuadre") {
+        return conf->permisos()->tiene("cajas.ver_arqueos") || conf->permisos()->tiene("listado_arqueos");
+    }
+    if (nombreTool == "consultar_movimientos_caja" || nombreTool == "movimientos_caja" ||
+        nombreTool == "entradas_salidas_caja" || nombreTool == "gastos_caja" ||
+        nombreTool == "caja_chica") {
+        return conf->permisos()->tiene("cajas.entradas_salidas") || conf->permisos()->tiene("cajas");
+    }
+
+    // 7. Proveedores y Compras
+    if (nombreTool == "consultar_compras_proveedor" || nombreTool == "proveedores_producto" ||
+        nombreTool == "historial_compras_proveedor") {
+        return conf->permisos()->tiene("proveedores");
+    }
+    if (nombreTool == "buscar_facturas_compra_articulo" || nombreTool == "facturas_compra" ||
+        nombreTool == "buscar_facturas" || nombreTool == "lineas_factura_compra" ||
+        nombreTool == "compras_articulo" || nombreTool == "buscar_albaranes_compra") {
+        return conf->permisos()->tiene("proveedores") || conf->permisos()->tiene("facturas");
+    }
+    if (nombreTool == "resumen_compras_proveedores" || nombreTool == "compras_proveedores" ||
+        nombreTool == "estadisticas_compras" || nombreTool == "gastos_proveedores" ||
+        nombreTool == "total_compras_proveedor") {
+        return conf->permisos()->tiene("proveedores") || conf->permisos()->tiene("estadisticas");
+    }
+
+    // 8. Logística: Traspasos, Salidas y Pedidos
+    if (nombreTool == "consultar_salidas_tiendas" || nombreTool == "consultar_salidas" ||
+        nombreTool == "salidas_tiendas" || nombreTool == "traspasos_tiendas" ||
+        nombreTool == "genero_salidas" || nombreTool == "consultar_traspasos_intertiendas" ||
+        nombreTool == "traspasos_intertiendas" || nombreTool == "traspasos_entre_tiendas" ||
+        nombreTool == "envios_tiendas" || nombreTool == "recepcion_traspasos") {
+        return conf->permisos()->tiene("movimientos") || conf->permisos()->tiene("salidas");
+    }
+    if (nombreTool == "consultar_pedidos" || nombreTool == "pedidos_proveedor" ||
+        nombreTool == "pedidos_pendientes" || nombreTool == "pedidos_aceptados" ||
+        nombreTool == "detalle_pedido" || nombreTool == "consultar_pedido") {
+        return conf->permisos()->tiene("gestionar_pedidos");
+    }
+
+    // 9. Usuarios del Sistema y Actividad Laboral
+    if (nombreTool == "consultar_usuarios" || nombreTool == "listar_usuarios" ||
+        nombreTool == "empleados" || nombreTool == "vendedores" || nombreTool == "cajeros") {
+        return conf->permisos()->tiene("usuarios");
+    }
+    if (nombreTool == "actividad_usuario" || nombreTool == "tickets_usuario" ||
+        nombreTool == "productos_usuario" || nombreTool == "ultimos_tickets_usuario") {
+        return conf->permisos()->tiene("estadisticas") || conf->permisos()->tiene("usuarios");
+    }
+
+    // Cualquier herramienta no explícitamente autorizada se deniega por defecto
+    return false;
+}
+
+/**
+ * @brief Despacha la ejecución de herramientas a los métodos correspondientes tras verificar permisos.
  */
 QJsonObject AsistenteIA::ejecutarHerramienta(const QString &nombre, const QJsonObject &argumentos)
 {
+    // Verificación de seguridad defensiva: comprobar permisos del usuario activo
+    if (!tienePermisoParaTool(nombre)) {
+        QJsonObject err;
+        err["error"] = QString("Permiso denegado: El usuario activo no tiene autorización para ejecutar la herramienta '%1'.").arg(nombre);
+        return err;
+    }
+
     if (nombre == "consultar_stock") {
         return toolConsultarStock(argumentos);
     } else if (nombre == "articulos_bajo_minimo") {
@@ -3905,6 +3968,12 @@ QJsonObject AsistenteIA::toolBuscarClientes(const QJsonObject &args)
     QJsonObject res;
     QJsonArray clientesArray;
 
+    // Validación de permisos de acceso a datos personales de clientes (GDPR / LOPD)
+    if (conf && conf->permisos() && !conf->permisos()->tiene("clientes")) {
+        res["error"] = "Permiso denegado: El usuario activo no tiene autorización para acceder a los datos de clientes.";
+        return res;
+    }
+
     if (termino.isEmpty()) {
         res["error"] = "Término de búsqueda de cliente vacío";
         return res;
@@ -3986,6 +4055,13 @@ QJsonObject AsistenteIA::toolBuscarClientes(const QJsonObject &args)
 QJsonObject AsistenteIA::toolUltimasComprasCliente(const QJsonObject &args)
 {
     QJsonObject res;
+
+    // Validación de permisos de acceso al historial comercial de clientes (GDPR / LOPD)
+    if (conf && conf->permisos() && !conf->permisos()->tiene("clientes")) {
+        res["error"] = "Permiso denegado: El usuario activo no tiene autorización para consultar compras o clientes.";
+        return res;
+    }
+
     int idCliente = args.value("id_cliente").toInt();
     if (idCliente <= 0) idCliente = args.value("idCliente").toInt();
 
@@ -5742,15 +5818,278 @@ QJsonObject AsistenteIA::toolPrevisionCoberturaStock(const QJsonObject &args)
 }
 
 /**
- * @brief Ejecuta una consulta SQL SELECT generada por la IA con filtros estrictos de seguridad.
+ * @brief Estructura interna para representar segmentos de una consulta SQL,
+ *        diferenciando código ejecutable de literales de texto o identificadores.
+ */
+struct SqlSegmento {
+    QString texto;
+    bool esLiteral; // true si es literal ('cadena', "cadena") o identificador (`tabla`)
+};
+
+/**
+ * @brief Divide una consulta SQL en segmentos diferenciando literales de cadena del código ejecutable.
+ *        Detecta y rechaza tajantemente comentarios SQL (bloques slash-asterisco, --, #) o sentencias múltiples (;).
+ * @param sql Cadena SQL a procesar.
+ * @param segmentos Salida con los fragmentos clasificados.
+ * @param errorDetalle Salida con la descripción del motivo de rechazo en caso de infracción de seguridad.
+ * @return true si la consulta no contiene comentarios ni múltiples sentencias y los literales cierran bien; false si es rechazada.
+ */
+static bool segmentarYValidarLexicoSql(const QString &sql, QList<SqlSegmento> &segmentos, QString &errorDetalle)
+{
+    segmentos.clear();
+    errorDetalle.clear();
+
+    const int len = sql.length();
+    if (len == 0) {
+        errorDetalle = "Consulta SQL vacía.";
+        return false;
+    }
+
+    enum Estado { Normal, EnComillaSimple, EnComillaDoble, EnBacktick };
+    Estado estado = Normal;
+    QString bufferActual;
+
+    for (int i = 0; i < len; ) {
+        const QChar c = sql.at(i);
+
+        if (estado == Normal) {
+            // 1. Detección y rechazo inmediato de comentarios SQL fuera de cadenas
+            if (c == '/' && i + 1 < len && sql.at(i + 1) == '*') {
+                errorDetalle = "Seguridad: No se permiten comentarios SQL (/* ... */) en consultas generadas.";
+                return false;
+            }
+            if (c == '-' && i + 1 < len && sql.at(i + 1) == '-') {
+                errorDetalle = "Seguridad: No se permiten comentarios SQL (--) en consultas generadas.";
+                return false;
+            }
+            if (c == '#') {
+                errorDetalle = "Seguridad: No se permiten comentarios SQL (#) en consultas generadas.";
+                return false;
+            }
+
+            // 2. Detección y rechazo de múltiples sentencias (punto y coma fuera de cadenas)
+            if (c == ';') {
+                // Comprobar si solo quedan espacios en blanco hasta el final
+                bool soloEspacios = true;
+                for (int j = i + 1; j < len; ++j) {
+                    if (!sql.at(j).isSpace()) {
+                        soloEspacios = false;
+                        break;
+                    }
+                }
+                if (!soloEspacios) {
+                    errorDetalle = "Seguridad: No se permiten múltiples sentencias SQL en una sola consulta.";
+                    return false;
+                }
+                // Si solo quedan espacios, permitimos el punto y coma final omitiéndolo del ejecutable
+                i++;
+                continue;
+            }
+
+            // 3. Apertura de literales o delimitadores
+            if (c == '\'') {
+                if (!bufferActual.isEmpty()) {
+                    segmentos.append({bufferActual, false});
+                    bufferActual.clear();
+                }
+                bufferActual += c;
+                estado = EnComillaSimple;
+                i++;
+            } else if (c == '"') {
+                if (!bufferActual.isEmpty()) {
+                    segmentos.append({bufferActual, false});
+                    bufferActual.clear();
+                }
+                bufferActual += c;
+                estado = EnComillaDoble;
+                i++;
+            } else if (c == '`') {
+                if (!bufferActual.isEmpty()) {
+                    segmentos.append({bufferActual, false});
+                    bufferActual.clear();
+                }
+                bufferActual += c;
+                estado = EnBacktick;
+                i++;
+            } else {
+                bufferActual += c;
+                i++;
+            }
+        } else if (estado == EnComillaSimple) {
+            bufferActual += c;
+            // Escapes tipo \'
+            if (c == '\\' && i + 1 < len) {
+                bufferActual += sql.at(i + 1);
+                i += 2;
+                continue;
+            }
+            // Escapes tipo '' (comilla simple doblada estándar SQL)
+            if (c == '\'') {
+                if (i + 1 < len && sql.at(i + 1) == '\'') {
+                    bufferActual += sql.at(i + 1);
+                    i += 2;
+                    continue;
+                }
+                // Cierre de la comilla simple
+                segmentos.append({bufferActual, true});
+                bufferActual.clear();
+                estado = Normal;
+            }
+            i++;
+        } else if (estado == EnComillaDoble) {
+            bufferActual += c;
+            // Escapes tipo \"
+            if (c == '\\' && i + 1 < len) {
+                bufferActual += sql.at(i + 1);
+                i += 2;
+                continue;
+            }
+            // Escapes tipo "" (comilla doble doblada)
+            if (c == '"') {
+                if (i + 1 < len && sql.at(i + 1) == '"') {
+                    bufferActual += sql.at(i + 1);
+                    i += 2;
+                    continue;
+                }
+                // Cierre de comilla doble
+                segmentos.append({bufferActual, true});
+                bufferActual.clear();
+                estado = Normal;
+            }
+            i++;
+        } else if (estado == EnBacktick) {
+            bufferActual += c;
+            // Escapes tipo `` (backtick doblado)
+            if (c == '`') {
+                if (i + 1 < len && sql.at(i + 1) == '`') {
+                    bufferActual += sql.at(i + 1);
+                    i += 2;
+                    continue;
+                }
+                // Cierre de backtick
+                segmentos.append({bufferActual, true});
+                bufferActual.clear();
+                estado = Normal;
+            }
+            i++;
+        }
+    }
+
+    if (estado != Normal) {
+        errorDetalle = "Seguridad: Literal de cadena o identificador sin cerrar en la consulta SQL.";
+        return false;
+    }
+
+    if (!bufferActual.isEmpty()) {
+        segmentos.append({bufferActual, false});
+    }
+
+    return true;
+}
+
+/**
+ * @brief Validador de seguridad semántico y léxico de consultas SQL para AsistenteIA.
+ *        Garantiza que la sentencia sea exclusivamente de solo lectura (SELECT/WITH),
+ *        sin instrucciones DML/DDL, sin llamadas a stored procedures, sin exportaciones de ficheros,
+ *        y sin acceso a credenciales confidenciales de usuarios.
+ * @param sql Cadena SQL a validar.
+ * @param errorDetalle Salida con la explicación del rechazo si no supera el análisis.
+ * @return true si la consulta es segura; false si es rechazada.
+ */
+static bool validarSeguridadConsultaSql(const QString &sql, QString &errorDetalle)
+{
+    QList<SqlSegmento> segmentos;
+    if (!segmentarYValidarLexicoSql(sql, segmentos, errorDetalle)) {
+        return false;
+    }
+
+    // Extraer todos los tokens léxicos (palabras clave / identificadores) exclusivamente fuera de literales
+    QStringList tokens;
+    QRegularExpression rxTokens("\\b[A-Za-z_][A-Za-z0-9_]*\\b");
+
+    for (const SqlSegmento &seg : segmentos) {
+        if (!seg.esLiteral) {
+            QRegularExpressionMatchIterator it = rxTokens.globalMatch(seg.texto);
+            while (it.hasNext()) {
+                tokens.append(it.next().captured(0).toUpper());
+            }
+        }
+    }
+
+    if (tokens.isEmpty()) {
+        errorDetalle = "Seguridad: No se encontraron instrucciones SQL válidas en la consulta.";
+        return false;
+    }
+
+    // 1. Regla de inicio: Solo se admiten SELECT o WITH (Common Table Expressions)
+    const QString primerToken = tokens.first();
+    if (primerToken != "SELECT" && primerToken != "WITH") {
+        errorDetalle = QString("Seguridad: Solo se permiten consultas SQL de solo lectura (SELECT / WITH). La instrucción inicia con '%1'.").arg(primerToken);
+        return false;
+    }
+
+    if (primerToken == "WITH" && !tokens.contains("SELECT")) {
+        errorDetalle = "Seguridad: Las expresiones de tabla común (WITH) deben culminar en una sentencia SELECT.";
+        return false;
+    }
+
+    // 2. Denylist exhaustivo de instrucciones de modificación, DDL, llamadas y funciones peligrosas
+    static const QSet<QString> tokensProhibidos = {
+        // DML (Modificación de datos)
+        "INSERT", "UPDATE", "DELETE", "REPLACE", "TRUNCATE", "MERGE", "UPSERT",
+        // DDL (Definición y alteración de esquema)
+        "CREATE", "ALTER", "DROP", "RENAME",
+        // Control de acceso y administración del servidor
+        "GRANT", "REVOKE", "KILL", "SHUTDOWN", "RESET", "PURGE", "FLUSH", "INSTALL", "UNINSTALL", "RESTART",
+        // Control de transacciones y variables de sesión (evitar manipular transacciones o safe-modes)
+        "SET", "START", "COMMIT", "ROLLBACK", "SAVEPOINT", "LOCK", "UNLOCK",
+        // Ejecución procedural y de bajo nivel (HANDLER burla optimizador, CALL ejecuta procedimientos con DML/DDL)
+        "CALL", "EXECUTE", "PREPARE", "DEALLOCATE", "DO", "HANDLER",
+        // I/O de ficheros y exportaciones (INTO bloquea SELECT ... INTO OUTFILE / DUMPFILE / @var)
+        "OUTFILE", "DUMPFILE", "LOAD_FILE", "LOAD", "INTO",
+        // DoS y funciones de sistema
+        "SLEEP", "BENCHMARK", "SYSTEM_USER", "SESSION_USER",
+        // Cambio de base de datos activa
+        "USE"
+    };
+
+    for (const QString &tok : tokens) {
+        if (tokensProhibidos.contains(tok)) {
+            errorDetalle = QString("Seguridad: La consulta contiene una instrucción o función no permitida ('%1').").arg(tok);
+            return false;
+        }
+    }
+
+    // 3. Prohibir acceso directo a credenciales, contraseñas o hashes de la tabla usuarios
+    if (tokens.contains("USUARIOS")) {
+        static const QSet<QString> colsSensibles = {"CLAVE", "SALT", "PASSWORD", "PASS", "HASH"};
+        for (const QString &tok : tokens) {
+            if (colsSensibles.contains(tok)) {
+                errorDetalle = "Seguridad: No se permite consultar campos de credenciales o autenticación de usuarios.";
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+/**
+ * @brief Ejecuta una consulta SQL SELECT generada por la IA con blindaje multicapa de seguridad:
+ *        - Análisis léxico y rechazo de comentarios/sentencias múltiples.
+ *        - Denegación estricta de palabras clave peligrosas por tokenización.
+ *        - Reescritura contextual de alias fuera de literales de cadena.
+ *        - Doble validación previa a la ejecución.
+ *        - Transacción de solo lectura (START TRANSACTION READ ONLY) y timeout a nivel de motor SQL.
+ *        - Enmascaramiento de datos sensibles en el resultado.
  */
 QJsonObject AsistenteIA::toolEjecutarConsultaSql(const QJsonObject &args)
 {
     QJsonObject res;
 
-    // Validación de permisos para consultas directas
-    if (conf && conf->permisos() && !conf->permisos()->tiene("estadisticas") && !conf->permisos()->tiene("articulos")) {
-        res["error"] = "Permiso denegado: El usuario activo no tiene permiso para ejecutar consultas analíticas avanzadas.";
+    // Validación de seguridad estricta: solo el Administrador (rol 0) puede ejecutar consultas SQL
+    if (!conf || conf->getRol() != 0) {
+        res["error"] = "Permiso denegado: Solo el Administrador (rol 0) tiene autorización para ejecutar consultas SQL directas.";
         return res;
     }
 
@@ -5763,31 +6102,14 @@ QJsonObject AsistenteIA::toolEjecutarConsultaSql(const QJsonObject &args)
         return res;
     }
 
-    // 1. Filtro de seguridad estricto: Solo consultas de lectura (SELECT / WITH / SHOW / DESCRIBE)
-    QString queryUpper = queryStr.toUpper().trimmed();
-    if (!queryUpper.startsWith("SELECT") && !queryUpper.startsWith("WITH") && !queryUpper.startsWith("SHOW") && !queryUpper.startsWith("DESCRIBE")) {
-        res["error"] = "Seguridad: Solo se permiten consultas SQL de solo lectura (SELECT).";
+    // 1. CAPA 1: Validación de seguridad inicial estricta sobre la consulta recibida
+    QString errValidacionInicial;
+    if (!validarSeguridadConsultaSql(queryStr, errValidacionInicial)) {
+        res["error"] = errValidacionInicial;
         return res;
     }
 
-    static const QStringList forbiddenWords = {
-        "INSERT ", "UPDATE ", "DELETE ", "DROP ", "ALTER ", "TRUNCATE ", "REPLACE ",
-        "CREATE ", "GRANT ", "REVOKE ", "LOCK ", "UNLOCK ", "INTO OUTFILE", "INTO DUMPFILE"
-    };
-
-    for (const QString &word : forbiddenWords) {
-        if (queryUpper.contains(word)) {
-            res["error"] = QString("Seguridad: La consulta contiene una instrucción no permitida (%1).").arg(word.trimmed());
-            return res;
-        }
-    }
-
-    // Asegurar un límite para evitar bloqueos por resultados masivos
-    if (!queryUpper.contains("LIMIT ") && !queryUpper.startsWith("DESCRIBE") && !queryUpper.startsWith("SHOW")) {
-        queryStr += " LIMIT 50";
-    }
-
-    // 2. Ejecutar contra nube si está disponible, o contra local
+    // 2. Conexión a la base de datos (nube preferente si disponible, o local)
     QSqlDatabase db;
     if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
         db = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
@@ -5800,42 +6122,75 @@ QJsonObject AsistenteIA::toolEjecutarConsultaSql(const QJsonObject &args)
         return res;
     }
 
-    // Corregir automáticamente alias comunes que los LLM suelen confundir en las vistas y tablas
-    QString queryAjustada = queryStr;
-    queryAjustada.replace(QRegularExpression("\\bmarca\\b", QRegularExpression::CaseInsensitiveOption), "fabricante");
-    queryAjustada.replace(QRegularExpression("\\bcliente_nombre\\b", QRegularExpression::CaseInsensitiveOption), "cliente");
-    queryAjustada.replace(QRegularExpression("\\bfecha_venta\\b", QRegularExpression::CaseInsensitiveOption), "fecha");
-    queryAjustada.replace(QRegularExpression("\\bimporte_total\\b", QRegularExpression::CaseInsensitiveOption), "total");
+    // 3. CAPA 2: Reescritura segura de alias respetando literales de cadena
+    // Se divide la consulta para aplicar reemplazos ÚNICAMENTE en fragmentos de código SQL
+    QList<SqlSegmento> segmentos;
+    QString errSegmentacion;
+    if (!segmentarYValidarLexicoSql(queryStr, segmentos, errSegmentacion)) {
+        res["error"] = errSegmentacion;
+        return res;
+    }
 
-    // Mapeos en tablas de artículos, compras y facturas:
-    queryAjustada.replace(QRegularExpression("\\bid_proveedor\\b", QRegularExpression::CaseInsensitiveOption), "idProveedor");
-    queryAjustada.replace(QRegularExpression("\\bfecha_factura\\b", QRegularExpression::CaseInsensitiveOption), "fechaFactura");
-    queryAjustada.replace(QRegularExpression("\\bfecha_pedido\\b", QRegularExpression::CaseInsensitiveOption), "fechaPedido");
-    queryAjustada.replace(QRegularExpression("\\bnumero_factura\\b", QRegularExpression::CaseInsensitiveOption), "nFactura");
-    queryAjustada.replace(QRegularExpression("\\bnum_factura\\b", QRegularExpression::CaseInsensitiveOption), "nFactura");
-    queryAjustada.replace(QRegularExpression("\\bnumero_documento\\b", QRegularExpression::CaseInsensitiveOption), "nDocumento");
-    queryAjustada.replace(QRegularExpression("\\bnum_documento\\b", QRegularExpression::CaseInsensitiveOption), "nDocumento");
-    queryAjustada.replace(QRegularExpression("\\btotal_base\\b", QRegularExpression::CaseInsensitiveOption), "totalBase");
-    queryAjustada.replace(QRegularExpression("\\btotal_iva\\b", QRegularExpression::CaseInsensitiveOption), "totalIva");
-    queryAjustada.replace(QRegularExpression("\\btotal_re\\b", QRegularExpression::CaseInsensitiveOption), "totalRe");
+    QString queryAjustada;
+    for (const SqlSegmento &seg : segmentos) {
+        if (seg.esLiteral) {
+            // Los literales ('texto', "texto", `identificador`) se conservan 100% intactos
+            queryAjustada += seg.texto;
+        } else {
+            QString codigo = seg.texto;
 
-    // Correcciones en articulos y lineaspedido (donde el código es 'cod' y el nombre es 'descripcion')
-    queryAjustada.replace(QRegularExpression("\\b(articulos|lineaspedido|lotes|salidagenero|salidagenero_tmp)\\.codigo\\b", QRegularExpression::CaseInsensitiveOption), "\\1.cod");
-    queryAjustada.replace(QRegularExpression("\\b(articulos|lineaspedido)\\.id_articulo\\b", QRegularExpression::CaseInsensitiveOption), "\\1.cod");
-    queryAjustada.replace(QRegularExpression("\\b(articulos|lineaspedido)\\.nombre\\b", QRegularExpression::CaseInsensitiveOption), "\\1.descripcion");
-    queryAjustada.replace(QRegularExpression("\\b(articulos|lineaspedido)\\.nombre_producto\\b", QRegularExpression::CaseInsensitiveOption), "\\1.descripcion");
-    queryAjustada.replace(QRegularExpression("\\b(a|lp)\\.codigo\\b", QRegularExpression::CaseInsensitiveOption), "\\1.cod");
-    queryAjustada.replace(QRegularExpression("\\b(a|lp)\\.id_articulo\\b", QRegularExpression::CaseInsensitiveOption), "\\1.cod");
-    queryAjustada.replace(QRegularExpression("\\b(a|lp)\\.nombre\\b", QRegularExpression::CaseInsensitiveOption), "\\1.descripcion");
-    queryAjustada.replace(QRegularExpression("\\ba\\.id\\b", QRegularExpression::CaseInsensitiveOption), "a.cod");
-    queryAjustada.replace(QRegularExpression("\\barticulos\\.id\\b", QRegularExpression::CaseInsensitiveOption), "articulos.cod");
-    queryAjustada.replace(QRegularExpression("\\blineaspedido\\.nFactura\\b", QRegularExpression::CaseInsensitiveOption), "lineaspedido.nDocumento");
-    queryAjustada.replace(QRegularExpression("\\blp\\.nFactura\\b", QRegularExpression::CaseInsensitiveOption), "lp.nDocumento");
+            // Reemplazo de alias genéricos comunes
+            codigo.replace(QRegularExpression("\\bmarca\\b", QRegularExpression::CaseInsensitiveOption), "fabricante");
+            codigo.replace(QRegularExpression("\\bcliente_nombre\\b", QRegularExpression::CaseInsensitiveOption), "cliente");
+            codigo.replace(QRegularExpression("\\bfecha_venta\\b", QRegularExpression::CaseInsensitiveOption), "fecha");
+            codigo.replace(QRegularExpression("\\bimporte_total\\b", QRegularExpression::CaseInsensitiveOption), "total");
+
+            // Mapeos en tablas de compras y facturación
+            codigo.replace(QRegularExpression("\\bid_proveedor\\b", QRegularExpression::CaseInsensitiveOption), "idProveedor");
+            codigo.replace(QRegularExpression("\\bfecha_factura\\b", QRegularExpression::CaseInsensitiveOption), "fechaFactura");
+            codigo.replace(QRegularExpression("\\bfecha_pedido\\b", QRegularExpression::CaseInsensitiveOption), "fechaPedido");
+            codigo.replace(QRegularExpression("\\bnumero_factura\\b", QRegularExpression::CaseInsensitiveOption), "nFactura");
+            codigo.replace(QRegularExpression("\\bnum_factura\\b", QRegularExpression::CaseInsensitiveOption), "nFactura");
+            codigo.replace(QRegularExpression("\\bnumero_documento\\b", QRegularExpression::CaseInsensitiveOption), "nDocumento");
+            codigo.replace(QRegularExpression("\\bnum_documento\\b", QRegularExpression::CaseInsensitiveOption), "nDocumento");
+            codigo.replace(QRegularExpression("\\btotal_base\\b", QRegularExpression::CaseInsensitiveOption), "totalBase");
+            codigo.replace(QRegularExpression("\\btotal_iva\\b", QRegularExpression::CaseInsensitiveOption), "totalIva");
+            codigo.replace(QRegularExpression("\\btotal_re\\b", QRegularExpression::CaseInsensitiveOption), "totalRe");
+
+            // Correcciones en articulos y lineaspedido (cod y descripcion)
+            codigo.replace(QRegularExpression("\\b(articulos|lineaspedido|lotes|salidagenero|salidagenero_tmp)\\.codigo\\b", QRegularExpression::CaseInsensitiveOption), "\\1.cod");
+            codigo.replace(QRegularExpression("\\b(articulos|lineaspedido)\\.id_articulo\\b", QRegularExpression::CaseInsensitiveOption), "\\1.cod");
+            codigo.replace(QRegularExpression("\\b(articulos|lineaspedido)\\.nombre\\b", QRegularExpression::CaseInsensitiveOption), "\\1.descripcion");
+            codigo.replace(QRegularExpression("\\b(articulos|lineaspedido)\\.nombre_producto\\b", QRegularExpression::CaseInsensitiveOption), "\\1.descripcion");
+            codigo.replace(QRegularExpression("\\b(a|lp)\\.codigo\\b", QRegularExpression::CaseInsensitiveOption), "\\1.cod");
+            codigo.replace(QRegularExpression("\\b(a|lp)\\.id_articulo\\b", QRegularExpression::CaseInsensitiveOption), "\\1.cod");
+            codigo.replace(QRegularExpression("\\b(a|lp)\\.nombre\\b", QRegularExpression::CaseInsensitiveOption), "\\1.descripcion");
+            codigo.replace(QRegularExpression("\\ba\\.id\\b", QRegularExpression::CaseInsensitiveOption), "a.cod");
+            codigo.replace(QRegularExpression("\\barticulos\\.id\\b", QRegularExpression::CaseInsensitiveOption), "articulos.cod");
+            codigo.replace(QRegularExpression("\\blineaspedido\\.nFactura\\b", QRegularExpression::CaseInsensitiveOption), "lineaspedido.nDocumento");
+            codigo.replace(QRegularExpression("\\blp\\.nFactura\\b", QRegularExpression::CaseInsensitiveOption), "lp.nDocumento");
+
+            queryAjustada += codigo;
+        }
+    }
 
     // Corrección genérica si no tienen prefijo de tabla cuando se consulta articulos o lineaspedido
     if (queryAjustada.contains("articulos", Qt::CaseInsensitive) || queryAjustada.contains("lineaspedido", Qt::CaseInsensitive)) {
-        queryAjustada.replace(QRegularExpression("\\bcodigo\\b", QRegularExpression::CaseInsensitiveOption), "cod");
-        queryAjustada.replace(QRegularExpression("\\bnombre_producto\\b", QRegularExpression::CaseInsensitiveOption), "descripcion");
+        // Realizar solo fuera de literales
+        QList<SqlSegmento> segsArt;
+        if (segmentarYValidarLexicoSql(queryAjustada, segsArt, errSegmentacion)) {
+            queryAjustada.clear();
+            for (const SqlSegmento &seg : segsArt) {
+                if (seg.esLiteral) {
+                    queryAjustada += seg.texto;
+                } else {
+                    QString codArt = seg.texto;
+                    codArt.replace(QRegularExpression("\\bcodigo\\b", QRegularExpression::CaseInsensitiveOption), "cod");
+                    codArt.replace(QRegularExpression("\\bnombre_producto\\b", QRegularExpression::CaseInsensitiveOption), "descripcion");
+                    queryAjustada += codArt;
+                }
+            }
+        }
     }
 
     // Corrección de consultas donde el LLM filtra familia por texto en vez de su ID numérico
@@ -5850,13 +6205,80 @@ QJsonObject AsistenteIA::toolEjecutarConsultaSql(const QJsonObject &args)
     queryAjustada.replace(QRegularExpression("\\b(articulos\\.|a\\.)?fabricante\\s*=\\s*'([^']+)'", QRegularExpression::CaseInsensitiveOption),
                           "articulos.fabricante IN (SELECT id FROM fabricantes WHERE nombre LIKE '%\\2%')");
 
-    // Corrección de consultas donde el LLM filtra proveedor en articulos (columna virtual a través de compras en lineaspedido)
+    // Corrección de consultas donde el LLM filtra proveedor en articulos
     QString tablaLineasProv = (db.databaseName().contains("nube", Qt::CaseInsensitive)) ? "lineaspedido_nube" : "lineaspedido";
     queryAjustada.replace(QRegularExpression("\\b(articulos\\.|a\\.)?proveedor\\s*LIKE\\s*'([^']+)'", QRegularExpression::CaseInsensitiveOption),
                           QString("articulos.cod IN (SELECT lp.cod FROM %1 lp JOIN proveedores prov ON lp.idProveedor = prov.idProveedor WHERE prov.nombre LIKE '\\2')").arg(tablaLineasProv));
     queryAjustada.replace(QRegularExpression("\\b(articulos\\.|a\\.)?proveedor\\s*=\\s*'([^']+)'", QRegularExpression::CaseInsensitiveOption),
                           QString("articulos.cod IN (SELECT lp.cod FROM %1 lp JOIN proveedores prov ON lp.idProveedor = prov.idProveedor WHERE prov.nombre LIKE '%\\2%')").arg(tablaLineasProv));
 
+    // 4. CAPA 3: Doble validación obligatoria sobre la consulta transformada
+    QString errSegundaValidacion;
+    if (!validarSeguridadConsultaSql(queryAjustada, errSegundaValidacion)) {
+        res["error"] = "Error de seguridad tras reescritura: " + errSegundaValidacion;
+        res["sql_descartado"] = queryAjustada;
+        return res;
+    }
+
+    // 5. Garantizar o limitar cláusula LIMIT para evitar respuestas masivas o desbordamientos de memoria
+    QList<SqlSegmento> segsLimit;
+    bool tieneLimitEnCodigo = false;
+    if (segmentarYValidarLexicoSql(queryAjustada, segsLimit, errSegmentacion)) {
+        for (const SqlSegmento &s : segsLimit) {
+            if (!s.esLiteral && s.texto.contains(QRegularExpression("\\bLIMIT\\b", QRegularExpression::CaseInsensitiveOption))) {
+                tieneLimitEnCodigo = true;
+                break;
+            }
+        }
+    }
+
+    if (tieneLimitEnCodigo) {
+        // Acotar límites excesivos fuera de literales
+        QRegularExpression rxLimit("\\bLIMIT\\s+(\\d+)(?:\\s*,\\s*(\\d+))?\\b", QRegularExpression::CaseInsensitiveOption);
+        QRegularExpressionMatch mLimit = rxLimit.match(queryAjustada);
+        if (mLimit.hasMatch()) {
+            long long nFilas = mLimit.captured(2).isEmpty() ? mLimit.captured(1).toLongLong() : mLimit.captured(2).toLongLong();
+            if (nFilas > 500) {
+                if (mLimit.captured(2).isEmpty()) {
+                    queryAjustada.replace(rxLimit, "LIMIT 500");
+                } else {
+                    queryAjustada.replace(rxLimit, QString("LIMIT %1, 500").arg(mLimit.captured(1)));
+                }
+            }
+        }
+    } else {
+        queryAjustada += " LIMIT 50";
+    }
+
+    // 6. CAPA 4: Transacción de solo lectura y timeout a nivel de motor de base de datos
+    // Estructura RAII para garantizar el ROLLBACK incondicional en cualquier ruta de salida
+    struct TxReadOnlyGuard {
+        QSqlDatabase db;
+        bool activa;
+        TxReadOnlyGuard(const QSqlDatabase &database, bool act) : db(database), activa(act) {}
+        ~TxReadOnlyGuard() {
+            if (activa && db.isOpen()) {
+                QSqlQuery qRollback(db);
+                qRollback.exec("ROLLBACK");
+            }
+        }
+    };
+
+    // Establecer tiempo máximo de ejecución en MariaDB/MySQL (10 segundos) para evitar bloqueos por consultas pesadas
+    QSqlQuery qTimeout(db);
+    qTimeout.exec("SET max_statement_time = 10");
+
+    // Iniciar transacción de solo lectura a nivel del servidor de base de datos
+    QSqlQuery qTx(db);
+    bool txIniciada = qTx.exec("START TRANSACTION READ ONLY");
+    if (!txIniciada) {
+        qTx.exec("SET TRANSACTION READ ONLY");
+        txIniciada = qTx.exec("START TRANSACTION");
+    }
+
+    TxReadOnlyGuard txGuard(db, txIniciada);
+
+    // Ejecutar la consulta validada
     QSqlQuery q(db);
     if (!q.exec(queryAjustada)) {
         res["error"] = "Error SQL: " + q.lastError().text();
@@ -5872,6 +6294,15 @@ QJsonObject AsistenteIA::toolEjecutarConsultaSql(const QJsonObject &args)
         QJsonObject fila;
         for (int i = 0; i < colCount; ++i) {
             QString colName = rec.fieldName(i);
+            QString colNameLower = colName.toLower();
+
+            // 7. CAPA 5: Enmascaramiento de campos sensibles por si se utilizó SELECT *
+            if (colNameLower == "clave" || colNameLower == "salt" || 
+                colNameLower == "password" || colNameLower == "pin" || colNameLower == "token") {
+                fila[colName] = "***PROTEGIDO***";
+                continue;
+            }
+
             QVariant val = q.value(i);
             if (val.isNull()) {
                 fila[colName] = QJsonValue::Null;
@@ -5886,7 +6317,7 @@ QJsonObject AsistenteIA::toolEjecutarConsultaSql(const QJsonObject &args)
         filasArray.append(fila);
     }
 
-    res["sql_ejecutado"] = queryStr;
+    res["sql_ejecutado"] = queryAjustada;
     res["filas_obtenidas"] = filasArray.size();
     res["resultados"] = filasArray;
     return res;
@@ -5900,6 +6331,13 @@ QJsonObject AsistenteIA::toolEjecutarConsultaSql(const QJsonObject &args)
  */
 QJsonObject AsistenteIA::toolConsultarCaducidades(const QJsonObject &args)
 {
+    // Validación defensiva de permisos para caducidades o artículos
+    if (conf && conf->permisos() && !conf->permisos()->tiene("caducidades") && !conf->permisos()->tiene("articulos")) {
+        QJsonObject res;
+        res["error"] = "Permiso denegado: El usuario activo no tiene autorización para consultar caducidades de artículos.";
+        return res;
+    }
+
     QString producto = args.value("producto").toString().trimmed();
     if (producto.isEmpty()) producto = args.value("articulo").toString().trimmed();
     if (producto.isEmpty()) producto = args.value("query").toString().trimmed();
@@ -6113,6 +6551,13 @@ QJsonObject AsistenteIA::toolConsultarCaducidades(const QJsonObject &args)
 QJsonObject AsistenteIA::toolConsultarComprasProveedor(const QJsonObject &args)
 {
     QJsonObject res;
+
+    // Validación de permisos de acceso a datos de compras y proveedores
+    if (conf && conf->permisos() && !conf->permisos()->tiene("proveedores")) {
+        res["error"] = "Permiso denegado: El usuario activo no tiene autorización para consultar datos o compras de proveedores.";
+        return res;
+    }
+
     QString prod = args.value("producto").toString().trimmed();
     if (prod.isEmpty()) prod = args.value("articulo").toString().trimmed();
     if (prod.isEmpty()) prod = args.value("termino").toString().trimmed();
@@ -6202,9 +6647,11 @@ QJsonObject AsistenteIA::toolConsultarComprasProveedor(const QJsonObject &args)
                 item["codigo"] = qM.value("cod").toString();
                 item["producto"] = qM.value("descripcion").toString();
                 item["fabricante"] = qM.value("fabricante").toString();
-                item["precio_compra"] = QString::number(qM.value("precio_compra").toDouble(), 'f', 2) + " €";
+                if (conf && conf->permisos() && conf->permisos()->tiene("articulos.coste")) {
+                    item["precio_compra"] = QString::number(qM.value("precio_compra").toDouble(), 'f', 2) + " €";
+                    item["margen_comercial_porcentaje"] = QString::number(qM.value("margen_pct").toDouble(), 'f', 1) + " %";
+                }
                 item["pvp"] = QString::number(qM.value("pvp").toDouble(), 'f', 2) + " €";
-                item["margen_comercial_porcentaje"] = QString::number(qM.value("margen_pct").toDouble(), 'f', 1) + " %";
                 item["stock_actual"] = qM.value("stock_total").toDouble();
                 margenesArray.append(item);
             }
@@ -6270,8 +6717,10 @@ QJsonObject AsistenteIA::toolConsultarComprasProveedor(const QJsonObject &args)
             item["producto"] = q.value("descripcion").toString();
             item["id_proveedor"] = q.value("idProveedor").toInt();
             item["proveedor"] = q.value("proveedor").toString();
-            item["precio_compra_costo"] = QString::number(q.value("precio_costo").toDouble(), 'f', 2) + " €";
-            item["descuento_porcentaje"] = QString::number(q.value("descuento").toDouble(), 'f', 1) + " %";
+            if (conf && conf->permisos() && conf->permisos()->tiene("articulos.coste")) {
+                item["precio_compra_costo"] = QString::number(q.value("precio_costo").toDouble(), 'f', 2) + " €";
+                item["descuento_porcentaje"] = QString::number(q.value("descuento").toDouble(), 'f', 1) + " %";
+            }
             item["fecha_compra"] = q.value("fecha_compra").toString();
             item["tienda"] = q.value("tienda").toString();
             comprasArray.append(item);
@@ -6293,7 +6742,9 @@ QJsonObject AsistenteIA::toolConsultarComprasProveedor(const QJsonObject &args)
                 item["codigo"] = qArt.value("cod").toString();
                 item["producto"] = qArt.value("descripcion").toString();
                 item["proveedor"] = qArt.value("proveedor").toString();
-                item["precio_compra_costo"] = QString::number(qArt.value("precio_compra").toDouble(), 'f', 2) + " €";
+                if (conf && conf->permisos() && conf->permisos()->tiene("articulos.coste")) {
+                    item["precio_compra_costo"] = QString::number(qArt.value("precio_compra").toDouble(), 'f', 2) + " €";
+                }
                 item["pvp"] = QString::number(qArt.value("pvp").toDouble(), 'f', 2) + " €";
                 comprasArray.append(item);
             }
@@ -6592,6 +7043,13 @@ QJsonObject AsistenteIA::toolFacturacionPorHoras(const QJsonObject &args)
  */
 QJsonObject AsistenteIA::toolConsultarSalidasTiendas(const QJsonObject &args)
 {
+    // Validación defensiva de permisos para salidas o movimientos de almacén
+    if (conf && conf->permisos() && !conf->permisos()->tiene("salidas") && !conf->permisos()->tiene("movimientos")) {
+        QJsonObject res;
+        res["error"] = "Permiso denegado: El usuario activo no tiene autorización para consultar salidas de género o traspasos.";
+        return res;
+    }
+
     QString origenFiltro = args.value("tienda_origen").toString().trimmed();
     if (origenFiltro.isEmpty()) origenFiltro = args.value("origen").toString().trimmed();
     if (origenFiltro.isEmpty()) origenFiltro = args.value("tienda").toString().trimmed();
@@ -6947,6 +7405,13 @@ QJsonObject AsistenteIA::toolConsultarSalidasTiendas(const QJsonObject &args)
  */
 QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
 {
+    // Validación defensiva de permisos para gestión de pedidos de compra
+    if (conf && conf->permisos() && !conf->permisos()->tiene("gestionar_pedidos")) {
+        QJsonObject res;
+        res["error"] = "Permiso denegado: El usuario activo no tiene autorización para consultar pedidos de compra.";
+        return res;
+    }
+
     QString userText = obtenerUltimoTextoUsuario();
     QString estado = args.value("estado").toString().trimmed().toLower();
     if (estado.isEmpty()) estado = args.value("tipo").toString().trimmed().toLower();
@@ -7678,6 +8143,12 @@ QJsonObject AsistenteIA::toolConsultarUsuarios(const QJsonObject &args)
     QJsonObject res;
     QJsonArray arrayUsuarios;
 
+    // Validación de permisos de acceso al directorio de usuarios del sistema
+    if (conf && conf->permisos() && !conf->permisos()->tiene("usuarios")) {
+        res["error"] = "Permiso denegado: El usuario activo no tiene autorización para consultar los usuarios del sistema.";
+        return res;
+    }
+
     QSqlDatabase db = QSqlDatabase::database(conf ? conf->getConexionLocal() : "DB");
     if (!db.isOpen()) {
         res["error"] = "No se puede acceder a la base de datos de usuarios.";
@@ -7745,6 +8216,13 @@ QJsonObject AsistenteIA::toolConsultarUsuarios(const QJsonObject &args)
  */
 QJsonObject AsistenteIA::toolVentasPorUsuario(const QJsonObject &args)
 {
+    // Validación de permisos de estadísticas de ventas
+    if (conf && conf->permisos() && !conf->permisos()->tiene("estadisticas")) {
+        QJsonObject res;
+        res["error"] = "Permiso denegado: El usuario activo no tiene autorización para consultar estadísticas de ventas por usuario.";
+        return res;
+    }
+
     QString usuarioFiltro = args.value("usuario").toString().trimmed();
     if (usuarioFiltro.isEmpty()) usuarioFiltro = args.value("vendedor").toString().trimmed();
     if (usuarioFiltro.isEmpty()) usuarioFiltro = args.value("empleado").toString().trimmed();
@@ -8041,6 +8519,13 @@ QJsonObject AsistenteIA::toolVentasPorUsuario(const QJsonObject &args)
  */
 QJsonObject AsistenteIA::toolActividadUsuario(const QJsonObject &args)
 {
+    // Validación de permisos de estadísticas o usuarios
+    if (conf && conf->permisos() && !conf->permisos()->tiene("estadisticas") && !conf->permisos()->tiene("usuarios")) {
+        QJsonObject res;
+        res["error"] = "Permiso denegado: El usuario activo no tiene autorización para consultar el registro de actividad de usuarios.";
+        return res;
+    }
+
     QString usuarioFiltro = args.value("usuario").toString().trimmed();
     if (usuarioFiltro.isEmpty()) usuarioFiltro = args.value("empleado").toString().trimmed();
     if (usuarioFiltro.isEmpty()) usuarioFiltro = args.value("vendedor").toString().trimmed();
@@ -8835,6 +9320,13 @@ QJsonObject AsistenteIA::toolAuditoriaDescuadresCaja(const QJsonObject &args)
 QJsonObject AsistenteIA::toolResumenComprasProveedores(const QJsonObject &args)
 {
     QJsonObject res;
+
+    // Validación de permisos de compras a proveedores o estadísticas
+    if (conf && conf->permisos() && !conf->permisos()->tiene("proveedores") && !conf->permisos()->tiene("estadisticas")) {
+        res["error"] = "Permiso denegado: El usuario activo no tiene autorización para consultar estadísticas o compras a proveedores.";
+        return res;
+    }
+
     QString provFiltro = args.value("proveedor").toString().trimmed();
     QString fechaI = args.value("fecha_inicio").toString().trimmed();
     if (fechaI.isEmpty()) fechaI = args.value("fecha").toString().trimmed();
@@ -8985,6 +9477,13 @@ QJsonObject AsistenteIA::toolResumenComprasProveedores(const QJsonObject &args)
 QJsonObject AsistenteIA::toolConsultarTraspasosIntertiendas(const QJsonObject &args)
 {
     QJsonObject res;
+
+    // Validación defensiva de permisos para movimientos de stock o salidas
+    if (conf && conf->permisos() && !conf->permisos()->tiene("movimientos") && !conf->permisos()->tiene("salidas")) {
+        res["error"] = "Permiso denegado: El usuario activo no tiene autorización para consultar traspasos o movimientos entre tiendas.";
+        return res;
+    }
+
     QString origenFiltro = args.value("tienda_origen").toString().trimmed();
     if (origenFiltro.isEmpty()) origenFiltro = args.value("origen").toString().trimmed();
     if (origenFiltro.isEmpty()) origenFiltro = "todas";
@@ -9344,10 +9843,12 @@ QJsonObject AsistenteIA::toolBuscarFacturasCompraArticulo(const QJsonObject &arg
                 item["descripcion"] = q.value("descripcion").toString();
                 item["cantidad"] = q.value("cantidad").toInt();
                 item["bonificacion"] = q.value("bonificacion").toInt();
-                item["costo"] = QString::number(q.value("costo").toDouble(), 'f', 2) + " €";
-                item["descuento"] = QString::number(q.value("descuento1").toDouble(), 'f', 2) + " %";
-                item["base_unitaria"] = QString::number(q.value("base").toDouble(), 'f', 4) + " €";
-                item["total_base"] = QString::number(q.value("totalbase").toDouble(), 'f', 2) + " €";
+                if (conf && conf->permisos() && conf->permisos()->tiene("articulos.coste")) {
+                    item["costo"] = QString::number(q.value("costo").toDouble(), 'f', 2) + " €";
+                    item["descuento"] = QString::number(q.value("descuento1").toDouble(), 'f', 2) + " %";
+                    item["base_unitaria"] = QString::number(q.value("base").toDouble(), 'f', 4) + " €";
+                    item["total_base"] = QString::number(q.value("totalbase").toDouble(), 'f', 2) + " €";
+                }
                 item["iva"] = QString::number(q.value("tipoIva").toDouble(), 'f', 1) + " %";
                 item["pvp"] = QString::number(q.value("pvp").toDouble(), 'f', 2) + " €";
 
@@ -9488,10 +9989,12 @@ QJsonObject AsistenteIA::toolBuscarFacturasCompraArticulo(const QJsonObject &arg
                     item["descripcion"] = q.value("descripcion").toString();
                     item["cantidad"] = q.value("cantidad").toInt();
                     item["bonificacion"] = q.value("bonificacion").toInt();
-                    item["costo"] = QString::number(q.value("costo").toDouble(), 'f', 2) + " €";
-                    item["descuento"] = QString::number(q.value("descuento1").toDouble(), 'f', 2) + " %";
-                    item["base_unitaria"] = QString::number(q.value("base").toDouble(), 'f', 4) + " €";
-                    item["total_base"] = QString::number(q.value("totalbase").toDouble(), 'f', 2) + " €";
+                    if (conf && conf->permisos() && conf->permisos()->tiene("articulos.coste")) {
+                        item["costo"] = QString::number(q.value("costo").toDouble(), 'f', 2) + " €";
+                        item["descuento"] = QString::number(q.value("descuento1").toDouble(), 'f', 2) + " %";
+                        item["base_unitaria"] = QString::number(q.value("base").toDouble(), 'f', 4) + " €";
+                        item["total_base"] = QString::number(q.value("totalbase").toDouble(), 'f', 2) + " €";
+                    }
                     item["iva"] = QString::number(q.value("tipoIva").toDouble(), 'f', 1) + " %";
                     item["pvp"] = QString::number(q.value("pvp").toDouble(), 'f', 2) + " €";
 
@@ -9651,82 +10154,20 @@ QJsonObject AsistenteIA::toolBuscarFacturasCompraArticulo(const QJsonObject &arg
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * @brief Asegura que la tabla ia_logs_peticiones exista tanto en la base local como en la nube.
+ * @brief Asegura que la tabla ia_logs_peticiones exista delegando en baseDatos::crearTablasIA.
  */
 void AsistenteIA::asegurarTablaLogs()
 {
-    // 1. En base de datos local
-    QSqlDatabase dbLocal = QSqlDatabase::database(conf ? conf->getConexionLocal() : "DB");
-    if (dbLocal.isOpen()) {
-        QSqlQuery q(dbLocal);
-        QString sql;
-        if (dbLocal.driverName().contains("SQLITE", Qt::CaseInsensitive)) {
-            sql = "CREATE TABLE IF NOT EXISTS ia_logs_peticiones ("
-                  "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                  "id_tienda INTEGER DEFAULT 1, "
-                  "usuario TEXT NOT NULL, "
-                  "modelo TEXT NOT NULL, "
-                  "peticion TEXT NOT NULL, "
-                  "respuesta TEXT NOT NULL, "
-                  "herramientas_usadas TEXT DEFAULT '', "
-                  "tiempo_ms INTEGER DEFAULT 0, "
-                  "fecha TEXT NOT NULL, "
-                  "hora TEXT NOT NULL, "
-                  "es_correcta INTEGER DEFAULT 0, "
-                  "comentario_feedback TEXT, "
-                  "sugerencia_mejora TEXT"
-                  ");";
-        } else {
-            sql = "CREATE TABLE IF NOT EXISTS `ia_logs_peticiones` ("
-                  "`id` BIGINT AUTO_INCREMENT PRIMARY KEY, "
-                  "`id_tienda` INT DEFAULT 1, "
-                  "`usuario` VARCHAR(50) NOT NULL, "
-                  "`modelo` VARCHAR(100) NOT NULL, "
-                  "`peticion` TEXT NOT NULL, "
-                  "`respuesta` MEDIUMTEXT NOT NULL, "
-                  "`herramientas_usadas` VARCHAR(255) DEFAULT '', "
-                  "`tiempo_ms` INT DEFAULT 0, "
-                  "`fecha` DATE NOT NULL, "
-                  "`hora` TIME NOT NULL, "
-                  "`es_correcta` TINYINT DEFAULT 0 COMMENT '0: Sin evaluar, 1: Correcta, -1: Incorrecta', "
-                  "`comentario_feedback` TEXT NULL, "
-                  "`sugerencia_mejora` TEXT NULL, "
-                  "INDEX `idx_fecha` (`fecha`), "
-                  "INDEX `idx_correcta` (`es_correcta`), "
-                  "INDEX `idx_tienda_fecha` (`id_tienda`, `fecha`)"
-                  ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-        }
-        q.exec(sql);
-    }
-
-    // 2. En la nube si la conexión sincronizada está abierta
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
-        QSqlQuery qN(dbNube);
-        QString sqlNube = "CREATE TABLE IF NOT EXISTS `ia_logs_peticiones` ("
-                          "`id` BIGINT AUTO_INCREMENT PRIMARY KEY, "
-                          "`id_tienda` INT DEFAULT 1, "
-                          "`usuario` VARCHAR(50) NOT NULL, "
-                          "`modelo` VARCHAR(100) NOT NULL, "
-                          "`peticion` TEXT NOT NULL, "
-                          "`respuesta` MEDIUMTEXT NOT NULL, "
-                          "`herramientas_usadas` VARCHAR(255) DEFAULT '', "
-                          "`tiempo_ms` INT DEFAULT 0, "
-                          "`fecha` DATE NOT NULL, "
-                          "`hora` TIME NOT NULL, "
-                          "`es_correcta` TINYINT DEFAULT 0, "
-                          "`comentario_feedback` TEXT NULL, "
-                          "`sugerencia_mejora` TEXT NULL, "
-                          "INDEX `idx_fecha` (`fecha`), "
-                          "INDEX `idx_correcta` (`es_correcta`), "
-                          "INDEX `idx_tienda_fecha` (`id_tienda`, `fecha`)"
-                          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-        qN.exec(sqlNube);
+    QString conn = conf ? conf->getConexionLocal() : "DB";
+    if (conn.isEmpty() || !QSqlDatabase::contains(conn)) conn = "DB";
+    if (QSqlDatabase::contains(conn)) {
+        QSqlDatabase dbLocal = QSqlDatabase::database(conn);
+        baseDatos::crearTablasIA(dbLocal);
     }
 }
 
 /**
- * @brief Guarda un registro de interacción con la IA en la tabla ia_logs_peticiones.
+ * @brief Guarda un registro de interacción con la IA en la base local (sincronizada automáticamente vía SyncManager).
  */
 qint64 AsistenteIA::guardarLogPeticion(const QString &peticion, const QString &respuesta,
                                       const QStringList &herramientas, int tiempoMs,
@@ -9765,32 +10206,6 @@ qint64 AsistenteIA::guardarLogPeticion(const QString &peticion, const QString &r
             idGenerado = q.lastInsertId().toLongLong();
         } else {
             qDebug() << "AsistenteIA: Error al guardar log en local:" << q.lastError().text();
-        }
-    }
-
-    // Si la base de datos de la nube está disponible, guardar también en la nube
-    QSqlDatabase dbNube = obtenerBaseDatosNube();
-    if (dbNube.isOpen()) {
-        QSqlQuery qN(dbNube);
-        qN.prepare("INSERT INTO ia_logs_peticiones "
-                   "(id_tienda, usuario, modelo, peticion, respuesta, herramientas_usadas, tiempo_ms, fecha, hora, es_correcta, comentario_feedback, sugerencia_mejora) "
-                   "VALUES (:tienda, :usu, :mod, :pet, :resp, :tools, :ms, :fec, :hor, :corr, :com, :sug)");
-        qN.bindValue(":tienda", idTienda);
-        qN.bindValue(":usu", usuario);
-        qN.bindValue(":mod", modelo);
-        qN.bindValue(":pet", peticion);
-        qN.bindValue(":resp", respuesta);
-        qN.bindValue(":tools", toolsStr);
-        qN.bindValue(":ms", tiempoMs);
-        qN.bindValue(":fec", fechaStr);
-        qN.bindValue(":hor", horaStr);
-        qN.bindValue(":corr", esCorrecta);
-        qN.bindValue(":com", comentario);
-        qN.bindValue(":sug", sugerencia);
-        if (qN.exec()) {
-            if (idGenerado == 0) idGenerado = qN.lastInsertId().toLongLong();
-        } else {
-            qDebug() << "AsistenteIA: Error al guardar log en nube:" << qN.lastError().text();
         }
     }
 

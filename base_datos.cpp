@@ -4267,6 +4267,142 @@ bool baseDatos::inicializarEsquemaNube() {
          "FROM arqueos_nube a "
          "LEFT JOIN tiendas t ON a.id_tienda = t.id");
 
+  // 10. Tablas del Asistente IA
+  crearTablasIA(dbNube);
+
+  return true;
+}
+
+/**
+ * @brief Crea o asegura la existencia de las 4 tablas unificadas del subsistema IA.
+ * Compatible tanto con MariaDB/MySQL como con SQLite.
+ */
+bool baseDatos::crearTablasIA(QSqlDatabase &db) {
+  if (!db.isOpen()) return false;
+  QSqlQuery q(db);
+  bool esSqlite = db.driverName().contains("SQLITE", Qt::CaseInsensitive);
+
+  if (esSqlite) {
+    // 1. ia_config
+    q.exec("CREATE TABLE IF NOT EXISTS ia_config ("
+           "id INTEGER PRIMARY KEY, "
+           "modelo TEXT NOT NULL, "
+           "num_ctx INTEGER DEFAULT 32768, "
+           "url_servidor TEXT DEFAULT '', "
+           "id_tienda_origen INTEGER DEFAULT 1, "
+           "updated_at TEXT DEFAULT (datetime('now', 'localtime'))"
+           ");");
+
+    // 2. ia_conocimiento
+    q.exec("CREATE TABLE IF NOT EXISTS ia_conocimiento ("
+           "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+           "categoria TEXT NOT NULL, "
+           "detonantes TEXT NOT NULL, "
+           "terminos_clave TEXT NOT NULL, "
+           "activo INTEGER DEFAULT 1, "
+           "id_tienda_origen INTEGER DEFAULT 1, "
+           "updated_at TEXT DEFAULT (datetime('now', 'localtime'))"
+           ");");
+
+    // 3. ia_embeddings
+    q.exec("CREATE TABLE IF NOT EXISTS ia_embeddings ("
+           "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+           "cod TEXT NOT NULL, "
+           "tipo TEXT NOT NULL DEFAULT 'articulo', "
+           "dimensiones INTEGER NOT NULL DEFAULT 768, "
+           "texto_hash TEXT NOT NULL, "
+           "embedding BLOB NOT NULL, "
+           "updated_at TEXT DEFAULT (datetime('now', 'localtime')), "
+           "UNIQUE (cod, tipo)"
+           ");");
+
+    // 4. ia_logs_peticiones
+    q.exec("CREATE TABLE IF NOT EXISTS ia_logs_peticiones ("
+           "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+           "id_tienda INTEGER DEFAULT 1, "
+           "id_local INTEGER DEFAULT NULL, "
+           "usuario TEXT NOT NULL, "
+           "modelo TEXT NOT NULL, "
+           "peticion TEXT NOT NULL, "
+           "respuesta TEXT NOT NULL, "
+           "herramientas_usadas TEXT DEFAULT '', "
+           "tiempo_ms INTEGER DEFAULT 0, "
+           "fecha TEXT NOT NULL, "
+           "hora TEXT NOT NULL, "
+           "es_correcta INTEGER DEFAULT 0, "
+           "comentario_feedback TEXT, "
+           "sugerencia_mejora TEXT"
+           ");");
+  } else {
+    // MariaDB / MySQL
+    // 1. ia_config
+    q.exec("CREATE TABLE IF NOT EXISTS `ia_config` ("
+           "  `id` INT PRIMARY KEY, "
+           "  `modelo` VARCHAR(100) NOT NULL, "
+           "  `num_ctx` INT DEFAULT 32768, "
+           "  `url_servidor` VARCHAR(255) DEFAULT '', "
+           "  `id_tienda_origen` INT DEFAULT 1, "
+           "  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+           ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    q.exec("ALTER TABLE `ia_config` ADD COLUMN IF NOT EXISTS `id_tienda_origen` INT DEFAULT 1");
+    q.exec("ALTER TABLE `ia_config` ADD COLUMN IF NOT EXISTS `num_ctx` INT DEFAULT 32768");
+    q.exec("ALTER TABLE `ia_config` ADD COLUMN IF NOT EXISTS `url_servidor` VARCHAR(255) DEFAULT ''");
+    q.exec("ALTER TABLE `ia_config` ADD COLUMN IF NOT EXISTS `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+
+    // 2. ia_conocimiento
+    q.exec("CREATE TABLE IF NOT EXISTS `ia_conocimiento` ("
+           "  `id` INT AUTO_INCREMENT PRIMARY KEY, "
+           "  `categoria` VARCHAR(120) NOT NULL, "
+           "  `detonantes` TEXT NOT NULL, "
+           "  `terminos_clave` TEXT NOT NULL, "
+           "  `activo` TINYINT DEFAULT 1, "
+           "  `id_tienda_origen` INT DEFAULT 1, "
+           "  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, "
+           "  INDEX `idx_activo` (`activo`)"
+           ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    q.exec("ALTER TABLE `ia_conocimiento` ADD COLUMN IF NOT EXISTS `id_tienda_origen` INT DEFAULT 1");
+    q.exec("ALTER TABLE `ia_conocimiento` ADD COLUMN IF NOT EXISTS `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+
+    // 3. ia_embeddings
+    q.exec("CREATE TABLE IF NOT EXISTS `ia_embeddings` ("
+           "  `id` INT AUTO_INCREMENT PRIMARY KEY, "
+           "  `cod` VARCHAR(64) NOT NULL, "
+           "  `tipo` VARCHAR(16) NOT NULL DEFAULT 'articulo', "
+           "  `dimensiones` INT NOT NULL DEFAULT 768, "
+           "  `texto_hash` VARCHAR(64) NOT NULL, "
+           "  `embedding` MEDIUMBLOB NOT NULL, "
+           "  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, "
+           "  UNIQUE KEY `uk_cod_tipo` (`cod`, `tipo`), "
+           "  INDEX `idx_hash` (`texto_hash`)"
+           ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // 4. ia_logs_peticiones
+    q.exec("CREATE TABLE IF NOT EXISTS `ia_logs_peticiones` ("
+           "  `id` BIGINT AUTO_INCREMENT PRIMARY KEY, "
+           "  `id_tienda` INT DEFAULT 1, "
+           "  `id_local` BIGINT DEFAULT NULL, "
+           "  `usuario` VARCHAR(50) NOT NULL, "
+           "  `modelo` VARCHAR(100) NOT NULL, "
+           "  `peticion` TEXT NOT NULL, "
+           "  `respuesta` MEDIUMTEXT NOT NULL, "
+           "  `herramientas_usadas` VARCHAR(255) DEFAULT '', "
+           "  `tiempo_ms` INT DEFAULT 0, "
+           "  `fecha` DATE NOT NULL, "
+           "  `hora` TIME NOT NULL, "
+           "  `es_correcta` TINYINT DEFAULT 0 COMMENT '0: Sin evaluar, 1: Correcta, -1: Incorrecta', "
+           "  `comentario_feedback` TEXT NULL, "
+           "  `sugerencia_mejora` TEXT NULL, "
+           "  INDEX `idx_fecha` (`fecha`), "
+           "  INDEX `idx_correcta` (`es_correcta`), "
+           "  INDEX `idx_tienda_fecha` (`id_tienda`, `fecha`)"
+           ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    q.exec("ALTER TABLE `ia_logs_peticiones` ADD COLUMN IF NOT EXISTS `id_local` BIGINT DEFAULT NULL");
+    q.exec("ALTER TABLE `ia_logs_peticiones` ADD INDEX IF NOT EXISTS `idx_tienda_local` (`id_tienda`, `id_local`)");
+  }
+
   return true;
 }
 

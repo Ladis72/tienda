@@ -4,6 +4,7 @@
  */
 
 #include "indexadorembeddings.h"
+#include "base_datos.h"
 #include "syncmanager.h"
 #include "configuracion.h"
 
@@ -12,6 +13,7 @@
 #include <QCryptographicHash>
 #include <QDataStream>
 #include <QDateTime>
+#include <QDebug>
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
@@ -173,37 +175,7 @@ IndexadorEmbeddings* IndexadorEmbeddings::instancia()
 bool IndexadorEmbeddings::asegurarTabla(QSqlDatabase &db)
 {
     if (!db.isOpen()) return false;
-
-    QSqlQuery q(db);
-    bool esSqlite = db.driverName().contains("SQLITE", Qt::CaseInsensitive);
-
-    QString ddl;
-    if (esSqlite) {
-        ddl = "CREATE TABLE IF NOT EXISTS ia_embeddings ("
-              "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
-              "  cod TEXT NOT NULL,"
-              "  tipo TEXT NOT NULL DEFAULT 'articulo',"
-              "  texto_hash TEXT NOT NULL,"
-              "  embedding BLOB NOT NULL,"
-              "  updated_at TEXT DEFAULT (datetime('now', 'localtime')),"
-              "  UNIQUE (cod, tipo)"
-              ");";
-    } else {
-        ddl = "CREATE TABLE IF NOT EXISTS ia_embeddings ("
-              "  id INT AUTO_INCREMENT PRIMARY KEY,"
-              "  cod VARCHAR(13) NOT NULL,"
-              "  tipo VARCHAR(16) NOT NULL DEFAULT 'articulo',"
-              "  texto_hash CHAR(32) NOT NULL,"
-              "  embedding MEDIUMBLOB NOT NULL,"
-              "  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
-              "  UNIQUE KEY uk_cod_tipo (cod, tipo)"
-              ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
-    }
-
-    if (!q.exec(ddl)) {
-        return false;
-    }
-    return true;
+    return baseDatos::crearTablasIA(db);
 }
 
 /* ========================================================================= */
@@ -232,34 +204,37 @@ bool IndexadorEmbeddings::cargarCache(bool forzarRecarga)
                     qint64 msecsEpoch;
                     stream >> total >> msecsEpoch;
 
-                    m_fechaMaxActualizacion = QDateTime::fromMSecsSinceEpoch(msecsEpoch);
-                    m_cacheMemoria.clear();
-                    m_cacheMemoria.reserve(total);
+                    // Sólo aceptar la caché en disco si contiene al menos un elemento
+                    if (total > 0) {
+                        m_fechaMaxActualizacion = QDateTime::fromMSecsSinceEpoch(msecsEpoch);
+                        m_cacheMemoria.clear();
+                        m_cacheMemoria.reserve(total);
 
-                    bool errorLectura = false;
-                    for (int i = 0; i < total; ++i) {
-                        ItemEmbedding item;
-                        stream >> item.cod >> item.tipo;
-                        quint16 dims;
-                        stream >> dims;
-                        if (dims > 0 && dims <= 4096) {
-                            item.vector.resize(dims);
-                            int bytes = dims * sizeof(float);
-                            if (stream.readRawData(reinterpret_cast<char*>(item.vector.data()), bytes) != bytes) {
+                        bool errorLectura = false;
+                        for (int i = 0; i < total; ++i) {
+                            ItemEmbedding item;
+                            stream >> item.cod >> item.tipo;
+                            quint16 dims;
+                            stream >> dims;
+                            if (dims > 0 && dims <= 4096) {
+                                item.vector.resize(dims);
+                                int bytes = dims * sizeof(float);
+                                if (stream.readRawData(reinterpret_cast<char*>(item.vector.data()), bytes) != bytes) {
+                                    errorLectura = true;
+                                    break;
+                                }
+                                m_cacheMemoria.append(item);
+                            } else {
                                 errorLectura = true;
                                 break;
                             }
-                            m_cacheMemoria.append(item);
-                        } else {
-                            errorLectura = true;
-                            break;
                         }
-                    }
 
-                    if (!errorLectura && m_cacheMemoria.size() == total) {
-                        file.close();
-                        emit cacheActualizada();
-                        return true;
+                        if (!errorLectura && m_cacheMemoria.size() == total) {
+                            file.close();
+                            emit cacheActualizada();
+                            return true;
+                        }
                     }
                 }
             }
@@ -267,27 +242,29 @@ bool IndexadorEmbeddings::cargarCache(bool forzarRecarga)
         }
     }
 
-    // 2. Si no hay archivo válido o se forzó recarga, leer desde la base de datos activa
+    // 2. Si no hay archivo válido con datos o se forzó recarga, leer desde la base de datos (priorizando local offline-first)
+    QString connLocal = conf ? conf->getConexionLocal() : "DB";
+    if (connLocal.isEmpty()) connLocal = "DB";
     QSqlDatabase db;
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    if (QSqlDatabase::contains(connLocal) && QSqlDatabase::database(connLocal).isOpen()) {
+        db = QSqlDatabase::database(connLocal);
+    } else if (QSqlDatabase::contains("DB") && QSqlDatabase::database("DB").isOpen()) {
+        db = QSqlDatabase::database("DB");
+    } else if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
         db = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
     } else {
-        QString connLocal = conf ? conf->getConexionLocal() : "DB";
-        if (connLocal.isEmpty()) connLocal = "DB";
-        if (QSqlDatabase::contains(connLocal) && QSqlDatabase::database(connLocal).isOpen()) {
-            db = QSqlDatabase::database(connLocal);
-        } else if (QSqlDatabase::contains("DB") && QSqlDatabase::database("DB").isOpen()) {
-            db = QSqlDatabase::database("DB");
-        } else {
-            db = QSqlDatabase::database();
-        }
+        db = QSqlDatabase::database();
     }
 
-    if (!db.isOpen()) return false;
+    if (!db.isOpen()) {
+        qWarning() << "IndexadorEmbeddings::cargarCache: No hay conexión a base de datos abierta para cargar embeddings.";
+        return false;
+    }
     asegurarTabla(db);
 
     QSqlQuery q(db);
     if (!q.exec("SELECT cod, tipo, embedding, updated_at FROM ia_embeddings")) {
+        qWarning() << "IndexadorEmbeddings::cargarCache: Error al consultar ia_embeddings:" << q.lastError().text();
         return false;
     }
 
@@ -315,12 +292,17 @@ bool IndexadorEmbeddings::cargarCache(bool forzarRecarga)
     }
 
     m_fechaMaxActualizacion = maxFecha;
+    int totalCargados = m_cacheMemoria.size();
     locker.unlock();
 
-    // Guardar la caché leída en disco para futuros inicios instantáneos
-    guardarCacheEnDisco();
+    if (totalCargados > 0) {
+        guardarCacheEnDisco();
+    } else {
+        qWarning() << "IndexadorEmbeddings::cargarCache: La tabla ia_embeddings está vacía. Es necesario regenerar el índice.";
+    }
+
     emit cacheActualizada();
-    return true;
+    return (totalCargados > 0);
 }
 
 /**
@@ -329,6 +311,11 @@ bool IndexadorEmbeddings::cargarCache(bool forzarRecarga)
 bool IndexadorEmbeddings::guardarCacheEnDisco()
 {
     QMutexLocker locker(&m_mutexCache);
+    if (m_cacheMemoria.isEmpty()) {
+        // No guardar un archivo de caché vacío para no enmascarar datos de la base de datos
+        return false;
+    }
+
     QString ruta = rutaFicheroCache();
     QString rutaTmp = ruta + ".tmp";
 
@@ -464,6 +451,9 @@ QVector<float> IndexadorEmbeddings::obtenerEmbedding(const QString &texto, bool 
     reply->deleteLater();
     if (!resultado.isEmpty()) {
         normalizarL2(resultado);
+    } else {
+        qWarning() << "IndexadorEmbeddings::obtenerEmbedding: Fallo al obtener vector embedding de Ollama:"
+                   << (timer.isActive() ? reply->errorString() : "Timeout agotado");
     }
     return resultado;
 }
@@ -485,8 +475,17 @@ QList<ResultadoSimilitud> IndexadorEmbeddings::buscarArticulosSimilares(const QS
         cargarCache();
     }
 
+    // Si el índice sigue vacío, no hacer petición innecesaria a Ollama ni búsqueda
+    if (totalEnCache() == 0) {
+        qWarning() << "IndexadorEmbeddings::buscarArticulosSimilares: Índice semántico en memoria vacío. Se omite búsqueda vectorial.";
+        return resultados;
+    }
+
     QVector<float> queryVec = obtenerEmbedding(query, true, 3000);
-    if (queryVec.isEmpty()) return resultados;
+    if (queryVec.isEmpty()) {
+        qWarning() << "IndexadorEmbeddings::buscarArticulosSimilares: No se pudo generar vector embedding para la consulta.";
+        return resultados;
+    }
 
     QMutexLocker locker(&m_mutexCache);
     for (const ItemEmbedding &item : m_cacheMemoria) {
@@ -525,8 +524,17 @@ QList<ResultadoSimilitud> IndexadorEmbeddings::buscarAreasSimilares(const QStrin
         cargarCache();
     }
 
+    // Si el índice sigue vacío, no hacer petición innecesaria a Ollama ni búsqueda
+    if (totalEnCache() == 0) {
+        qWarning() << "IndexadorEmbeddings::buscarAreasSimilares: Índice semántico en memoria vacío. Se omite búsqueda de áreas.";
+        return resultados;
+    }
+
     QVector<float> queryVec = obtenerEmbedding(query, true, 3000);
-    if (queryVec.isEmpty()) return resultados;
+    if (queryVec.isEmpty()) {
+        qWarning() << "IndexadorEmbeddings::buscarAreasSimilares: No se pudo generar vector embedding para la consulta.";
+        return resultados;
+    }
 
     QMutexLocker locker(&m_mutexCache);
     for (const ItemEmbedding &item : m_cacheMemoria) {
@@ -630,6 +638,8 @@ void WorkerIndexador::run()
                     QString k = qHash.value("cod").toString() + "_" + qHash.value("tipo").toString();
                     hashesExistentes.insert(k, qHash.value("texto_hash").toString());
                 }
+            } else {
+                qWarning() << "WorkerIndexador: Error al consultar hashes de ia_embeddings:" << qHash.lastError().text();
             }
         }
 
@@ -641,58 +651,87 @@ void WorkerIndexador::run()
             QString hash;
         };
         QList<TareaItem> itemsParaIndexar;
+        int totalArticulosLeidos = 0;
 
         {
             QSqlQuery qArt(dbWorker);
-            QString sqlArt = "SELECT cod, descrip, d_larga, principio_activo, composicion, contraindicaciones "
-                             "FROM articulos WHERE descrip IS NOT NULL AND TRIM(descrip) != ''";
-            if (qArt.exec(sqlArt)) {
-                while (qArt.next()) {
-                    QString cod = qArt.value("cod").toString().trimmed();
-                    if (cod.isEmpty()) continue;
+            QString sqlArt = "SELECT a.cod, a.descripcion, "
+                             "COALESCE(b.nombre, a.fabricante, '') AS fabricante_nom, "
+                             "COALESCE(c.descripcion, a.familia, '') AS familia_nom, "
+                             "a.formato, a.notas "
+                             "FROM articulos a "
+                             "LEFT JOIN fabricantes b ON a.fabricante = b.id "
+                             "LEFT JOIN familias c ON a.familia = c.id "
+                             "WHERE a.descripcion IS NOT NULL AND TRIM(a.descripcion) != ''";
 
-                    QString descrip = qArt.value("descrip").toString().trimmed();
-                    QString dLarga = qArt.value("d_larga").toString().trimmed();
-                    QString pa = qArt.value("principio_activo").toString().trimmed();
-                    QString comp = qArt.value("composicion").toString().trimmed();
-                    QString contra = qArt.value("contraindicaciones").toString().trimmed();
+            if (!qArt.exec(sqlArt)) {
+                qWarning() << "WorkerIndexador: Fallo en consulta avanzada de articulos:" << qArt.lastError().text()
+                           << ". Intentando consulta básica...";
+                sqlArt = "SELECT cod, descripcion, notas, formato FROM articulos WHERE descripcion IS NOT NULL AND TRIM(descripcion) != ''";
+                if (!qArt.exec(sqlArt)) {
+                    qCritical() << "WorkerIndexador: Error crítico al consultar articulos:" << qArt.lastError().text();
+                    dbWorker.close();
+                    emit finalizado(false, "Error al consultar la tabla articulos: " + qArt.lastError().text());
+                    return;
+                }
+            }
 
-                    QString textoCompleto = QString("Producto: %1. %2. Principio activo: %3. Composición: %4. Contraindicaciones: %5")
-                                                .arg(descrip, dLarga, pa, comp, contra);
-                    QString textoLimpio = IndexadorEmbeddings::limpiarTextoParaEmbedding(textoCompleto, 4000);
-                    if (textoLimpio.isEmpty()) continue;
+            while (qArt.next()) {
+                totalArticulosLeidos++;
+                QString cod = qArt.value("cod").toString().trimmed();
+                if (cod.isEmpty()) continue;
 
-                    QString hash = QString::fromLatin1(QCryptographicHash::hash(textoLimpio.toUtf8(), QCryptographicHash::Sha256).toHex());
-                    QString k = cod + "_articulo";
+                QString descrip = qArt.value("descripcion").toString().trimmed();
+                QString fabricante = qArt.value("fabricante_nom").toString().trimmed();
+                QString familia = qArt.value("familia_nom").toString().trimmed();
+                QString formato = qArt.value("formato").toString().trimmed();
+                QString notas = qArt.value("notas").toString().trimmed();
 
-                    if (!hashesExistentes.contains(k) || hashesExistentes.value(k) != hash) {
-                        TareaItem it;
-                        it.cod = cod;
-                        it.tipo = "articulo";
-                        it.textoIndexable = textoLimpio;
-                        it.hash = hash;
-                        itemsParaIndexar.append(it);
-                    }
+                QStringList partesTexto;
+                partesTexto << QString("Producto: %1").arg(descrip);
+                if (!fabricante.isEmpty()) partesTexto << QString("Marca: %1").arg(fabricante);
+                if (!familia.isEmpty()) partesTexto << QString("Familia: %1").arg(familia);
+                if (!formato.isEmpty()) partesTexto << QString("Formato: %1").arg(formato);
+                if (!notas.isEmpty()) partesTexto << QString("Información: %1").arg(notas);
+
+                QString textoCompleto = partesTexto.join(". ");
+                QString textoLimpio = IndexadorEmbeddings::limpiarTextoParaEmbedding(textoCompleto, 4000);
+                if (textoLimpio.isEmpty()) continue;
+
+                QString hash = QString::fromLatin1(QCryptographicHash::hash(textoLimpio.toUtf8(), QCryptographicHash::Sha256).toHex());
+                QString k = cod + "_articulo";
+
+                if (!hashesExistentes.contains(k) || hashesExistentes.value(k) != hash) {
+                    TareaItem it;
+                    it.cod = cod;
+                    it.tipo = "articulo";
+                    it.textoIndexable = textoLimpio;
+                    it.hash = hash;
+                    itemsParaIndexar.append(it);
                 }
             }
         }
 
         // 3. Extraer áreas de conocimiento
+        int totalAreasLeidas = 0;
         {
             QSqlQuery qArea(dbWorker);
-            QString sqlArea = "SELECT area_id, nombre_area, sintomas_asociados, contenido_md "
-                              "FROM ia_conocimiento WHERE activo = 1";
-            if (qArea.exec(sqlArea)) {
+            QString sqlArea = "SELECT id, categoria, detonantes, terminos_clave FROM ia_conocimiento WHERE activo = 1";
+            if (!qArea.exec(sqlArea)) {
+                qWarning() << "WorkerIndexador: Aviso al consultar ia_conocimiento:" << qArea.lastError().text();
+            } else {
                 while (qArea.next()) {
-                    QString cod = qArea.value("area_id").toString().trimmed();
-                    if (cod.isEmpty()) continue;
+                    totalAreasLeidas++;
+                    int areaId = qArea.value("id").toInt();
+                    if (areaId <= 0) continue;
 
-                    QString nombre = qArea.value("nombre_area").toString().trimmed();
-                    QString sint = qArea.value("sintomas_asociados").toString().trimmed();
-                    QString cont = qArea.value("contenido_md").toString().trimmed();
+                    QString cod = QString("AREA_%1").arg(areaId);
+                    QString categoria = qArea.value("categoria").toString().trimmed();
+                    QString detonantes = qArea.value("detonantes").toString().trimmed();
+                    QString terminos = qArea.value("terminos_clave").toString().trimmed();
 
-                    QString texto = QString("Área de salud: %1. Síntomas y motivos: %2. Protocolo y conocimiento: %3")
-                                        .arg(nombre, sint, cont);
+                    QString texto = QString("Área de salud: %1. Síntomas detonantes: %2. Términos clave: %3")
+                                        .arg(categoria, detonantes, terminos);
                     texto = IndexadorEmbeddings::limpiarTextoParaEmbedding(texto, 6000);
                     if (texto.isEmpty()) continue;
 
@@ -715,8 +754,14 @@ void WorkerIndexador::run()
         if (totalPendientes == 0) {
             dbWorker.close();
             finalizadoOk = true;
-            mensajeFinal = "Índice al día. No había productos ni áreas modificadas.";
-            emit progreso(100, 100, "El índice semántico ya está completamente actualizado.");
+            if (hashesExistentes.isEmpty() && totalArticulosLeidos == 0 && totalAreasLeidas == 0) {
+                mensajeFinal = "No se encontraron artículos ni áreas de conocimiento en la base de datos para indexar.";
+                emit progreso(0, 0, mensajeFinal);
+            } else {
+                mensajeFinal = QString("Índice al día. Todos los elementos (%1) ya estaban indexados y sin cambios.")
+                                   .arg(hashesExistentes.size());
+                emit progreso(100, 100, "El índice semántico ya está completamente actualizado.");
+            }
         } else {
             emit progreso(0, totalPendientes, QString("Indexando %1 elementos modificados o nuevos...").arg(totalPendientes));
 
@@ -777,10 +822,19 @@ void WorkerIndexador::run()
 
                 if (reply->error() != QNetworkReply::NoError) {
                     QString errStr = reply->errorString();
+                    QByteArray errBody = reply->readAll();
                     reply->deleteLater();
                     dbWorker.close();
                     finalizadoOk = false;
-                    mensajeFinal = QString("Error en Ollama al generar lote (%1): %2").arg(modelo, errStr);
+
+                    QJsonDocument docErr = QJsonDocument::fromJson(errBody);
+                    QString detalleOllama = docErr.object().value("error").toString();
+                    if (!detalleOllama.isEmpty()) {
+                        mensajeFinal = QString("Error en Ollama (%1): %2").arg(modelo, detalleOllama);
+                    } else {
+                        mensajeFinal = QString("Error en Ollama al generar lote (%1): %2").arg(modelo, errStr);
+                    }
+                    qWarning() << "WorkerIndexador:" << mensajeFinal;
                     break;
                 }
 
@@ -795,11 +849,13 @@ void WorkerIndexador::run()
                     finalizadoOk = false;
                     mensajeFinal = QString("Respuesta inesperada de Ollama: se enviaron %1 textos y se recibieron %2 vectores.")
                                       .arg(fin - i).arg(embeddingsArr.size());
+                    qWarning() << "WorkerIndexador:" << mensajeFinal;
                     break;
                 }
 
                 // Guardar el lote en base de datos usando transacción
                 dbWorker.transaction();
+                bool hayErrorUpsert = false;
                 for (int k = 0; k < embeddingsArr.size(); ++k) {
                     const TareaItem &tarea = itemsParaIndexar[i + k];
                     QJsonArray vArr = embeddingsArr[k].toArray();
@@ -839,11 +895,35 @@ void WorkerIndexador::run()
                     qUpsert.bindValue(":emb", blob);
                     qUpsert.bindValue(":dim", vec.size());
                     qUpsert.bindValue(":hash", tarea.hash);
-                    qUpsert.bindValue(":upd", QDateTime::currentDateTime());
+                    if (esSqlite) {
+                        qUpsert.bindValue(":upd", QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"));
+                    } else {
+                        qUpsert.bindValue(":upd", QDateTime::currentDateTime());
+                    }
 
-                    qUpsert.exec();
+                    if (!qUpsert.exec()) {
+                        qWarning() << "WorkerIndexador: Error al insertar embedding para" << tarea.cod << ":" << qUpsert.lastError().text();
+                        hayErrorUpsert = true;
+                        break;
+                    }
                 }
-                dbWorker.commit();
+
+                if (hayErrorUpsert) {
+                    dbWorker.rollback();
+                    dbWorker.close();
+                    finalizadoOk = false;
+                    mensajeFinal = "Error al guardar los embeddings en la base de datos.";
+                    break;
+                }
+
+                if (!dbWorker.commit()) {
+                    qCritical() << "WorkerIndexador: Error al confirmar commit de embeddings:" << dbWorker.lastError().text();
+                    dbWorker.rollback();
+                    dbWorker.close();
+                    finalizadoOk = false;
+                    mensajeFinal = "Error al confirmar la transacción de embeddings en la base de datos.";
+                    break;
+                }
 
                 procesados += (fin - i);
                 emit progreso(procesados, totalPendientes, QString("Indexados %1 de %2 elementos...").arg(procesados).arg(totalPendientes));
@@ -877,20 +957,18 @@ void IndexadorEmbeddings::iniciarReindexacionAsync()
 {
     if (estaIndexando()) return;
 
-    // Obtener la conexión abierta en el hilo principal
+    // Obtener la conexión abierta en el hilo principal (priorizando local offline-first)
+    QString connLocal = conf ? conf->getConexionLocal() : "DB";
+    if (connLocal.isEmpty()) connLocal = "DB";
     QSqlDatabase dbGui;
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    if (QSqlDatabase::contains(connLocal) && QSqlDatabase::database(connLocal).isOpen()) {
+        dbGui = QSqlDatabase::database(connLocal);
+    } else if (QSqlDatabase::contains("DB") && QSqlDatabase::database("DB").isOpen()) {
+        dbGui = QSqlDatabase::database("DB");
+    } else if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
         dbGui = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
     } else {
-        QString connLocal = conf ? conf->getConexionLocal() : "DB";
-        if (connLocal.isEmpty()) connLocal = "DB";
-        if (QSqlDatabase::contains(connLocal) && QSqlDatabase::database(connLocal).isOpen()) {
-            dbGui = QSqlDatabase::database(connLocal);
-        } else if (QSqlDatabase::contains("DB") && QSqlDatabase::database("DB").isOpen()) {
-            dbGui = QSqlDatabase::database("DB");
-        } else {
-            dbGui = QSqlDatabase::database();
-        }
+        dbGui = QSqlDatabase::database();
     }
 
     if (!dbGui.isOpen()) {

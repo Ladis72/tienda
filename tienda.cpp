@@ -582,6 +582,8 @@ void Tienda::permisos(int rol) {
   QMap<QString, QWidget *> mapa = {
       {"ventas", ui->ventasButton},
       {"articulos", ui->pushButtonArticulos},
+      {"articulos.catalogador_ia", ui->pushButtonCatalogadorIA},
+      {"articulos.fotos_masivo", ui->pushButtonFotosMasivo},
       {"familias", ui->pushButtonFamilias},
       {"fabricantes", ui->pushButtonFabricantes},
       {"clientes", ui->pushButtonClientes},
@@ -701,11 +703,23 @@ void Tienda::on_pushButtonArticulos_clicked() {
 }
 
 void Tienda::on_pushButtonCatalogadorIA_clicked() {
+  // Comprobación defensiva de permisos para catalogador masivo con IA
+  if (conf && conf->permisos() && !conf->permisos()->tiene("articulos.catalogador_ia")) {
+    QMessageBox::warning(this, tr("Permiso denegado"),
+                         tr("No tiene permiso para utilizar el catalogador IA masivo."));
+    return;
+  }
   DialogEnriquecimientoMasivo dlg(this);
   dlg.exec();
 }
 
 void Tienda::on_pushButtonFotosMasivo_clicked() {
+  // Comprobación defensiva de permisos para asignación masiva de fotos
+  if (conf && conf->permisos() && !conf->permisos()->tiene("articulos.fotos_masivo")) {
+    QMessageBox::warning(this, tr("Permiso denegado"),
+                         tr("No tiene permiso para utilizar la asignación masiva de fotos."));
+    return;
+  }
   DialogFotosMasivo dlg(this);
   dlg.exec();
 }

@@ -1,5 +1,6 @@
 #include "generarvales.h"
 #include "ui_generarvales.h"
+#include "syncmanager.h"
 
 #include <QMessageBox>
 #include <QHeaderView>
@@ -50,13 +51,11 @@ double GenerarVales::ventasTotalesCliente(int idCliente,
 {
     double total = 0.0;
 
-    for (const QString &conexion : tiendas) {
-        QSqlDatabase db = QSqlDatabase::database(conexion);
-        if (!db.isOpen()) continue;
-
-        // Construimos la consulta unificando tickets y ticketss si existe
-        QSqlQuery q(db);
-        if (db.tables().contains("ticketss")) {
+    // 1. Consultar ventas de la tienda local en la base de datos local
+    QSqlDatabase dbLocal = QSqlDatabase::database(conf->getConexionLocal());
+    if (dbLocal.isOpen()) {
+        QSqlQuery q(dbLocal);
+        if (dbLocal.tables().contains("ticketss")) {
             q.prepare("SELECT COALESCE(SUM(total),0) FROM ("
                       "  SELECT total FROM tickets  WHERE cliente=? AND fecha BETWEEN ? AND ? "
                       "  UNION ALL "
@@ -78,7 +77,57 @@ double GenerarVales::ventasTotalesCliente(int idCliente,
         if (q.exec() && q.first()) {
             total += q.value(0).toDouble();
         } else {
-            qWarning() << "Error consultando ventas en" << conexion << ":" << q.lastError().text();
+            qWarning() << "Error consultando ventas locales:" << q.lastError().text();
+        }
+    }
+
+    // 2. Consultar ventas de las demás tiendas: Nube si está disponible, o conexiones remotas como fallback
+    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        QSqlQuery qNube(dbNube);
+        qNube.prepare("SELECT COALESCE(SUM(total), 0) FROM tickets_nube "
+                      "WHERE cliente = :cliente AND fecha BETWEEN :desde AND :hasta AND id_tienda != :idLocal");
+        qNube.bindValue(":cliente", idCliente);
+        qNube.bindValue(":desde", desde);
+        qNube.bindValue(":hasta", hasta);
+        qNube.bindValue(":idLocal", idTiendaLocal);
+        if (qNube.exec() && qNube.first()) {
+            total += qNube.value(0).toDouble();
+        }
+    } else {
+        // Fallback: Iterar por las tiendas remotas directas
+        for (const QString &conexion : tiendas) {
+            if (conexion == conf->getConexionLocal()) continue;
+            QSqlDatabase db = QSqlDatabase::database(conexion);
+            if (!db.isOpen()) continue;
+
+            QSqlQuery q(db);
+            if (db.tables().contains("ticketss")) {
+                q.prepare("SELECT COALESCE(SUM(total),0) FROM ("
+                          "  SELECT total FROM tickets  WHERE cliente=? AND fecha BETWEEN ? AND ? "
+                          "  UNION ALL "
+                          "  SELECT total FROM ticketss WHERE cliente=? AND fecha BETWEEN ? AND ?"
+                          ") AS todas");
+                q.bindValue(0, idCliente);
+                q.bindValue(1, desde);
+                q.bindValue(2, hasta);
+                q.bindValue(3, idCliente);
+                q.bindValue(4, desde);
+                q.bindValue(5, hasta);
+            } else {
+                q.prepare("SELECT COALESCE(SUM(total),0) FROM tickets "
+                          "WHERE cliente=? AND fecha BETWEEN ? AND ?");
+                q.bindValue(0, idCliente);
+                q.bindValue(1, desde);
+                q.bindValue(2, hasta);
+            }
+            if (q.exec() && q.first()) {
+                total += q.value(0).toDouble();
+            } else {
+                qWarning() << "Error consultando ventas en" << conexion << ":" << q.lastError().text();
+            }
         }
     }
     return total;
@@ -103,11 +152,11 @@ void GenerarVales::on_pushButtonGenerar_clicked()
         return;
     }
 
-    // ── 0b. Verificar que TODAS las tiendas están conectadas ───────────────
-    // Los vales son UNIFICADOS: si alguna tienda remota no está conectada,
-    // los totales serían incorrectos (incompletos). Se bloquea la generación
-    // hasta que todas estén disponibles.
-    {
+    // ── 0b. Verificar disponibilidad de cálculo (Nube o todas las tiendas conectadas) ──
+    bool nubeDisponible = (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+                           QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen());
+
+    if (!nubeDisponible) {
         // Tiendas remotas configuradas en la BD (local = 0)
         const QStringList todasRemotas  = conf->getNombreConexiones();
         // Tiendas remotas con conexión activa en este instante
@@ -122,27 +171,27 @@ void GenerarVales::on_pushButtonGenerar_clicked()
         }
 
         if (!offline.isEmpty()) {
-            // Hay tiendas sin conexión → no se puede garantizar un cálculo completo
+            // Hay tiendas sin conexión y la Nube no está disponible → no se puede garantizar un cálculo completo
             QMessageBox::critical(
                 this,
                 tr("Tiendas no conectadas"),
                 tr("No se pueden generar los vales porque las siguientes tiendas "
-                   "no están conectadas:\n\n  • %1\n\n"
-                   "Conéctelas pulsando el botón «Conectar» e inténtelo de nuevo.")
+                   "no están conectadas y la Nube no está disponible:\n\n  • %1\n\n"
+                   "Conéctelas pulsando el botón «Conectar» o compruebe la conexión a la Nube.")
                     .arg(offline.join("\n  • ")));
             ui->progressBar->setValue(0);
             ui->label->setText(tr("Generación cancelada: hay tiendas offline."));
             return;
         }
 
-        // Todas las remotas están activas.
-        // La lista de cálculo = conexión local + todas las remotas activas.
-        // IMPORTANTE: getNombreConexiones() solo devuelve remotas (local=0),
-        // por eso añadimos explícitamente la BD local.
         tiendas.clear();
         tiendas << conf->getConexionLocal(); // BD local (tickets propios)
         tiendas << activas;                  // BDs remotas (tickets de las demás)
         qDebug() << "GenerarVales: Tiendas para el cálculo:" << tiendas;
+    } else {
+        tiendas.clear();
+        tiendas << conf->getConexionLocal();
+        qDebug() << "GenerarVales: Nube activa. Se utilizará cálculo consolidado rápido desde la Nube.";
     }
 
     // Rango del mes seleccionado

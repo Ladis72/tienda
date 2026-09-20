@@ -2,6 +2,7 @@
 #include "ui_dialogconocimientoia.h"
 #include "indexadorembeddings.h"
 #include "configuracion.h"
+#include "base_datos.h"
 #include "syncmanager.h"
 #include <QCheckBox>
 #include <QDialogButtonBox>
@@ -91,6 +92,11 @@ DialogConocimientoIA::DialogConocimientoIA(QWidget *parent)
     connect(idx, &IndexadorEmbeddings::indexacionFinalizada, this, &DialogConocimientoIA::onIndexacionFinalizada);
     connect(idx, &IndexadorEmbeddings::cacheActualizada, this, &DialogConocimientoIA::actualizarEstadoIndiceUI);
 
+    // Cargar la caché en memoria desde disco o BD si todavía no ha sido inicializada
+    if (idx->totalEnCache() == 0) {
+        idx->cargarCache();
+    }
+
     actualizarEstadoIndiceUI();
 }
 
@@ -107,9 +113,6 @@ DialogConocimientoIA::~DialogConocimientoIA()
  */
 static QSqlDatabase obtenerBdConocimiento()
 {
-    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-        return QSqlDatabase::database(SyncManager::CONEXION_NUBE);
-    }
     QString connLocal = conf ? conf->getConexionLocal() : "DB";
     if (connLocal.isEmpty()) connLocal = "DB";
     if (QSqlDatabase::contains(connLocal)) {
@@ -126,32 +129,9 @@ void DialogConocimientoIA::asegurarTablaBaseDatos()
     QSqlDatabase db = obtenerBdConocimiento();
     if (!db.isOpen()) return;
 
+    baseDatos::crearTablasIA(db);
+
     QSqlQuery q(db);
-    QString createSql =
-        "CREATE TABLE IF NOT EXISTS `ia_conocimiento` ("
-        "  `id` INT AUTO_INCREMENT PRIMARY KEY,"
-        "  `categoria` VARCHAR(120) NOT NULL,"
-        "  `detonantes` TEXT NOT NULL,"
-        "  `terminos_clave` TEXT NOT NULL,"
-        "  `activo` TINYINT DEFAULT 1,"
-        "  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
-
-    // En SQLite (si no es MySQL):
-    if (db.driverName().contains("SQLITE", Qt::CaseInsensitive)) {
-        createSql =
-            "CREATE TABLE IF NOT EXISTS ia_conocimiento ("
-            "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
-            "  categoria TEXT NOT NULL,"
-            "  detonantes TEXT NOT NULL,"
-            "  terminos_clave TEXT NOT NULL,"
-            "  activo INTEGER DEFAULT 1,"
-            "  updated_at TEXT"
-            ");";
-    }
-
-    q.exec(createSql);
-
     // Comprobar si tiene registros
     q.exec("SELECT COUNT(*) FROM ia_conocimiento");
     if (q.next() && q.value(0).toInt() == 0) {
