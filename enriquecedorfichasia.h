@@ -44,7 +44,7 @@ struct ResultadoFicha {
 
 /**
  * @brief Motor nativo C++/Qt para enriquecimiento automático y verificación
- * de fichas de producto herbolario/dietética mediante Open Facts, Serper API,
+ * de fichas de producto herbolario/dietética mediante Open Facts, Google Serper API,
  * web scraping limpio e inferencia local con Ollama.
  */
 class EnriquecedorFichasIA : public QObject
@@ -66,10 +66,10 @@ public:
     /// @brief Cancela cualquier petición en curso
     void cancelar();
 
-    /// @brief Obtiene la clave de Serper guardada en tienda.ini
+    /// @brief Obtiene la clave de Serper API guardada en tienda.ini o variables de entorno
     static QString obtenerClaveSerper();
 
-    /// @brief Guarda la clave de Serper en tienda.ini
+    /// @brief Guarda la clave de Serper API en tienda.ini
     static void guardarClaveSerper(const QString &apiKey);
 
 signals:
