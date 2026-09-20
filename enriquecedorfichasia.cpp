@@ -249,7 +249,7 @@ void EnriquecedorFichasIA::onOpenFactsTerminado()
 }
 
 /**
- * @brief Paso 2: Búsqueda en Google vía Serper API focalizada en web oficial y presentación.
+ * @brief Paso 2: Búsqueda en Google vía Serper API optimizada (1 sola consulta por producto para ahorrar créditos).
  */
 void EnriquecedorFichasIA::paso2_consultarSerper()
 {
@@ -272,94 +272,85 @@ void EnriquecedorFichasIA::paso2_consultarSerper()
         fmts = extraerTokensFormato(m_formato);
     }
 
-    // Generar consultas especializadas
-    QStringList queries;
-    if (!slugFab.isEmpty() && slugFab != "0" && slugFab != "fabricantedesconocido") {
-        queries << QString("%1 %2 composición por dosis").arg(base, m_fabricante);
-        queries << QString("%1 %2 ficha producto").arg(base, m_fabricante);
-        queries << QString("%1 site:%2.es composición").arg(base, slugFab);
-        queries << QString("%1 site:%2.com").arg(base, slugFab);
+    // Generar consulta unificada optimizada (1 sola búsqueda por producto = 1 crédito consumido)
+    QString consulta = base;
+    if (!m_fabricante.isEmpty() && m_fabricante != "0" && m_fabricante.toLower() != "fabricante desconocido") {
+        consulta = QString("%1 %2").arg(m_fabricante, base);
     }
     if (!fmts.isEmpty()) {
-        queries << QString("%1 %2 composición mg").arg(base, fmts.first());
+        consulta += QString(" %1").arg(fmts.first());
     }
-    queries << QString("%1 composición ingredientes cantidades").arg(base);
-    queries << QString("%1 modo de empleo dosis").arg(base);
-    queries << QString("%1 información nutricional").arg(base);
+    consulta += " composición ingredientes dosis";
+    consulta = consulta.simplified();
 
-    // Evitar demasiadas consultas si ya hay suficientes fuentes
-    if (queries.size() > 5) {
-        queries = queries.mid(0, 5);
-    }
+    m_serperPendientes = 1;
 
-    m_serperPendientes = queries.size();
+    QUrl url("https://google.serper.dev/search");
+    QNetworkRequest req(url);
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    req.setRawHeader("X-API-KEY", m_apiKeySerper.toUtf8());
+    req.setTransferTimeout(20000);
 
-    for (const QString &q : queries) {
-        QUrl url("https://google.serper.dev/search");
-        QNetworkRequest req(url);
-        req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-        req.setRawHeader("X-API-KEY", m_apiKeySerper.toUtf8());
-        req.setTransferTimeout(20000);
+    QJsonObject body;
+    body["q"] = consulta;
+    body["gl"] = "es";
+    body["hl"] = "es";
+    body["num"] = 6;
 
-        QJsonObject body;
-        body["q"] = q;
-        body["gl"] = "es";
-        body["hl"] = "es";
-        body["num"] = 6;
+    QByteArray jsonData = QJsonDocument(body).toJson();
+    QNetworkReply *reply = m_netManager->post(req, jsonData);
 
-        QByteArray jsonData = QJsonDocument(body).toJson();
-        QNetworkReply *reply = m_netManager->post(req, jsonData);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, slugFab]() {
+        reply->deleteLater();
+        m_serperPendientes--;
 
-        connect(reply, &QNetworkReply::finished, this, [this, reply, slugFab]() {
-            reply->deleteLater();
-            m_serperPendientes--;
+        if (reply->error() == QNetworkReply::NoError) {
+            QByteArray data = reply->readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (doc.isObject()) {
+                QJsonArray organic = doc.object().value("organic").toArray();
+                for (const QJsonValue &val : organic) {
+                    QJsonObject item = val.toObject();
+                    QString link = item.value("link").toString().trimmed();
+                    QString title = item.value("title").toString().trimmed();
+                    QString snippet = item.value("snippet").toString().trimmed();
 
-            if (reply->error() == QNetworkReply::NoError) {
-                QByteArray data = reply->readAll();
-                QJsonDocument doc = QJsonDocument::fromJson(data);
-                if (doc.isObject()) {
-                    QJsonArray organic = doc.object().value("organic").toArray();
-                    for (const QJsonValue &val : organic) {
-                        QJsonObject item = val.toObject();
-                        QString link = item.value("link").toString().trimmed();
-                        QString title = item.value("title").toString().trimmed();
-                        QString snippet = item.value("snippet").toString().trimmed();
+                    if (link.isEmpty() || title.isEmpty()) continue;
 
-                        if (link.isEmpty() || title.isEmpty()) continue;
-
-                        // Evitar URLs duplicadas
-                        bool yaExiste = false;
-                        for (const FuenteWeb &f : m_fuentes) {
-                            if (f.url.compare(link, Qt::CaseInsensitive) == 0) {
-                                yaExiste = true;
-                                break;
-                            }
+                    // Evitar URLs duplicadas
+                    bool yaExiste = false;
+                    for (const FuenteWeb &f : m_fuentes) {
+                        if (f.url.compare(link, Qt::CaseInsensitive) == 0) {
+                            yaExiste = true;
+                            break;
                         }
-                        if (yaExiste) continue;
-
-                        QUrl urlObj(link);
-                        QString host = urlObj.host().toLower();
-                        bool oficial = (!slugFab.isEmpty() && host.contains(slugFab));
-
-                        FuenteWeb f;
-                        f.url = link;
-                        f.titulo = title;
-                        f.snippet = snippet;
-                        f.tipo = oficial ? "oficial" : "web";
-                        f.oficial = oficial;
-                        f.puntuacionKeywords = puntuacionKeywords(snippet);
-                        m_fuentes.append(f);
                     }
-                }
-            } else {
-                qDebug() << "[EnriquecedorFichasIA] Error Serper:" << reply->errorString();
-            }
+                    if (yaExiste) continue;
 
-            if (m_serperPendientes <= 0) {
-                onSerperTerminado();
+                    QUrl urlObj(link);
+                    QString host = urlObj.host().toLower();
+                    bool oficial = (!slugFab.isEmpty() && host.contains(slugFab));
+
+                    FuenteWeb f;
+                    f.url = link;
+                    f.titulo = title;
+                    f.snippet = snippet;
+                    // f.texto se deja vacío para que paso3_descargarPaginasWeb descargue y limpie el HTML completo
+                    f.texto = "";
+                    f.tipo = oficial ? "oficial" : "web";
+                    f.oficial = oficial;
+                    f.puntuacionKeywords = puntuacionKeywords(snippet);
+                    m_fuentes.append(f);
+                }
             }
-        });
-    }
+        } else {
+            qDebug() << "[EnriquecedorFichasIA] Error Serper:" << reply->errorString();
+        }
+
+        if (m_serperPendientes <= 0) {
+            onSerperTerminado();
+        }
+    });
 }
 
 void EnriquecedorFichasIA::onSerperTerminado()

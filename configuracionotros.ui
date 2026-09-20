@@ -314,7 +314,7 @@
        <item>
         <widget class="QGroupBox" name="groupBoxSerper">
          <property name="title">
-          <string>Búsqueda Web de Fichas (Serper Google API)</string>
+          <string>Búsqueda Web de Fichas (Google Serper API - Optimizado 1 crédito/producto)</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayoutSerper">
           <item>
@@ -329,7 +329,7 @@
             <item>
              <widget class="QLineEdit" name="lineEditSerperKey">
               <property name="placeholderText">
-               <string>Clave API de serper.dev para verificación de fichas...</string>
+               <string>Clave API de serper.dev (2.500 búsquedas gratuitas)...</string>
               </property>
               <property name="echoMode">
                <enum>QLineEdit::EchoMode::PasswordEchoOnEdit</enum>
@@ -344,7 +344,7 @@
              <string notr="true">color: #666666; font-size: 11px;</string>
             </property>
             <property name="text">
-             <string>Permite buscar las fichas técnicas oficiales y composición de productos en Google para evitar alucinaciones en la IA.</string>
+             <string>Busca directamente en todo Google España fichas técnicas oficiales, ingredientes y modo de empleo (1 crédito por producto). Se obtienen 2.500 créditos gratis al registrarse en serper.dev.</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>
