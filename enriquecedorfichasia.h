@@ -72,6 +72,12 @@ public:
     /// @brief Guarda la clave de Serper API en tienda.ini
     static void guardarClaveSerper(const QString &apiKey);
 
+    /// @brief Obtiene la clave de Tavily API guardada en tienda.ini o variables de entorno
+    static QString obtenerClaveTavily();
+
+    /// @brief Guarda la clave de Tavily API en tienda.ini
+    static void guardarClaveTavily(const QString &apiKey);
+
 signals:
     /// @brief Notifica el avance en los pasos del pipeline
     void progreso(int pasoActual, int totalPasos, const QString &mensaje);
@@ -100,6 +106,7 @@ private:
     QString m_baseUrlOllama;
     QString m_modeloOllama;
     QString m_apiKeySerper;
+    QString m_apiKeyTavily;
 
     // Estado del pipeline
     bool m_cancelado;
@@ -112,6 +119,7 @@ private:
     // Métodos auxiliares
     void paso1_consultarOpenFacts();
     void paso2_consultarSerper();
+    void consultarTavily(const QString &consulta, const QString &slugFab);
     void paso3_descargarPaginasWeb();
     void paso4_extraerConOllama();
     void paso5_validarYFinalizar(const QJsonObject &jsonExtraccion);
