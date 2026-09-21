@@ -83,8 +83,9 @@ ConfiguracionOtros::ConfiguracionOtros(QWidget *parent)
         ui->comboBoxModeloOllama->setCurrentText(modeloGuardado);
     }
 
-    // Cargar clave Serper API para búsqueda web de fichas
+    // Cargar clave Serper API y Tavily API para búsqueda web de fichas
     ui->lineEditSerperKey->setText(EnriquecedorFichasIA::obtenerClaveSerper());
+    ui->lineEditTavilyKey->setText(EnriquecedorFichasIA::obtenerClaveTavily());
 
     // Consultar automáticamente los modelos disponibles de Ollama en segundo plano
     QTimer::singleShot(50, this, &ConfiguracionOtros::on_pushButtonProbarOllama_clicked);
@@ -134,8 +135,9 @@ void ConfiguracionOtros::on_pushButtonAceptar_clicked()
         settings.setValue("url", urlOllama);
         settings.endGroup();
 
-        // Guardar clave Serper API
+        // Guardar clave Serper API y Tavily API
         EnriquecedorFichasIA::guardarClaveSerper(ui->lineEditSerperKey->text().trimmed());
+        EnriquecedorFichasIA::guardarClaveTavily(ui->lineEditTavilyKey->text().trimmed());
 
         QString modeloAnterior = AsistenteIA::obtenerModeloCentralizado();
         QString nuevoModelo = ui->comboBoxModeloOllama->currentText().trimmed();

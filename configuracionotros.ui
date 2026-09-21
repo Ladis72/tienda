@@ -314,7 +314,7 @@
        <item>
         <widget class="QGroupBox" name="groupBoxSerper">
          <property name="title">
-          <string>Búsqueda Web de Fichas (Google Serper API - Optimizado 1 crédito/producto)</string>
+          <string>Búsqueda Web de Fichas (Google Serper / Tavily API)</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayoutSerper">
           <item>
@@ -339,12 +339,33 @@
            </layout>
           </item>
           <item>
+           <layout class="QHBoxLayout" name="horizontalLayoutTavilyKey">
+            <item>
+             <widget class="QLabel" name="labelTavilyKey">
+              <property name="text">
+               <string>API Key Tavily:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditTavilyKey">
+              <property name="placeholderText">
+               <string>Clave API de tavily.com (tvly-..., alternativa / fallback para IA)...</string>
+              </property>
+              <property name="echoMode">
+               <enum>QLineEdit::EchoMode::PasswordEchoOnEdit</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
            <widget class="QLabel" name="labelSerperAyuda">
             <property name="styleSheet">
              <string notr="true">color: #666666; font-size: 11px;</string>
             </property>
             <property name="text">
-             <string>Busca directamente en todo Google España fichas técnicas oficiales, ingredientes y modo de empleo (1 crédito por producto). Se obtienen 2.500 créditos gratis al registrarse en serper.dev.</string>
+             <string>Busca fichas técnicas oficiales, composición y modo de empleo. Soporta Google Serper y Tavily Search (con fallback automático).</string>
             </property>
             <property name="wordWrap">
              <bool>true</bool>

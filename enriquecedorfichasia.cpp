@@ -52,8 +52,9 @@ EnriquecedorFichasIA::EnriquecedorFichasIA(QObject *parent)
     // Obtener modelo de Ollama centralizado (vía AsistenteIA)
     m_modeloOllama = AsistenteIA::obtenerModeloCentralizado();
 
-    // Cargar clave de Serper API
+    // Cargar clave de Serper API y Tavily API
     m_apiKeySerper = obtenerClaveSerper();
+    m_apiKeyTavily = obtenerClaveTavily();
 }
 
 EnriquecedorFichasIA::~EnriquecedorFichasIA()
@@ -103,6 +104,47 @@ void EnriquecedorFichasIA::guardarClaveSerper(const QString &apiKey)
 }
 
 /**
+ * @brief Obtiene la clave de Tavily API guardada en tienda.ini o variables de entorno.
+ */
+QString EnriquecedorFichasIA::obtenerClaveTavily()
+{
+    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QSettings settings(iniPath, QSettings::IniFormat);
+
+    // Intentar primero en sección [Tavily]
+    settings.beginGroup("Tavily");
+    QString key = settings.value("apiKey", "").toString().trimmed();
+    settings.endGroup();
+
+    // Si no está, buscar en [IA]
+    if (key.isEmpty()) {
+        settings.beginGroup("IA");
+        key = settings.value("tavilyKey", "").toString().trimmed();
+        settings.endGroup();
+    }
+
+    // Fallback a variable de entorno TAVILY_KEY
+    if (key.isEmpty()) {
+        key = qEnvironmentVariable("TAVILY_KEY").trimmed();
+    }
+
+    return key;
+}
+
+/**
+ * @brief Guarda la clave de Tavily API en tienda.ini.
+ */
+void EnriquecedorFichasIA::guardarClaveTavily(const QString &apiKey)
+{
+    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QSettings settings(iniPath, QSettings::IniFormat);
+    settings.beginGroup("Tavily");
+    settings.setValue("apiKey", apiKey.trimmed());
+    settings.endGroup();
+    settings.sync();
+}
+
+/**
  * @brief Cancela cualquier operación de red en curso.
  */
 void EnriquecedorFichasIA::cancelar()
@@ -133,6 +175,7 @@ void EnriquecedorFichasIA::procesarArticulo(const QString &ean,
     // Actualizar configuración en tiempo de ejecución
     m_modeloOllama = AsistenteIA::obtenerModeloCentralizado();
     m_apiKeySerper = obtenerClaveSerper();
+    m_apiKeyTavily = obtenerClaveTavily();
 
     emit progreso(1, 5, tr("Consultando bases de datos de productos (Open Facts por EAN)..."));
     paso1_consultarOpenFacts();
@@ -249,19 +292,11 @@ void EnriquecedorFichasIA::onOpenFactsTerminado()
 }
 
 /**
- * @brief Paso 2: Búsqueda en Google vía Serper API optimizada (1 sola consulta por producto para ahorrar créditos).
+ * @brief Paso 2: Búsqueda en Google vía Serper API o Tavily API optimizada.
  */
 void EnriquecedorFichasIA::paso2_consultarSerper()
 {
     if (m_cancelado) return;
-
-    if (m_apiKeySerper.isEmpty()) {
-        qDebug() << "[EnriquecedorFichasIA] Sin SERPER_KEY, saltando búsqueda web.";
-        paso3_descargarPaginasWeb();
-        return;
-    }
-
-    emit progreso(2, 5, tr("Buscando fichas oficiales y composición en internet (Google Serper)..."));
 
     QString base = limpiarTextoDesc(m_descripcion);
     if (base.isEmpty()) base = m_descripcion;
@@ -272,10 +307,13 @@ void EnriquecedorFichasIA::paso2_consultarSerper()
         fmts = extraerTokensFormato(m_formato);
     }
 
-    // Generar consulta unificada optimizada (1 sola búsqueda por producto = 1 crédito consumido)
+    // Generar consulta unificada optimizada
     QString consulta = base;
+    // Si la descripción no contiene ya el nombre del fabricante, anteponerlo
     if (!m_fabricante.isEmpty() && m_fabricante != "0" && m_fabricante.toLower() != "fabricante desconocido") {
-        consulta = QString("%1 %2").arg(m_fabricante, base);
+        if (!m_descripcion.contains(m_fabricante, Qt::CaseInsensitive)) {
+            consulta = QString("%1 %2").arg(m_fabricante, base);
+        }
     }
     if (!fmts.isEmpty()) {
         consulta += QString(" %1").arg(fmts.first());
@@ -283,13 +321,27 @@ void EnriquecedorFichasIA::paso2_consultarSerper()
     consulta += " composición ingredientes dosis";
     consulta = consulta.simplified();
 
+    // Si Serper no tiene clave válida o contiene espacios, usar Tavily si está disponible
+    if (m_apiKeySerper.isEmpty() || m_apiKeySerper.contains(' ')) {
+        if (!m_apiKeyTavily.isEmpty()) {
+            qDebug() << "[EnriquecedorFichasIA] Usando Tavily API para búsqueda web.";
+            consultarTavily(consulta, slugFab);
+            return;
+        }
+        qDebug() << "[EnriquecedorFichasIA] Sin SERPER_KEY ni TAVILY_KEY, saltando búsqueda web.";
+        paso3_descargarPaginasWeb();
+        return;
+    }
+
+    emit progreso(2, 5, tr("Buscando fichas oficiales y composición en internet (Google Serper)..."));
+
     m_serperPendientes = 1;
 
     QUrl url("https://google.serper.dev/search");
     QNetworkRequest req(url);
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     req.setRawHeader("X-API-KEY", m_apiKeySerper.toUtf8());
-    req.setTransferTimeout(20000);
+    req.setTransferTimeout(15000);
 
     QJsonObject body;
     body["q"] = consulta;
@@ -300,10 +352,11 @@ void EnriquecedorFichasIA::paso2_consultarSerper()
     QByteArray jsonData = QJsonDocument(body).toJson();
     QNetworkReply *reply = m_netManager->post(req, jsonData);
 
-    connect(reply, &QNetworkReply::finished, this, [this, reply, slugFab]() {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, slugFab, consulta]() {
         reply->deleteLater();
         m_serperPendientes--;
 
+        bool exitoSerper = false;
         if (reply->error() == QNetworkReply::NoError) {
             QByteArray data = reply->readAll();
             QJsonDocument doc = QJsonDocument::fromJson(data);
@@ -341,15 +394,100 @@ void EnriquecedorFichasIA::paso2_consultarSerper()
                     f.oficial = oficial;
                     f.puntuacionKeywords = puntuacionKeywords(snippet);
                     m_fuentes.append(f);
+                    exitoSerper = true;
                 }
             }
         } else {
             qDebug() << "[EnriquecedorFichasIA] Error Serper:" << reply->errorString();
         }
 
+        // Si Serper falló (403, timeout, etc.) o no devolvió resultados, y tenemos Tavily, hacer fallback automático
+        if (!exitoSerper && !m_apiKeyTavily.isEmpty()) {
+            qDebug() << "[EnriquecedorFichasIA] Fallback automático a Tavily API tras fallo o sin resultados en Serper.";
+            consultarTavily(consulta, slugFab);
+            return;
+        }
+
         if (m_serperPendientes <= 0) {
             onSerperTerminado();
         }
+    });
+}
+
+/**
+ * @brief Consulta la API de Tavily Search para obtener fuentes y contenidos estructurados.
+ */
+void EnriquecedorFichasIA::consultarTavily(const QString &consulta, const QString &slugFab)
+{
+    if (m_cancelado) return;
+
+    if (m_apiKeyTavily.isEmpty()) {
+        onSerperTerminado();
+        return;
+    }
+
+    emit progreso(2, 5, tr("Buscando fichas oficiales y composición en internet (Tavily)..."));
+
+    QUrl url("https://api.tavily.com/search");
+    QNetworkRequest req(url);
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    req.setTransferTimeout(15000);
+
+    QJsonObject body;
+    body["api_key"] = m_apiKeyTavily;
+    body["query"] = consulta;
+    body["search_depth"] = "basic";
+    body["max_results"] = 6;
+
+    QByteArray jsonData = QJsonDocument(body).toJson();
+    QNetworkReply *reply = m_netManager->post(req, jsonData);
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply, slugFab]() {
+        reply->deleteLater();
+
+        if (reply->error() == QNetworkReply::NoError) {
+            QByteArray data = reply->readAll();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (doc.isObject()) {
+                QJsonArray results = doc.object().value("results").toArray();
+                for (const QJsonValue &val : results) {
+                    QJsonObject item = val.toObject();
+                    QString link = item.value("url").toString().trimmed();
+                    QString title = item.value("title").toString().trimmed();
+                    QString snippet = item.value("content").toString().trimmed();
+
+                    if (link.isEmpty() || title.isEmpty()) continue;
+
+                    // Evitar duplicados
+                    bool yaExiste = false;
+                    for (const FuenteWeb &f : m_fuentes) {
+                        if (f.url.compare(link, Qt::CaseInsensitive) == 0) {
+                            yaExiste = true;
+                            break;
+                        }
+                    }
+                    if (yaExiste) continue;
+
+                    QUrl urlObj(link);
+                    QString host = urlObj.host().toLower();
+                    bool oficial = (!slugFab.isEmpty() && host.contains(slugFab));
+
+                    FuenteWeb f;
+                    f.url = link;
+                    f.titulo = title;
+                    f.snippet = snippet;
+                    f.texto = "";
+                    f.tipo = oficial ? "oficial" : "web";
+                    f.oficial = oficial;
+                    f.puntuacionKeywords = puntuacionKeywords(snippet);
+                    m_fuentes.append(f);
+                }
+            }
+        } else {
+            qDebug() << "[EnriquecedorFichasIA] Error Tavily:" << reply->errorString();
+        }
+
+        onSerperTerminado();
     });
 }
 
@@ -510,6 +648,9 @@ void EnriquecedorFichasIA::paso4_extraerConOllama()
         "DEBES extraer la información ÚNICAMENTE de ese texto. Reglas estrictas:\n"
         "- NUNCA inventes, infieras ni completes datos que no aparezcan literalmente en el texto.\n"
         "- Si un campo no aparece en el texto, devuelve null (no lo rellenes con tu conocimiento).\n"
+        "- INDICACIÓN:\n"
+        "  * Describe con claridad qué es el producto, sus propiedades, beneficios y para qué dolencias, síntomas o funciones del organismo se recomienda según el texto descargado.\n"
+        "  * Redáctalo de forma explicativa y completa pero concisa (un párrafo fluido de unas 4 a 6 frases, un poco más extenso sin divagar innecesariamente).\n"
         "- COMPOSICIÓN Y CANTIDADES (OBLIGATORIO Y PRIORITARIO):\n"
         "  * Incluye SIEMPRE las CANTIDADES, miligramos (mg), gramos (g), microgramos (mcg/µg), porcentajes (%) o unidades por dosis de cada ingrediente siempre que aparezcan en el texto descargado.\n"
         "  * Si el texto indica las cantidades por toma o dosis (ej: 'Por 2 cápsulas:', 'Por 1 vial:', 'Por 100g:', 'Por dosis diaria recomendada:'), INCLUYE SIEMPRE dicho encabezado con el desglose exacto de cantidades de cada principio activo.\n"
@@ -528,7 +669,7 @@ void EnriquecedorFichasIA::paso4_extraerConOllama()
         "{\n"
         "  \"producto_detectado\": \"nombre del producto tal como aparece en el texto, o null\",\n"
         "  \"coincide\": true,\n"
-        "  \"indicacion\": \"qué es, propiedades y para qué sirve según el texto (máx 2-3 frases), o null\",\n"
+        "  \"indicacion\": \"qué es, propiedades, beneficios principales y aplicaciones según el texto (párrafo informativo y fluido de unas 4-6 frases, algo más extenso), o null\",\n"
         "  \"composicion\": \"LISTA DE INGREDIENTES CON UN INGREDIENTE POR LÍNEA y sus cantidades exactas si constan (sin poner 'null' si falta cantidad), o null\",\n"
         "  \"posologia\": \"cómo se toma/usa, dosis diaria recomendada y pauta de administración, o null\",\n"
         "  \"contraindicaciones\": \"contraindicaciones, advertencias especiales, embarazo/lactancia o alérgenos si los tuviese, o null\"\n"
@@ -540,9 +681,10 @@ void EnriquecedorFichasIA::paso4_extraerConOllama()
         "Texto de las fuentes descargadas:\n\n%4\n\n"
         "Extrae los campos. REQUISITOS CLAVE:\n"
         "1) Usa SOLO el texto de las fuentes descargadas.\n"
-        "2) composicion DEBE incluir obligatoriamente las CANTIDADES numéricas (mg, g, %, mcg) cuando estén disponibles y formatearse con UN INGREDIENTE POR LÍNEA. Si de un ingrediente no se indica cantidad en el texto, pon solo su nombre (ej: '- Extracto de gayuba') y NUNCA escribas la palabra 'null'.\n"
-        "3) COMPRUEBA EL FORMATO: si la fuente describe otra presentación distinta (ej. perlas en vez de aceite líquido o número de unidades diferente), pon coincide=false.\n"
-        "4) Si trata de otro producto, indícalo en producto_detectado y coincide=false.\n%5")
+        "2) indicacion: Explica con claridad qué es el producto, sus propiedades y sus aplicaciones principales (un párrafo bien estructurado de 4 a 6 frases, algo más extenso y completo, sin limitarte a 1 o 2 frases cortas).\n"
+        "3) composicion DEBE incluir obligatoriamente las CANTIDADES numéricas (mg, g, %, mcg) cuando estén disponibles y formatearse con UN INGREDIENTE POR LÍNEA. Si de un ingrediente no se indica cantidad en el texto, pon solo su nombre (ej: '- Extracto de gayuba') y NUNCA escribas la palabra 'null'.\n"
+        "4) COMPRUEBA EL FORMATO: si la fuente describe otra presentación distinta (ej. perlas en vez de aceite líquido o número de unidades diferente), pon coincide=false.\n"
+        "5) Si trata de otro producto, indícalo en producto_detectado y coincide=false.\n%5")
         .arg(m_descripcion,
              m_fabricante.isEmpty() ? "desconocido" : m_fabricante,
              fmts.isEmpty() ? "no indicado" : fmts.join(", "),
@@ -646,10 +788,24 @@ void EnriquecedorFichasIA::paso5_validarYFinalizar(const QJsonObject &jsonExtrac
 {
     emit progreso(5, 5, tr("Validando exactitud de ingredientes y emitiendo ficha..."));
 
+    auto extraerCampoTexto = [](const QJsonObject &obj, const QString &clave1, const QString &clave2 = QString(), bool conSaltos = false) -> QString {
+        QJsonValue val = obj.contains(clave1) ? obj.value(clave1) : (clave2.isEmpty() ? QJsonValue() : obj.value(clave2));
+        if (val.isArray()) {
+            QStringList l;
+            for (const QJsonValue &v : val.toArray()) {
+                QString s = v.toString().trimmed();
+                if (!s.isEmpty()) l << s;
+            }
+            return l.join(conSaltos ? "\n" : " ").trimmed();
+        }
+        return val.toString().trimmed();
+    };
+
     ResultadoFicha res;
-    res.productoDetectado = jsonExtraccion.value("producto_detectado").toString().trimmed();
+    res.productoDetectado = extraerCampoTexto(jsonExtraccion, "producto_detectado");
     res.coincide = jsonExtraccion.value("coincide").toBool(false);
-    res.composicion = jsonExtraccion.value("composicion").toString().trimmed();
+    res.composicion = extraerCampoTexto(jsonExtraccion, "composicion", QString(), true);
+
     if (res.composicion.compare("null", Qt::CaseInsensitive) == 0) {
         res.composicion.clear();
     } else {
@@ -660,12 +816,9 @@ void EnriquecedorFichasIA::paso5_validarYFinalizar(const QJsonObject &jsonExtrac
         res.composicion.replace(QRegularExpression(R"(:\s*(\n|$))"), "\n");
         res.composicion = res.composicion.trimmed();
     }
-    res.descripcion = jsonExtraccion.contains("indicacion") ? jsonExtraccion.value("indicacion").toString().trimmed()
-                                                            : jsonExtraccion.value("descripcion").toString().trimmed();
-    res.modoEmpleo = jsonExtraccion.contains("posologia") ? jsonExtraccion.value("posologia").toString().trimmed()
-                                                          : jsonExtraccion.value("modo_empleo").toString().trimmed();
-    res.advertencias = jsonExtraccion.contains("contraindicaciones") ? jsonExtraccion.value("contraindicaciones").toString().trimmed()
-                                                                    : jsonExtraccion.value("advertencias").toString().trimmed();
+    res.descripcion = extraerCampoTexto(jsonExtraccion, "indicacion", "descripcion");
+    res.modoEmpleo = extraerCampoTexto(jsonExtraccion, "posologia", "modo_empleo");
+    res.advertencias = extraerCampoTexto(jsonExtraccion, "contraindicaciones", "advertencias");
     res.fuentes = m_fuentes;
 
     // Extraer textos de las fuentes
@@ -703,13 +856,13 @@ void EnriquecedorFichasIA::paso5_validarYFinalizar(const QJsonObject &jsonExtrac
 }
 
 /**
- * @brief Extrae tokens de medidas o formatos (ej: 100ml, 230 comp, 14 viales).
+ * @brief Extrae tokens de medidas o formatos (ej: 100ml, 230 comp, 14 viales, 100c, 300mcg).
  */
 QStringList EnriquecedorFichasIA::extraerTokensFormato(const QString &texto) const
 {
     QStringList tokens;
     QRegularExpression re(
-        "\\b\\d+\\s*(?:ml|l|cl|gr|g|kg|mg|t|tabs|caps?|cápsulas?|comps?|comprimidos?|uds|sobres?|viales?|ampollas?|perlas?)\\b",
+        R"(\b\d+\s*(?:ml|l|cl|gr|g|kg|mg|mcg|µg|ug|t|tabs|caps?|cápsulas?|comps?|comprimidos?|uds|sobres?|viales?|ampollas?|perlas?|c)\b)",
         QRegularExpression::CaseInsensitiveOption);
 
     QRegularExpressionMatchIterator it = re.globalMatch(texto);
@@ -722,8 +875,12 @@ QStringList EnriquecedorFichasIA::extraerTokensFormato(const QString &texto) con
 QString EnriquecedorFichasIA::limpiarTextoDesc(const QString &desc) const
 {
     QString d = desc;
-    QRegularExpression reUnit("\\b\\d+\\s*(?:ml|gr|g|mg|t|tabs|cap|comp|uds)\\b", QRegularExpression::CaseInsensitiveOption);
-    d.replace(reUnit, "");
+    // Reemplazar puntos de separación no decimales por espacios
+    d.replace(QRegularExpression(R"((?<!\d)\.|\.(?!\d))"), " ");
+    QRegularExpression reUnit(
+        R"(\b\d+\s*(?:ml|l|cl|gr|g|kg|mg|mcg|µg|ug|t|tabs|caps?|cápsulas?|comps?|comprimidos?|uds|sobres?|viales?|ampollas?|perlas?|c)\b)",
+        QRegularExpression::CaseInsensitiveOption);
+    d.replace(reUnit, " ");
     d = d.simplified();
     return d;
 }

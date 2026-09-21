@@ -587,92 +587,7 @@ void Articulos::llenarComboFormatos() {
 #include "syncmanager.h"
 
 void Articulos::llenarStockRemoto(QString ean) {
-  // El encabezado ya se pone en refrescarBotones, aquí solo añadimos filas
-
-  // 1. Si la Nube está disponible, consultar stock y lotes de todas las demás tiendas en una sola consulta
-  if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
-      QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
-    QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
-    int idTiendaLocal = conf ? conf->getIdTienda() : 1;
-
-    // Obtener pedidos pendientes consolidados en la nube si existen
-    QMap<int, double> pendientesPedidoPorTienda;
-    QSqlQuery qPed(dbNube);
-    qPed.prepare("SELECT id_tienda, COALESCE(SUM(cantidad + bonificacion), 0) FROM lineaspedido_nube "
-                 "WHERE cod = :cod AND id_tienda != :idLocal GROUP BY id_tienda");
-    qPed.bindValue(":cod", ean);
-    qPed.bindValue(":idLocal", idTiendaLocal);
-    if (qPed.exec()) {
-      while (qPed.next()) {
-        pendientesPedidoPorTienda[qPed.value(0).toInt()] = qPed.value(1).toDouble();
-      }
-    }
-
-    // Consulta consolidada de tiendas remotas con sus lotes y stock
-    QSqlQuery qStk(dbNube);
-    qStk.prepare("SELECT t.id, t.nombre, s.lote, DATE_FORMAT(s.fecha, '%Y-%m-%d') as fecha_str, "
-                 "COALESCE(s.cantidad, 0) as cantidad "
-                 "FROM tiendas t "
-                 "LEFT JOIN stock_tiendas_nube s ON t.id = s.id_tienda AND s.cod = :cod "
-                 "WHERE t.local = 0 AND t.id != :idLocal "
-                 "ORDER BY t.nombre ASC, s.fecha ASC");
-    qStk.bindValue(":cod", ean);
-    qStk.bindValue(":idLocal", idTiendaLocal);
-
-    if (qStk.exec()) {
-      QMap<int, QString> nombresTiendas;
-      QMap<int, double> stockTotalPorTienda;
-      QMap<int, QList<QPair<QString, QString>>> lotesPorTienda; // id_tienda -> list of (fecha+lote, cantidad)
-
-      while (qStk.next()) {
-        int idTienda = qStk.value(0).toInt();
-        QString nombre = qStk.value(1).toString();
-        QString lote = qStk.value(2).toString();
-        QString fechaStr = qStk.value(3).toString();
-        double cant = qStk.value(4).toDouble();
-
-        nombresTiendas[idTienda] = nombre;
-        stockTotalPorTienda[idTienda] += cant;
-
-        if (!fechaStr.isEmpty() && cant > 0) {
-          QString descLote = fechaStr;
-          if (!lote.trimmed().isEmpty()) {
-            descLote += " (Lote: " + lote.trimmed() + ")";
-          }
-          lotesPorTienda[idTienda].append(qMakePair(descLote, QString::number(cant, 'f', 2)));
-        }
-      }
-
-      // Añadir al árbol de la UI
-      for (auto it = nombresTiendas.begin(); it != nombresTiendas.end(); ++it) {
-        int idTienda = it.key();
-        QString nombre = it.value();
-        double stockTot = stockTotalPorTienda.value(idTienda, 0.0);
-
-        QTreeWidgetItem *item = new QTreeWidgetItem(ui->treeWidgetStockTiendas);
-        item->setText(0, nombre);
-        item->setData(0, Qt::UserRole, idTienda);
-        item->setText(1, QString::number(stockTot, 'f', 2));
-
-        double rP = pendientesPedidoPorTienda.value(idTienda, 0.0);
-        if (rP > 0) {
-          item->setText(2, QString("P:%1").arg(rP));
-        }
-
-        const auto &lotes = lotesPorTienda.value(idTienda);
-        for (const auto &p : lotes) {
-          QTreeWidgetItem *loteItem = new QTreeWidgetItem(item);
-          loteItem->setText(0, p.first);
-          loteItem->setText(1, p.second);
-        }
-      }
-      return; // Completado rápidamente desde la nube sin tocar tiendas remotas
-    } else {
-      qDebug() << "Articulos::llenarStockRemoto - Error consultando nube:" << qStk.lastError().text();
-    }
-  }
-
-  // 2. Fallback: Si la nube no está abierta o falló la consulta, consultar tiendas remotas individuales
+  // El encabezado ya se pone en refrescarBotones, aquí solo añadimos filas de cada tienda remota
   for (int i = 0; i < listaConexionesRemotas.length(); i++) {
     QString conn = listaConexionesRemotas.at(i);
 
@@ -686,7 +601,10 @@ void Articulos::llenarStockRemoto(QString ean) {
     item->setText(0, conn);
     item->setText(1, base.sumarStockArticulo(ean, conn));
 
-    // Calcular pendientes remotos
+    // Calcular pendientes remotos en las tablas temporales de la tienda remota
+    // rE: Entradas de género temporales pendientes
+    // rS: Salidas de género temporales pendientes
+    // rP: Pedidos preparados temporales sin aceptar
     double rE = 0, rS = 0, rP = 0;
     QSqlQuery qRE(QSqlDatabase::database(conn));
     qRE.prepare("SELECT sum(cantidad) FROM entradaGenero_tmp WHERE cod = ?");
@@ -716,6 +634,7 @@ void Articulos::llenarStockRemoto(QString ean) {
       pList << QString("P:%1").arg(rP);
     item->setText(2, pList.join("|"));
 
+    // Desglose de lotes de la tienda remota
     QSqlQuery lotes = base.lotesProducto(ean, conn);
     while (lotes.next()) {
       QTreeWidgetItem *lote = new QTreeWidgetItem(item);
