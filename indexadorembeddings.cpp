@@ -119,9 +119,18 @@ QString IndexadorEmbeddings::limpiarTextoParaEmbedding(const QString &texto, int
  */
 QString IndexadorEmbeddings::obtenerUrlOllama()
 {
-    QSettings settings("Ladis", "tienda");
-    QString url = settings.value("url", "http://localhost:11434").toString().trimmed();
+    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QSettings settings(iniPath, QSettings::IniFormat);
+    settings.beginGroup("Ollama");
+    QString url = settings.value("url", "").toString().trimmed();
+    settings.endGroup();
+
+    if (url.isEmpty()) {
+        QSettings settingsFallback("Ladis", "tienda");
+        url = settingsFallback.value("url", "http://localhost:11434").toString().trimmed();
+    }
     if (url.isEmpty()) url = "http://localhost:11434";
+    if (url.endsWith("/")) url.chop(1);
     return url;
 }
 
@@ -130,8 +139,16 @@ QString IndexadorEmbeddings::obtenerUrlOllama()
  */
 QString IndexadorEmbeddings::obtenerModeloEmbeddings()
 {
-    QSettings settings("Ladis", "tienda");
-    QString modelo = settings.value("modelo_embedding", "nomic-embed-text").toString().trimmed();
+    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QSettings settings(iniPath, QSettings::IniFormat);
+    settings.beginGroup("Ollama");
+    QString modelo = settings.value("modelo_embedding", "").toString().trimmed();
+    settings.endGroup();
+
+    if (modelo.isEmpty()) {
+        QSettings settingsFallback("Ladis", "tienda");
+        modelo = settingsFallback.value("modelo_embedding", "nomic-embed-text").toString().trimmed();
+    }
     if (modelo.isEmpty()) modelo = "nomic-embed-text";
     return modelo;
 }
@@ -856,6 +873,7 @@ void WorkerIndexador::run()
                 // Guardar el lote en base de datos usando transacción
                 dbWorker.transaction();
                 bool hayErrorUpsert = false;
+                QString errorDetalleUpsert;
                 for (int k = 0; k < embeddingsArr.size(); ++k) {
                     const TareaItem &tarea = itemsParaIndexar[i + k];
                     QJsonArray vArr = embeddingsArr[k].toArray();
@@ -902,7 +920,8 @@ void WorkerIndexador::run()
                     }
 
                     if (!qUpsert.exec()) {
-                        qWarning() << "WorkerIndexador: Error al insertar embedding para" << tarea.cod << ":" << qUpsert.lastError().text();
+                        errorDetalleUpsert = qUpsert.lastError().text();
+                        qWarning() << "WorkerIndexador: Error al insertar embedding para" << tarea.cod << ":" << errorDetalleUpsert;
                         hayErrorUpsert = true;
                         break;
                     }
@@ -912,16 +931,17 @@ void WorkerIndexador::run()
                     dbWorker.rollback();
                     dbWorker.close();
                     finalizadoOk = false;
-                    mensajeFinal = "Error al guardar los embeddings en la base de datos.";
+                    mensajeFinal = QString("Error al guardar los embeddings en la base de datos: %1").arg(errorDetalleUpsert);
                     break;
                 }
 
                 if (!dbWorker.commit()) {
-                    qCritical() << "WorkerIndexador: Error al confirmar commit de embeddings:" << dbWorker.lastError().text();
+                    QString errCommit = dbWorker.lastError().text();
+                    qCritical() << "WorkerIndexador: Error al confirmar commit de embeddings:" << errCommit;
                     dbWorker.rollback();
                     dbWorker.close();
                     finalizadoOk = false;
-                    mensajeFinal = "Error al confirmar la transacción de embeddings en la base de datos.";
+                    mensajeFinal = QString("Error al confirmar la transacción de embeddings en la base de datos: %1").arg(errCommit);
                     break;
                 }
 

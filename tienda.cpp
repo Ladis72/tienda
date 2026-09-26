@@ -81,6 +81,12 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   ListaCaducados = nullptr;
   Format = nullptr;
   estadisticasDialog = nullptr;
+  estadisticasAfluenciaDialog = nullptr;
+  estadisticasTiendasDialog = nullptr;
+  estadisticasProductosDialog = nullptr;
+  estadisticasStockMuertoDialog = nullptr;
+  estadisticasClientesDialog = nullptr;
+  estadisticasMermasDialog = nullptr;
   Director = nullptr;
   Sucursal = nullptr;
 
@@ -613,6 +619,12 @@ void Tienda::permisos(int rol) {
       {"listado_arqueos", ui->pushButtonListadoArqueos},
       {"listado_caducados", ui->pushButtonCaducados_2},
       {"estadisticas", ui->pushButtonEstadisticas},
+      {"estadisticas", ui->pushButtonEstadisticasAfluencia},
+      {"estadisticas", ui->pushButtonEstadisticasTiendas},
+      {"estadisticas", ui->pushButtonEstadisticasProductos},
+      {"estadisticas", ui->pushButtonEstadisticasStockMuerto},
+      {"estadisticas", ui->pushButtonEstadisticasClientes},
+      {"estadisticas", ui->pushButtonEstadisticasMermas},
       {"config_ticket", ui->pushButtonTicket},
       {"configuracion", ui->pushButtonConfiguracion},
       {"informes", ui->pushButtonInformes},
@@ -1202,6 +1214,48 @@ void Tienda::on_pushButtonEstadisticas_clicked() {
     estadisticasDialog = new Estadisticas(this);
   }
   estadisticasDialog->exec();
+}
+
+void Tienda::on_pushButtonEstadisticasAfluencia_clicked() {
+  if (!estadisticasAfluenciaDialog) {
+    estadisticasAfluenciaDialog = new DialogEstadisticasAfluencia(this);
+  }
+  estadisticasAfluenciaDialog->exec();
+}
+
+void Tienda::on_pushButtonEstadisticasTiendas_clicked() {
+  if (!estadisticasTiendasDialog) {
+    estadisticasTiendasDialog = new DialogEstadisticasTiendas(this);
+  }
+  estadisticasTiendasDialog->exec();
+}
+
+void Tienda::on_pushButtonEstadisticasProductos_clicked() {
+  if (!estadisticasProductosDialog) {
+    estadisticasProductosDialog = new DialogEstadisticasProductos(this);
+  }
+  estadisticasProductosDialog->exec();
+}
+
+void Tienda::on_pushButtonEstadisticasStockMuerto_clicked() {
+  if (!estadisticasStockMuertoDialog) {
+    estadisticasStockMuertoDialog = new DialogEstadisticasStockMuerto(this);
+  }
+  estadisticasStockMuertoDialog->exec();
+}
+
+void Tienda::on_pushButtonEstadisticasClientes_clicked() {
+  if (!estadisticasClientesDialog) {
+    estadisticasClientesDialog = new DialogEstadisticasClientes(this);
+  }
+  estadisticasClientesDialog->exec();
+}
+
+void Tienda::on_pushButtonEstadisticasMermas_clicked() {
+  if (!estadisticasMermasDialog) {
+    estadisticasMermasDialog = new DialogEstadisticasMermas(this);
+  }
+  estadisticasMermasDialog->exec();
 }
 
 void Tienda::on_pushButtonVentaArticulos_clicked() {

@@ -4004,6 +4004,1668 @@ int baseDatos::estadisticasNumeroPedidos(const QString &db, const QDate &desde,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Estadísticas optimizadas en la NUBE (SyncManager::CONEXION_NUBE)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @brief Obtiene una conexión activa a la base de datos central en la nube.
+ * Verifica si el socket sigue vivo mediante un ping ("SELECT 1") y, si el servidor
+ * cerró la conexión por inactividad ("Server has gone away"), la reabre automáticamente.
+ */
+QSqlDatabase baseDatos::obtenerConexionNube() {
+  if (!QSqlDatabase::contains(SyncManager::CONEXION_NUBE)) {
+    return QSqlDatabase();
+  }
+  QSqlDatabase db = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+  if (!db.isOpen()) {
+    if (!db.open()) {
+      return QSqlDatabase();
+    }
+  }
+
+  // Comprobar que la conexión responde físicamente
+  QSqlQuery ping(db);
+  if (!ping.exec("SELECT 1")) {
+    qDebug() << "Conexión Nube inactiva o cerrada por el servidor. Reconectando...";
+    db.close();
+    if (!db.open()) {
+      qWarning() << "Error al reabrir conexión Nube:" << db.lastError().text();
+      return QSqlDatabase();
+    }
+  }
+  return db;
+}
+
+/**
+ * @brief Obtiene el total de ventas acumulado en la nube en un rango de fechas.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return Importe total vendido en euros.
+ */
+double baseDatos::estadisticasTotalVentasNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return 0.0;
+  }
+  QSqlQuery query(db);
+  if (idTienda > 0) {
+    query.prepare("SELECT COALESCE(SUM(total), 0) FROM tickets_nube "
+                  "WHERE fecha BETWEEN :desde AND :hasta AND id_tienda = :idTienda");
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    query.prepare("SELECT COALESCE(SUM(total), 0) FROM tickets_nube "
+                  "WHERE fecha BETWEEN :desde AND :hasta");
+  }
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (query.exec() && query.first()) {
+    return query.value(0).toDouble();
+  }
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasTotalVentasNube:" << query.lastError().text();
+  }
+  return 0.0;
+}
+
+/**
+ * @brief Obtiene el número total de tickets registrados en la nube en un rango de fechas.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return Cantidad de tickets emitidos.
+ */
+int baseDatos::estadisticasNumeroTicketsNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return 0;
+  }
+  QSqlQuery query(db);
+  if (idTienda > 0) {
+    query.prepare("SELECT COUNT(*) FROM tickets_nube "
+                  "WHERE fecha BETWEEN :desde AND :hasta AND id_tienda = :idTienda");
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    query.prepare("SELECT COUNT(*) FROM tickets_nube "
+                  "WHERE fecha BETWEEN :desde AND :hasta");
+  }
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (query.exec() && query.first()) {
+    return query.value(0).toInt();
+  }
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasNumeroTicketsNube:" << query.lastError().text();
+  }
+  return 0;
+}
+
+/**
+ * @brief Obtiene el importe total de compras/pedidos a proveedores en la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return Importe total de compras en euros.
+ */
+double baseDatos::estadisticasTotalComprasNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return 0.0;
+  }
+  QSqlQuery query(db);
+  if (idTienda > 0) {
+    query.prepare("SELECT COALESCE(SUM(total), 0) FROM pedidos_nube "
+                  "WHERE fechaPedido BETWEEN :desde AND :hasta AND id_tienda = :idTienda");
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    query.prepare("SELECT COALESCE(SUM(total), 0) FROM pedidos_nube "
+                  "WHERE fechaPedido BETWEEN :desde AND :hasta");
+  }
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (query.exec() && query.first()) {
+    return query.value(0).toDouble();
+  }
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasTotalComprasNube:" << query.lastError().text();
+  }
+  return 0.0;
+}
+
+/**
+ * @brief Obtiene el número de clientes con compras activas (excluyendo cliente anónimo/contado).
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return Número de clientes distintos activos.
+ */
+int baseDatos::estadisticasClientesActivosNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return 0;
+  }
+  QSqlQuery query(db);
+  if (idTienda > 0) {
+    query.prepare("SELECT COUNT(DISTINCT cliente) FROM tickets_nube "
+                  "WHERE fecha BETWEEN :desde AND :hasta AND cliente IS NOT NULL AND cliente > 1 "
+                  "AND id_tienda = :idTienda");
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    query.prepare("SELECT COUNT(DISTINCT cliente) FROM tickets_nube "
+                  "WHERE fecha BETWEEN :desde AND :hasta AND cliente IS NOT NULL AND cliente > 1");
+  }
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (query.exec() && query.first()) {
+    return query.value(0).toInt();
+  }
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasClientesActivosNube:" << query.lastError().text();
+  }
+  return 0;
+}
+
+/**
+ * @brief Obtiene el total de unidades de artículos en stock almacenados en la nube.
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return Total de unidades físicas en stock.
+ */
+int baseDatos::estadisticasTotalArticulosStockNube(int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return 0;
+  }
+  QSqlQuery query(db);
+  if (idTienda > 0) {
+    query.prepare("SELECT COALESCE(SUM(cantidad), 0) FROM stock_tiendas_nube WHERE id_tienda = :idTienda");
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    query.prepare("SELECT COALESCE(SUM(cantidad), 0) FROM stock_tiendas_nube");
+  }
+  if (query.exec() && query.first()) {
+    return query.value(0).toInt();
+  }
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasTotalArticulosStockNube:" << query.lastError().text();
+  }
+  return 0;
+}
+
+/**
+ * @brief Obtiene las ventas agrupadas por periodo temporal desde la nube para gráficos.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param agrupacion "dia", "mes" o "anio".
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return QSqlQuery con columnas (periodo, total_ventas).
+ */
+QSqlQuery baseDatos::estadisticasVentasPorPeriodoNube(const QDate &desde, const QDate &hasta,
+                                                      const QString &agrupacion, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+  QString formatoFechaSQL = "DATE_FORMAT(fecha, '%Y-%m-%d')";
+  if (agrupacion == "mes") {
+    formatoFechaSQL = "DATE_FORMAT(fecha, '%Y-%m')";
+  } else if (agrupacion == "anio") {
+    formatoFechaSQL = "DATE_FORMAT(fecha, '%Y')";
+  }
+
+  QString sql;
+  if (idTienda > 0) {
+    sql = QString("SELECT %1 AS periodo, SUM(total) AS total_ventas "
+                  "FROM tickets_nube "
+                  "WHERE fecha BETWEEN :desde AND :hasta AND id_tienda = :idTienda "
+                  "GROUP BY periodo ORDER BY periodo ASC").arg(formatoFechaSQL);
+    query.prepare(sql);
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    sql = QString("SELECT %1 AS periodo, SUM(total) AS total_ventas "
+                  "FROM tickets_nube "
+                  "WHERE fecha BETWEEN :desde AND :hasta "
+                  "GROUP BY periodo ORDER BY periodo ASC").arg(formatoFechaSQL);
+    query.prepare(sql);
+  }
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasVentasPorPeriodoNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el ranking de artículos más vendidos por cantidad desde la nube.
+ * Aprovecha los índices directos de lineasticket_nube sin necesidad de JOIN con tickets.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param limite Cantidad máxima de registros a retornar.
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return QSqlQuery con columnas (cod, descripcion, cantidad_total).
+ */
+QSqlQuery baseDatos::estadisticasTopArticulosVendidosNube(const QDate &desde, const QDate &hasta,
+                                                           int limite, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+  QString sql;
+  if (idTienda > 0) {
+    sql = QString("SELECT cod, descripcion, SUM(cantidad) AS cantidad_total "
+                  "FROM lineasticket_nube "
+                  "WHERE fecha BETWEEN :desde AND :hasta AND id_tienda = :idTienda "
+                  "GROUP BY cod, descripcion ORDER BY cantidad_total DESC "
+                  "LIMIT %1").arg(limite);
+    query.prepare(sql);
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    sql = QString("SELECT cod, descripcion, SUM(cantidad) AS cantidad_total "
+                  "FROM lineasticket_nube "
+                  "WHERE fecha BETWEEN :desde AND :hasta "
+                  "GROUP BY cod, descripcion ORDER BY cantidad_total DESC "
+                  "LIMIT %1").arg(limite);
+    query.prepare(sql);
+  }
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasTopArticulosVendidosNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene los artículos más rentables (margen PVP - coste) desde la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param limite Cantidad máxima de registros.
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return QSqlQuery con columnas (cod, descripcion, rentabilidad).
+ */
+QSqlQuery baseDatos::estadisticasTopArticulosRentablesNube(const QDate &desde, const QDate &hasta,
+                                                            int limite, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+  QString sql;
+  if (idTienda > 0) {
+    sql = QString("SELECT lt.cod, lt.descripcion, "
+                  "ROUND(SUM(lt.cantidad * (lt.precio - COALESCE(a.precio_compra, 0))), 2) AS rentabilidad "
+                  "FROM lineasticket_nube lt "
+                  "LEFT JOIN articulos a ON lt.cod = a.cod "
+                  "WHERE lt.fecha BETWEEN :desde AND :hasta AND lt.id_tienda = :idTienda "
+                  "GROUP BY lt.cod, lt.descripcion ORDER BY rentabilidad DESC "
+                  "LIMIT %1").arg(limite);
+    query.prepare(sql);
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    sql = QString("SELECT lt.cod, lt.descripcion, "
+                  "ROUND(SUM(lt.cantidad * (lt.precio - COALESCE(a.precio_compra, 0))), 2) AS rentabilidad "
+                  "FROM lineasticket_nube lt "
+                  "LEFT JOIN articulos a ON lt.cod = a.cod "
+                  "WHERE lt.fecha BETWEEN :desde AND :hasta "
+                  "GROUP BY lt.cod, lt.descripcion ORDER BY rentabilidad DESC "
+                  "LIMIT %1").arg(limite);
+    query.prepare(sql);
+  }
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasTopArticulosRentablesNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el listado de mejores clientes por volumen de compra desde la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param limite Cantidad máxima de registros.
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return QSqlQuery con columnas (nif, nombre_completo, total_compras).
+ */
+QSqlQuery baseDatos::estadisticasMejoresClientesNube(const QDate &desde, const QDate &hasta,
+                                                      int limite, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+  QString sql;
+  if (idTienda > 0) {
+    sql = QString("SELECT c.nif, TRIM(CONCAT(COALESCE(c.nombre, ''), ' ', COALESCE(c.apellidos, ''))) AS nombre_completo, "
+                  "SUM(t.total) AS total_compras "
+                  "FROM tickets_nube t "
+                  "JOIN clientes c ON t.cliente = c.idCliente "
+                  "WHERE t.fecha BETWEEN :desde AND :hasta AND t.cliente > 1 AND t.id_tienda = :idTienda "
+                  "GROUP BY c.idCliente ORDER BY total_compras DESC "
+                  "LIMIT %1").arg(limite);
+    query.prepare(sql);
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    sql = QString("SELECT c.nif, TRIM(CONCAT(COALESCE(c.nombre, ''), ' ', COALESCE(c.apellidos, ''))) AS nombre_completo, "
+                  "SUM(t.total) AS total_compras "
+                  "FROM tickets_nube t "
+                  "JOIN clientes c ON t.cliente = c.idCliente "
+                  "WHERE t.fecha BETWEEN :desde AND :hasta AND t.cliente > 1 "
+                  "GROUP BY c.idCliente ORDER BY total_compras DESC "
+                  "LIMIT %1").arg(limite);
+    query.prepare(sql);
+  }
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasMejoresClientesNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene las ventas acumuladas por usuario/vendedor desde la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return QSqlQuery con columnas (nombre, total).
+ */
+QSqlQuery baseDatos::estadisticasVentasPorUsuarioNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+  QString sql;
+  if (idTienda > 0) {
+    sql = "SELECT u.nombre, SUM(t.total) AS total "
+          "FROM tickets_nube t "
+          "JOIN usuarios u ON t.usuario = u.id "
+          "WHERE t.fecha BETWEEN :desde AND :hasta AND t.id_tienda = :idTienda "
+          "GROUP BY u.nombre ORDER BY total DESC";
+    query.prepare(sql);
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    sql = "SELECT u.nombre, SUM(t.total) AS total "
+          "FROM tickets_nube t "
+          "JOIN usuarios u ON t.usuario = u.id "
+          "WHERE t.fecha BETWEEN :desde AND :hasta "
+          "GROUP BY u.nombre ORDER BY total DESC";
+    query.prepare(sql);
+  }
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasVentasPorUsuarioNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene las ventas por forma de pago desde la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return QSqlQuery con columnas (id, tipo, total).
+ */
+QSqlQuery baseDatos::estadisticasVentasPorFormaPagoNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+  QString sql;
+  if (idTienda > 0) {
+    sql = "SELECT fp.id, fp.tipo, SUM(t.total) AS total "
+          "FROM tickets_nube t "
+          "JOIN fpago fp ON t.fpago = fp.id "
+          "WHERE t.fecha BETWEEN :desde AND :hasta AND t.id_tienda = :idTienda "
+          "GROUP BY fp.tipo ORDER BY total DESC";
+    query.prepare(sql);
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    sql = "SELECT fp.id, fp.tipo, SUM(t.total) AS total "
+          "FROM tickets_nube t "
+          "JOIN fpago fp ON t.fpago = fp.id "
+          "WHERE t.fecha BETWEEN :desde AND :hasta "
+          "GROUP BY fp.tipo ORDER BY total DESC";
+    query.prepare(sql);
+  }
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasVentasPorFormaPagoNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene las ventas por familia de productos desde la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return QSqlQuery con columnas (id_fam, nombre_fam, total).
+ */
+QSqlQuery baseDatos::estadisticasVentasPorFamiliaNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+  QString sql;
+  if (idTienda > 0) {
+    sql = "SELECT COALESCE(f.id, 0) AS id_fam, "
+          "COALESCE(f.descripcion, 'SIN FAMILIA') AS nombre_fam, "
+          "ROUND(SUM(COALESCE(lt.cantidad, 0) * COALESCE(lt.precio, 0)), 2) AS total "
+          "FROM lineasticket_nube lt "
+          "JOIN articulos a ON lt.cod = a.cod "
+          "LEFT JOIN familias f ON a.familia = f.id "
+          "WHERE lt.fecha BETWEEN :desde AND :hasta AND lt.id_tienda = :idTienda "
+          "GROUP BY id_fam, nombre_fam ORDER BY total DESC";
+    query.prepare(sql);
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    sql = "SELECT COALESCE(f.id, 0) AS id_fam, "
+          "COALESCE(f.descripcion, 'SIN FAMILIA') AS nombre_fam, "
+          "ROUND(SUM(COALESCE(lt.cantidad, 0) * COALESCE(lt.precio, 0)), 2) AS total "
+          "FROM lineasticket_nube lt "
+          "JOIN articulos a ON lt.cod = a.cod "
+          "LEFT JOIN familias f ON a.familia = f.id "
+          "WHERE lt.fecha BETWEEN :desde AND :hasta "
+          "GROUP BY id_fam, nombre_fam ORDER BY total DESC";
+    query.prepare(sql);
+  }
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasVentasPorFamiliaNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el desglose de ventas por franja horaria en la base de datos local o remota.
+ * @param dbName Nombre de la conexión a la base de datos.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param consolidado Si es true, incluye la tabla ticketss.
+ * @return QSqlQuery con columnas (h, num_tickets, total_ventas).
+ */
+QSqlQuery baseDatos::estadisticasVentasPorHora(const QString &dbName, const QDate &desde,
+                                               const QDate &hasta, bool consolidado) {
+  QSqlDatabase db = QSqlDatabase::database(dbName);
+  QSqlQuery query(db);
+
+  bool reallyConsolidado = consolidado && db.tables().contains("ticketss");
+  QString sql;
+  if (reallyConsolidado) {
+    sql = "SELECT HOUR(hora) AS h, COUNT(*) AS num_tickets, SUM(total) AS total_ventas "
+          "FROM ("
+          "  SELECT hora, total FROM tickets WHERE fecha BETWEEN :desde AND :hasta "
+          "  UNION ALL "
+          "  SELECT hora, total FROM ticketss WHERE fecha BETWEEN :desde2 AND :hasta2 "
+          ") AS t "
+          "GROUP BY h ORDER BY h ASC";
+  } else {
+    sql = "SELECT HOUR(hora) AS h, COUNT(*) AS num_tickets, SUM(total) AS total_ventas "
+          "FROM tickets "
+          "WHERE fecha BETWEEN :desde AND :hasta "
+          "GROUP BY h ORDER BY h ASC";
+  }
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (reallyConsolidado) {
+    query.bindValue(":desde2", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta2", hasta.toString("yyyy-MM-dd"));
+  }
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasVentasPorHora:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el desglose de ventas por franja horaria desde la nube central.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return QSqlQuery con columnas (h, num_tickets, total_ventas).
+ */
+QSqlQuery baseDatos::estadisticasVentasPorHoraNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString sql;
+  if (idTienda > 0) {
+    sql = "SELECT HOUR(hora) AS h, COUNT(*) AS num_tickets, SUM(total) AS total_ventas "
+          "FROM tickets_nube "
+          "WHERE fecha BETWEEN :desde AND :hasta AND id_tienda = :idTienda "
+          "GROUP BY h ORDER BY h ASC";
+    query.prepare(sql);
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    sql = "SELECT HOUR(hora) AS h, COUNT(*) AS num_tickets, SUM(total) AS total_ventas "
+          "FROM tickets_nube "
+          "WHERE fecha BETWEEN :desde AND :hasta "
+          "GROUP BY h ORDER BY h ASC";
+    query.prepare(sql);
+  }
+
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasVentasPorHoraNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el desglose de ventas por día de la semana (0=Lunes..6=Domingo) en local/remoto.
+ * @param dbName Nombre de la conexión a la base de datos.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param consolidado Si es true, incluye la tabla ticketss.
+ * @return QSqlQuery con columnas (d, num_tickets, total_ventas).
+ */
+QSqlQuery baseDatos::estadisticasVentasPorDiaSemana(const QString &dbName, const QDate &desde,
+                                                    const QDate &hasta, bool consolidado) {
+  QSqlDatabase db = QSqlDatabase::database(dbName);
+  QSqlQuery query(db);
+
+  bool reallyConsolidado = consolidado && db.tables().contains("ticketss");
+  QString sql;
+  if (reallyConsolidado) {
+    sql = "SELECT WEEKDAY(fecha) AS d, COUNT(*) AS num_tickets, SUM(total) AS total_ventas "
+          "FROM ("
+          "  SELECT fecha, total FROM tickets WHERE fecha BETWEEN :desde AND :hasta "
+          "  UNION ALL "
+          "  SELECT fecha, total FROM ticketss WHERE fecha BETWEEN :desde2 AND :hasta2 "
+          ") AS t "
+          "GROUP BY d ORDER BY d ASC";
+  } else {
+    sql = "SELECT WEEKDAY(fecha) AS d, COUNT(*) AS num_tickets, SUM(total) AS total_ventas "
+          "FROM tickets "
+          "WHERE fecha BETWEEN :desde AND :hasta "
+          "GROUP BY d ORDER BY d ASC";
+  }
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (reallyConsolidado) {
+    query.bindValue(":desde2", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta2", hasta.toString("yyyy-MM-dd"));
+  }
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasVentasPorDiaSemana:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el desglose de ventas por día de la semana (0=Lunes..6=Domingo) desde la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return QSqlQuery con columnas (d, num_tickets, total_ventas).
+ */
+QSqlQuery baseDatos::estadisticasVentasPorDiaSemanaNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString sql;
+  if (idTienda > 0) {
+    sql = "SELECT WEEKDAY(fecha) AS d, COUNT(*) AS num_tickets, SUM(total) AS total_ventas "
+          "FROM tickets_nube "
+          "WHERE fecha BETWEEN :desde AND :hasta AND id_tienda = :idTienda "
+          "GROUP BY d ORDER BY d ASC";
+    query.prepare(sql);
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    sql = "SELECT WEEKDAY(fecha) AS d, COUNT(*) AS num_tickets, SUM(total) AS total_ventas "
+          "FROM tickets_nube "
+          "WHERE fecha BETWEEN :desde AND :hasta "
+          "GROUP BY d ORDER BY d ASC";
+    query.prepare(sql);
+  }
+
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasVentasPorDiaSemanaNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene la matriz cruzada de actividad Día x Hora (d: 0=Lunes..6=Domingo, h: 0..23).
+ * @param dbName Conexión a la base de datos.
+ * @param desde Fecha inicial ("yyyy-MM-dd").
+ * @param hasta Fecha final ("yyyy-MM-dd").
+ * @param consolidado Si es true, incluye ticketss.
+ * @return QSqlQuery con columnas (d, h, num_tickets, total_ventas).
+ */
+QSqlQuery baseDatos::estadisticasMatrizDiaHora(const QString &dbName, const QDate &desde,
+                                              const QDate &hasta, bool consolidado) {
+  QSqlDatabase db = QSqlDatabase::database(dbName);
+  QSqlQuery query(db);
+
+  bool reallyConsolidado = consolidado && db.tables().contains("ticketss");
+  QString sql;
+  if (reallyConsolidado) {
+    sql = "SELECT WEEKDAY(fecha) AS d, HOUR(hora) AS h, COUNT(*) AS num_tickets, SUM(total) AS total_ventas "
+          "FROM ("
+          "  SELECT fecha, hora, total FROM tickets WHERE fecha BETWEEN :desde AND :hasta "
+          "  UNION ALL "
+          "  SELECT fecha, hora, total FROM ticketss WHERE fecha BETWEEN :desde2 AND :hasta2 "
+          ") AS t "
+          "GROUP BY d, h ORDER BY d ASC, h ASC";
+  } else {
+    sql = "SELECT WEEKDAY(fecha) AS d, HOUR(hora) AS h, COUNT(*) AS num_tickets, SUM(total) AS total_ventas "
+          "FROM tickets "
+          "WHERE fecha BETWEEN :desde AND :hasta "
+          "GROUP BY d, h ORDER BY d ASC, h ASC";
+  }
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (reallyConsolidado) {
+    query.bindValue(":desde2", desde.toString("yyyy-MM-dd"));
+    query.bindValue(":hasta2", hasta.toString("yyyy-MM-dd"));
+  }
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasMatrizDiaHora:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene la matriz cruzada de actividad Día x Hora desde la nube central.
+ * @param desde Fecha inicial ("yyyy-MM-dd").
+ * @param hasta Fecha final ("yyyy-MM-dd").
+ * @param idTienda ID de la tienda (> 0 para tienda individual, <= 0 para global).
+ * @return QSqlQuery con columnas (d, h, num_tickets, total_ventas).
+ */
+QSqlQuery baseDatos::estadisticasMatrizDiaHoraNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString sql;
+  if (idTienda > 0) {
+    sql = "SELECT WEEKDAY(fecha) AS d, HOUR(hora) AS h, COUNT(*) AS num_tickets, SUM(total) AS total_ventas "
+          "FROM tickets_nube "
+          "WHERE fecha BETWEEN :desde AND :hasta AND id_tienda = :idTienda "
+          "GROUP BY d, h ORDER BY d ASC, h ASC";
+    query.prepare(sql);
+    query.bindValue(":idTienda", idTienda);
+  } else {
+    sql = "SELECT WEEKDAY(fecha) AS d, HOUR(hora) AS h, COUNT(*) AS num_tickets, SUM(total) AS total_ventas "
+          "FROM tickets_nube "
+          "WHERE fecha BETWEEN :desde AND :hasta "
+          "GROUP BY d, h ORDER BY d ASC, h ASC";
+    query.prepare(sql);
+  }
+
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasMatrizDiaHoraNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene la comparativa general de rendimiento y ventas entre todas las tiendas en la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @return QSqlQuery con columnas (id_tienda, nombre_tienda, num_tickets, total_ventas, dias_activos).
+ */
+QSqlQuery baseDatos::estadisticasComparativaTiendasNube(const QDate &desde, const QDate &hasta) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+  QString sql = "SELECT t.id_tienda, "
+                "       COALESCE(ti.nombre, CONCAT('Tienda ', t.id_tienda)) AS nombre_tienda, "
+                "       COUNT(*) AS num_tickets, "
+                "       COALESCE(SUM(t.total), 0) AS total_ventas, "
+                "       COUNT(DISTINCT t.fecha) AS dias_activos "
+                "FROM tickets_nube t "
+                "LEFT JOIN tiendas ti ON t.id_tienda = ti.id "
+                "WHERE t.fecha BETWEEN :desde AND :hasta "
+                "GROUP BY t.id_tienda, ti.nombre "
+                "ORDER BY total_ventas DESC";
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasComparativaTiendasNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el desglose de formas de pago por cada tienda en la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @return QSqlQuery con columnas (id_tienda, nombre_tienda, forma_pago, es_efectivo, num_tickets, total_ventas).
+ */
+QSqlQuery baseDatos::estadisticasFormasPagoPorTiendaNube(const QDate &desde, const QDate &hasta) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+  QString sql = "SELECT t.id_tienda, "
+                "       COALESCE(ti.nombre, CONCAT('Tienda ', t.id_tienda)) AS nombre_tienda, "
+                "       COALESCE(f.tipo, 'Sin Especificar') AS forma_pago, "
+                "       COALESCE(f.efectivo, 0) AS es_efectivo, "
+                "       COUNT(*) AS num_tickets, "
+                "       COALESCE(SUM(t.total), 0) AS total_ventas "
+                "FROM tickets_nube t "
+                "LEFT JOIN tiendas ti ON t.id_tienda = ti.id "
+                "LEFT JOIN fpago f ON t.fpago = f.id "
+                "WHERE t.fecha BETWEEN :desde AND :hasta "
+                "GROUP BY t.id_tienda, ti.nombre, t.fpago, f.tipo, f.efectivo "
+                "ORDER BY t.id_tienda ASC, total_ventas DESC";
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasFormasPagoPorTiendaNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene la evolución temporal de facturación comparada por cada tienda.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param agrupacion "dia", "semana" o "mes".
+ * @return QSqlQuery con columnas (id_tienda, nombre_tienda, periodo, num_tickets, total_ventas).
+ */
+QSqlQuery baseDatos::estadisticasEvolucionPorTiendaNube(const QDate &desde, const QDate &hasta,
+                                                        const QString &agrupacion) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString fmtPeriodo = "%Y-%m";
+  if (agrupacion == "dia") {
+    fmtPeriodo = "%Y-%m-%d";
+  } else if (agrupacion == "semana") {
+    fmtPeriodo = "%X-S%V";
+  }
+
+  QString sql = QString("SELECT t.id_tienda, "
+                        "       COALESCE(ti.nombre, CONCAT('Tienda ', t.id_tienda)) AS nombre_tienda, "
+                        "       DATE_FORMAT(t.fecha, '%1') AS periodo, "
+                        "       COUNT(*) AS num_tickets, "
+                        "       COALESCE(SUM(t.total), 0) AS total_ventas "
+                        "FROM tickets_nube t "
+                        "LEFT JOIN tiendas ti ON t.id_tienda = ti.id "
+                        "WHERE t.fecha BETWEEN :desde AND :hasta "
+                        "GROUP BY t.id_tienda, ti.nombre, periodo "
+                        "ORDER BY periodo ASC, total_ventas DESC").arg(fmtPeriodo);
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasEvolucionPorTiendaNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Lista las familias disponibles en la base de datos de la nube.
+ * @return QSqlQuery con columnas (id, descripcion).
+ */
+QSqlQuery baseDatos::listaFamiliasNube() {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+  query.exec("SELECT id, descripcion FROM familias ORDER BY descripcion ASC");
+  return query;
+}
+
+/**
+ * @brief Obtiene el ranking detallado de productos por volumen de ventas y facturación en la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idFamilia ID de la familia (o <= 0 para todas).
+ * @param limite Máximo de registros a devolver.
+ * @param idTienda ID de la tienda (o <= 0 para global).
+ * @return QSqlQuery con (cod, descripcion, nombre_familia, cantidad_total, total_ventas, precio_medio).
+ */
+QSqlQuery baseDatos::estadisticasRankingProductosVentasNube(const QDate &desde, const QDate &hasta,
+                                                            int idFamilia, int limite, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString where = "WHERE lt.fecha BETWEEN :desde AND :hasta ";
+  if (idTienda > 0) {
+    where += "AND lt.id_tienda = :idTienda ";
+  }
+  if (idFamilia > 0) {
+    where += "AND a.familia = :idFamilia ";
+  }
+
+  QString limitClause = (limite > 0) ? QString("LIMIT %1").arg(limite) : "";
+
+  QString sql = QString("SELECT lt.cod, "
+                        "       lt.descripcion, "
+                        "       COALESCE(fa.descripcion, 'Sin Familia') AS nombre_familia, "
+                        "       SUM(lt.cantidad) AS cantidad_total, "
+                        "       COALESCE(SUM(lt.totallinea), 0) AS total_ventas, "
+                        "       ROUND(COALESCE(SUM(lt.totallinea), 0) / NULLIF(SUM(lt.cantidad), 0), 2) AS precio_medio "
+                        "FROM lineasticket_nube lt "
+                        "LEFT JOIN articulos a ON lt.cod = a.cod "
+                        "LEFT JOIN familias fa ON a.familia = fa.id "
+                        "%1 "
+                        "GROUP BY lt.cod, lt.descripcion, fa.descripcion "
+                        "ORDER BY total_ventas DESC %2").arg(where, limitClause);
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (idTienda > 0) query.bindValue(":idTienda", idTienda);
+  if (idFamilia > 0) query.bindValue(":idFamilia", idFamilia);
+
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasRankingProductosVentasNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el ranking de productos por beneficio neto real y margen comercial en la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idFamilia ID de familia (o <= 0 para todas).
+ * @param limite Máximo de registros.
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (cod, descripcion, nombre_familia, cantidad_total, total_ventas, total_coste, beneficio, margen_pct).
+ */
+QSqlQuery baseDatos::estadisticasRankingProductosRentablesNube(const QDate &desde, const QDate &hasta,
+                                                               int idFamilia, int limite, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString where = "WHERE lt.fecha BETWEEN :desde AND :hasta ";
+  if (idTienda > 0) {
+    where += "AND lt.id_tienda = :idTienda ";
+  }
+  if (idFamilia > 0) {
+    where += "AND a.familia = :idFamilia ";
+  }
+
+  QString limitClause = (limite > 0) ? QString("LIMIT %1").arg(limite) : "";
+
+  QString sql = QString("SELECT lt.cod, "
+                        "       lt.descripcion, "
+                        "       COALESCE(fa.descripcion, 'Sin Familia') AS nombre_familia, "
+                        "       SUM(lt.cantidad) AS cantidad_total, "
+                        "       COALESCE(SUM(lt.totallinea), 0) AS total_ventas, "
+                        "       ROUND(SUM(lt.cantidad * COALESCE(a.precio_compra, 0)), 2) AS total_coste, "
+                        "       ROUND(SUM(lt.totallinea - (lt.cantidad * COALESCE(a.precio_compra, 0))), 2) AS beneficio, "
+                        "       ROUND(CASE WHEN SUM(lt.totallinea) > 0 THEN ((SUM(lt.totallinea - (lt.cantidad * COALESCE(a.precio_compra, 0)))) / SUM(lt.totallinea)) * 100 ELSE 0 END, 1) AS margen_pct "
+                        "FROM lineasticket_nube lt "
+                        "LEFT JOIN articulos a ON lt.cod = a.cod "
+                        "LEFT JOIN familias fa ON a.familia = fa.id "
+                        "%1 "
+                        "GROUP BY lt.cod, lt.descripcion, fa.descripcion "
+                        "ORDER BY beneficio DESC %2").arg(where, limitClause);
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (idTienda > 0) query.bindValue(":idTienda", idTienda);
+  if (idFamilia > 0) query.bindValue(":idFamilia", idFamilia);
+
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasRankingProductosRentablesNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el desglose consolidado de ventas y beneficio por familia de productos en la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (id_familia, nombre_familia, unidades_vendidas, total_ventas, num_tickets, beneficio_familia).
+ */
+QSqlQuery baseDatos::estadisticasDesgloseFamiliasNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString where = "WHERE lt.fecha BETWEEN :desde AND :hasta ";
+  if (idTienda > 0) {
+    where += "AND lt.id_tienda = :idTienda ";
+  }
+
+  QString sql = QString("SELECT COALESCE(fa.id, 0) AS id_familia, "
+                        "       COALESCE(fa.descripcion, 'Sin Familia') AS nombre_familia, "
+                        "       SUM(lt.cantidad) AS unidades_vendidas, "
+                        "       COALESCE(SUM(lt.totallinea), 0) AS total_ventas, "
+                        "       COUNT(DISTINCT lt.nticket) AS num_tickets, "
+                        "       ROUND(SUM(lt.totallinea - (lt.cantidad * COALESCE(a.precio_compra, 0))), 2) AS beneficio_familia "
+                        "FROM lineasticket_nube lt "
+                        "LEFT JOIN articulos a ON lt.cod = a.cod "
+                        "LEFT JOIN familias fa ON a.familia = fa.id "
+                        "%1 "
+                        "GROUP BY fa.id, fa.descripcion "
+                        "ORDER BY total_ventas DESC").arg(where);
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (idTienda > 0) query.bindValue(":idTienda", idTienda);
+
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasDesgloseFamiliasNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene los artículos que tienen stock positivo pero CERO ventas durante el período analizado.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idFamilia ID de familia (o <= 0 para todas).
+ * @param limite Límite de registros.
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (cod, descripcion, familia, pvp, coste, stock_actual, valor_inmovilizado).
+ */
+QSqlQuery baseDatos::estadisticasProductosSinVentasNube(const QDate &desde, const QDate &hasta,
+                                                        int idFamilia, int limite, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString filtroStock = (idTienda > 0) ? QString("WHERE id_tienda = %1").arg(idTienda) : "";
+  QString filtroLtTienda = (idTienda > 0) ? QString("AND lt.id_tienda = %1").arg(idTienda) : "";
+  QString filtroFamilia = (idFamilia > 0) ? QString("AND a.familia = %1").arg(idFamilia) : "";
+  QString limitClause = (limite > 0) ? QString("LIMIT %1").arg(limite) : "";
+
+  QString sql = QString("SELECT a.cod, a.descripcion, COALESCE(fa.descripcion, 'Sin Familia') AS familia, "
+                        "       a.pvp, COALESCE(a.precio_compra, 0) AS coste, "
+                        "       COALESCE(st.stock_total, 0) AS stock_actual, "
+                        "       ROUND(COALESCE(st.stock_total, 0) * COALESCE(a.precio_compra, 0), 2) AS valor_inmovilizado "
+                        "FROM articulos a "
+                        "LEFT JOIN familias fa ON a.familia = fa.id "
+                        "LEFT JOIN ( "
+                        "  SELECT cod, SUM(cantidad) AS stock_total "
+                        "  FROM stock_tiendas_nube "
+                        "  %1 "
+                        "  GROUP BY cod "
+                        ") st ON a.cod = st.cod "
+                        "WHERE st.stock_total > 0 %2 "
+                        "  AND a.cod NOT IN ( "
+                        "    SELECT DISTINCT lt.cod "
+                        "    FROM lineasticket_nube lt "
+                        "    WHERE lt.fecha BETWEEN :desde AND :hasta %3 "
+                        "  ) "
+                        "ORDER BY valor_inmovilizado DESC %4")
+                    .arg(filtroStock, filtroFamilia, filtroLtTienda, limitClause);
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasProductosSinVentasNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el listado de artículos con stock físico que llevan más de N días sin ninguna venta.
+ * @param diasSinVentas Antigüedad mínima en días sin registrar ventas (por defecto 90 días).
+ * @param idFamilia ID de familia específica (o <= 0 para todas).
+ * @param limite Límite máximo de filas.
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (cod, descripcion, nombre_familia, stock_actual, coste, pvp, capital_inmovilizado, valor_venta, fecha_ultima_venta, dias_sin_venta).
+ */
+QSqlQuery baseDatos::estadisticasStockMuertoNube(int diasSinVentas, int idFamilia, int limite, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString filtroStockTienda = (idTienda > 0) ? QString("WHERE id_tienda = %1").arg(idTienda) : "";
+  QString filtroLtTienda = (idTienda > 0) ? QString("WHERE id_tienda = %1").arg(idTienda) : "";
+  QString filtroFamilia = (idFamilia > 0) ? QString("AND a.familia = %1").arg(idFamilia) : "";
+  QString limitClause = (limite > 0) ? QString("LIMIT %1").arg(limite) : "";
+
+  QString sql = QString(
+      "SELECT a.cod, "
+      "       a.descripcion, "
+      "       COALESCE(fa.descripcion, 'Sin Familia') AS nombre_familia, "
+      "       st.stock_total AS stock_actual, "
+      "       COALESCE(a.precio_compra, 0) AS coste, "
+      "       COALESCE(a.pvp, 0) AS pvp, "
+      "       ROUND(st.stock_total * COALESCE(a.precio_compra, 0), 2) AS capital_inmovilizado, "
+      "       ROUND(st.stock_total * COALESCE(a.pvp, 0), 2) AS valor_venta, "
+      "       ult.fecha_ultima_venta, "
+      "       DATEDIFF(CURRENT_DATE, ult.fecha_ultima_venta) AS dias_sin_venta "
+      "FROM articulos a "
+      "JOIN ( "
+      "  SELECT cod, SUM(cantidad) AS stock_total "
+      "  FROM stock_tiendas_nube "
+      "  %1 "
+      "  GROUP BY cod "
+      "  HAVING stock_total > 0 "
+      ") st ON a.cod = st.cod "
+      "LEFT JOIN familias fa ON a.familia = fa.id "
+      "JOIN ( "
+      "  SELECT cod, MAX(fecha) AS fecha_ultima_venta "
+      "  FROM lineasticket_nube "
+      "  %2 "
+      "  GROUP BY cod "
+      ") ult ON a.cod = ult.cod "
+      "WHERE ult.fecha_ultima_venta <= DATE_SUB(CURRENT_DATE, INTERVAL :dias DAY) %3 "
+      "ORDER BY capital_inmovilizado DESC %4"
+  ).arg(filtroStockTienda, filtroLtTienda, filtroFamilia, limitClause);
+
+  query.prepare(sql);
+  query.bindValue(":dias", diasSinVentas);
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasStockMuertoNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el listado de artículos que tienen stock físico pero NUNCA se ha registrado una venta suya.
+ * @param idFamilia ID de familia específica (o <= 0 para todas).
+ * @param limite Límite máximo de filas.
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (cod, descripcion, nombre_familia, stock_actual, coste, pvp, capital_inmovilizado, valor_venta).
+ */
+QSqlQuery baseDatos::estadisticasStockNuncaVendidoNube(int idFamilia, int limite, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString filtroStockTienda = (idTienda > 0) ? QString("WHERE id_tienda = %1").arg(idTienda) : "";
+  QString filtroLtTienda = (idTienda > 0) ? QString("WHERE id_tienda = %1").arg(idTienda) : "";
+  QString filtroFamilia = (idFamilia > 0) ? QString("AND a.familia = %1").arg(idFamilia) : "";
+  QString limitClause = (limite > 0) ? QString("LIMIT %1").arg(limite) : "";
+
+  QString sql = QString(
+      "SELECT a.cod, "
+      "       a.descripcion, "
+      "       COALESCE(fa.descripcion, 'Sin Familia') AS nombre_familia, "
+      "       st.stock_total AS stock_actual, "
+      "       COALESCE(a.precio_compra, 0) AS coste, "
+      "       COALESCE(a.pvp, 0) AS pvp, "
+      "       ROUND(st.stock_total * COALESCE(a.precio_compra, 0), 2) AS capital_inmovilizado, "
+      "       ROUND(st.stock_total * COALESCE(a.pvp, 0), 2) AS valor_venta "
+      "FROM articulos a "
+      "JOIN ( "
+      "  SELECT cod, SUM(cantidad) AS stock_total "
+      "  FROM stock_tiendas_nube "
+      "  %1 "
+      "  GROUP BY cod "
+      "  HAVING stock_total > 0 "
+      ") st ON a.cod = st.cod "
+      "LEFT JOIN familias fa ON a.familia = fa.id "
+      "LEFT JOIN ( "
+      "  SELECT DISTINCT cod "
+      "  FROM lineasticket_nube "
+      "  %2 "
+      ") vend ON a.cod = vend.cod "
+      "WHERE vend.cod IS NULL %3 "
+      "ORDER BY capital_inmovilizado DESC %4"
+  ).arg(filtroStockTienda, filtroLtTienda, filtroFamilia, limitClause);
+
+  query.prepare(sql);
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasStockNuncaVendidoNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el resumen de capital inmovilizado agrupado por familias de productos.
+ * @param diasSinVentas Antigüedad mínima en días sin ventas.
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (id_familia, nombre_familia, articulos_afectados, unidades_inmovilizadas, capital_inmovilizado, valor_venta_potencial).
+ */
+QSqlQuery baseDatos::estadisticasInmovilizadoPorFamiliaNube(int diasSinVentas, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString filtroStockTienda = (idTienda > 0) ? QString("WHERE id_tienda = %1").arg(idTienda) : "";
+  QString filtroLtTienda = (idTienda > 0) ? QString("WHERE id_tienda = %1").arg(idTienda) : "";
+
+  QString sql = QString(
+      "SELECT COALESCE(fa.id, 0) AS id_familia, "
+      "       COALESCE(fa.descripcion, 'Sin Familia') AS nombre_familia, "
+      "       COUNT(DISTINCT a.cod) AS articulos_afectados, "
+      "       SUM(st.stock_total) AS unidades_inmovilizadas, "
+      "       ROUND(SUM(st.stock_total * COALESCE(a.precio_compra, 0)), 2) AS capital_inmovilizado, "
+      "       ROUND(SUM(st.stock_total * COALESCE(a.pvp, 0)), 2) AS valor_venta_potencial "
+      "FROM articulos a "
+      "JOIN ( "
+      "  SELECT cod, SUM(cantidad) AS stock_total "
+      "  FROM stock_tiendas_nube "
+      "  %1 "
+      "  GROUP BY cod "
+      "  HAVING stock_total > 0 "
+      ") st ON a.cod = st.cod "
+      "LEFT JOIN familias fa ON a.familia = fa.id "
+      "JOIN ( "
+      "  SELECT cod, MAX(fecha) AS fecha_ultima_venta "
+      "  FROM lineasticket_nube "
+      "  %2 "
+      "  GROUP BY cod "
+      ") ult ON a.cod = ult.cod "
+      "WHERE ult.fecha_ultima_venta <= DATE_SUB(CURRENT_DATE, INTERVAL :dias DAY) "
+      "GROUP BY fa.id, fa.descripcion "
+      "ORDER BY capital_inmovilizado DESC"
+  ).arg(filtroStockTienda, filtroLtTienda);
+
+  query.prepare(sql);
+  query.bindValue(":dias", diasSinVentas);
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasInmovilizadoPorFamiliaNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el ranking de clientes por volumen de compra y fidelización en la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param soloRegistrados Si es true, excluye clientes anónimos/mostrador (idCliente <= 1).
+ * @param limite Límite máximo de filas.
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (id_cliente, nombre_completo, telefono, localidad, mail, total_compras, num_tickets, ticket_medio, ultima_compra, dias_inactivo).
+ */
+QSqlQuery baseDatos::estadisticasRankingClientesNube(const QDate &desde, const QDate &hasta,
+                                                     bool soloRegistrados, int limite, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString where = "WHERE t.fecha BETWEEN :desde AND :hasta ";
+  if (idTienda > 0) {
+    where += "AND t.id_tienda = :idTienda ";
+  }
+  if (soloRegistrados) {
+    where += "AND t.cliente > 1 ";
+  }
+
+  QString limitClause = (limite > 0) ? QString("LIMIT %1").arg(limite) : "";
+
+  QString sql = QString(
+      "SELECT t.cliente AS id_cliente, "
+      "       COALESCE(NULLIF(TRIM(CONCAT(c.nombre, ' ', COALESCE(c.apellidos, ''))), ''), 'Cliente Mostrador / Anónimo') AS nombre_completo, "
+      "       COALESCE(c.telefono, '') AS telefono, "
+      "       COALESCE(c.localidad, '') AS localidad, "
+      "       COALESCE(c.mail, '') AS mail, "
+      "       COALESCE(SUM(t.total), 0) AS total_compras, "
+      "       COUNT(DISTINCT t.ticket) AS num_tickets, "
+      "       ROUND(COALESCE(SUM(t.total), 0) / NULLIF(COUNT(DISTINCT t.ticket), 0), 2) AS ticket_medio, "
+      "       MAX(t.fecha) AS ultima_compra, "
+      "       DATEDIFF(CURRENT_DATE, MAX(t.fecha)) AS dias_inactivo "
+      "FROM tickets_nube t "
+      "LEFT JOIN clientes c ON t.cliente = c.idCliente "
+      "%1 "
+      "GROUP BY t.cliente, c.nombre, c.apellidos, c.telefono, c.localidad, c.mail "
+      "ORDER BY total_compras DESC %2"
+  ).arg(where, limitClause);
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (idTienda > 0) query.bindValue(":idTienda", idTienda);
+
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasRankingClientesNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene las métricas de frecuencia y recurrencia de visitas de clientes fidelizados.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param limite Límite máximo de filas.
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (id_cliente, nombre_completo, telefono, total_visitas, total_compras, ticket_medio, primera_compra, ultima_compra, dias_entre_visitas).
+ */
+QSqlQuery baseDatos::estadisticasRecurrenciaClientesNube(const QDate &desde, const QDate &hasta,
+                                                         int limite, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString where = "WHERE t.fecha BETWEEN :desde AND :hasta AND t.cliente > 1 ";
+  if (idTienda > 0) {
+    where += "AND t.id_tienda = :idTienda ";
+  }
+
+  QString limitClause = (limite > 0) ? QString("LIMIT %1").arg(limite) : "";
+
+  QString sql = QString(
+      "SELECT t.cliente AS id_cliente, "
+      "       COALESCE(NULLIF(TRIM(CONCAT(c.nombre, ' ', COALESCE(c.apellidos, ''))), ''), 'Cliente Desconocido') AS nombre_completo, "
+      "       COALESCE(c.telefono, '') AS telefono, "
+      "       COUNT(DISTINCT t.ticket) AS total_visitas, "
+      "       COALESCE(SUM(t.total), 0) AS total_compras, "
+      "       ROUND(COALESCE(SUM(t.total), 0) / NULLIF(COUNT(DISTINCT t.ticket), 0), 2) AS ticket_medio, "
+      "       MIN(t.fecha) AS primera_compra, "
+      "       MAX(t.fecha) AS ultima_compra, "
+      "       ROUND(DATEDIFF(MAX(t.fecha), MIN(t.fecha)) / NULLIF(COUNT(DISTINCT t.ticket) - 1, 0), 1) AS dias_entre_visitas "
+      "FROM tickets_nube t "
+      "JOIN clientes c ON t.cliente = c.idCliente "
+      "%1 "
+      "GROUP BY t.cliente, c.nombre, c.apellidos, c.telefono "
+      "HAVING total_visitas >= 2 "
+      "ORDER BY total_visitas DESC, total_compras DESC %2"
+  ).arg(where, limitClause);
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (idTienda > 0) query.bindValue(":idTienda", idTienda);
+
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasRecurrenciaClientesNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Identifica clientes fidelizados históricos que llevan más de N días sin realizar ninguna compra (riesgo de fuga).
+ * @param diasInactividad Umbral mínimo de días de inactividad (por defecto 60).
+ * @param limite Límite máximo de filas.
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (id_cliente, nombre_completo, telefono, mail, localidad, total_tickets_historicos, total_historico, ultima_compra, dias_inactivo).
+ */
+QSqlQuery baseDatos::estadisticasClientesEnRiesgoNube(int diasInactividad, int limite, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString where = "WHERE c.idCliente > 1 ";
+  if (idTienda > 0) {
+    where += QString("AND t.id_tienda = %1 ").arg(idTienda);
+  }
+
+  QString limitClause = (limite > 0) ? QString("LIMIT %1").arg(limite) : "";
+
+  QString sql = QString(
+      "SELECT c.idCliente AS id_cliente, "
+      "       COALESCE(NULLIF(TRIM(CONCAT(c.nombre, ' ', COALESCE(c.apellidos, ''))), ''), 'Cliente Sin Nombre') AS nombre_completo, "
+      "       COALESCE(c.telefono, '') AS telefono, "
+      "       COALESCE(c.mail, '') AS mail, "
+      "       COALESCE(c.localidad, '') AS localidad, "
+      "       COUNT(DISTINCT t.ticket) AS total_tickets_historicos, "
+      "       COALESCE(SUM(t.total), 0) AS total_historico, "
+      "       MAX(t.fecha) AS ultima_compra, "
+      "       DATEDIFF(CURRENT_DATE, MAX(t.fecha)) AS dias_inactivo "
+      "FROM clientes c "
+      "JOIN tickets_nube t ON c.idCliente = t.cliente "
+      "%1 "
+      "GROUP BY c.idCliente, c.nombre, c.apellidos, c.telefono, c.mail, c.localidad "
+      "HAVING MAX(t.fecha) <= DATE_SUB(CURRENT_DATE, INTERVAL :dias DAY) "
+      "ORDER BY total_historico DESC %2"
+  ).arg(where, limitClause);
+
+  query.prepare(sql);
+  query.bindValue(":dias", diasInactividad);
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasClientesEnRiesgoNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Agrupa las ventas y el volumen de clientes por localidad o municipio geográfico.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (localidad, total_clientes, total_tickets, total_ventas, ticket_medio).
+ */
+QSqlQuery baseDatos::estadisticasClientesPorLocalidadNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString where = "WHERE t.fecha BETWEEN :desde AND :hasta ";
+  if (idTienda > 0) {
+    where += "AND t.id_tienda = :idTienda ";
+  }
+
+  QString sql = QString(
+      "SELECT COALESCE(NULLIF(TRIM(c.localidad), ''), 'Sin Localidad / Mostrador') AS localidad, "
+      "       COUNT(DISTINCT c.idCliente) AS total_clientes, "
+      "       COUNT(DISTINCT t.ticket) AS total_tickets, "
+      "       COALESCE(SUM(t.total), 0) AS total_ventas, "
+      "       ROUND(COALESCE(SUM(t.total), 0) / NULLIF(COUNT(DISTINCT t.ticket), 0), 2) AS ticket_medio "
+      "FROM tickets_nube t "
+      "LEFT JOIN clientes c ON t.cliente = c.idCliente "
+      "%1 "
+      "GROUP BY localidad "
+      "ORDER BY total_ventas DESC"
+  ).arg(where);
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (idTienda > 0) query.bindValue(":idTienda", idTienda);
+
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasClientesPorLocalidadNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Obtiene el ranking de productos con mayores mermas, roturas o salidas en la nube.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idFamilia ID de familia específica (o <= 0 para todas).
+ * @param tipoMerma 0: Todas las mermas (Caducidad + Rotura), 1: Solo Caducados, 2: Solo Rotura / Merma.
+ * @param limite Límite de filas.
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (cod, descripcion, nombre_familia, motivo_grupo, unidades_mermadas, coste_unitario, pvp_unitario, coste_total_perdida, pvp_total_perdida, ultima_fecha).
+ */
+QSqlQuery baseDatos::estadisticasRankingMermasNube(const QDate &desde, const QDate &hasta,
+                                                   int idFamilia, int tipoMerma, int limite, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    db = QSqlDatabase::database(conf->getConexionLocal());
+  }
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  bool esNube = (db.connectionName() == SyncManager::CONEXION_NUBE);
+  QString tablaH = esNube ? "historico_stock_nube" : "historico_stock";
+
+  QString where = "WHERE DATE(h.fecha_hora) BETWEEN :desde AND :hasta AND ABS(h.stock_new - h.stock_ant) > 0 ";
+  if (esNube && idTienda > 0) {
+    where += "AND h.id_tienda = :idTienda ";
+  }
+  if (idFamilia > 0) {
+    where += "AND a.familia = :idFamilia ";
+  }
+  if (tipoMerma == 1) {
+    where += "AND (h.motivo IN ('Cadicidad', 'Caducidad') OR h.motivo LIKE '%cad%') ";
+  } else if (tipoMerma == 2) {
+    where += "AND (h.motivo LIKE '%rotura%' OR h.motivo LIKE '%merma%') ";
+  } else {
+    where += "AND (h.motivo IN ('Cadicidad', 'Caducidad', 'Rotura / Merma') OR h.motivo LIKE '%cad%' OR h.motivo LIKE '%merma%' OR h.motivo LIKE '%rotura%') ";
+  }
+
+  QString limitClause = (limite > 0) ? QString("LIMIT %1").arg(limite) : "";
+
+  QString sql = QString(
+      "SELECT h.ean AS cod, "
+      "       COALESCE(NULLIF(TRIM(a.descripcion), ''), 'Artículo Desconocido') AS descripcion, "
+      "       COALESCE(fa.descripcion, 'Sin Familia') AS nombre_familia, "
+      "       CASE "
+      "         WHEN h.motivo IN ('Cadicidad', 'Caducidad') OR h.motivo LIKE '%cad%' THEN 'Caducidad' "
+      "         WHEN h.motivo LIKE '%rotura%' OR h.motivo LIKE '%merma%' THEN 'Rotura / Merma' "
+      "         ELSE h.motivo "
+      "       END AS motivo_grupo, "
+      "       SUM(ABS(h.stock_new - h.stock_ant)) AS unidades_mermadas, "
+      "       COALESCE(a.precio_compra, 0) AS coste_unitario, "
+      "       COALESCE(a.pvp, 0) AS pvp_unitario, "
+      "       ROUND(SUM(ABS(h.stock_new - h.stock_ant) * COALESCE(a.precio_compra, 0)), 2) AS coste_total_perdida, "
+      "       ROUND(SUM(ABS(h.stock_new - h.stock_ant) * COALESCE(a.pvp, 0)), 2) AS pvp_total_perdida, "
+      "       MAX(DATE(h.fecha_hora)) AS ultima_fecha "
+      "FROM %1 h "
+      "LEFT JOIN articulos a ON h.ean = a.cod "
+      "LEFT JOIN familias fa ON a.familia = fa.id "
+      "%2 "
+      "GROUP BY h.ean, a.descripcion, fa.descripcion, motivo_grupo, a.precio_compra, a.pvp "
+      "ORDER BY coste_total_perdida DESC %3"
+  ).arg(tablaH, where, limitClause);
+
+  QSqlQuery query(db);
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (esNube && idTienda > 0) query.bindValue(":idTienda", idTienda);
+  if (idFamilia > 0) query.bindValue(":idFamilia", idFamilia);
+
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasRankingMermasNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Agrupa el coste de las mermas y desperdicios según el motivo (Caducidad vs Rotura / Merma).
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (motivo, registros, unidades_totales, coste_total, pvp_total).
+ */
+QSqlQuery baseDatos::estadisticasMermasPorMotivoNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    db = QSqlDatabase::database(conf->getConexionLocal());
+  }
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  bool esNube = (db.connectionName() == SyncManager::CONEXION_NUBE);
+  QString tablaH = esNube ? "historico_stock_nube" : "historico_stock";
+
+  QString where = "WHERE DATE(h.fecha_hora) BETWEEN :desde AND :hasta AND ABS(h.stock_new - h.stock_ant) > 0 "
+                  "AND (h.motivo IN ('Cadicidad', 'Caducidad', 'Rotura / Merma') OR h.motivo LIKE '%cad%' OR h.motivo LIKE '%merma%' OR h.motivo LIKE '%rotura%') ";
+  if (esNube && idTienda > 0) {
+    where += "AND h.id_tienda = :idTienda ";
+  }
+
+  QString sql = QString(
+      "SELECT CASE "
+      "         WHEN h.motivo IN ('Cadicidad', 'Caducidad') OR h.motivo LIKE '%cad%' THEN 'Caducidad' "
+      "         WHEN h.motivo LIKE '%rotura%' OR h.motivo LIKE '%merma%' THEN 'Rotura / Merma' "
+      "         ELSE h.motivo "
+      "       END AS motivo, "
+      "       COUNT(*) AS registros, "
+      "       SUM(ABS(h.stock_new - h.stock_ant)) AS unidades_totales, "
+      "       ROUND(SUM(ABS(h.stock_new - h.stock_ant) * COALESCE(a.precio_compra, 0)), 2) AS coste_total, "
+      "       ROUND(SUM(ABS(h.stock_new - h.stock_ant) * COALESCE(a.pvp, 0)), 2) AS pvp_total "
+      "FROM %1 h "
+      "LEFT JOIN articulos a ON h.ean = a.cod "
+      "%2 "
+      "GROUP BY motivo "
+      "ORDER BY coste_total DESC"
+  ).arg(tablaH, where);
+
+  QSqlQuery query(db);
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (esNube && idTienda > 0) query.bindValue(":idTienda", idTienda);
+
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasMermasPorMotivoNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Compara el impacto de mermas y caducidades entre las distintas tiendas de la cadena.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @return QSqlQuery con (id_tienda, nombre_tienda, total_registros, unidades_mermadas, coste_total_perdida, pvp_total_perdida).
+ */
+QSqlQuery baseDatos::estadisticasMermasPorTiendaNube(const QDate &desde, const QDate &hasta) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  QSqlQuery query(db);
+
+  QString sql =
+      "SELECT t.id AS id_tienda, "
+      "       COALESCE(t.nombre, CONCAT('Tienda ', h.id_tienda)) AS nombre_tienda, "
+      "       COUNT(DISTINCT h.id_local) AS registros, "
+      "       COUNT(DISTINCT h.id_local) AS total_registros, "
+      "       SUM(ABS(h.stock_new - h.stock_ant)) AS unidades_totales, "
+      "       SUM(ABS(h.stock_new - h.stock_ant)) AS unidades_mermadas, "
+      "       ROUND(SUM(ABS(h.stock_new - h.stock_ant) * COALESCE(a.precio_compra, 0)), 2) AS coste_total, "
+      "       ROUND(SUM(ABS(h.stock_new - h.stock_ant) * COALESCE(a.precio_compra, 0)), 2) AS coste_total_perdida, "
+      "       ROUND(SUM(ABS(h.stock_new - h.stock_ant) * COALESCE(a.pvp, 0)), 2) AS pvp_total, "
+      "       ROUND(SUM(ABS(h.stock_new - h.stock_ant) * COALESCE(a.pvp, 0)), 2) AS pvp_total_perdida "
+      "FROM historico_stock_nube h "
+      "LEFT JOIN tiendas t ON h.id_tienda = t.id "
+      "LEFT JOIN articulos a ON h.ean = a.cod "
+      "WHERE DATE(h.fecha_hora) BETWEEN :desde AND :hasta AND ABS(h.stock_new - h.stock_ant) > 0 "
+      "  AND (h.motivo IN ('Cadicidad', 'Caducidad', 'Rotura / Merma') OR h.motivo LIKE '%cad%' OR h.motivo LIKE '%merma%' OR h.motivo LIKE '%rotura%') "
+      "GROUP BY h.id_tienda, t.id, t.nombre "
+      "ORDER BY coste_total DESC";
+
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasMermasPorTiendaNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+/**
+ * @brief Agrupa el impacto de mermas y desperdicios por familia de productos.
+ * @param desde Fecha de inicio ("yyyy-MM-dd").
+ * @param hasta Fecha de fin ("yyyy-MM-dd").
+ * @param idTienda ID de tienda (o <= 0 para global).
+ * @return QSqlQuery con (id_familia, nombre_familia, articulos_afectados, unidades_totales, coste_total, pvp_total).
+ */
+QSqlQuery baseDatos::estadisticasMermasPorFamiliaNube(const QDate &desde, const QDate &hasta, int idTienda) {
+  QSqlDatabase db = obtenerConexionNube();
+  if (!db.isValid() || !db.isOpen()) {
+    db = QSqlDatabase::database(conf->getConexionLocal());
+  }
+  if (!db.isValid() || !db.isOpen()) {
+    return QSqlQuery();
+  }
+  bool esNube = (db.connectionName() == SyncManager::CONEXION_NUBE);
+  QString tablaH = esNube ? "historico_stock_nube" : "historico_stock";
+
+  QString where = "WHERE DATE(h.fecha_hora) BETWEEN :desde AND :hasta AND ABS(h.stock_new - h.stock_ant) > 0 "
+                  "AND (h.motivo IN ('Cadicidad', 'Caducidad', 'Rotura / Merma') OR h.motivo LIKE '%cad%' OR h.motivo LIKE '%merma%' OR h.motivo LIKE '%rotura%') ";
+  if (esNube && idTienda > 0) {
+    where += "AND h.id_tienda = :idTienda ";
+  }
+
+  QString sql = QString(
+      "SELECT fa.id AS id_familia, "
+      "       COALESCE(fa.descripcion, 'Sin Familia') AS nombre_familia, "
+      "       COUNT(DISTINCT h.ean) AS articulos_afectados, "
+      "       SUM(ABS(h.stock_new - h.stock_ant)) AS unidades_totales, "
+      "       ROUND(SUM(ABS(h.stock_new - h.stock_ant) * COALESCE(a.precio_compra, 0)), 2) AS coste_total, "
+      "       ROUND(SUM(ABS(h.stock_new - h.stock_ant) * COALESCE(a.pvp, 0)), 2) AS pvp_total "
+      "FROM %1 h "
+      "LEFT JOIN articulos a ON h.ean = a.cod "
+      "LEFT JOIN familias fa ON a.familia = fa.id "
+      "%2 "
+      "GROUP BY fa.id, fa.descripcion "
+      "ORDER BY coste_total DESC"
+  ).arg(tablaH, where);
+
+  QSqlQuery query(db);
+  query.prepare(sql);
+  query.bindValue(":desde", desde.toString("yyyy-MM-dd"));
+  query.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
+  if (esNube && idTienda > 0) query.bindValue(":idTienda", idTienda);
+
+  query.exec();
+  if (query.lastError().isValid()) {
+    qDebug() << "Error en estadisticasMermasPorFamiliaNube:" << query.lastError().text();
+  }
+  return query;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Consolidación de Ventas, Compras y Arqueos en la NUBE (nubeCervantes)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -4316,6 +5978,22 @@ bool baseDatos::crearTablasIA(QSqlDatabase &db) {
            "UNIQUE (cod, tipo)"
            ");");
 
+    // Asegurar columna dimensiones en SQLite si la tabla venía de una versión anterior
+    {
+      bool tieneDimensiones = false;
+      if (q.exec("PRAGMA table_info(ia_embeddings)")) {
+        while (q.next()) {
+          if (q.value("name").toString().compare("dimensiones", Qt::CaseInsensitive) == 0) {
+            tieneDimensiones = true;
+            break;
+          }
+        }
+      }
+      if (!tieneDimensiones) {
+        q.exec("ALTER TABLE ia_embeddings ADD COLUMN dimensiones INTEGER NOT NULL DEFAULT 768;");
+      }
+    }
+
     // 4. ia_logs_peticiones
     q.exec("CREATE TABLE IF NOT EXISTS ia_logs_peticiones ("
            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -4377,6 +6055,11 @@ bool baseDatos::crearTablasIA(QSqlDatabase &db) {
            "  UNIQUE KEY `uk_cod_tipo` (`cod`, `tipo`), "
            "  INDEX `idx_hash` (`texto_hash`)"
            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+    // Migraciones para ia_embeddings en tablas existentes
+    q.exec("ALTER TABLE `ia_embeddings` ADD COLUMN IF NOT EXISTS `dimensiones` INT NOT NULL DEFAULT 768");
+    q.exec("ALTER TABLE `ia_embeddings` MODIFY COLUMN `texto_hash` VARCHAR(64) NOT NULL");
+    q.exec("ALTER TABLE `ia_embeddings` MODIFY COLUMN `cod` VARCHAR(64) NOT NULL");
 
     // 4. ia_logs_peticiones
     q.exec("CREATE TABLE IF NOT EXISTS `ia_logs_peticiones` ("

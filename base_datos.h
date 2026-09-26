@@ -225,6 +225,49 @@ public:
     double estadisticasTotalCompras(const QString &db, const QDate &desde, const QDate &hasta);
     int estadisticasNumeroPedidos(const QString &db, const QDate &desde, const QDate &hasta);
 
+    // Obtiene una conexión activa a la nube verificando su estado y reconectando si expiró
+    QSqlDatabase obtenerConexionNube();
+
+    // Funciones ESTADÍSTICAS OPTIMIZADAS PARA LA NUBE (SyncManager::CONEXION_NUBE).
+    // Si idTienda <= 0 se consulta toda la cadena (Global), si es > 0 se filtra por esa tienda.
+    double estadisticasTotalVentasNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    int estadisticasNumeroTicketsNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    double estadisticasTotalComprasNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    int estadisticasClientesActivosNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    int estadisticasTotalArticulosStockNube(int idTienda = -1);
+    QSqlQuery estadisticasVentasPorPeriodoNube(const QDate &desde, const QDate &hasta, const QString &agrupacion, int idTienda = -1);
+    QSqlQuery estadisticasTopArticulosVendidosNube(const QDate &desde, const QDate &hasta, int limite = 100, int idTienda = -1);
+    QSqlQuery estadisticasTopArticulosRentablesNube(const QDate &desde, const QDate &hasta, int limite = 100, int idTienda = -1);
+    QSqlQuery estadisticasMejoresClientesNube(const QDate &desde, const QDate &hasta, int limite = 50, int idTienda = -1);
+    QSqlQuery estadisticasVentasPorUsuarioNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    QSqlQuery estadisticasVentasPorFormaPagoNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    QSqlQuery estadisticasVentasPorFamiliaNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    QSqlQuery estadisticasVentasPorHora(const QString &db, const QDate &desde, const QDate &hasta, bool consolidado = false);
+    QSqlQuery estadisticasVentasPorHoraNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    QSqlQuery estadisticasVentasPorDiaSemana(const QString &db, const QDate &desde, const QDate &hasta, bool consolidado = false);
+    QSqlQuery estadisticasVentasPorDiaSemanaNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    QSqlQuery estadisticasMatrizDiaHora(const QString &db, const QDate &desde, const QDate &hasta, bool consolidado = false);
+    QSqlQuery estadisticasMatrizDiaHoraNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    QSqlQuery estadisticasComparativaTiendasNube(const QDate &desde, const QDate &hasta);
+    QSqlQuery estadisticasFormasPagoPorTiendaNube(const QDate &desde, const QDate &hasta);
+    QSqlQuery estadisticasEvolucionPorTiendaNube(const QDate &desde, const QDate &hasta, const QString &agrupacion = "mes");
+    QSqlQuery estadisticasRankingProductosVentasNube(const QDate &desde, const QDate &hasta, int idFamilia = -1, int limite = 100, int idTienda = -1);
+    QSqlQuery estadisticasRankingProductosRentablesNube(const QDate &desde, const QDate &hasta, int idFamilia = -1, int limite = 100, int idTienda = -1);
+    QSqlQuery estadisticasDesgloseFamiliasNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    QSqlQuery estadisticasProductosSinVentasNube(const QDate &desde, const QDate &hasta, int idFamilia = -1, int limite = 100, int idTienda = -1);
+    QSqlQuery estadisticasStockMuertoNube(int diasSinVentas = 90, int idFamilia = -1, int limite = 100, int idTienda = -1);
+    QSqlQuery estadisticasStockNuncaVendidoNube(int idFamilia = -1, int limite = 100, int idTienda = -1);
+    QSqlQuery estadisticasInmovilizadoPorFamiliaNube(int diasSinVentas = 90, int idTienda = -1);
+    QSqlQuery estadisticasRankingClientesNube(const QDate &desde, const QDate &hasta, bool soloRegistrados = true, int limite = 100, int idTienda = -1);
+    QSqlQuery estadisticasRecurrenciaClientesNube(const QDate &desde, const QDate &hasta, int limite = 100, int idTienda = -1);
+    QSqlQuery estadisticasClientesEnRiesgoNube(int diasInactividad = 60, int limite = 100, int idTienda = -1);
+    QSqlQuery estadisticasClientesPorLocalidadNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    QSqlQuery estadisticasRankingMermasNube(const QDate &desde, const QDate &hasta, int idFamilia = -1, int tipoMerma = 0, int limite = 100, int idTienda = -1);
+    QSqlQuery estadisticasMermasPorMotivoNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    QSqlQuery estadisticasMermasPorTiendaNube(const QDate &desde, const QDate &hasta);
+    QSqlQuery estadisticasMermasPorFamiliaNube(const QDate &desde, const QDate &hasta, int idTienda = -1);
+    QSqlQuery listaFamiliasNube();
+
     //Funciones de configuración
     QMap<QString, QVariant> leerConfiguracion();
     bool GuardarConfiguracion(QMap<QString, QVariant> datos);
