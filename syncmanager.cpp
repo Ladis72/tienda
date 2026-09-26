@@ -47,7 +47,7 @@ const QStringList SyncManager::TABLAS_MAESTRAS = {
 const QStringList SyncManager::TABLAS_TRANSACCIONALES = {
     "tickets",      "lineasticket", "arqueos",         "pedidos",
     "lineaspedido", "salidaGenero", "entradasSalidas", "lotes",
-    "ia_logs_peticiones"};
+    "ia_logs_peticiones", "historico_stock"};
 
 const QMap<QString, QStringList> SyncManager::CAMPOS_EXCLUIDOS = {
     {"articulos",
@@ -308,11 +308,11 @@ bool SyncManager::conectarNube() {
     if (QDir::isRelativePath(sslCa))
       sslCa = QCoreApplication::applicationDirPath() + "/" + sslCa;
     dbNube.setConnectOptions("SSL_CA=" + sslCa +
-                             ";MYSQL_OPT_CONNECT_TIMEOUT=2;MYSQL_OPT_READ_"
-                             "TIMEOUT=5;MYSQL_OPT_WRITE_TIMEOUT=5");
+                             ";MYSQL_OPT_CONNECT_TIMEOUT=4;MYSQL_OPT_READ_"
+                             "TIMEOUT=30;MYSQL_OPT_WRITE_TIMEOUT=30;MYSQL_OPT_RECONNECT=1");
   } else {
-    dbNube.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=2;MYSQL_OPT_READ_"
-                             "TIMEOUT=5;MYSQL_OPT_WRITE_TIMEOUT=5");
+    dbNube.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=4;MYSQL_OPT_READ_"
+                             "TIMEOUT=30;MYSQL_OPT_WRITE_TIMEOUT=30;MYSQL_OPT_RECONNECT=1");
   }
 
   if (!dbNube.open()) {
@@ -598,6 +598,11 @@ int SyncManager::subirCambios(const QString &connLocal, const QString &connNube,
                       "AND `id_local` = ?");
           del.addBindValue(m_idTiendaLocal);
           del.addBindValue(idReg);
+        } else if (tabla == "historico_stock") {
+          del.prepare("DELETE FROM `historico_stock_nube` WHERE `id_tienda` = ? "
+                      "AND `id_local` = ?");
+          del.addBindValue(m_idTiendaLocal);
+          del.addBindValue(idReg);
         }
         ok = del.exec();
       } else {
@@ -842,6 +847,31 @@ int SyncManager::subirCambios(const QString &connLocal, const QString &connNube,
             ins.addBindValue(rec.value("es_correcta"));
             ins.addBindValue(rec.value("comentario_feedback"));
             ins.addBindValue(rec.value("sugerencia_mejora"));
+            ok = ins.exec();
+          } else if (tabla == "historico_stock") {
+            ins.prepare(
+                "INSERT INTO `historico_stock_nube` (id_tienda, id_local, ean, lote, "
+                "fecha_caducidad_ant, fecha_caducidad_new, stock_ant, stock_new, motivo, "
+                "notas, usuario, fecha_hora) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON DUPLICATE KEY UPDATE ean=VALUES(ean), lote=VALUES(lote), "
+                "fecha_caducidad_ant=VALUES(fecha_caducidad_ant), "
+                "fecha_caducidad_new=VALUES(fecha_caducidad_new), "
+                "stock_ant=VALUES(stock_ant), stock_new=VALUES(stock_new), "
+                "motivo=VALUES(motivo), notas=VALUES(notas), usuario=VALUES(usuario), "
+                "fecha_hora=VALUES(fecha_hora)");
+            ins.addBindValue(m_idTiendaLocal);
+            ins.addBindValue(rec.value("id"));
+            ins.addBindValue(rec.value("ean"));
+            ins.addBindValue(rec.value("lote"));
+            ins.addBindValue(rec.value("fecha_caducidad_ant"));
+            ins.addBindValue(rec.value("fecha_caducidad_new"));
+            ins.addBindValue(rec.value("stock_ant"));
+            ins.addBindValue(rec.value("stock_new"));
+            ins.addBindValue(rec.value("motivo"));
+            ins.addBindValue(rec.value("notas"));
+            ins.addBindValue(rec.value("usuario"));
+            ins.addBindValue(rec.value("fecha_hora"));
             ok = ins.exec();
           }
           if (!ok) {
@@ -1618,7 +1648,8 @@ QString SyncManager::getPkTabla(const QString &tabla) const {
       {"lotes", "id"},
       {"ia_config", "id"},
       {"ia_conocimiento", "id"},
-      {"ia_logs_peticiones", "id"}};
+      {"ia_logs_peticiones", "id"},
+      {"historico_stock", "id"}};
   return m.value(tabla, "");
 }
 

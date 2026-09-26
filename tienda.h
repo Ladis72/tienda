@@ -41,6 +41,12 @@
 #include "listadoventas.h"
 #include "proveedores.h"
 #include "estadisticas.h"
+#include "dialogestadisticasafluencia.h"
+#include "dialogestadisticastiendas.h"
+#include "dialogestadisticasproductos.h"
+#include "dialogestadisticasstockmuerto.h"
+#include "dialogestadisticasclientes.h"
+#include "dialogestadisticasmermas.h"
 #include "salidas.h"
 #include "tabwidget.h"
 #include "tiendas.h"
@@ -140,6 +146,13 @@ private slots:
     void on_pushButtonVentaArticulos_clicked();
     void on_pushButtonUnificarGlobal_clicked();
 
+    void on_pushButtonEstadisticasAfluencia_clicked();
+    void on_pushButtonEstadisticasTiendas_clicked();
+    void on_pushButtonEstadisticasProductos_clicked();
+    void on_pushButtonEstadisticasStockMuerto_clicked();
+    void on_pushButtonEstadisticasClientes_clicked();
+    void on_pushButtonEstadisticasMermas_clicked();
+
     void onRecomendacionesListas(QList<RecomendacionCaducidad> recomendaciones);
     void onBtnMonitorCaducidadesClicked();
     void onMonitorCaducidadesError(QString msg);
@@ -182,6 +195,12 @@ private:
     ListadoCaducados *ListaCaducados;
     Formatos *Format;
     Estadisticas *estadisticasDialog;
+    DialogEstadisticasAfluencia *estadisticasAfluenciaDialog;
+    DialogEstadisticasTiendas *estadisticasTiendasDialog;
+    DialogEstadisticasProductos *estadisticasProductosDialog;
+    DialogEstadisticasStockMuerto *estadisticasStockMuertoDialog;
+    DialogEstadisticasClientes *estadisticasClientesDialog;
+    DialogEstadisticasMermas *estadisticasMermasDialog;
 
     // Métodos para cambiar estilos de cabecera
     void setupHeaderStyles();

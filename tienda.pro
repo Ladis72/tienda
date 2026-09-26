@@ -121,7 +121,13 @@ SOURCES += main.cpp\
     indexadorembeddings.cpp \
     enriquecedorfichasia.cpp \
     dialogenriquecimientomasivo.cpp \
-    dialogfotosmasivo.cpp
+    dialogfotosmasivo.cpp \
+    dialogestadisticasafluencia.cpp \
+    dialogestadisticastiendas.cpp \
+    dialogestadisticasproductos.cpp \
+    dialogestadisticasstockmuerto.cpp \
+    dialogestadisticasclientes.cpp \
+    dialogestadisticasmermas.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -226,7 +232,14 @@ HEADERS  += tienda.h \
     indexadorembeddings.h \
     enriquecedorfichasia.h \
     dialogenriquecimientomasivo.h \
-    dialogfotosmasivo.h
+    dialogfotosmasivo.h \
+    dialogestadisticasafluencia.h \
+    dialogestadisticastiendas.h \
+    dialogestadisticasproductos.h \
+    dialogestadisticasstockmuerto.h \
+    dialogestadisticasclientes.h \
+    dialogestadisticasmermas.h \
+    estadisticas_utils.h
 
 FORMS    += tienda.ui \
     generarvales.ui \
@@ -307,7 +320,13 @@ FORMS    += tienda.ui \
     dialogcambiarproveedor.ui \
     dialogcomparartraspaso.ui \
     dialogenriquecimientomasivo.ui \
-    dialogfotosmasivo.ui
+    dialogfotosmasivo.ui \
+    dialogestadisticasafluencia.ui \
+    dialogestadisticastiendas.ui \
+    dialogestadisticasproductos.ui \
+    dialogestadisticasstockmuerto.ui \
+    dialogestadisticasclientes.ui \
+    dialogestadisticasmermas.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 

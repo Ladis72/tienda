@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DialogEstadisticasAfluencia</class>
+ <widget class="QDialog" name="DialogEstadisticasAfluencia">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1100</width>
+    <height>720</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Horarios y Días Punta - Patrones de Afluencia</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayoutMain">
+   <item>
+    <widget class="QGroupBox" name="groupBoxFiltros">
+     <property name="title">
+      <string>Filtros y Ámbito de Consulta</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayoutFiltros">
+      <item>
+       <layout class="QHBoxLayout" name="layoutFiltros">
+        <item>
+         <widget class="QLabel" name="labelTienda">
+          <property name="text">
+           <string>Tienda / Ámbito:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboTienda">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>220</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelDesde">
+          <property name="text">
+           <string>Desde:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDateEdit" name="dateDesde">
+          <property name="calendarPopup">
+           <bool>true</bool>
+          </property>
+          <property name="displayFormat">
+           <string>yyyy-MM-dd</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelHasta">
+          <property name="text">
+           <string>Hasta:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDateEdit" name="dateHasta">
+          <property name="calendarPopup">
+           <bool>true</bool>
+          </property>
+          <property name="displayFormat">
+           <string>yyyy-MM-dd</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnHoy">
+          <property name="text">
+           <string>Hoy</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnSemana">
+          <property name="text">
+           <string>Esta Semana</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnMes">
+          <property name="text">
+           <string>Este Mes</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnAno">
+          <property name="text">
+           <string>Este Año</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnActualizar">
+          <property name="minimumSize">
+           <size>
+            <width>110</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>🔄 Actualizar</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="layoutEstado">
+        <item>
+         <widget class="QLabel" name="labelOrigen">
+          <property name="text">
+           <string>Fuente: Conectando...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacerEstado">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelModoConsolidado">
+          <property name="text">
+           <string>Modo: Normal [F2 para conmutar]</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelTiempoConsulta">
+          <property name="text">
+           <string>⚡ 0 ms</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="layoutTarjetasKPI">
+     <item>
+      <widget class="QFrame" name="kpiHoraPicoFrame">
+       <property name="frameShape">
+        <enum>QFrame::Shape::StyledPanel</enum>
+       </property>
+       <layout class="QVBoxLayout" name="vLayoutKPI1">
+        <item>
+         <widget class="QLabel" name="kpiHoraPicoTitulo">
+          <property name="text">
+           <string>HORA PUNTA MÁXIMA</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiHoraPicoValor">
+          <property name="font">
+           <font>
+            <pointsize>15</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>--:--</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiHoraPicoSub">
+          <property name="text">
+           <string>0 tickets · 0,00 €</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QFrame" name="kpiDiaPicoFrame">
+       <property name="frameShape">
+        <enum>QFrame::Shape::StyledPanel</enum>
+       </property>
+       <layout class="QVBoxLayout" name="vLayoutKPI2">
+        <item>
+         <widget class="QLabel" name="kpiDiaPicoTitulo">
+          <property name="text">
+           <string>DÍA MÁS FUERTE</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiDiaPicoValor">
+          <property name="font">
+           <font>
+            <pointsize>15</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>--</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiDiaPicoSub">
+          <property name="text">
+           <string>0 tickets · 0,00 €</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QFrame" name="kpiTicketMedioFrame">
+       <property name="frameShape">
+        <enum>QFrame::Shape::StyledPanel</enum>
+       </property>
+       <layout class="QVBoxLayout" name="vLayoutKPI3">
+        <item>
+         <widget class="QLabel" name="kpiTicketMedioTitulo">
+          <property name="text">
+           <string>TICKET MEDIO GLOBAL</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiTicketMedioValor">
+          <property name="font">
+           <font>
+            <pointsize>15</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>0,00 €</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiTicketMedioSub">
+          <property name="text">
+           <string>Pico vs Promedio</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QFrame" name="kpiTotalTicketsFrame">
+       <property name="frameShape">
+        <enum>QFrame::Shape::StyledPanel</enum>
+       </property>
+       <layout class="QVBoxLayout" name="vLayoutKPI4">
+        <item>
+         <widget class="QLabel" name="kpiTotalTicketsTitulo">
+          <property name="text">
+           <string>TOTAL TICKETS Y VENTAS</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiTotalTicketsValor">
+          <property name="font">
+           <font>
+            <pointsize>15</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>0 Tickets</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiTotalTicketsSub">
+          <property name="text">
+           <string>0,00 € total</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="tabWidgetAfluencia">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tabHoras">
+      <attribute name="title">
+       <string>Franjas Horarias (00h - 23h)</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="vLayoutTabHoras">
+       <item>
+        <widget class="QTableView" name="tablaHoras">
+         <property name="editTriggers">
+          <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+         </property>
+         <property name="selectionBehavior">
+          <set>QAbstractItemView::SelectionBehavior::SelectRows</set>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabDias">
+      <attribute name="title">
+       <string>Días de la Semana</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="vLayoutTabDias">
+       <item>
+        <widget class="QTableView" name="tablaDias">
+         <property name="editTriggers">
+          <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+         </property>
+         <property name="selectionBehavior">
+          <set>QAbstractItemView::SelectionBehavior::SelectRows</set>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBoxLaborablesFinde">
+         <property name="title">
+          <string>Comparativa: Días Laborables (Lun-Vie) vs Fin de Semana (Sáb-Dom)</string>
+         </property>
+         <layout class="QHBoxLayout" name="hLayoutLabFinde">
+          <item>
+           <widget class="QLabel" name="labelComparativaLab">
+            <property name="text">
+             <string>Laborables (L-V): 0 tickets (0%) · 0,00 € (0%) · Media: 0,00 €</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelComparativaFinde">
+            <property name="text">
+             <string>Fin de Semana (S-D): 0 tickets (0%) · 0,00 € (0%) · Media: 0,00 €</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabMatriz">
+      <attribute name="title">
+       <string>Matriz de Actividad (Día × Franja Horaria)</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="vLayoutTabMatriz">
+       <item>
+        <widget class="QLabel" name="labelInfoMatriz">
+         <property name="text">
+          <string>Distribución de afluencia cruzada por día de la semana y franja horaria. Los colores resaltan las horas de mayor intensidad de paso y tickets.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="tablaMatriz">
+         <property name="editTriggers">
+          <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+         </property>
+         <property name="selectionBehavior">
+          <set>QAbstractItemView::SelectionBehavior::SelectItems</set>
+         </property>
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="layoutAccionesInferiores">
+     <item>
+      <widget class="QPushButton" name="btnExportarCSV">
+       <property name="text">
+        <string>📥 Exportar a CSV</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnCopiarTabla">
+       <property name="text">
+        <string>📋 Copiar al Portapapeles</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacerBotones">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnCerrar">
+       <property name="minimumSize">
+        <size>
+         <width>90</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Cerrar</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>btnCerrar</sender>
+   <signal>clicked()</signal>
+   <receiver>DialogEstadisticasAfluencia</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1050</x>
+     <y>700</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>550</x>
+     <y>360</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

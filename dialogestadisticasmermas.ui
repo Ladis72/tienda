@@ -1,0 +1,481 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DialogEstadisticasMermas</class>
+ <widget class="QDialog" name="DialogEstadisticasMermas">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1140</width>
+    <height>740</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Control de Mermas, Roturas y Desperdicios</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayoutMain">
+   <item>
+    <widget class="QGroupBox" name="groupBoxFiltros">
+     <property name="title">
+      <string>Filtros de Análisis de Pérdidas</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayoutFiltros">
+      <item>
+       <layout class="QHBoxLayout" name="layoutFiltros">
+        <item>
+         <widget class="QLabel" name="labelDesde">
+          <property name="text">
+           <string>Desde:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDateEdit" name="dateDesde">
+          <property name="calendarPopup">
+           <bool>true</bool>
+          </property>
+          <property name="displayFormat">
+           <string>yyyy-MM-dd</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelHasta">
+          <property name="text">
+           <string>Hasta:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDateEdit" name="dateHasta">
+          <property name="calendarPopup">
+           <bool>true</bool>
+          </property>
+          <property name="displayFormat">
+           <string>yyyy-MM-dd</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnHoy">
+          <property name="text">
+           <string>Hoy</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnSemana">
+          <property name="text">
+           <string>Esta Semana</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnMes">
+          <property name="text">
+           <string>Este Mes</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnAno">
+          <property name="text">
+           <string>Este Año</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelTienda">
+          <property name="text">
+           <string>Tienda:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboTienda">
+          <property name="minimumSize">
+           <size>
+            <width>160</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelFamilia">
+          <property name="text">
+           <string>Familia:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboFamilia">
+          <property name="minimumSize">
+           <size>
+            <width>150</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelTipoSalida">
+          <property name="text">
+           <string>Tipo:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboTipoSalida">
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnActualizar">
+          <property name="minimumSize">
+           <size>
+            <width>110</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>🔄 Actualizar</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="layoutEstado">
+        <item>
+         <widget class="QLabel" name="labelOrigen">
+          <property name="text">
+           <string>Fuente: 🌐 Base de Datos Central en la Nube (Salidas y Mermas)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacerEstado">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelTiempoConsulta">
+          <property name="text">
+           <string>⚡ 0 ms</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="layoutTarjetasKPI">
+     <item>
+      <widget class="QFrame" name="kpiCostePerdidasFrame">
+       <property name="frameShape">
+        <enum>QFrame::Shape::StyledPanel</enum>
+       </property>
+       <layout class="QVBoxLayout" name="vLayoutKPI1">
+        <item>
+         <widget class="QLabel" name="kpiCostePerdidasTitulo">
+          <property name="text">
+           <string>COSTE FINANCIERO TOTAL DE PÉRDIDAS</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiCostePerdidasValor">
+          <property name="font">
+           <font>
+            <pointsize>13</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>--</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiCostePerdidasSub">
+          <property name="text">
+           <string>Valoración a precio de coste real</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QFrame" name="kpiUnidadesMermadasFrame">
+       <property name="frameShape">
+        <enum>QFrame::Shape::StyledPanel</enum>
+       </property>
+       <layout class="QVBoxLayout" name="vLayoutKPI2">
+        <item>
+         <widget class="QLabel" name="kpiUnidadesMermadasTitulo">
+          <property name="text">
+           <string>UNIDADES FÍSICAS PERDIDAS</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiUnidadesMermadasValor">
+          <property name="font">
+           <font>
+            <pointsize>13</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>--</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiUnidadesMermadasSub">
+          <property name="text">
+           <string>0 unidades dadas de baja</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QFrame" name="kpiArticuloMayorMermaFrame">
+       <property name="frameShape">
+        <enum>QFrame::Shape::StyledPanel</enum>
+       </property>
+       <layout class="QVBoxLayout" name="vLayoutKPI3">
+        <item>
+         <widget class="QLabel" name="kpiArticuloMayorMermaTitulo">
+          <property name="text">
+           <string>ARTÍCULO CON MAYOR MERMA</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiArticuloMayorMermaValor">
+          <property name="font">
+           <font>
+            <pointsize>13</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>--</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiArticuloMayorMermaSub">
+          <property name="text">
+           <string>0,00 € coste acumulado</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QFrame" name="kpiTiendaMayorMermaFrame">
+       <property name="frameShape">
+        <enum>QFrame::Shape::StyledPanel</enum>
+       </property>
+       <layout class="QVBoxLayout" name="vLayoutKPI4">
+        <item>
+         <widget class="QLabel" name="kpiTiendaMayorMermaTitulo">
+          <property name="text">
+           <string>TIENDA CON MAYOR PÉRDIDA</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiTiendaMayorMermaValor">
+          <property name="font">
+           <font>
+            <pointsize>13</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>--</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="kpiTiendaMayorMermaSub">
+          <property name="text">
+           <string>0,00 € · 0% del total de merma</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="tabWidgetMermas">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tabRankingMermas">
+      <attribute name="title">
+       <string>📉 Ranking de Productos Mermados</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="vLayoutTab1">
+       <item>
+        <widget class="QTableView" name="tablaRankingMermas">
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabMotivos">
+      <attribute name="title">
+       <string>📋 Desglose por Motivo / Concepto</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="vLayoutTab2">
+       <item>
+        <widget class="QTableView" name="tablaMotivos">
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabTiendas">
+      <attribute name="title">
+       <string>🏪 Comparativa por Tienda</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="vLayoutTab3">
+       <item>
+        <widget class="QTableView" name="tablaTiendas">
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabFamilias">
+      <attribute name="title">
+       <string>🏷️ Mermas por Familias</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="vLayoutTab4">
+       <item>
+        <widget class="QTableView" name="tablaFamilias">
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="layoutAccionesInferior">
+     <item>
+      <widget class="QPushButton" name="btnExportarCSV">
+       <property name="text">
+        <string>📄 Exportar a CSV</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnCopiarTabla">
+       <property name="text">
+        <string>📋 Copiar al Portapapeles</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacerAcciones">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnCerrar">
+       <property name="text">
+        <string>Cerrar</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>btnCerrar</sender>
+   <signal>clicked()</signal>
+   <receiver>DialogEstadisticasMermas</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1080</x>
+     <y>715</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>569</x>
+     <y>369</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
