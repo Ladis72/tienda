@@ -373,7 +373,14 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   QGridLayout *grid = qobject_cast<QGridLayout *>(ui->centralWidget->layout());
   if (grid) {
     grid->addWidget(mainSplitter, 1, 0);
+    // Configurar factores de estiramiento: las pestañas (fila 0) ocupan solo el espacio necesario,
+    // y el área principal con el splitter (fila 1) aprovecha todo el espacio vertical sobrante.
+    grid->setRowStretch(0, 0);
+    grid->setRowStretch(1, 1);
   }
+
+  // Asegurar que el widget de pestañas no crezca verticalmente más allá de su tamaño recomendado
+  ui->tab->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
 
   btnNotifNotas = new QPushButton(tr("📋 Notas: 0"), this);
   btnNotifNotas->setFlat(true);
@@ -704,14 +711,25 @@ void Tienda::actualizarNotificacionNotas(int count) {
 }
 
 void Tienda::on_pushButtonUsuarios_clicked() {
-  U = new Ususarios();
-
+  if (!U) {
+    U = new Ususarios(this);
+    U->setAttribute(Qt::WA_DeleteOnClose);
+    connect(U, &QObject::destroyed, this, [this]() { U = nullptr; });
+  }
   U->show();
+  U->raise();
+  U->activateWindow();
 }
 
 void Tienda::on_pushButtonArticulos_clicked() {
-  A = new Articulos(this);
+  if (!A) {
+    A = new Articulos(this);
+    A->setAttribute(Qt::WA_DeleteOnClose);
+    connect(A, &QObject::destroyed, this, [this]() { A = nullptr; });
+  }
   A->show();
+  A->raise();
+  A->activateWindow();
 }
 
 void Tienda::on_pushButtonCatalogadorIA_clicked() {
@@ -737,33 +755,63 @@ void Tienda::on_pushButtonFotosMasivo_clicked() {
 }
 
 void Tienda::on_pushButtonFamilias_clicked() {
-  F = new Familias(this);
+  if (!F) {
+    F = new Familias(this);
+    F->setAttribute(Qt::WA_DeleteOnClose);
+    connect(F, &QObject::destroyed, this, [this]() { F = nullptr; });
+  }
   F->show();
+  F->raise();
+  F->activateWindow();
 }
 
 void Tienda::on_pushButtonFabricantes_clicked() {
-  Fab = new Fabricantes(this);
+  if (!Fab) {
+    Fab = new Fabricantes(this);
+    Fab->setAttribute(Qt::WA_DeleteOnClose);
+    connect(Fab, &QObject::destroyed, this, [this]() { Fab = nullptr; });
+  }
   Fab->show();
+  Fab->raise();
+  Fab->activateWindow();
 }
 
 void Tienda::on_pushButtonFormasPago_clicked() {
-  FPago = new FormasPago(this);
+  if (!FPago) {
+    FPago = new FormasPago(this);
+    FPago->setAttribute(Qt::WA_DeleteOnClose);
+    connect(FPago, &QObject::destroyed, this, [this]() { FPago = nullptr; });
+  }
   FPago->show();
+  FPago->raise();
+  FPago->activateWindow();
 }
 
 void Tienda::on_pushButtonClientes_clicked() {
-  Cli = new Clientes(this);
+  if (!Cli) {
+    Cli = new Clientes(this);
+    Cli->setAttribute(Qt::WA_DeleteOnClose);
+    connect(Cli, &QObject::destroyed, this, [this]() { Cli = nullptr; });
+  }
   Cli->show();
+  Cli->raise();
+  Cli->activateWindow();
 }
 
 void Tienda::on_pushButtonProveedores_clicked() {
-  Prov = new Proveedores(this);
-  Prov->exec();
+  Proveedores prov(this);
+  prov.exec();
 }
 
 void Tienda::on_pushButtonGestionar_clicked() {
-  GestPed = new GestionPedidos;
+  if (!GestPed) {
+    GestPed = new GestionPedidos(this);
+    GestPed->setAttribute(Qt::WA_DeleteOnClose);
+    connect(GestPed, &QObject::destroyed, this, [this]() { GestPed = nullptr; });
+  }
   GestPed->show();
+  GestPed->raise();
+  GestPed->activateWindow();
 }
 
 /**
@@ -776,119 +824,117 @@ void Tienda::on_pushButtonPreparar_clicked() {
 }
 
 void Tienda::on_cajasButton_clicked() {
-  caja = new Cajas;
-  caja->exec();
+  Cajas dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonEntradaSalida_clicked() {
-  TiposEntSal = new TiposEntradasSalidas;
-  TiposEntSal->exec();
+  TiposEntradasSalidas dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_movimientosButton_clicked() {
-  ES = new EntradaSalida;
-  ES->exec();
+  EntradaSalida dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonTickets_clicked() {
-  HT = new HistoricoTickets;
-  HT->exec();
+  HistoricoTickets dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonFacturas_clicked() {
-  VFact = new VerFacturas("facturas", this);
-  VFact->exec();
+  VerFacturas dlg("facturas", this);
+  dlg.exec();
 }
 
 void Tienda::on_listadoVentasButton_clicked() {
-  ListVent = new ListadoVentas;
-  ListVent->exec();
+  ListadoVentas dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonEntradas_clicked() {
-  Entradas = new EntradaMercancia(this);
-  Entradas->exec();
+  EntradaMercancia dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonCaducidades_clicked() {
-  Cad = new Caducidades(this);
-  Cad->exec();
+  Caducidades dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonSalidas_clicked() {
-  Salid = new Salidas(this);
-  Salid->exec();
+  Salidas dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonEtiquetas_clicked() {
-  Etiq = new Etiquetas(this);
-  Etiq->exec();
+  Etiquetas dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonTicket_clicked() {
-  CTicket = new ConfigTicket(this);
-  CTicket->exec();
+  ConfigTicket dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonConfigDB_clicked() {
   // Abre el diálogo de configuración del servidor MariaDB en la nube
-  CBase = new ConfigBase(this);
-  CBase->exec();
+  ConfigBase dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonConfigLocal_clicked() {
   // Abre el diálogo de configuración de la base de datos local (tienda.ini)
-  CLocal = new ConfigLocal(this);
-  CLocal->exec();
+  ConfigLocal dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonConfiguracion_clicked() {
-  ConfigOtros = new ConfiguracionOtros(this);
-  ConfigOtros->exec();
+  ConfiguracionOtros dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonAlbaranes_clicked() {
-  VFact = new VerFacturas("albaranes", this);
-  VFact->exec();
+  VerFacturas dlg("albaranes", this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonFacturar_clicked() {
-  FacturarAlbaranes *fa = new FacturarAlbaranes(this);
-  fa->exec();
-  delete fa;
+  FacturarAlbaranes fa(this);
+  fa.exec();
 }
 
 void Tienda::on_pushButtonListadoMovimientos_clicked() {
-  ListSalidas = new ListadoSalidas(this);
-  ListSalidas->exec();
+  ListadoSalidas dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonListadoArqueos_clicked() {
-  ListaArqueos = new ListadoArqueos(this);
-  ListaArqueos->exec();
+  ListadoArqueos dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonCaducados_2_clicked() {
-  ListaCaducados = new ListadoCaducados(this);
-  ListaCaducados->exec();
+  ListadoCaducados dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonFormatos_clicked() {
-  Format = new Formatos(this);
-  Format->exec();
+  Formatos dlg(this);
+  dlg.exec();
 }
 
 void Tienda::on_pushButtonInformes_clicked() {
-  Director = new Directorios(this);
-  if (Director->exec() == QDialog::Accepted ||
-      true) { // Refresh anyway if it was modal and could have changed things
+  Directorios dlg(this);
+  if (dlg.exec() == QDialog::Accepted || true) {
     cargarLogo();
   }
 }
 
 void Tienda::on_pushButtonTiendas_clicked() {
-  Sucursal = new tiendas(this);
-  Sucursal->exec();
+  tiendas dlg(this);
+  dlg.exec();
 }
 
 void Tienda::refrescarConexiones() {
@@ -1142,8 +1188,8 @@ void Tienda::login() {
 }
 
 void Tienda::on_pushButtonImpuestos_clicked() {
-  impuestos *editarImpuestos = new impuestos(this);
-  editarImpuestos->exec();
+  impuestos editarImpuestos(this);
+  editarImpuestos.exec();
 }
 
 void Tienda::resizeEvent(QResizeEvent *event) {

@@ -1,5 +1,6 @@
 #include "dialogconocimientoia.h"
 #include "ui_dialogconocimientoia.h"
+#include "dialogreglasalud.h"
 #include "indexadorembeddings.h"
 #include "configuracion.h"
 #include "base_datos.h"
@@ -263,39 +264,15 @@ void DialogConocimientoIA::guardarDatos()
 }
 
 /**
- * @brief Abre diálogo modal para crear una nueva regla de salud.
+ * @brief Abre diálogo modal para crear una nueva regla de salud usando DialogReglaSalud (.ui).
  */
 void DialogConocimientoIA::on_pushButtonAnadir_clicked()
 {
-    QDialog dlg(this);
-    dlg.setWindowTitle("Añadir Nueva Regla de Salud");
-    dlg.resize(550, 320);
-
-    QFormLayout form(&dlg);
-    QLineEdit editCat(&dlg);
-    editCat.setPlaceholderText("Ej: Dolor de Cabeza / Migrañas");
-
-    QTextEdit editDet(&dlg);
-    editDet.setPlaceholderText("Palabras que dice el cliente (ej: cabeza, jaqueca, migrana, mareo, cefalea)");
-    editDet.setMaximumHeight(80);
-
-    QTextEdit editTerm(&dlg);
-    editTerm.setPlaceholderText("Principios activos y productos recomendados (ej: ginkgo, matricaria, migrasin, magnesio, lavanda)");
-    editTerm.setMaximumHeight(80);
-
-    form.addRow("Categoría / Dolencia:", &editCat);
-    form.addRow("Palabras Detonantes:", &editDet);
-    form.addRow("Principios Activos y Marcas:", &editTerm);
-
-    QDialogButtonBox bbox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
-    form.addRow(&bbox);
-    connect(&bbox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    connect(&bbox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-
+    DialogReglaSalud dlg(this, false);
     if (dlg.exec() == QDialog::Accepted) {
-        QString cat = editCat.text().trimmed();
-        QString det = editDet.toPlainText().trimmed();
-        QString term = editTerm.toPlainText().trimmed();
+        QString cat = dlg.categoria();
+        QString det = dlg.detonantes();
+        QString term = dlg.terminos();
 
         if (cat.isEmpty()) {
             QMessageBox::warning(this, "Aviso", "La categoría no puede estar vacía.");
@@ -320,7 +297,7 @@ void DialogConocimientoIA::on_pushButtonAnadir_clicked()
 }
 
 /**
- * @brief Abre diálogo modal para editar la regla seleccionada.
+ * @brief Abre diálogo modal para editar la regla seleccionada usando DialogReglaSalud (.ui).
  */
 void DialogConocimientoIA::on_pushButtonEditar_clicked()
 {
@@ -334,35 +311,13 @@ void DialogConocimientoIA::on_pushButtonEditar_clicked()
     QString det = ui->tableWidgetReglas->item(row, 2) ? ui->tableWidgetReglas->item(row, 2)->text() : "";
     QString term = ui->tableWidgetReglas->item(row, 3) ? ui->tableWidgetReglas->item(row, 3)->text() : "";
 
-    QDialog dlg(this);
-    dlg.setWindowTitle("Editar Regla de Salud");
-    dlg.resize(550, 320);
-
-    QFormLayout form(&dlg);
-    QLineEdit editCat(&dlg);
-    editCat.setText(cat);
-
-    QTextEdit editDet(&dlg);
-    editDet.setText(det);
-    editDet.setMaximumHeight(80);
-
-    QTextEdit editTerm(&dlg);
-    editTerm.setText(term);
-    editTerm.setMaximumHeight(80);
-
-    form.addRow("Categoría / Dolencia:", &editCat);
-    form.addRow("Palabras Detonantes:", &editDet);
-    form.addRow("Principios Activos y Marcas:", &editTerm);
-
-    QDialogButtonBox bbox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
-    form.addRow(&bbox);
-    connect(&bbox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    connect(&bbox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    DialogReglaSalud dlg(this, true);
+    dlg.setDatos(cat, det, term);
 
     if (dlg.exec() == QDialog::Accepted) {
-        if (ui->tableWidgetReglas->item(row, 1)) ui->tableWidgetReglas->item(row, 1)->setText(editCat.text().trimmed());
-        if (ui->tableWidgetReglas->item(row, 2)) ui->tableWidgetReglas->item(row, 2)->setText(editDet.toPlainText().trimmed());
-        if (ui->tableWidgetReglas->item(row, 3)) ui->tableWidgetReglas->item(row, 3)->setText(editTerm.toPlainText().trimmed());
+        if (ui->tableWidgetReglas->item(row, 1)) ui->tableWidgetReglas->item(row, 1)->setText(dlg.categoria());
+        if (ui->tableWidgetReglas->item(row, 2)) ui->tableWidgetReglas->item(row, 2)->setText(dlg.detonantes());
+        if (ui->tableWidgetReglas->item(row, 3)) ui->tableWidgetReglas->item(row, 3)->setText(dlg.terminos());
         guardarDatos();
     }
 }

@@ -11,6 +11,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QEventLoop>
+#include <QTimer>
 #include <QPainter>
 #include <QDir>
 #include <QDebug>
@@ -115,8 +116,10 @@ QString verifactuClass::generarXmlAlta(const VeriFactuConfig &config,
                                       const QString &hashActual,
                                       const QString &fechaHoraGen,
                                       const QString &numSerieAnterior,
-                                      const QString &fechaExpedicionAnterior)
+                                      const QString &fechaExpedicionAnterior,
+                                      const QList<DesgloseIva> &desgloses)
 {
+    Q_UNUSED(horaExpedicion);
     QString xmlOutput;
     QXmlStreamWriter writer(&xmlOutput);
     writer.setAutoFormatting(true);
@@ -169,14 +172,29 @@ QString verifactuClass::generarXmlAlta(const VeriFactuConfig &config,
 
     // Desglose de impuestos (Desglose)
     writer.writeStartElement("sum1:Desglose");
-    writer.writeStartElement("sum1:DetalleDesglose");
-    writer.writeTextElement("sum1:Impuesto", "01"); // 01 = IVA
-    writer.writeTextElement("sum1:ClaveRegimen", "01"); // 01 = Régimen común
-    writer.writeTextElement("sum1:CalificacionOperacion", "S1"); // S1 = Sujeta y no exenta, sin inversión
-    writer.writeTextElement("sum1:TipoImpositivo", "21"); // IVA estándar 21%
-    writer.writeTextElement("sum1:BaseImponibleOimporteNoSujeto", formatearDecimalAEAT(totalBase));
-    writer.writeTextElement("sum1:CuotaRepercutida", formatearDecimalAEAT(totalIva));
-    writer.writeEndElement(); // sum1:DetalleDesglose
+    if (desgloses.isEmpty()) {
+        // Fallback con tramo único cuando no se especifica desglose por líneas
+        writer.writeStartElement("sum1:DetalleDesglose");
+        writer.writeTextElement("sum1:Impuesto", "01"); // 01 = IVA
+        writer.writeTextElement("sum1:ClaveRegimen", "01"); // 01 = Régimen común
+        writer.writeTextElement("sum1:CalificacionOperacion", "S1"); // S1 = Sujeta y no exenta, sin inversión
+        writer.writeTextElement("sum1:TipoImpositivo", totalIva > 0 ? "21" : "0");
+        writer.writeTextElement("sum1:BaseImponibleOimporteNoSujeto", formatearDecimalAEAT(totalBase));
+        writer.writeTextElement("sum1:CuotaRepercutida", formatearDecimalAEAT(totalIva));
+        writer.writeEndElement(); // sum1:DetalleDesglose
+    } else {
+        // Detalle por cada tramo impositivo real (ej: 4%, 10%, 21%, 0%)
+        for (const DesgloseIva &tramo : desgloses) {
+            writer.writeStartElement("sum1:DetalleDesglose");
+            writer.writeTextElement("sum1:Impuesto", "01"); // 01 = IVA
+            writer.writeTextElement("sum1:ClaveRegimen", "01"); // 01 = Régimen común
+            writer.writeTextElement("sum1:CalificacionOperacion", "S1"); // S1 = Sujeta y no exenta
+            writer.writeTextElement("sum1:TipoImpositivo", formatearDecimalAEAT(tramo.tipoImpositivo));
+            writer.writeTextElement("sum1:BaseImponibleOimporteNoSujeto", formatearDecimalAEAT(tramo.baseImponible));
+            writer.writeTextElement("sum1:CuotaRepercutida", formatearDecimalAEAT(tramo.cuota));
+            writer.writeEndElement(); // sum1:DetalleDesglose
+        }
+    }
     writer.writeEndElement(); // sum1:Desglose
 
     // Totales de impuestos e importe
@@ -287,9 +305,19 @@ int verifactuClass::enviarAEAT(const QString &xmlContent, const VeriFactuConfig 
     // Enviar POST SOAP
     QNetworkReply *reply = manager.post(request, xmlContent.toUtf8());
 
-    // Bloqueo síncrono mediante QEventLoop local para transacciones seguras del TPV
+    // Bloqueo síncrono controlado mediante QEventLoop con timeout de seguridad (10s)
+    // para evitar congelar indefinidamente el TPV ante problemas de red o caída de la AEAT
     QEventLoop loop;
-    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    QTimer timer;
+    timer.setSingleShot(true);
+    QObject::connect(&timer, &QTimer::timeout, &loop, [&loop, reply]() {
+        if (reply && reply->isRunning()) {
+            reply->abort();
+        }
+        loop.quit();
+    });
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    timer.start(10000); // 10 segundos máximo de espera telemática
     loop.exec();
 
     int resultado = EstadoPendiente;
@@ -307,7 +335,11 @@ int verifactuClass::enviarAEAT(const QString &xmlContent, const VeriFactuConfig 
             errStr = tr("El servidor AEAT retornó errores: %1").arg(QString::fromUtf8(response));
         }
     } else {
-        errStr = tr("Error de conexión telemática (%1): %2").arg(reply->error()).arg(reply->errorString());
+        if (reply->error() == QNetworkReply::OperationCanceledError) {
+            errStr = tr("Tiempo de espera agotado al conectar telemáticamente con la AEAT (Timeout de 10s).");
+        } else {
+            errStr = tr("Error de conexión telemática (%1): %2").arg(reply->error()).arg(reply->errorString());
+        }
     }
 
     reply->deleteLater();

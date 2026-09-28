@@ -112,6 +112,14 @@
 
     return true;
 }
+#include <QDebug>
+#include <QTcpSocket>
+
+/**
+ * @brief Crea una conexión remota a una base de datos MySQL de otra tienda.
+ * Realiza un pre-chequeo TCP rápido (600ms) para evitar congelaciones de la UI
+ * en tiendas apagadas o desconectadas, y no muestra QMessageBox bloqueantes si falla.
+ */
 [[maybe_unused]] static bool createConnection(QString host,
                              QString puerto,
                              QString baseDatos,
@@ -120,13 +128,31 @@
                              QString nombreConexion,
                              QString sslCa = QString())
 {
+    int portInt = puerto.toInt();
+    if (portInt <= 0) {
+        portInt = 3306;
+    }
+
+    // Comprobación rápida por socket TCP (timeout 600ms).
+    // Si la máquina está apagada o fuera de red, abortamos inmediatamente sin esperar
+    // los timeouts del driver MySQL ni congelar la interfaz.
+    QTcpSocket sockTest;
+    sockTest.connectToHost(host, portInt);
+    bool socketOk = sockTest.waitForConnected(600);
+    sockTest.disconnectFromHost();
+
+    if (!socketOk) {
+        qWarning() << "[Conexión Remota]" << nombreConexion << "no accesible en" << host << ":" << portInt;
+        return false;
+    }
+
     QSqlDatabase db = QSqlDatabase::addDatabase("QMYSQL", nombreConexion);
     db.setConnectOptions("MYSQL_OPT_CONNECT_TIMEOUT=3");
     db.setHostName(host);
     db.setDatabaseName(baseDatos);
     db.setUserName(usuario);
     db.setPassword(clave);
-    db.setPort(puerto.toInt());
+    db.setPort(portInt);
 
     // Si se indica un fichero CA, activar SSL para MySQL/MariaDB
     if (!sslCa.isEmpty()) {
@@ -134,12 +160,10 @@
     }
 
     if (!db.open()) {
-        QMessageBox mensaje;
-        mensaje.setText("No se puede continuar" + db.lastError().text());
-        mensaje.setWindowTitle("Error");
-        mensaje.exec();
+        qWarning() << "[Conexión Remota] No se pudo abrir la BD para" << nombreConexion << ":" << db.lastError().text();
         return false;
     }
 
     return true;
 }
+

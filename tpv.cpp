@@ -288,6 +288,39 @@ QStringList Tpv::recopilarBasesIvas()
     return basesIvas;
 }
 
+QList<verifactuClass::DesgloseIva> Tpv::recopilarDesglosesIva()
+{
+    // Agrupar bases imponibles y cuotas por tipo impositivo real (ej: 4%, 10%, 21%, 0%)
+    QMap<double, QPair<double, double>> mapaTramos;
+    double factorDescuento = 1.0;
+    if (totalizacion && totalizacion->descuento > 0.0) {
+        factorDescuento = (100.0 - totalizacion->descuento) / 100.0;
+    }
+
+    for (int i = 0; i < modeloTicket->rowCount(); ++i) {
+        double tipoIva = modeloTicket->record(i).value(5).toDouble();
+        double totalLinea = modeloTicket->record(i).value(8).toDouble() * factorDescuento;
+        double baseLinea = totalLinea / (1.0 + (tipoIva / 100.0));
+        double cuotaLinea = totalLinea - baseLinea;
+
+        if (!mapaTramos.contains(tipoIva)) {
+            mapaTramos[tipoIva] = qMakePair(0.0, 0.0);
+        }
+        mapaTramos[tipoIva].first += baseLinea;
+        mapaTramos[tipoIva].second += cuotaLinea;
+    }
+
+    QList<verifactuClass::DesgloseIva> lista;
+    for (auto it = mapaTramos.begin(); it != mapaTramos.end(); ++it) {
+        verifactuClass::DesgloseIva d;
+        d.tipoImpositivo = it.key();
+        d.baseImponible = it.value().first;
+        d.cuota = it.value().second;
+        lista.append(d);
+    }
+    return lista;
+}
+
 QString Tpv::formatearCadena(QString cadena, int tamano)
 {
     if (cadena.length() >= tamano) {
@@ -806,7 +839,8 @@ void Tpv::on_btn_cobrar_clicked()
                 fechaHoraGen
             );
             
-            // Generar el XML oficial de alta de facturación
+            // Generar el XML oficial de alta de facturación con desglose multirate de IVA
+            QList<verifactuClass::DesgloseIva> desglosesIva = recopilarDesglosesIva();
             QString xmlContent = verifactuClass::generarXmlAlta(
                 vfConfig,
                 numSerie,
@@ -820,7 +854,8 @@ void Tpv::on_btn_cobrar_clicked()
                 hashFactura,
                 fechaHoraGen,
                 numSerieAnterior,
-                fechaAnteriorAEAT
+                fechaAnteriorAEAT,
+                desglosesIva
             );
             
             // Si el modo es VERI*FACTU, remitimos telemáticamente a la AEAT.

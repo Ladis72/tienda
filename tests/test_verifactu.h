@@ -18,6 +18,7 @@ private slots:
     void urlQR_entornoProduccion();
     void urlQR_nifMayusculas();
     void fechaHoraHuso_formato();
+    void generarXmlAlta_desgloseMultirate();
 };
 
 #endif // TEST_VERIFACTU_H

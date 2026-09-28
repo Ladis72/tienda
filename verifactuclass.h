@@ -63,6 +63,13 @@ public:
                                       const QString &huellaAnterior,
                                       const QString &fechaHoraGen);
 
+    /// Estructura para detallar cada tramo impositivo en el desglose de IVA (Veri*Factu)
+    struct DesgloseIva {
+        double tipoImpositivo; // Ej: 21.0, 10.0, 4.0, 0.0
+        double baseImponible;  // Base imponible del tramo
+        double cuota;          // Cuota repercutida de IVA del tramo
+    };
+
     /// Genera la cadena XML para el envío de alta de facturación según XSD oficial
     static QString generarXmlAlta(const VeriFactuConfig &config,
                                   const QString &numSerieFactura,
@@ -76,7 +83,8 @@ public:
                                   const QString &hashActual,
                                   const QString &fechaHoraGen,
                                   const QString &numSerieAnterior = QString(),
-                                  const QString &fechaExpedicionAnterior = QString());
+                                  const QString &fechaExpedicionAnterior = QString(),
+                                  const QList<DesgloseIva> &desgloses = {});
 
     /// Envía el XML al web service SOAP de la AEAT mediante HTTPS y cliente certificado.
     /// Devuelve un valor de EstadoEnvioVerifactu: EstadoEnviado o EstadoAceptadoConErrores

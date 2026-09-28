@@ -118,3 +118,53 @@ void TestVerifactu::fechaHoraHuso_formato()
     QString s = verifactuClass::obtenerFechaHoraHusoActual();
     QVERIFY2(re.match(s).hasMatch(), qPrintable(s));
 }
+
+void TestVerifactu::generarXmlAlta_desgloseMultirate()
+{
+    VeriFactuConfig cfg;
+    cfg.emisorNif = "B12345678";
+    cfg.emisorNombre = "EMPRESA PRUEBA SL";
+    cfg.modo = 1;
+
+    QList<verifactuClass::DesgloseIva> desgloses;
+    verifactuClass::DesgloseIva d1;
+    d1.tipoImpositivo = 21.0;
+    d1.baseImponible = 100.0;
+    d1.cuota = 21.0;
+    desgloses.append(d1);
+
+    verifactuClass::DesgloseIva d2;
+    d2.tipoImpositivo = 10.0;
+    d2.baseImponible = 50.0;
+    d2.cuota = 5.0;
+    desgloses.append(d2);
+
+    verifactuClass::DesgloseIva d3;
+    d3.tipoImpositivo = 4.0;
+    d3.baseImponible = 25.0;
+    d3.cuota = 1.0;
+    desgloses.append(d3);
+
+    QString xml = verifactuClass::generarXmlAlta(
+        cfg, "TICKET-101", "01-08-2026", "12:00:00",
+        175.0, 27.0, 202.0, "F2", "", "HASHACTUAL",
+        "2026-08-01T12:00:00+02:00", "", "", desgloses
+    );
+
+    // Debe contener los tres tramos impositivos
+    QVERIFY(xml.contains("<sum1:TipoImpositivo>21</sum1:TipoImpositivo>"));
+    QVERIFY(xml.contains("<sum1:BaseImponibleOimporteNoSujeto>100</sum1:BaseImponibleOimporteNoSujeto>"));
+    QVERIFY(xml.contains("<sum1:CuotaRepercutida>21</sum1:CuotaRepercutida>"));
+
+    QVERIFY(xml.contains("<sum1:TipoImpositivo>10</sum1:TipoImpositivo>"));
+    QVERIFY(xml.contains("<sum1:BaseImponibleOimporteNoSujeto>50</sum1:BaseImponibleOimporteNoSujeto>"));
+    QVERIFY(xml.contains("<sum1:CuotaRepercutida>5</sum1:CuotaRepercutida>"));
+
+    QVERIFY(xml.contains("<sum1:TipoImpositivo>4</sum1:TipoImpositivo>"));
+    QVERIFY(xml.contains("<sum1:BaseImponibleOimporteNoSujeto>25</sum1:BaseImponibleOimporteNoSujeto>"));
+    QVERIFY(xml.contains("<sum1:CuotaRepercutida>1</sum1:CuotaRepercutida>"));
+
+    // Y los totales consolidados
+    QVERIFY(xml.contains("<sum1:CuotaTotal>27</sum1:CuotaTotal>"));
+    QVERIFY(xml.contains("<sum1:ImporteTotal>202</sum1:ImporteTotal>"));
+}

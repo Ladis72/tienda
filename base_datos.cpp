@@ -877,22 +877,28 @@ QSqlQuery baseDatos::ventasClientes(QString nombreConexion, QDate fechaI,
   QSqlQuery consulta(db);
   
   QString desde = fechaI.toString("yyyy-MM-01");
-  QString hasta = fechaF.toString("yyyy-MM-" + QString::number(fechaF.daysInMonth()));
-  
-  QString sql;
+  QDate finMes(fechaF.year(), fechaF.month(), fechaF.daysInMonth());
+  QString hasta = finMes.toString("yyyy-MM-dd");
+
   // Si existe la tabla histórica ticketss, unificamos con tickets
   if (db.tables().contains("ticketss")) {
-      sql = QString("SELECT cliente, SUM(total) FROM ("
-                    "  SELECT cliente, total FROM tickets WHERE fecha BETWEEN '%1' AND '%2' "
-                    "  UNION ALL "
-                    "  SELECT cliente, total FROM ticketss WHERE fecha BETWEEN '%1' AND '%2' "
-                    ") AS todas_ventas WHERE cliente > 0 GROUP BY cliente").arg(desde, hasta);
+      consulta.prepare("SELECT cliente, SUM(total) FROM ("
+                       "  SELECT cliente, total FROM tickets WHERE fecha BETWEEN ? AND ? "
+                       "  UNION ALL "
+                       "  SELECT cliente, total FROM ticketss WHERE fecha BETWEEN ? AND ? "
+                       ") AS todas_ventas WHERE cliente > 0 GROUP BY cliente");
+      consulta.bindValue(0, desde);
+      consulta.bindValue(1, hasta);
+      consulta.bindValue(2, desde);
+      consulta.bindValue(3, hasta);
   } else {
-      sql = QString("SELECT cliente, SUM(total) FROM tickets "
-                    "WHERE fecha BETWEEN '%1' AND '%2' AND cliente > 0 GROUP BY cliente").arg(desde, hasta);
+      consulta.prepare("SELECT cliente, SUM(total) FROM tickets "
+                       "WHERE fecha BETWEEN ? AND ? AND cliente > 0 GROUP BY cliente");
+      consulta.bindValue(0, desde);
+      consulta.bindValue(1, hasta);
   }
 
-  if (!consulta.exec(sql)) {
+  if (!consulta.exec()) {
       qDebug() << "Error en ventasClientes (" << nombreConexion << "):" << consulta.lastError().text();
   }
   
@@ -1582,30 +1588,7 @@ bool baseDatos::modificarCliente(QSqlDatabase db, QStringList datos,
   consulta.bindValue(12, datos.at(12));
   consulta.bindValue(13, datos.at(13));
   consulta.bindValue(14, dato.toInt());
-  QString texto = QString("UPDATE clientes SET idCliente = '%1' , nombre = "
-                          "'%2' , apellidos = '%3' , "
-                          "direccion = '%4' , cp = '%5' , "
-                          "localidad = '%6' , provincia = '%7' , nif = '%8' , "
-                          "telefono = '%9' , telefono2 "
-                          "= '%10' , mail = '%11' , descuento = '%12' , "
-                          "fechaAlta = '%13' , notas = '%14'"
-                          " WHERE idCliente = '%15'")
-                      .arg(datos.at(0))
-                      .arg(datos.at(1))
-                      .arg(datos.at(2))
-                      .arg(datos.at(3))
-                      .arg(datos.at(4))
-                      .arg(datos.at(5))
-                      .arg(datos.at(6))
-                      .arg(datos.at(7))
-                      .arg(datos.at(8))
-                      .arg(datos.at(9))
-                      .arg(datos.at(10))
-                      .arg(datos.at(11))
-                      .arg(datos.at(12))
-                      .arg(datos.at(13))
-                      .arg(dato);
-  qDebug() << texto;
+  qDebug() << "Modificando cliente ID:" << dato;
   if (!consulta.exec()) {
     db.rollback();
     return false;

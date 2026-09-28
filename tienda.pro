@@ -127,7 +127,9 @@ SOURCES += main.cpp\
     dialogestadisticasproductos.cpp \
     dialogestadisticasstockmuerto.cpp \
     dialogestadisticasclientes.cpp \
-    dialogestadisticasmermas.cpp
+    dialogestadisticasmermas.cpp \
+    dialognueva_nota.cpp \
+    dialogreglasalud.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -239,7 +241,9 @@ HEADERS  += tienda.h \
     dialogestadisticasstockmuerto.h \
     dialogestadisticasclientes.h \
     dialogestadisticasmermas.h \
-    estadisticas_utils.h
+    estadisticas_utils.h \
+    dialognueva_nota.h \
+    dialogreglasalud.h
 
 FORMS    += tienda.ui \
     generarvales.ui \
@@ -326,7 +330,9 @@ FORMS    += tienda.ui \
     dialogestadisticasproductos.ui \
     dialogestadisticasstockmuerto.ui \
     dialogestadisticasclientes.ui \
-    dialogestadisticasmermas.ui
+    dialogestadisticasmermas.ui \
+    dialognueva_nota.ui \
+    dialogreglasalud.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 

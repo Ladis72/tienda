@@ -18,6 +18,7 @@
 #include "totalizar.h"
 #include "visorimagenes.h"
 #include "monitorcaducidades.h"
+#include "verifactuclass.h"
 extern Configuracion *conf;
 
 namespace Ui {
@@ -116,6 +117,7 @@ protected:
     int ticketActualizado();
     QStringList recopilarDatosTicket();
     QStringList recopilarBasesIvas();
+    QList<verifactuClass::DesgloseIva> recopilarDesglosesIva();
     QString formatearCadena(QString cadena, int tamano);
     void datosProducto(QString IdProducto);
     QString generarDatosFactura(const QStringList datos, const QString ultimoHash);

@@ -7,21 +7,20 @@ on:
 jobs:
   tests:
     name: Unit tests (QTest)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Install Qt 6
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.7.*'
-          modules: 'qtbase'
-          cache: true
-
-      - name: Install libqrencode
+      - name: Install Qt 6 and dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libqrencode-dev
+          sudo apt-get install -y --no-install-recommends \
+            qt6-base-dev \
+            qt6-base-dev-tools \
+            libqt6network6 \
+            libqt6sql6 \
+            libqrencode-dev
+
 
       - name: Configure tests
         run: |
@@ -32,5 +31,7 @@ jobs:
           make -j$(nproc)
 
       - name: Run tests
+        env:
+          QT_QPA_PLATFORM: offscreen
         run: |
           ./tests

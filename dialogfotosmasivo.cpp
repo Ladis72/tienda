@@ -607,10 +607,19 @@ bool DialogFotosMasivo::descargarYAsignarFoto(int rowArticulo, int indexCandidat
     req.setHeader(QNetworkRequest::UserAgentHeader,
                   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
-    // Descarga sincrónica controlada con event loop local
+    // Descarga sincrónica controlada con event loop local y timeout de 10s
     QNetworkReply *reply = m_netManager->get(req);
     QEventLoop loop;
+    QTimer timer;
+    timer.setSingleShot(true);
+    QObject::connect(&timer, &QTimer::timeout, &loop, [&loop, reply]() {
+        if (reply && reply->isRunning()) {
+            reply->abort();
+        }
+        loop.quit();
+    });
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    timer.start(10000);
     loop.exec();
 
     reply->deleteLater();

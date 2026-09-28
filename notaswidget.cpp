@@ -1,6 +1,7 @@
 #include "notaswidget.h"
 #include "configuracion.h"
 #include "gestorencargosdialog.h"
+#include "dialognueva_nota.h"
 #include <QAbstractItemDelegate>
 #include <QApplication>
 #include <QCheckBox>
@@ -271,85 +272,22 @@ int NotasWidget::idNotaSeleccionada() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Diálogo para crear / editar nota
+// Diálogo para crear / editar nota (mediante archivo .ui de Qt Creator)
 // ─────────────────────────────────────────────────────────────
 bool NotasWidget::dialogoNota(QString &titulo, QString &descripcion,
                               QString &fechaLimite, QString &prioridad,
                               int idEdicion) {
-  QDialog dlg(this);
-  dlg.setWindowTitle(idEdicion < 0 ? tr("Nueva nota") : tr("Editar nota"));
-  dlg.setMinimumWidth(420);
+  DialogNuevaNota dlg(this, idEdicion >= 0);
+  dlg.setDatos(titulo, descripcion, fechaLimite, prioridad);
 
-  QFormLayout *form = new QFormLayout;
-
-  QLineEdit *edTitulo = new QLineEdit(&dlg);
-  edTitulo->setMaxLength(200);
-  edTitulo->setPlaceholderText(tr("Título de la nota..."));
-  edTitulo->setText(titulo);
-  form->addRow(tr("Título *:"), edTitulo);
-
-  QTextEdit *edDesc = new QTextEdit(&dlg);
-  edDesc->setPlaceholderText(tr("Descripción opcional..."));
-  edDesc->setPlainText(descripcion);
-  // edDesc->setMaximumHeight(100);
-  form->addRow(tr("Descripción:"), edDesc);
-
-  QComboBox *cboPrio = new QComboBox(&dlg);
-  cboPrio->addItems({tr("Alta"), tr("Normal"), tr("Baja")});
-  cboPrio->setCurrentText(prioridad.isEmpty() ? tr("Normal") : prioridad);
-  form->addRow(tr("Prioridad:"), cboPrio);
-
-  QDateEdit *dateLimite = new QDateEdit(&dlg);
-  dateLimite->setCalendarPopup(true);
-  dateLimite->setDisplayFormat("dd/MM/yyyy");
-  dateLimite->setSpecialValueText(tr("Sin fecha límite"));
-  dateLimite->setDate(QDate::currentDate());
-  // Si ya tiene fecha, la mostramos
-  if (!fechaLimite.isEmpty()) {
-    QDate d = QDate::fromString(fechaLimite, "dd/MM/yyyy");
-    if (!d.isValid())
-      d = QDate::fromString(fechaLimite, "yyyy-MM-dd");
-    if (d.isValid())
-      dateLimite->setDate(d);
-  }
-
-  QCheckBox *chkSinFecha = new QCheckBox(tr("Sin fecha límite"), &dlg);
-  chkSinFecha->setChecked(fechaLimite.isEmpty());
-  connect(chkSinFecha, &QCheckBox::toggled, dateLimite,
-          &QDateEdit::setDisabled);
-  dateLimite->setDisabled(chkSinFecha->isChecked());
-
-  QHBoxLayout *fechaBox = new QHBoxLayout;
-  fechaBox->addWidget(dateLimite);
-  fechaBox->addWidget(chkSinFecha);
-  form->addRow(tr("Fecha límite:"), fechaBox);
-
-  QDialogButtonBox *buttons = new QDialogButtonBox(
-      QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
-  buttons->button(QDialogButtonBox::Ok)->setText(tr("Guardar"));
-  buttons->button(QDialogButtonBox::Cancel)->setText(tr("Cancelar"));
-
-  QVBoxLayout *vlay = new QVBoxLayout(&dlg);
-  vlay->addLayout(form);
-  vlay->addWidget(buttons);
-
-  connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-  connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-
-  if (dlg.exec() != QDialog::Accepted)
-    return false;
-
-  if (edTitulo->text().trimmed().isEmpty()) {
-    QMessageBox::warning(this, tr("Campo requerido"),
-                         tr("El título es obligatorio."));
+  if (dlg.exec() != QDialog::Accepted) {
     return false;
   }
 
-  titulo = edTitulo->text().trimmed();
-  descripcion = edDesc->toPlainText().trimmed();
-  prioridad = cboPrio->currentText();
-  fechaLimite =
-      chkSinFecha->isChecked() ? "" : dateLimite->date().toString("yyyy-MM-dd");
+  titulo = dlg.titulo();
+  descripcion = dlg.descripcion();
+  prioridad = dlg.prioridad();
+  fechaLimite = dlg.fechaLimite();
   return true;
 }
 

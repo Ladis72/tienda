@@ -42,6 +42,8 @@ void MonitorCaducidades::ejecutarAnalisis()
     dbLocal.setPassword(m_password);
 
     if (!dbLocal.open()) {
+        dbLocal = QSqlDatabase();
+        QSqlDatabase::removeDatabase(connectionName);
         emit errorOcurrido("MonitorCaducidades: No se pudo abrir la BD local.");
         return;
     }
@@ -53,6 +55,8 @@ void MonitorCaducidades::ejecutarAnalisis()
     qLock.exec("SELECT GET_LOCK('monitor_caducidades_lock', 0)");
     if (qLock.next() && qLock.value(0).toInt() != 1) {
         dbLocal.close();
+        dbLocal = QSqlDatabase();
+        QSqlDatabase::removeDatabase(connectionName);
         emit errorOcurrido("El análisis de caducidades ya se está ejecutando en otra instancia o en otra máquina en este momento. Por favor, inténtelo de nuevo más tarde.");
         emit finished();
         return;
@@ -314,15 +318,28 @@ void MonitorCaducidades::ejecutarAnalisis()
         }
     }
     
-    // Limpiar y cerrar las conexiones que abrimos
-    if (usarNube) {
+    // Liberar cerrojo distribuido de base de datos
+    qLock.exec("SELECT RELEASE_LOCK('monitor_caducidades_lock')");
+    qLock.finish();
+    qIdTienda.finish();
+    qLotes.finish();
+    dbLocal.close();
+    dbLocal = QSqlDatabase();
+
+    // Limpiar y desregistrar las conexiones temporales del pool global de Qt
+    if (usarNube && QSqlDatabase::contains(connNube)) {
         QSqlDatabase::database(connNube).close();
+        QSqlDatabase::removeDatabase(connNube);
     }
     for (const QString &connRemote : conexionesRemotasActivas) {
-        QSqlDatabase::database(connRemote).close();
+        if (QSqlDatabase::contains(connRemote)) {
+            QSqlDatabase::database(connRemote).close();
+            QSqlDatabase::removeDatabase(connRemote);
+        }
     }
-
-    dbLocal.close();
+    if (QSqlDatabase::contains(connectionName)) {
+        QSqlDatabase::removeDatabase(connectionName);
+    }
     
     // Notificamos a la UI si hay recomendaciones (o lista vacía)
     emit analisisCompletado(listaRecomendaciones);
