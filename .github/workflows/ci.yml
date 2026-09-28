@@ -35,3 +35,28 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           ./tests
+
+  build-app:
+    name: Build Application (tienda.pro)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Qt 6 and full dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qt6-base-dev \
+            qt6-base-dev-tools \
+            qt6-charts-dev \
+            qt6-webengine-dev \
+            qt6-positioning-dev \
+            qt6-5compat-dev \
+            libqrencode-dev \
+            libgl1-mesa-dev
+
+      - name: Build Tienda
+        run: |
+          mkdir -p build && cd build
+          qmake6 ../tienda.pro
+          make -j$(nproc)

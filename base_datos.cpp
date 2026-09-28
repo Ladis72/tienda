@@ -3146,11 +3146,13 @@ bool baseDatos::copiaSeguridad(QString base, QString nombre) {
 
   process.setStandardOutputFile(nombre);
   process.start("mysqldump", argumentos);
-  if (process.waitForFinished(-1)) {
-    qDebug() << "Compretada sin errores el backup de: " << nombre;
+  // Limitar la espera a 120 segundos para evitar congelar indefinidamente la interfaz si mysqldump se bloquea
+  if (process.waitForFinished(120000)) {
+    qDebug() << "Completada sin errores el backup de: " << nombre;
     return true;
   } else {
-    qDebug() << "Backup error";
+    process.kill();
+    qDebug() << "Backup error o timeout tras 120s:";
     qDebug() << process.errorString();
   }
 
@@ -6305,7 +6307,28 @@ bool baseDatos::volcarHistoricoLocalANube(int idTienda, const QString &fechaDesd
   int arqueosSubidos = 0;
   int lotesSubidos = 0;
 
-  // 1. Subir Tickets y sus líneas
+  // 1. Precargar todas las líneas de tickets en bloque para eliminar el problema de N+1 consultas
+  QHash<int, QList<QVariantMap>> lineasPorTicket;
+  QSqlQuery qLineasAll(dbLocal);
+  qLineasAll.prepare("SELECT nticket, cod, descripcion, cantidad, precio, iva, descuento, totallinea "
+                     "FROM lineasticket WHERE nticket IN (SELECT ticket FROM tickets WHERE fecha >= ?)");
+  qLineasAll.bindValue(0, fechaDesde);
+  if (qLineasAll.exec()) {
+    while (qLineasAll.next()) {
+      int tktId = qLineasAll.value("nticket").toInt();
+      QVariantMap lm;
+      lm["cod"] = qLineasAll.value("cod").toString();
+      lm["descripcion"] = qLineasAll.value("descripcion").toString();
+      lm["cantidad"] = qLineasAll.value("cantidad").toDouble();
+      lm["precio"] = qLineasAll.value("precio").toDouble();
+      lm["iva"] = qLineasAll.value("iva").toDouble();
+      lm["descuento"] = qLineasAll.value("descuento").toDouble();
+      lm["totallinea"] = qLineasAll.value("totallinea").toDouble();
+      lineasPorTicket[tktId].append(lm);
+    }
+  }
+
+  // Subir Tickets asociando las líneas precargadas
   QSqlQuery qTickets(dbLocal);
   qTickets.prepare("SELECT ticket, usuario, cliente, DATE_FORMAT(fecha, '%Y-%m-%d') as fecha_fmt, "
                    "hora, total, fpago FROM tickets WHERE fecha >= ?");
@@ -6321,25 +6344,7 @@ bool baseDatos::volcarHistoricoLocalANube(int idTienda, const QString &fechaDesd
       int cli = qTickets.value("cliente").toInt();
       int usu = qTickets.value("usuario").toInt();
 
-      // Obtener líneas
-      QList<QVariantMap> lineas;
-      QSqlQuery qL(dbLocal);
-      qL.prepare("SELECT cod, descripcion, cantidad, precio, iva, descuento, totallinea "
-                 "FROM lineasticket WHERE nticket = ?");
-      qL.bindValue(0, nTkt);
-      if (qL.exec()) {
-        while (qL.next()) {
-          QVariantMap lm;
-          lm["cod"] = qL.value("cod").toString();
-          lm["descripcion"] = qL.value("descripcion").toString();
-          lm["cantidad"] = qL.value("cantidad").toDouble();
-          lm["precio"] = qL.value("precio").toDouble();
-          lm["iva"] = qL.value("iva").toDouble();
-          lm["descuento"] = qL.value("descuento").toDouble();
-          lm["totallinea"] = qL.value("totallinea").toDouble();
-          lineas.append(lm);
-        }
-      }
+      QList<QVariantMap> lineas = lineasPorTicket.value(nTkt);
 
       if (subirTicketNube(idTienda, nTkt, f, h, tot, fp, cli, usu, lineas)) {
         ticketsSubidos++;

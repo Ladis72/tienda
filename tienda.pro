@@ -205,6 +205,7 @@ HEADERS  += tienda.h \
     gestorencargosdialog.h \
     dialogdevolucionanticipo.h \
     syncmanager.h \
+    skip_sync_guard.h \
     unificarproveedores.h \
     saneadorglobal.h \
     unificarmaestros.h \

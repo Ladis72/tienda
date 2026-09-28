@@ -131,6 +131,11 @@ void SyncManager::crearTablasSyncLocal() {
          "  ultima_sync DATETIME    NOT NULL DEFAULT '2000-01-01 00:00:00'"
          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+  // Índices críticos para rendimiento en TPV, facturación y compras
+  q.exec("ALTER TABLE `lineasticket_tmp` ADD INDEX IF NOT EXISTS `idx_orden` (`orden`)");
+  q.exec("ALTER TABLE `facturas` ADD INDEX IF NOT EXISTS `idx_nfactura` (`nFactura`)");
+  q.exec("ALTER TABLE `lineaspedido` ADD INDEX IF NOT EXISTS `idx_cod_doc` (`cod`, `nDocumento`)");
+
   for (const QString &tabla : TABLAS_MAESTRAS) {
     q.exec(QString("ALTER TABLE `%1` ADD COLUMN IF NOT EXISTS id_tienda_origen "
                    "INT DEFAULT NULL")
