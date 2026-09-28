@@ -113,11 +113,17 @@ void Login::on_pushButton_clicked()
     QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
     QSqlQuery consulta(db);
 
-    // Comprobar si la columna salt existe en la tabla usuarios
+    // Comprobar si la columna salt existe en la tabla usuarios; si no existe, crearla para permitir migración
     bool tieneSalt = false;
     QSqlQuery checkCol(db);
     if (checkCol.exec("SHOW COLUMNS FROM usuarios LIKE 'salt'")) {
         tieneSalt = checkCol.next();
+    }
+    if (!tieneSalt) {
+        QSqlQuery addCol(db);
+        if (addCol.exec("ALTER TABLE usuarios ADD COLUMN salt VARCHAR(64) DEFAULT NULL")) {
+            tieneSalt = true;
+        }
     }
 
     if (tieneSalt) {

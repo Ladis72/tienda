@@ -1,7 +1,6 @@
 #ifndef CONEXION_H
 #define CONEXION_H
 
-#endif // CONEXION_H
 #include <QCoreApplication>
 #include <QMessageBox>
 #include <QSettings>
@@ -167,3 +166,4 @@
     return true;
 }
 
+#endif // CONEXION_H

@@ -1508,27 +1508,27 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index) {
     ui->labelProveedor->setText("Detalle de compras: " + nombreProv);
 
     // Cargamos el detalle específico para este proveedor, calculando el neto
-    // por línea (Año actual y anterior)
-    modeloCompras.setQuery(
+    // por línea (Año actual y anterior) mediante consulta parametrizada
+    QSqlQuery qCompras(QSqlDatabase::database(conf->getConexionLocal()));
+    qCompras.prepare(
         "SELECT lp.nDocumento as 'Nº Factura', p.idProveedor as 'Cód Prov', lp.cantidad as 'Uds', "
         "lp.bonificacion as 'Bonif', "
-        "lp.costo as 'Bruto', lp.descuento1 as '% Desc L', p.descuento as '% "
-        "Desc P', "
+        "lp.costo as 'Bruto', lp.descuento1 as '% Desc L', p.descuento as '% Desc P', "
         "ROUND((lp.costo * (1 - COALESCE(lp.descuento1, 0)/100) * "
         "(1 - COALESCE(p.descuento, 0)/100) * "
         "(1 + i.porcentaje/100 + i.recargo/100) * "
-        "lp.cantidad) / (lp.cantidad + lp.bonificacion), 2) as 'Neto + IVA + "
-        "RE', "
+        "lp.cantidad) / (lp.cantidad + lp.bonificacion), 2) as 'Neto + IVA + RE', "
         "DATE_FORMAT(p.fechaPedido, '%Y-%m-%d') as 'Fecha' "
         "FROM lineaspedido lp "
         "JOIN pedidos p ON lp.nDocumento = p.npedido "
         "LEFT JOIN impuestos i ON i.porcentaje = lp.tipoIva "
-        "WHERE lp.cod = '" +
-            ui->lineEditCod->text() + "' AND p.idProveedor = '" + idProv +
-            "' "
-            "AND YEAR(p.fechaPedido) >= YEAR(CURDATE()) - 1 "
-            "ORDER BY p.fechaPedido DESC",
-        QSqlDatabase::database(conf->getConexionLocal()));
+        "WHERE lp.cod = ? AND p.idProveedor = ? "
+        "AND YEAR(p.fechaPedido) >= YEAR(CURDATE()) - 1 "
+        "ORDER BY p.fechaPedido DESC");
+    qCompras.bindValue(0, ui->lineEditCod->text().trimmed());
+    qCompras.bindValue(1, idProv);
+    qCompras.exec();
+    modeloCompras.setQuery(std::move(qCompras));
 
     ui->tableViewCompras->setModel(&modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
@@ -1539,7 +1539,8 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index) {
 }
 
 void Articulos::mostrarFoto() {
-  VisorImagenes *visor = new VisorImagenes(ui->lineEditFoto->text());
+  VisorImagenes *visor = new VisorImagenes(ui->lineEditFoto->text(), this);
+  visor->setAttribute(Qt::WA_DeleteOnClose);
   visor->showMaximized();
 }
 

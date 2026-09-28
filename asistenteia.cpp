@@ -6060,8 +6060,21 @@ static bool validarSeguridadConsultaSql(const QString &sql, QString &errorDetall
         }
     }
 
-    // 3. Prohibir acceso directo a credenciales, contraseñas o hashes de la tabla usuarios
+    // 3. Prohibir acceso a tablas de configuración y credenciales del sistema
+    static const QSet<QString> tablasProhibidas = {"CONFIG_NUBE", "CONFIGLOCAL", "TIENDAS"};
+    for (const QString &tok : tokens) {
+        if (tablasProhibidas.contains(tok)) {
+            errorDetalle = QString("Seguridad: No se permite consultar la tabla de configuración o credenciales '%1'.").arg(tok);
+            return false;
+        }
+    }
+
+    // 4. Prohibir acceso directo a credenciales, contraseñas o hashes de la tabla usuarios
     if (tokens.contains("USUARIOS")) {
+        if (sql.contains('*')) {
+            errorDetalle = "Seguridad: No se permite usar comodín '*' sobre la tabla de usuarios. Seleccione únicamente campos no sensibles (ej: nombre, rol).";
+            return false;
+        }
         static const QSet<QString> colsSensibles = {"CLAVE", "SALT", "PASSWORD", "PASS", "HASH"};
         for (const QString &tok : tokens) {
             if (colsSensibles.contains(tok)) {

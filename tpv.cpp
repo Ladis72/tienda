@@ -407,10 +407,11 @@ bool Tpv::grabarLineasTicket(const QString serie)
             return false;
         }
         if (lineaTicket.at(3).toInt() < 0) {
-            DialogFecha *fechaCaducidad = new DialogFecha(lineaTicket.at(2));
-            fechaCaducidad->exec();
-            QString fecha = fechaCaducidad->fecha.toString("yyyy-MM-dd");
-            QString lote = fechaCaducidad->lote;
+            // Uso en la pila (RAII) para evitar fugas de memoria
+            DialogFecha fechaCaducidad(lineaTicket.at(2), this);
+            fechaCaducidad.exec();
+            QString fecha = fechaCaducidad.fecha.toString("yyyy-MM-dd");
+            QString lote = fechaCaducidad.lote;
             QString idLote = base.idLote(conf->getConexionLocal(), lineaTicket.at(1), lote, fecha);
             qDebug() << lote;
             if (idLote != "0") {
@@ -937,7 +938,8 @@ void Tpv::on_btn_cobrar_clicked()
             lm["cod"] = modeloTicket->record(i).value("cod").toString();
             lm["descripcion"] = modeloTicket->record(i).value("descripcion").toString();
             lm["cantidad"] = modeloTicket->record(i).value("cantidad").toDouble();
-            lm["precio"] = modeloTicket->record(i).value("pvp").toDouble();
+            // Corrección: La columna en lineasticket_tmp se llama 'precio', no 'pvp'
+            lm["precio"] = modeloTicket->record(i).value("precio").toDouble();
             lm["iva"] = modeloTicket->record(i).value("iva").toDouble();
             lm["descuento"] = modeloTicket->record(i).value("descuento").toDouble();
             lm["totallinea"] = modeloTicket->record(i).value("totallinea").toDouble();

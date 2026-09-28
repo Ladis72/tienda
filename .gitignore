@@ -84,3 +84,6 @@ schema_diff.txt
 *.sql
 *.py
 *.sh
+
+# Informes de auditoría interna
+revision_tienda.*

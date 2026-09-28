@@ -1232,16 +1232,23 @@ int SyncManager::bajarCambios(const QString &connLocal, const QString &connNube,
       QSqlQuery qL(dbLocal);
       bool ok = true;
       for (const auto &dep : cfg.dependencias) {
-        QString sqlU = QString("UPDATE %1 SET %2 = '%3' WHERE %2 = '%4'")
-                           .arg(dep.tabla, dep.campo, g, p);
-        if (!qL.exec(sqlU)) {
+        QString sqlU = QString("UPDATE %1 SET %2 = ? WHERE %2 = ?")
+                           .arg(dep.tabla, dep.campo);
+        qL.prepare(sqlU);
+        qL.bindValue(0, g);
+        qL.bindValue(1, p);
+        if (!qL.exec()) {
           ok = false;
           break;
         }
       }
-      if (ok)
-        ok = qL.exec(QString("DELETE FROM %1 WHERE %2 = '%3'")
-                         .arg(cfg.tablaMaestra, cfg.campoId, p));
+      if (ok) {
+        QString sqlD = QString("DELETE FROM %1 WHERE %2 = ?")
+                           .arg(cfg.tablaMaestra, cfg.campoId);
+        qL.prepare(sqlD);
+        qL.bindValue(0, p);
+        ok = qL.exec();
+      }
 
       if (ok)
         dbLocal.commit();

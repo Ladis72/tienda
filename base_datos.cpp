@@ -20,6 +20,7 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QSettings>
+#include <QThread>
 #include <QUrl>
 
 
@@ -1502,12 +1503,11 @@ int baseDatos::maxTicketPendiente(QSqlDatabase db) {
   QSqlQuery consulta(db);
 
   if (consulta.exec("SELECT max(orden) FROM ticket_tmp")) {
-    consulta.first();
-    if (consulta.numRowsAffected() == 0) {
-      return 0;
+    if (consulta.first() && !consulta.value(0).isNull()) {
+      return consulta.value(0).toInt();
     }
   }
-  return consulta.value(0).toInt();
+  return 0;
 }
 
 bool baseDatos::nuevoTicketTmp(int orden, int cliente, int vendedor) {
@@ -6078,55 +6078,83 @@ bool baseDatos::crearTablasIA(QSqlDatabase &db) {
 bool baseDatos::subirTicketNube(int idTienda, int nTicket, const QString &fecha, const QString &hora,
                                double total, int fpago, int cliente, int usuario,
                                const QList<QVariantMap> &lineas) {
-  if (!QSqlDatabase::contains(SyncManager::CONEXION_NUBE) ||
-      !QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+  if (!QSqlDatabase::contains(SyncManager::CONEXION_NUBE)) {
     return false;
   }
 
-  QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
-  QSqlQuery q(dbNube);
-  q.prepare("INSERT INTO tickets_nube (id_tienda, ticket, usuario, cliente, fecha, hora, total, fpago) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
-            "ON DUPLICATE KEY UPDATE usuario=VALUES(usuario), cliente=VALUES(cliente), "
-            "total=VALUES(total), fpago=VALUES(fpago)");
-  q.bindValue(0, idTienda);
-  q.bindValue(1, nTicket);
-  q.bindValue(2, usuario);
-  q.bindValue(3, cliente);
-  q.bindValue(4, fecha);
-  q.bindValue(5, hora);
-  q.bindValue(6, total);
-  q.bindValue(7, fpago);
-
-  if (!q.exec()) {
-    qDebug() << "baseDatos::subirTicketNube error cabecera:" << q.lastError().text();
-    return false;
+  // Garantizar conexión segura para el hilo actual si se invoca desde QtConcurrent
+  QString connName = SyncManager::CONEXION_NUBE;
+  bool connPropia = false;
+  if (QThread::currentThread() != QCoreApplication::instance()->thread()) {
+    connName = QString("NubeUpload_%1").arg(quintptr(QThread::currentThreadId()));
+    connPropia = true;
   }
 
-  // Eliminar líneas anteriores si existieran y reinsertar
-  QSqlQuery qDel(dbNube);
-  qDel.prepare("DELETE FROM lineasticket_nube WHERE id_tienda = ? AND nticket = ?");
-  qDel.bindValue(0, idTienda);
-  qDel.bindValue(1, nTicket);
-  qDel.exec();
-
-  for (const QVariantMap &l : lineas) {
-    QSqlQuery qL(dbNube);
-    qL.prepare("INSERT INTO lineasticket_nube (id_tienda, nticket, cod, descripcion, cantidad, precio, iva, descuento, totallinea) "
-               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    qL.bindValue(0, idTienda);
-    qL.bindValue(1, nTicket);
-    qL.bindValue(2, l.value("cod").toString());
-    qL.bindValue(3, l.value("descripcion").toString());
-    qL.bindValue(4, l.value("cantidad").toDouble());
-    qL.bindValue(5, l.value("precio").toDouble());
-    qL.bindValue(6, l.value("iva").toDouble());
-    qL.bindValue(7, l.value("descuento").toDouble());
-    qL.bindValue(8, l.value("totallinea").toDouble());
-    qL.exec();
+  QSqlDatabase dbNube;
+  if (connPropia) {
+    QSqlDatabase dbSrc = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    dbNube = QSqlDatabase::cloneDatabase(dbSrc, connName);
+    if (!dbNube.open()) {
+      QSqlDatabase::removeDatabase(connName);
+      return false;
+    }
+  } else {
+    dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    if (!dbNube.isOpen()) return false;
   }
 
-  return true;
+  bool exito = true;
+  {
+    QSqlQuery q(dbNube);
+    q.prepare("INSERT INTO tickets_nube (id_tienda, ticket, usuario, cliente, fecha, hora, total, fpago) "
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+              "ON DUPLICATE KEY UPDATE usuario=VALUES(usuario), cliente=VALUES(cliente), "
+              "total=VALUES(total), fpago=VALUES(fpago)");
+    q.bindValue(0, idTienda);
+    q.bindValue(1, nTicket);
+    q.bindValue(2, usuario);
+    q.bindValue(3, cliente);
+    q.bindValue(4, fecha);
+    q.bindValue(5, hora);
+    q.bindValue(6, total);
+    q.bindValue(7, fpago);
+
+    if (!q.exec()) {
+      qDebug() << "baseDatos::subirTicketNube error cabecera:" << q.lastError().text();
+      exito = false;
+    } else {
+      // Eliminar líneas anteriores si existieran y reinsertar
+      QSqlQuery qDel(dbNube);
+      qDel.prepare("DELETE FROM lineasticket_nube WHERE id_tienda = ? AND nticket = ?");
+      qDel.bindValue(0, idTienda);
+      qDel.bindValue(1, nTicket);
+      qDel.exec();
+
+      for (const QVariantMap &l : lineas) {
+        QSqlQuery qL(dbNube);
+        qL.prepare("INSERT INTO lineasticket_nube (id_tienda, nticket, cod, descripcion, cantidad, precio, iva, descuento, totallinea) "
+                   "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        qL.bindValue(0, idTienda);
+        qL.bindValue(1, nTicket);
+        qL.bindValue(2, l.value("cod").toString());
+        qL.bindValue(3, l.value("descripcion").toString());
+        qL.bindValue(4, l.value("cantidad").toDouble());
+        qL.bindValue(5, l.value("precio").toDouble());
+        qL.bindValue(6, l.value("iva").toDouble());
+        qL.bindValue(7, l.value("descuento").toDouble());
+        qL.bindValue(8, l.value("totallinea").toDouble());
+        qL.exec();
+      }
+    }
+  }
+
+  if (connPropia) {
+    dbNube.close();
+    dbNube = QSqlDatabase();
+    QSqlDatabase::removeDatabase(connName);
+  }
+
+  return exito;
 }
 
 /**
