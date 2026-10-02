@@ -161,6 +161,8 @@ public:
     QStringList listadoPrestamistas();
     QStringList datosFactura(QSqlDatabase db, QString nFactura);
     bool cambiarProveedorFactura(QString base, QString nDoc, QString idProveedorViejo, QString idProveedorNuevo);
+    bool convertirFacturaAAlbaran(QString base, const QString &nFactura, const QString &idProveedor, const QString &nuevoNDoc, const QString &fecha, const QString &notas);
+    bool convertirAlbaranAFactura(QString base, const QString &nAlbaran, const QString &idProveedor, const QString &nuevoNDoc, const QString &fecha, const QString &vencimiento, int pagada, const QString &notas);
 
     //Funciones CAJAS
     QSqlQuery ventas(QString fecha, QString tabla, QString base);

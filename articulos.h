@@ -127,20 +127,14 @@ private:
     Ui::Articulos *ui;
 
     baseDatos base;
-    QSqlQueryModel *modeloTabla;
-    QSqlQueryModel modeloVentas;
-    QSqlQueryModel modeloCompras;
-    QSqlTableModel *modeloAux;
-    QDataWidgetMapper mapper;
-    QSqlQuery consultaRemota;
-    Stock *stock;
-    VisorImagenes *visor;
-    VisorFacturas *factura;
-    comprasVentasRemoto *cvr;
+    QSqlQueryModel *modeloTabla = nullptr;
+    QSqlQueryModel *modeloVentas = nullptr;
+    QSqlQueryModel *modeloCompras = nullptr;
+    QSqlTableModel *modeloAux = nullptr;
+    QDataWidgetMapper *mapper = nullptr;
     QString nFactura, idProveedor;
-    conexionesRemotas *conexiones;
     QStringList listaConexionesRemotas;
-    bool remoto;
+    bool remoto = false;
     GraficoVentasWidget *graficoVentas = nullptr;
     //Familias *F;
     void cargarDatosGrafico(DatosGrafico nuevosDatos);

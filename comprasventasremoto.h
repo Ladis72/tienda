@@ -32,8 +32,8 @@ private slots:
 private:
     Ui::comprasVentasRemoto *ui;
 
-    QSqlQueryModel modeloVentas;
-    QSqlQueryModel modeloCompras;
+    QSqlQueryModel *modeloVentas = nullptr;
+    QSqlQueryModel *modeloCompras = nullptr;
     QString codigo;
     QSqlDatabase db;
     int m_idTienda;

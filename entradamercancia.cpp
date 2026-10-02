@@ -100,6 +100,11 @@ void EntradaMercancia::on_pushButtonAceptar_clicked()
     for (int i = 0; i < mTablaEntradas->rowCount(); ++i) {
         procesarLineaEntrada(mTablaEntradas->record(i));
     }
+
+    // Limpieza de seguridad: borrar cualquier lote huérfano con cantidad 0 en la BD local
+    QSqlQuery qClean(QSqlDatabase::database(conf->getConexionLocal()));
+    qClean.exec("DELETE FROM lotes WHERE cantidad = 0");
+
     base->insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(), "Entrada genero ");
 
     guardarArticulo(idTienda);
@@ -277,6 +282,12 @@ void EntradaMercancia::procesarLineaEntrada(const QSqlRecord &registro)
     const QString descripcion = registro.value("descripcion").toString();
     const QString precio = registro.value("pvp").toString();
 
+    // Si la cantidad es 0 o negativa no generamos existencias en lotes
+    if (uds <= 0) {
+        actualizarArticulo(cod, descripcion, precio);
+        return;
+    }
+
     QString idLote = base->idLote(conf->getConexionLocal(), cod, "", "2000-01-01");
 
     if (idLote != "0") {
@@ -292,15 +303,18 @@ void EntradaMercancia::procesarLineaEntrada(const QSqlRecord &registro)
             deleteLoteQuery.exec();
             int nuevasUnidades = uds + pendientes;
 
-            idLote = base->idLote(conf->getConexionLocal(), cod, "", fechaCaducidad);
-            if (idLote == "0") {
-                base->crearLote(conf->getConexionLocal(),
-                                cod,
-                                "",
-                                fechaCaducidad,
-                                QString::number(nuevasUnidades));
-            } else {
-                base->aumentarLote(conf->getConexionLocal(), idLote, nuevasUnidades);
+            // Solo creamos o aumentamos lote si efectivamente quedan unidades positivas (> 0)
+            if (nuevasUnidades > 0) {
+                idLote = base->idLote(conf->getConexionLocal(), cod, "", fechaCaducidad);
+                if (idLote == "0") {
+                    base->crearLote(conf->getConexionLocal(),
+                                    cod,
+                                    "",
+                                    fechaCaducidad,
+                                    QString::number(nuevasUnidades));
+                } else {
+                    base->aumentarLote(conf->getConexionLocal(), idLote, nuevasUnidades);
+                }
             }
         }
     } else {
@@ -311,6 +325,12 @@ void EntradaMercancia::procesarLineaEntrada(const QSqlRecord &registro)
             base->aumentarLote(conf->getConexionLocal(), idLote, uds);
         }
     }
+
+    // Limpieza de seguridad: borrar cualquier lote que haya podido quedar con cantidad 0
+    QSqlQuery qClean(QSqlDatabase::database(conf->getConexionLocal()));
+    qClean.prepare("DELETE FROM lotes WHERE ean = ? AND cantidad = 0");
+    qClean.bindValue(0, cod);
+    qClean.exec();
 
     actualizarArticulo(cod, descripcion, precio);
 }
@@ -512,7 +532,7 @@ bool EntradaMercancia::procesarSalidaRemota(const QString &connRemota, int idLoc
     QSqlDatabase dbRem = QSqlDatabase::database(connRemota, false);
     if (!dbRem.isOpen()) return false;
 
-    // 1. Descontar lotes en la tienda remota
+    // 1. Descontar lotes en la tienda remota eliminando lotes al llegar a 0 para no dejar rastros vacíos
     QSqlQuery qSel(dbRem);
     qSel.prepare("SELECT cod, fechaCaducidad, cantidad, pvp, descripcion FROM salidaGenero_tmp WHERE idTienda = ?");
     qSel.bindValue(0, idLocalEnRemota);
@@ -520,26 +540,95 @@ bool EntradaMercancia::procesarSalidaRemota(const QString &connRemota, int idLoc
         while (qSel.next()) {
             QString cod = qSel.value("cod").toString();
             QString fechaCad = qSel.value("fechaCaducidad").toString();
-            int uds = qSel.value("cantidad").toInt();
+            int udsPorDescontar = qSel.value("cantidad").toInt();
 
-            // Intentar descontar lote por fecha exacta en la remota
-            QSqlQuery qLote(dbRem);
-            qLote.prepare("UPDATE lotes SET cantidad = cantidad - ? WHERE ean = ? AND fecha = ? LIMIT 1");
-            qLote.bindValue(0, uds);
-            qLote.bindValue(1, cod);
-            qLote.bindValue(2, fechaCad);
-            qLote.exec();
-
-            if (qLote.numRowsAffected() < 1) {
-                // Si no coincide la fecha exacta, descontar del lote más antiguo
-                QSqlQuery qFallback(dbRem);
-                qFallback.prepare("UPDATE lotes SET cantidad = cantidad - ? WHERE ean = ? ORDER BY fecha ASC LIMIT 1");
-                qFallback.bindValue(0, uds);
-                qFallback.bindValue(1, cod);
-                qFallback.exec();
+            if (udsPorDescontar <= 0) {
+                continue;
             }
+
+            // A. Primero intentar descontar del lote que coincide exactamente en fecha de caducidad
+            if (!fechaCad.isEmpty()) {
+                QSqlQuery qLote(dbRem);
+                qLote.prepare("SELECT id, cantidad FROM lotes WHERE ean = ? AND fecha = ? ORDER BY id ASC");
+                qLote.bindValue(0, cod);
+                qLote.bindValue(1, fechaCad);
+                if (qLote.exec()) {
+                    while (qLote.next() && udsPorDescontar > 0) {
+                        int idLote = qLote.value("id").toInt();
+                        int cantActual = qLote.value("cantidad").toInt();
+
+                        if (cantActual <= udsPorDescontar) {
+                            // Se agotan las existencias del lote: se elimina para no dejar rastro con cantidad 0
+                            QSqlQuery qDel(dbRem);
+                            qDel.prepare("DELETE FROM lotes WHERE id = ?");
+                            qDel.bindValue(0, idLote);
+                            qDel.exec();
+                            udsPorDescontar -= cantActual;
+                        } else {
+                            // Queda stock positivo restante en el lote
+                            QSqlQuery qUp(dbRem);
+                            qUp.prepare("UPDATE lotes SET cantidad = cantidad - ? WHERE id = ?");
+                            qUp.bindValue(0, udsPorDescontar);
+                            qUp.bindValue(1, idLote);
+                            qUp.exec();
+                            udsPorDescontar = 0;
+                        }
+                    }
+                }
+            }
+
+            // B. Si aún quedan unidades por descontar (o no había lote con esa fecha exacta),
+            // descontar de los lotes más antiguos con existencias (FIFO)
+            if (udsPorDescontar > 0) {
+                QSqlQuery qFIFO(dbRem);
+                qFIFO.prepare("SELECT id, cantidad FROM lotes WHERE ean = ? AND cantidad > 0 ORDER BY fecha ASC, id ASC");
+                qFIFO.bindValue(0, cod);
+                if (qFIFO.exec()) {
+                    while (qFIFO.next() && udsPorDescontar > 0) {
+                        int idLote = qFIFO.value("id").toInt();
+                        int cantActual = qFIFO.value("cantidad").toInt();
+
+                        if (cantActual <= udsPorDescontar) {
+                            // Se agota el lote completamente: se elimina para evitar cantidad 0
+                            QSqlQuery qDel(dbRem);
+                            qDel.prepare("DELETE FROM lotes WHERE id = ?");
+                            qDel.bindValue(0, idLote);
+                            qDel.exec();
+                            udsPorDescontar -= cantActual;
+                        } else {
+                            // Descontar parcialmente
+                            QSqlQuery qUp(dbRem);
+                            qUp.prepare("UPDATE lotes SET cantidad = cantidad - ? WHERE id = ?");
+                            qUp.bindValue(0, udsPorDescontar);
+                            qUp.bindValue(1, idLote);
+                            qUp.exec();
+                            udsPorDescontar = 0;
+                        }
+                    }
+                }
+            }
+
+            // C. Si tras revisar todos los lotes aún faltan unidades (stock negativo pendiente de compensar)
+            if (udsPorDescontar > 0) {
+                QString fReg = !fechaCad.isEmpty() ? fechaCad : "2000-01-01";
+                QSqlQuery qNeg(dbRem);
+                qNeg.prepare("INSERT INTO lotes (ean, lote, fecha, cantidad) VALUES (?, '', ?, ?)");
+                qNeg.bindValue(0, cod);
+                qNeg.bindValue(1, fReg);
+                qNeg.bindValue(2, -udsPorDescontar);
+                qNeg.exec();
+            }
+
+            // D. Limpieza preventiva del artículo en la BD remota
+            QSqlQuery qCleanArt(dbRem);
+            qCleanArt.prepare("DELETE FROM lotes WHERE ean = ? AND cantidad = 0");
+            qCleanArt.bindValue(0, cod);
+            qCleanArt.exec();
         }
     }
+
+    // Limpieza general de cualquier lote con cantidad 0 en la base remota
+    dbRem.exec("DELETE FROM lotes WHERE cantidad = 0");
 
     // 2. Insertar en salidaGenero remota desde salidaGenero_tmp
     QSqlQuery qInsert(dbRem);
@@ -614,6 +703,11 @@ void EntradaMercancia::on_pushButtonAceptarAmbas_clicked()
     for (int i = 0; i < mTablaEntradas->rowCount(); ++i) {
         procesarLineaEntrada(mTablaEntradas->record(i));
     }
+
+    // Limpieza de seguridad: borrar cualquier lote con cantidad 0 en la BD local
+    QSqlQuery qCleanLocal(QSqlDatabase::database(conf->getConexionLocal()));
+    qCleanLocal.exec("DELETE FROM lotes WHERE cantidad = 0");
+
     base->insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                       QString("Entrada traspaso aceptada bilateralmente desde %1").arg(m_nombreTiendaRemota));
     guardarArticulo(m_idTiendaRemotaEnLocal);

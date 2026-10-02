@@ -12,6 +12,12 @@ comprasVentasRemoto::comprasVentasRemoto(QSqlDatabase base, QString ean, int idT
     , m_nombreTienda(nombreTienda)
 {
     ui->setupUi(this);
+    // Si la conexión directa no es válida o no está abierta, intentar obtenerla por nombre
+    if ((!db.isValid() || !db.isOpen()) && !m_nombreTienda.isEmpty()) {
+        if (QSqlDatabase::contains(m_nombreTienda)) {
+            db = QSqlDatabase::database(m_nombreTienda);
+        }
+    }
     if (db.isValid() && !db.isOpen()) {
         db.open();
     }
@@ -30,18 +36,39 @@ comprasVentasRemoto::comprasVentasRemoto(QSqlDatabase base, QString ean, int idT
         }
     }
 
-    emit on_radioButtonVentaMes_clicked();
-    emit on_radioButtonComprasMes_clicked();
+    setAttribute(Qt::WA_DeleteOnClose);
+    modeloVentas = new QSqlQueryModel(this);
+    modeloCompras = new QSqlQueryModel(this);
+
+    // Cargar vistas iniciales
+    on_radioButtonVentaMes_clicked();
+    on_radioButtonComprasMes_clicked();
 }
 
 comprasVentasRemoto::~comprasVentasRemoto()
 {
+    if (ui && ui->tableViewVentas) {
+        ui->tableViewVentas->setModel(nullptr);
+    }
+    if (ui && ui->tableViewCompras) {
+        ui->tableViewCompras->setModel(nullptr);
+    }
+    if (modeloVentas) {
+        delete modeloVentas;
+        modeloVentas = nullptr;
+    }
+    if (modeloCompras) {
+        delete modeloCompras;
+        modeloCompras = nullptr;
+    }
     delete ui;
+    ui = nullptr;
 }
 
 void comprasVentasRemoto::on_radioButtonVentasDia_clicked()
 {
-    modeloVentas.clear();
+    if (!modeloVentas) return;
+    modeloVentas->clear();
 
     QSqlQuery q;
     // Priorizar consulta a la Nube centralizada si está disponible
@@ -61,17 +88,18 @@ void comprasVentasRemoto::on_radioButtonVentasDia_clicked()
     }
 
     if (!q.exec()) qDebug() << "comprasVentasRemoto::VentasDia:" << q.lastError().text();
-    modeloVentas.setQuery(q);
-    modeloVentas.setHeaderData(0, Qt::Horizontal, "Producto");
-    modeloVentas.setHeaderData(1, Qt::Horizontal, "Fecha");
-    modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
-    ui->tableViewVentas->setModel(&modeloVentas);
+    modeloVentas->setQuery(q);
+    modeloVentas->setHeaderData(0, Qt::Horizontal, "Producto");
+    modeloVentas->setHeaderData(1, Qt::Horizontal, "Fecha");
+    modeloVentas->setHeaderData(2, Qt::Horizontal, "Cantidad");
+    ui->tableViewVentas->setModel(modeloVentas);
     ui->tableViewVentas->resizeColumnsToContents();
 }
 
 void comprasVentasRemoto::on_radioButtonVentaMes_clicked()
 {
-    modeloVentas.clear();
+    if (!modeloVentas) return;
+    modeloVentas->clear();
 
     QSqlQuery q;
     // Priorizar consulta a la Nube centralizada si está disponible
@@ -93,18 +121,19 @@ void comprasVentasRemoto::on_radioButtonVentaMes_clicked()
     }
 
     if (!q.exec()) qDebug() << "comprasVentasRemoto::VentaMes:" << q.lastError().text();
-    modeloVentas.setQuery(q);
-    modeloVentas.setHeaderData(0, Qt::Horizontal, "Artículo");
-    modeloVentas.setHeaderData(1, Qt::Horizontal, "Año");
-    modeloVentas.setHeaderData(2, Qt::Horizontal, "Mes");
-    modeloVentas.setHeaderData(3, Qt::Horizontal, "Cantidad");
-    ui->tableViewVentas->setModel(&modeloVentas);
+    modeloVentas->setQuery(q);
+    modeloVentas->setHeaderData(0, Qt::Horizontal, "Artículo");
+    modeloVentas->setHeaderData(1, Qt::Horizontal, "Año");
+    modeloVentas->setHeaderData(2, Qt::Horizontal, "Mes");
+    modeloVentas->setHeaderData(3, Qt::Horizontal, "Cantidad");
+    ui->tableViewVentas->setModel(modeloVentas);
     ui->tableViewVentas->resizeColumnsToContents();
 }
 
 void comprasVentasRemoto::on_radioButtonVentasAno_clicked()
 {
-    modeloVentas.clear();
+    if (!modeloVentas) return;
+    modeloVentas->clear();
 
     QSqlQuery q;
     // Priorizar consulta a la Nube centralizada si está disponible
@@ -125,18 +154,19 @@ void comprasVentasRemoto::on_radioButtonVentasAno_clicked()
     }
 
     if (!q.exec()) qDebug() << "comprasVentasRemoto::VentasAno:" << q.lastError().text();
-    modeloVentas.setQuery(q);
-    modeloVentas.setHeaderData(0, Qt::Horizontal, "Artículo");
-    modeloVentas.setHeaderData(1, Qt::Horizontal, "Año");
-    modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
+    modeloVentas->setQuery(q);
+    modeloVentas->setHeaderData(0, Qt::Horizontal, "Artículo");
+    modeloVentas->setHeaderData(1, Qt::Horizontal, "Año");
+    modeloVentas->setHeaderData(2, Qt::Horizontal, "Cantidad");
 
-    ui->tableViewVentas->setModel(&modeloVentas);
+    ui->tableViewVentas->setModel(modeloVentas);
     ui->tableViewVentas->resizeColumnsToContents();
 }
 
 void comprasVentasRemoto::on_radioButtonComprasDia_clicked()
 {
-    modeloCompras.clear();
+    if (!modeloCompras) return;
+    modeloCompras->clear();
 
     QSqlQuery q;
     // Priorizar consulta a la Nube centralizada si está disponible
@@ -162,14 +192,15 @@ void comprasVentasRemoto::on_radioButtonComprasDia_clicked()
     }
 
     if (!q.exec()) qDebug() << "comprasVentasRemoto::ComprasDia:" << q.lastError().text();
-    modeloCompras.setQuery(q);
-    ui->tableViewCompras->setModel(&modeloCompras);
+    modeloCompras->setQuery(q);
+    ui->tableViewCompras->setModel(modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
 }
 
 void comprasVentasRemoto::on_radioButtonComprasMes_clicked()
 {
-    modeloCompras.clear();
+    if (!modeloCompras) return;
+    modeloCompras->clear();
 
     QSqlQuery q;
     // Priorizar consulta a la Nube centralizada si está disponible
@@ -195,14 +226,15 @@ void comprasVentasRemoto::on_radioButtonComprasMes_clicked()
     }
 
     if (!q.exec()) qDebug() << "comprasVentasRemoto::ComprasMes:" << q.lastError().text();
-    modeloCompras.setQuery(q);
-    ui->tableViewCompras->setModel(&modeloCompras);
+    modeloCompras->setQuery(q);
+    ui->tableViewCompras->setModel(modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
 }
 
 void comprasVentasRemoto::on_radioButtonComprasano_clicked()
 {
-    modeloCompras.clear();
+    if (!modeloCompras) return;
+    modeloCompras->clear();
 
     QSqlQuery q;
     // Priorizar consulta a la Nube centralizada si está disponible
@@ -227,7 +259,7 @@ void comprasVentasRemoto::on_radioButtonComprasano_clicked()
     }
 
     if (!q.exec()) qDebug() << "comprasVentasRemoto::ComprasAno:" << q.lastError().text();
-    modeloCompras.setQuery(q);
-    ui->tableViewCompras->setModel(&modeloCompras);
+    modeloCompras->setQuery(q);
+    ui->tableViewCompras->setModel(modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
 }

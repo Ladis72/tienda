@@ -33,7 +33,7 @@ Stock::Stock(QString cod, baseDatos *db, QWidget *parent)
   modeloLotes = new QSqlTableModel(
       this, QSqlDatabase::database(conf->getConexionLocal()));
   modeloLotes->setTable("lotes");
-  modeloLotes->setFilter("ean = '" + escSQL(codProducto) + "'");
+  modeloLotes->setFilter("ean = '" + escSQL(codProducto) + "' AND cantidad != 0");
   refrescarLotes();
 
   ui->tableView->setModel(modeloLotes);

@@ -34,6 +34,7 @@ private slots:
 
     void on_pushButtonVerFactura_clicked();
     void on_pushButtonCambiarProveedor_clicked();
+    void on_pushButtonConvertir_clicked();
     void on_pushButtonCerrar_clicked();
 
 private:

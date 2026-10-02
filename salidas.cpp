@@ -346,6 +346,9 @@ void Salidas::on_pushButtonEnviar_clicked()
     deleteTmpQuery.exec();
     base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(), "Salida genero ");
 
+    // Limpieza de seguridad: borrar cualquier lote con cantidad 0 en la BD local tras descontar
+    QSqlQuery(QSqlDatabase::database(conf->getConexionLocal())).exec("DELETE FROM lotes WHERE cantidad = 0");
+
     actualizarTabla();
 }
 
@@ -551,6 +554,11 @@ bool Salidas::procesarEntradaRemota(const QString &connRemota, int idLocalEnRemo
             QString fechaCad = qSel.value("fechaCaducidad").toString();
             int uds = qSel.value("cantidad").toInt();
 
+            // Omitir si la cantidad es 0 o negativa para no crear lotes vacíos
+            if (uds <= 0) {
+                continue;
+            }
+
             // Buscar lote existente
             QSqlQuery qCheck(dbRem);
             qCheck.prepare("SELECT id FROM lotes WHERE ean = ? AND fecha = ? LIMIT 1");
@@ -572,6 +580,9 @@ bool Salidas::procesarEntradaRemota(const QString &connRemota, int idLocalEnRemo
             }
         }
     }
+
+    // Limpieza preventiva en la BD remota
+    dbRem.exec("DELETE FROM lotes WHERE cantidad = 0");
 
     // 2. Insertar en entradaGenero remota desde entradaGenero_tmp
     QSqlQuery qInsert(dbRem);
@@ -671,6 +682,9 @@ void Salidas::on_pushButtonAceptarAmbas_clicked()
     deleteTmpQuery.prepare("DELETE FROM salidaGenero_tmp WHERE idTienda = ?");
     deleteTmpQuery.bindValue(0, m_idTiendaRemotaEnLocal);
     deleteTmpQuery.exec();
+
+    // Limpieza de seguridad tras descontar localmente
+    QSqlQuery(QSqlDatabase::database(conf->getConexionLocal())).exec("DELETE FROM lotes WHERE cantidad = 0");
 
     base.insertarLog(conf->getConexionLocal(), "Info", conf->getUsuario(),
                      QString("Salida traspaso aceptada bilateralmente hacia %1").arg(m_nombreTiendaRemota));

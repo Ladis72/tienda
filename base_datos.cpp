@@ -2209,6 +2209,285 @@ bool baseDatos::cambiarProveedorFactura(QString base, QString nDoc, QString idPr
   return true;
 }
 
+/**
+ * @brief Convierte una factura en albarán de compra (reclasificación 1 a 1).
+ * @param base Nombre de la conexión a la base de datos.
+ * @param nFactura Número de la factura a convertir.
+ * @param idProveedor ID del proveedor asignado a la factura.
+ * @param nuevoNDoc Nuevo número que tendrá el albarán.
+ * @param fecha Fecha del documento en formato yyyy-MM-dd.
+ * @param notas Notas u observaciones del documento.
+ * @return true si la operación se completó correctamente bajo transacción, false en caso contrario.
+ */
+bool baseDatos::convertirFacturaAAlbaran(QString base, const QString &nFactura, const QString &idProveedor,
+                                        const QString &nuevoNDoc, const QString &fecha, const QString &notas)
+{
+    QSqlDatabase db = QSqlDatabase::database(base);
+    if (!db.isOpen()) {
+        qDebug() << "convertirFacturaAAlbaran: BD no abierta";
+        return false;
+    }
+
+    // 1. Obtener los importes actuales de la factura
+    QSqlQuery qSel(db);
+    qSel.prepare("SELECT id, totalBase, totalIva, totalRe, total FROM facturas WHERE nFactura = ? AND idProveedor = ? LIMIT 1");
+    qSel.bindValue(0, nFactura);
+    qSel.bindValue(1, idProveedor);
+    if (!qSel.exec() || !qSel.next()) {
+        qDebug() << "convertirFacturaAAlbaran: no se encontró la factura" << nFactura << qSel.lastError().text();
+        return false;
+    }
+
+    int idOriginal = qSel.value("id").toInt();
+    double totalBase = qSel.value("totalBase").toDouble();
+    double totalIva = qSel.value("totalIva").toDouble();
+    double totalRe = qSel.value("totalRe").toDouble();
+    double total = qSel.value("total").toDouble();
+
+    // 2. Verificar que no exista ya un albarán con el nuevo número para este proveedor
+    QSqlQuery qCheck(db);
+    qCheck.prepare("SELECT COUNT(*) FROM albaranes WHERE nFactura = ? AND idProveedor = ?");
+    qCheck.bindValue(0, nuevoNDoc);
+    qCheck.bindValue(1, idProveedor);
+    if (qCheck.exec() && qCheck.next() && qCheck.value(0).toInt() > 0) {
+        qDebug() << "convertirFacturaAAlbaran: ya existe albarán con número" << nuevoNDoc;
+        return false;
+    }
+
+    db.transaction();
+
+    // 3. Insertar registro en albaranes (facturada = 0, idFactura = '0')
+    QSqlQuery qIns(db);
+    qIns.prepare("INSERT INTO albaranes (nFactura, fechaFactura, idProveedor, totalBase, totalIva, totalRe, total, facturada, idFactura, notas) "
+                 "VALUES (?, ?, ?, ?, ?, ?, ?, 0, '0', ?)");
+    qIns.bindValue(0, nuevoNDoc);
+    qIns.bindValue(1, fecha);
+    qIns.bindValue(2, idProveedor);
+    qIns.bindValue(3, totalBase);
+    qIns.bindValue(4, totalIva);
+    qIns.bindValue(5, totalRe);
+    qIns.bindValue(6, total);
+    qIns.bindValue(7, notas);
+    if (!qIns.exec()) {
+        qDebug() << "convertirFacturaAAlbaran: error al insertar albarán:" << qIns.lastError().text();
+        db.rollback();
+        return false;
+    }
+
+    // 4. Eliminar el registro original de la tabla facturas
+    QSqlQuery qDel(db);
+    qDel.prepare("DELETE FROM facturas WHERE id = ?");
+    qDel.bindValue(0, idOriginal);
+    if (!qDel.exec()) {
+        qDebug() << "convertirFacturaAAlbaran: error al eliminar factura:" << qDel.lastError().text();
+        db.rollback();
+        return false;
+    }
+
+    // 5. Desvincular cualquier albarán que estuviese agrupado bajo esta factura
+    QSqlQuery qDesv(db);
+    qDesv.prepare("UPDATE albaranes SET idFactura = '0', facturada = 0 WHERE idFactura = ? AND idProveedor = ?");
+    qDesv.bindValue(0, nFactura);
+    qDesv.bindValue(1, idProveedor);
+    qDesv.exec();
+
+    // 6. Actualizar pedidos: un albarán tiene nFactura = '0'
+    QSqlQuery qPed(db);
+    qPed.prepare("UPDATE pedidos SET npedido = ?, nFactura = '0' WHERE (npedido = ? OR nFactura = ?) AND idProveedor = ?");
+    qPed.bindValue(0, nuevoNDoc);
+    qPed.bindValue(1, nFactura);
+    qPed.bindValue(2, nFactura);
+    qPed.bindValue(3, idProveedor);
+    if (!qPed.exec()) {
+        qDebug() << "convertirFacturaAAlbaran: error al actualizar pedidos:" << qPed.lastError().text();
+        db.rollback();
+        return false;
+    }
+
+    // 7. Si el número de documento cambió, actualizar también lineaspedido
+    if (nuevoNDoc != nFactura) {
+        QSqlQuery qLin(db);
+        qLin.prepare("UPDATE lineaspedido SET nDocumento = ? WHERE nDocumento = ? AND idProveedor = ?");
+        qLin.bindValue(0, nuevoNDoc);
+        qLin.bindValue(1, nFactura);
+        qLin.bindValue(2, idProveedor);
+        if (!qLin.exec()) {
+            qDebug() << "convertirFacturaAAlbaran: error al actualizar lineaspedido:" << qLin.lastError().text();
+            db.rollback();
+            return false;
+        }
+    }
+
+    db.commit();
+
+    // 8. Actualizar base de datos de la nube si está configurada y conectada
+    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        QSqlQuery qPedNube(dbNube);
+        qPedNube.prepare("UPDATE pedidos_nube SET nDocumento = ? WHERE nDocumento = ? AND idProveedor = ?");
+        qPedNube.bindValue(0, nuevoNDoc);
+        qPedNube.bindValue(1, nFactura);
+        qPedNube.bindValue(2, idProveedor);
+        qPedNube.exec();
+
+        if (nuevoNDoc != nFactura) {
+            QSqlQuery qLinNube(dbNube);
+            qLinNube.prepare("UPDATE lineaspedido_nube SET nDocumento = ? WHERE nDocumento = ? AND idProveedor = ?");
+            qLinNube.bindValue(0, nuevoNDoc);
+            qLinNube.bindValue(1, nFactura);
+            qLinNube.bindValue(2, idProveedor);
+            qLinNube.exec();
+        }
+    }
+
+    // Registrar auditoría en logs
+    insertarLog(base, "Modificación", conf->getUsuario(),
+                QString("Conversión de Factura %1 a Albarán %2 para Proveedor ID %3")
+                    .arg(nFactura, nuevoNDoc, idProveedor));
+
+    return true;
+}
+
+/**
+ * @brief Convierte un albarán en factura de compra (reclasificación 1 a 1).
+ * @param base Nombre de la conexión a la base de datos.
+ * @param nAlbaran Número del albarán a convertir.
+ * @param idProveedor ID del proveedor asignado al albarán.
+ * @param nuevoNDoc Nuevo número que tendrá la factura.
+ * @param fecha Fecha del documento en formato yyyy-MM-dd.
+ * @param vencimiento Fecha de vencimiento de la factura en formato yyyy-MM-dd.
+ * @param pagada Indicador de factura pagada (1) o pendiente (0).
+ * @param notas Notas u observaciones del documento.
+ * @return true si la operación se completó correctamente bajo transacción, false en caso contrario.
+ */
+bool baseDatos::convertirAlbaranAFactura(QString base, const QString &nAlbaran, const QString &idProveedor,
+                                        const QString &nuevoNDoc, const QString &fecha, const QString &vencimiento,
+                                        int pagada, const QString &notas)
+{
+    QSqlDatabase db = QSqlDatabase::database(base);
+    if (!db.isOpen()) {
+        qDebug() << "convertirAlbaranAFactura: BD no abierta";
+        return false;
+    }
+
+    // 1. Obtener los importes actuales del albarán
+    QSqlQuery qSel(db);
+    qSel.prepare("SELECT id, totalBase, totalIva, totalRe, total FROM albaranes WHERE nFactura = ? AND idProveedor = ? LIMIT 1");
+    qSel.bindValue(0, nAlbaran);
+    qSel.bindValue(1, idProveedor);
+    if (!qSel.exec() || !qSel.next()) {
+        qDebug() << "convertirAlbaranAFactura: no se encontró el albarán" << nAlbaran << qSel.lastError().text();
+        return false;
+    }
+
+    int idOriginal = qSel.value("id").toInt();
+    double totalBase = qSel.value("totalBase").toDouble();
+    double totalIva = qSel.value("totalIva").toDouble();
+    double totalRe = qSel.value("totalRe").toDouble();
+    double total = qSel.value("total").toDouble();
+
+    // 2. Verificar que no exista ya una factura con el nuevo número para este proveedor
+    QSqlQuery qCheck(db);
+    qCheck.prepare("SELECT COUNT(*) FROM facturas WHERE nFactura = ? AND idProveedor = ?");
+    qCheck.bindValue(0, nuevoNDoc);
+    qCheck.bindValue(1, idProveedor);
+    if (qCheck.exec() && qCheck.next() && qCheck.value(0).toInt() > 0) {
+        qDebug() << "convertirAlbaranAFactura: ya existe factura con número" << nuevoNDoc;
+        return false;
+    }
+
+    db.transaction();
+
+    // 3. Insertar registro en la tabla facturas
+    QSqlQuery qIns(db);
+    qIns.prepare("INSERT INTO facturas (nFactura, fechaFactura, idProveedor, totalBase, totalIva, totalRe, total, vencimiento, pagada, notas) "
+                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    qIns.bindValue(0, nuevoNDoc);
+    qIns.bindValue(1, fecha);
+    qIns.bindValue(2, idProveedor);
+    qIns.bindValue(3, totalBase);
+    qIns.bindValue(4, totalIva);
+    qIns.bindValue(5, totalRe);
+    qIns.bindValue(6, total);
+    qIns.bindValue(7, vencimiento);
+    qIns.bindValue(8, pagada);
+    qIns.bindValue(9, notas);
+    if (!qIns.exec()) {
+        qDebug() << "convertirAlbaranAFactura: error al insertar factura:" << qIns.lastError().text();
+        db.rollback();
+        return false;
+    }
+
+    // 4. Eliminar el registro original de la tabla albaranes
+    QSqlQuery qDel(db);
+    qDel.prepare("DELETE FROM albaranes WHERE id = ?");
+    qDel.bindValue(0, idOriginal);
+    if (!qDel.exec()) {
+        qDebug() << "convertirAlbaranAFactura: error al eliminar albarán:" << qDel.lastError().text();
+        db.rollback();
+        return false;
+    }
+
+    // 5. Actualizar pedidos: para facturas, nFactura = nuevoNDoc, npedido = nuevoNDoc
+    QSqlQuery qPed(db);
+    qPed.prepare("UPDATE pedidos SET npedido = ?, nFactura = ? WHERE (npedido = ? OR nFactura = ?) AND idProveedor = ?");
+    qPed.bindValue(0, nuevoNDoc);
+    qPed.bindValue(1, nuevoNDoc);
+    qPed.bindValue(2, nAlbaran);
+    qPed.bindValue(3, nAlbaran);
+    qPed.bindValue(4, idProveedor);
+    if (!qPed.exec()) {
+        qDebug() << "convertirAlbaranAFactura: error al actualizar pedidos:" << qPed.lastError().text();
+        db.rollback();
+        return false;
+    }
+
+    // 6. Si el número de documento cambió, actualizar también lineaspedido
+    if (nuevoNDoc != nAlbaran) {
+        QSqlQuery qLin(db);
+        qLin.prepare("UPDATE lineaspedido SET nDocumento = ? WHERE nDocumento = ? AND idProveedor = ?");
+        qLin.bindValue(0, nuevoNDoc);
+        qLin.bindValue(1, nAlbaran);
+        qLin.bindValue(2, idProveedor);
+        if (!qLin.exec()) {
+            qDebug() << "convertirAlbaranAFactura: error al actualizar lineaspedido:" << qLin.lastError().text();
+            db.rollback();
+            return false;
+        }
+    }
+
+    db.commit();
+
+    // 7. Actualizar base de datos de la nube si está configurada y conectada
+    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+        QSqlQuery qPedNube(dbNube);
+        qPedNube.prepare("UPDATE pedidos_nube SET nDocumento = ? WHERE nDocumento = ? AND idProveedor = ?");
+        qPedNube.bindValue(0, nuevoNDoc);
+        qPedNube.bindValue(1, nAlbaran);
+        qPedNube.bindValue(2, idProveedor);
+        qPedNube.exec();
+
+        if (nuevoNDoc != nAlbaran) {
+            QSqlQuery qLinNube(dbNube);
+            qLinNube.prepare("UPDATE lineaspedido_nube SET nDocumento = ? WHERE nDocumento = ? AND idProveedor = ?");
+            qLinNube.bindValue(0, nuevoNDoc);
+            qLinNube.bindValue(1, nAlbaran);
+            qLinNube.bindValue(2, idProveedor);
+            qLinNube.exec();
+        }
+    }
+
+    // Registrar auditoría en logs
+    insertarLog(base, "Modificación", conf->getUsuario(),
+                QString("Conversión de Albarán %1 a Factura %2 para Proveedor ID %3")
+                    .arg(nAlbaran, nuevoNDoc, idProveedor));
+
+    return true;
+}
+
 bool baseDatos::pasarLineaPedidoAHistorico(QString base, QStringList datos) {
   QSqlQuery consulta(QSqlDatabase::database(base));
   consulta.prepare(
@@ -2777,29 +3056,31 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
   }
   QString id = consulta.record().value(0).toString();
   qDebug() << id;
-  if (consulta.record().value(1).toInt() == uds) {
-    consulta.prepare("DELETE FROM lotes WHERE id LIKE ?");
-    consulta.bindValue(0, id);
-    consulta.exec();
-    qDebug() << consulta.lastError() << "== borrando";
-    return;
-  }
-  if (consulta.record().value(1).toInt() < uds) {
-    int resto = uds - consulta.record().value(1).toInt();
+  int cantActual = consulta.record().value(1).toInt();
+  if (cantActual <= uds) {
+    int resto = uds - cantActual;
     consulta.prepare("DELETE FROM lotes WHERE id = ?");
     consulta.bindValue(0, id);
     consulta.exec();
-    qDebug() << consulta.lastError() << "1<";
+    qDebug() << consulta.lastError() << "borrando lote agotado";
 
-    disminuirLote(cod, fecha, resto);
+    if (resto > 0) {
+      disminuirLote(cod, fecha, resto);
+    }
     return;
   }
-  int descontarUds = consulta.record().value(1).toInt();
-  QString resto = QString::number(descontarUds - uds);
-  consulta.prepare("UPDATE lotes SET cantidad = ? WHERE id = ?");
-  consulta.bindValue(0, resto);
-  consulta.bindValue(1, id);
-  consulta.exec();
+  int resto = cantActual - uds;
+  if (resto <= 0) {
+    // Si la cantidad resultante es 0 o menor, eliminar el lote para no dejar rastro
+    consulta.prepare("DELETE FROM lotes WHERE id = ?");
+    consulta.bindValue(0, id);
+    consulta.exec();
+  } else {
+    consulta.prepare("UPDATE lotes SET cantidad = ? WHERE id = ?");
+    consulta.bindValue(0, resto);
+    consulta.bindValue(1, id);
+    consulta.exec();
+  }
   return;
 }
 
@@ -2820,9 +3101,10 @@ QSqlQuery baseDatos::lotesProducto(QString cod, QString nombreConnexion) {
   // Usamos DATE_FORMAT para que la fecha llegue como QString "yyyy-MM-dd" y no
   // como QDate, evitando que Qt 6 la convierta con el locale del sistema al
   // llamar a toString() sin formato explícito.
+  // Excluimos lotes con cantidad 0 para no mostrar registros agotados.
   QSqlQuery consulta(QSqlDatabase::database(nombreConnexion));
   consulta.prepare("SELECT id, ean, lote, DATE_FORMAT(fecha,'%Y-%m-%d') AS fecha, cantidad "
-                   "FROM lotes WHERE ean = ? GROUP BY fecha");
+                   "FROM lotes WHERE ean = ? AND cantidad != 0 GROUP BY fecha");
   consulta.bindValue(0, cod);
   if (!consulta.exec()) {
     qDebug() << consulta.lastError();

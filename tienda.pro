@@ -117,6 +117,7 @@ SOURCES += main.cpp\
     dialogbuscarfotointernet.cpp \
     prepararpedidos.cpp \
     dialogcambiarproveedor.cpp \
+    dialogconvertirdocumento.cpp \
     dialogcomparartraspaso.cpp \
     indexadorembeddings.cpp \
     enriquecedorfichasia.cpp \
@@ -231,6 +232,7 @@ HEADERS  += tienda.h \
     dialogbuscarfotointernet.h \
     prepararpedidos.h \
     dialogcambiarproveedor.h \
+    dialogconvertirdocumento.h \
     dialogcomparartraspaso.h \
     indexadorembeddings.h \
     enriquecedorfichasia.h \
@@ -323,6 +325,7 @@ FORMS    += tienda.ui \
     dialogbuscarfotointernet.ui \
     prepararpedidos.ui \
     dialogcambiarproveedor.ui \
+    dialogconvertirdocumento.ui \
     dialogcomparartraspaso.ui \
     dialogenriquecimientomasivo.ui \
     dialogfotosmasivo.ui \

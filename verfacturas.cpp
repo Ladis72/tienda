@@ -12,6 +12,8 @@
 #include <QSqlError>
 #include "imprimirfacturaproveedor.h"
 #include "dialogcambiarproveedor.h"
+#include "dialogconvertirdocumento.h"
+#include "syncmanager.h"
 #include "ui_verfacturas.h"
 
 VerFacturas::VerFacturas(QString docType, QWidget *parent)
@@ -30,6 +32,18 @@ VerFacturas::VerFacturas(QString docType, QWidget *parent)
         ui->pushButtonVerFactura->hide();
         ui->pushButtonPagar->hide();
         ui->pushButtonCambiarProveedor->hide();
+        ui->pushButtonConvertir->hide();
+    } else if (tipoDocumento == "facturas") {
+        this->setWindowTitle(tr("Listado de Facturas"));
+        ui->labelTitle->setText(tr("Consulta de Facturas de Proveedor"));
+        ui->pushButtonConvertir->setText(tr("Convertir en Albarán"));
+        ui->pushButtonConvertir->setToolTip(tr("Convierte la factura seleccionada en un albarán"));
+    } else {
+        this->setWindowTitle(tr("Listado de Albaranes"));
+        ui->labelTitle->setText(tr("Consulta de Albaranes de Proveedor"));
+        ui->pushButtonConvertir->setText(tr("Convertir en Factura"));
+        ui->pushButtonConvertir->setToolTip(tr("Convierte el albarán seleccionado en una factura"));
+        ui->pushButtonPagar->hide();
     }
 
     llenarProveedores();
@@ -320,7 +334,161 @@ void VerFacturas::on_pushButtonCambiarProveedor_clicked()
     }
 }
 
+/**
+ * @brief Permite convertir una factura en albarán o un albarán en factura (reclasificación 1 a 1).
+ */
+void VerFacturas::on_pushButtonConvertir_clicked()
+{
+    // Restricción: Solo administradores (Rol 0) pueden modificar o reclasificar documentos
+    if (conf->getRol() != 0) {
+        QMessageBox::warning(this, tr("Acceso denegado"),
+                             tr("Solo los administradores pueden convertir tipos de documento."));
+        return;
+    }
+
+    if (idFactura.isEmpty() || tipoDocumento == "verifactu_logs") {
+        // Si no se hizo click explícito, comprobar si hay una fila activa en el tableView
+        QModelIndex indiceActual = ui->tableView->currentIndex();
+        if (indiceActual.isValid()) {
+            on_tableView_clicked(indiceActual);
+        }
+    }
+
+    if (idFactura.isEmpty() || tipoDocumento == "verifactu_logs") {
+        QMessageBox::information(this, tr("Aviso"),
+                                 tr("Seleccione un documento de la tabla primero."));
+        return;
+    }
+
+    // Obtener el proveedor actual a partir de la fila seleccionada (columna 2 es el nombre del proveedor)
+    QString nombreProveedorActual = "";
+    if (datos.size() > 2) {
+        nombreProveedorActual = datos.at(2);
+    }
+    QString idProv = base->idProveedor(nombreProveedorActual, conf->getConexionLocal());
+
+    QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
+    QSqlQuery q(db);
+
+    if (tipoDocumento == "facturas") {
+        // Conversión: FACTURA -> ALBARÁN
+        q.prepare("SELECT *, DATE_FORMAT(fechaFactura, '%Y-%m-%d') AS fecha_str, "
+                  "DATE_FORMAT(vencimiento, '%Y-%m-%d') AS vencimiento_str "
+                  "FROM facturas WHERE nFactura = ? AND idProveedor = ?");
+        q.bindValue(0, idFactura);
+        q.bindValue(1, idProv);
+        if (!q.exec() || !q.next()) {
+            QMessageBox::warning(this, tr("Error"),
+                                 tr("No se pudo obtener la información de la factura '%1' en la base de datos.").arg(idFactura));
+            return;
+        }
+
+        double totalBase = q.value("totalBase").toDouble();
+        double totalIva = q.value("totalIva").toDouble();
+        double totalRe = q.value("totalRe").toDouble();
+        double total = q.value("total").toDouble();
+        QString fechaStr = q.value("fecha_str").toString();
+        QString vencimientoStr = q.value("vencimiento_str").toString();
+        int pagada = q.value("pagada").toInt();
+        QString notas = q.value("notas").toString();
+
+        DialogConvertirDocumento dialog(DialogConvertirDocumento::FacturaAAlbaran,
+                                        idFactura, nombreProveedorActual, idProv,
+                                        totalBase, totalIva, totalRe, total,
+                                        fechaStr, vencimientoStr, pagada, notas, this);
+
+        if (dialog.exec() == QDialog::Accepted) {
+            QString nuevoNDoc = dialog.getNuevoNDoc();
+            QString nuevaFecha = dialog.getNuevaFecha();
+            QString nuevasNotas = dialog.getNuevasNotas();
+
+            if (base->convertirFacturaAAlbaran(conf->getConexionLocal(), idFactura, idProv,
+                                               nuevoNDoc, nuevaFecha, nuevasNotas)) {
+                QMessageBox::information(this, tr("Operación exitosa"),
+                                         tr("La factura '%1' se ha convertido en el albarán '%2' correctamente.")
+                                             .arg(idFactura, nuevoNDoc));
+
+                if (SyncManager::instance()) {
+                    SyncManager::instance()->sincronizar();
+                }
+
+                idFactura = "";
+                datos.clear();
+                llenarTabla();
+            } else {
+                QMessageBox::critical(this, tr("Error"),
+                                      tr("No se pudo convertir la factura en albarán. Verifique que no exista ya un albarán con ese número para este proveedor."));
+            }
+        }
+    } else {
+        // Conversión: ALBARÁN -> FACTURA
+        q.prepare("SELECT *, DATE_FORMAT(fechaFactura, '%Y-%m-%d') AS fecha_str "
+                  "FROM albaranes WHERE nFactura = ? AND idProveedor = ?");
+        q.bindValue(0, idFactura);
+        q.bindValue(1, idProv);
+        if (!q.exec() || !q.next()) {
+            QMessageBox::warning(this, tr("Error"),
+                                 tr("No se pudo obtener la información del albarán '%1' en la base de datos.").arg(idFactura));
+            return;
+        }
+
+        double totalBase = q.value("totalBase").toDouble();
+        double totalIva = q.value("totalIva").toDouble();
+        double totalRe = q.value("totalRe").toDouble();
+        double total = q.value("total").toDouble();
+        QString fechaStr = q.value("fecha_str").toString();
+        QString idFacturaAsociada = q.value("idFactura").toString();
+        QString notas = q.value("notas").toString();
+
+        // Si ya estuviese facturado en una factura agrupada, alertar al usuario
+        if (!idFacturaAsociada.isEmpty() && idFacturaAsociada != "0") {
+            QMessageBox::StandardButton resp = QMessageBox::question(
+                this, tr("Albarán agrupado"),
+                tr("Este albarán ya figura asignado a la factura '%1'.\n"
+                   "¿Desea desvincularlo y convertirlo en una factura independiente?")
+                    .arg(idFacturaAsociada),
+                QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+            if (resp != QMessageBox::Yes) {
+                return;
+            }
+        }
+
+        DialogConvertirDocumento dialog(DialogConvertirDocumento::AlbaranAFactura,
+                                        idFactura, nombreProveedorActual, idProv,
+                                        totalBase, totalIva, totalRe, total,
+                                        fechaStr, "", 0, notas, this);
+
+        if (dialog.exec() == QDialog::Accepted) {
+            QString nuevoNDoc = dialog.getNuevoNDoc();
+            QString nuevaFecha = dialog.getNuevaFecha();
+            QString nuevoVencimiento = dialog.getNuevoVencimiento();
+            int pagada = dialog.getPagada();
+            QString nuevasNotas = dialog.getNuevasNotas();
+
+            if (base->convertirAlbaranAFactura(conf->getConexionLocal(), idFactura, idProv,
+                                               nuevoNDoc, nuevaFecha, nuevoVencimiento,
+                                               pagada, nuevasNotas)) {
+                QMessageBox::information(this, tr("Operación exitosa"),
+                                         tr("El albarán '%1' se ha convertido en la factura '%2' correctamente.")
+                                             .arg(idFactura, nuevoNDoc));
+
+                if (SyncManager::instance()) {
+                    SyncManager::instance()->sincronizar();
+                }
+
+                idFactura = "";
+                datos.clear();
+                llenarTabla();
+            } else {
+                QMessageBox::critical(this, tr("Error"),
+                                      tr("No se pudo convertir el albarán en factura. Verifique que no exista ya una factura con ese número para este proveedor."));
+            }
+        }
+    }
+}
+
 void VerFacturas::on_pushButtonCerrar_clicked()
 {
     close();
 }
+

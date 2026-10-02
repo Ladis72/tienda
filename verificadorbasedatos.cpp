@@ -109,8 +109,21 @@ void VerificadorBaseDatos::inicializarComprobaciones()
         c.id = "stock_negativo_lotes";
         c.titulo = tr("Artículos con stock total de lotes negativo");
         c.consultaCheck = "SELECT COUNT(*) FROM (SELECT ean FROM lotes GROUP BY ean HAVING SUM(cantidad) < 0) as stock_negativo;";
-        c.consultaFix = "UPDATE lotes SET cantidad = 0 WHERE cantidad < 0;";
+        c.consultaFix = "DELETE FROM lotes WHERE cantidad <= 0;";
         c.consultaDetalle = "SELECT CONCAT(IFNULL(a.descripcion, 'SIN DESCRIPCIÓN'), ' [', l.ean, '] (Stock total lotes: ', SUM(l.cantidad), ')') FROM lotes l LEFT JOIN articulos a ON l.ean = a.cod GROUP BY l.ean, a.descripcion HAVING SUM(l.cantidad) < 0 LIMIT 50;";
+        c.esCorregible = true;
+        c.totalErrores = 0;
+        m_comprobaciones.append(c);
+    }
+
+    // 5b. Lotes huérfanos con cantidad 0 (rastros de existencias agotadas o traspasos)
+    {
+        ComprobacionBD c;
+        c.id = "lotes_cantidad_cero";
+        c.titulo = tr("Lotes huérfanos con cantidad 0");
+        c.consultaCheck = "SELECT COUNT(*) FROM lotes WHERE cantidad = 0;";
+        c.consultaFix = "DELETE FROM lotes WHERE cantidad = 0;";
+        c.consultaDetalle = "SELECT CONCAT('EAN: ', ean, ' | Fecha: ', IFNULL(fecha, 'SIN FECHA'), ' | Lote: ', IFNULL(lote, '')) FROM lotes WHERE cantidad = 0 LIMIT 50;";
         c.esCorregible = true;
         c.totalErrores = 0;
         m_comprobaciones.append(c);

@@ -71,29 +71,32 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   fotoHR->setMinimumSize(200, 200);
   connect(fotoHR, SIGNAL(clicked()), this, SLOT(mostrarFoto()));
   llenarComboFormatos();
-  modeloTabla = new QSqlQueryModel;
+  modeloTabla = new QSqlQueryModel(this);
+  modeloVentas = new QSqlQueryModel(this);
+  modeloCompras = new QSqlQueryModel(this);
   recargarTabla();
 
-  mapper.setCurrentIndex(0);
-  mapper.addMapping(ui->lineEditCod, 0);
-  mapper.addMapping(ui->lineEditDesc, 1);
-  mapper.addMapping(ui->lineEditPvp, 2);
-  mapper.addMapping(ui->lineEditIva, 3);
-  mapper.addMapping(ui->lineEditMinimo, 5);
-  mapper.addMapping(ui->lineEditMaximo, 6);
-  mapper.addMapping(ui->lineEditEncargados, 8);
-  mapper.addMapping(ui->lineEditPendientes, 7);
-  mapper.addMapping(ui->dateEditUltimaVenta, 9);
-  mapper.addMapping(ui->dateEditUltimoPedido, 10);
-  mapper.addMapping(ui->lineEditCodFamila, 11);
-  mapper.addMapping(ui->lineEditCosto, 12);
-  mapper.addMapping(ui->lineEditCodFabricante, 13);
-  mapper.addMapping(ui->lineEditFoto, 14);
+  mapper = new QDataWidgetMapper(this);
+  mapper->setCurrentIndex(0);
+  mapper->addMapping(ui->lineEditCod, 0);
+  mapper->addMapping(ui->lineEditDesc, 1);
+  mapper->addMapping(ui->lineEditPvp, 2);
+  mapper->addMapping(ui->lineEditIva, 3);
+  mapper->addMapping(ui->lineEditMinimo, 5);
+  mapper->addMapping(ui->lineEditMaximo, 6);
+  mapper->addMapping(ui->lineEditEncargados, 8);
+  mapper->addMapping(ui->lineEditPendientes, 7);
+  mapper->addMapping(ui->dateEditUltimaVenta, 9);
+  mapper->addMapping(ui->dateEditUltimoPedido, 10);
+  mapper->addMapping(ui->lineEditCodFamila, 11);
+  mapper->addMapping(ui->lineEditCosto, 12);
+  mapper->addMapping(ui->lineEditCodFabricante, 13);
+  mapper->addMapping(ui->lineEditFoto, 14);
   // NOTA: textEditNotas (notas HTML) se carga/guarda manualmente en
   //       refrescarBotones() y recogerDatosFormulario() respectivamente.
   //       QDataWidgetMapper no gestiona bien HTML en QTextEdit.
-  mapper.addMapping(ui->comboBoxFormato, 16);
-  mapper.addMapping(ui->lineEditCantidad, 17);
+  mapper->addMapping(ui->comboBoxFormato, 16);
+  mapper->addMapping(ui->lineEditCantidad, 17);
 
   // ── Barra de herramientas de formato para las notas ──────────────────────
   // Se inserta dinámicamente encima del QTextEdit usando el layout de la
@@ -185,11 +188,11 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   });
 
   // Sincronizar estado de los botones de formato con el cursor actual
-  connect(ui->textEditNotas, &QTextEdit::currentCharFormatChanged, this,
+  connect(ui->textEditNotas, &QTextEdit::currentCharFormatChanged, tbNotas,
           [actBold, actItalic, actUnder](const QTextCharFormat &fmt) {
-            actBold->setChecked(fmt.fontWeight() >= QFont::Bold);
-            actItalic->setChecked(fmt.fontItalic());
-            actUnder->setChecked(fmt.fontUnderline());
+            if (actBold) actBold->setChecked(fmt.fontWeight() >= QFont::Bold);
+            if (actItalic) actItalic->setChecked(fmt.fontItalic());
+            if (actUnder) actUnder->setChecked(fmt.fontUnderline());
           });
 
   // Insertar la toolbar de formato en la cabecera de notas
@@ -197,11 +200,12 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
     ui->horizontalLayoutCabeceraNotas->insertWidget(1, tbNotas);
   }
 
-  mapper.toFirst();
+  if (mapper) {
+    mapper->toFirst();
+    refrescarBotones(mapper->currentIndex());
+  }
 
   remoto = false;
-
-  refrescarBotones(mapper.currentIndex());
 
   ui->lineEditCod->installEventFilter(this);
   borrarFormulario();
@@ -212,7 +216,56 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   aplicarPermisos();
 }
 
-Articulos::~Articulos() { delete ui; }
+Articulos::~Articulos() {
+  // 1. Desconectar el filtro de eventos de lineEditCod para que no procese eventos durante la destrucción
+  if (ui && ui->lineEditCod) {
+    ui->lineEditCod->removeEventFilter(this);
+  }
+
+  // 2. Desconectar señales de notas para evitar llamadas a lambdas sobre objetos liberados
+  if (ui && ui->textEditNotas) {
+    ui->textEditNotas->disconnect();
+  }
+
+  // 3. Desvincular de forma segura los modelos de las vistas antes de que los modelos o la UI sean destruidos
+  if (ui && ui->tableViewCompras) {
+    ui->tableViewCompras->setModel(nullptr);
+  }
+  if (ui && ui->tableViewVentas) {
+    ui->tableViewVentas->setModel(nullptr);
+  }
+  if (ui && ui->tableViewAux) {
+    ui->tableViewAux->setModel(nullptr);
+  }
+  if (mapper) {
+    mapper->setModel(nullptr);
+    mapper->clearMapping();
+    delete mapper;
+    mapper = nullptr;
+  }
+
+  // 4. Liberar modelos dinámicos de forma ordenada
+  if (modeloTabla) {
+    delete modeloTabla;
+    modeloTabla = nullptr;
+  }
+  if (modeloVentas) {
+    delete modeloVentas;
+    modeloVentas = nullptr;
+  }
+  if (modeloCompras) {
+    delete modeloCompras;
+    modeloCompras = nullptr;
+  }
+  if (modeloAux) {
+    delete modeloAux;
+    modeloAux = nullptr;
+  }
+
+  // 5. Destruir la interfaz de usuario
+  delete ui;
+  ui = nullptr;
+}
 
 /**
  * @brief Carga y visualiza directamente la ficha del artículo correspondiente al código indicado.
@@ -273,7 +326,7 @@ void Articulos::refrescarBotones(int i) {
   // ── Cargar notas como HTML en el editor de texto enriquecido ─────────────
   // El campo notas se lee directamente del modelo para esta fila.
   // Como el mapper ya no gestiona textEditNotas, lo hacemos aquí manualmente.
-  int filaActual = mapper.currentIndex();
+  int filaActual = mapper ? mapper->currentIndex() : -1;
   if (filaActual >= 0 && modeloTabla && filaActual < modeloTabla->rowCount()) {
     QString notasRaw =
         modeloTabla->record(filaActual).value("notas").toString();
@@ -477,11 +530,12 @@ void Articulos::recargarTabla() {
           .arg(pvpQuery);
 
   modeloTabla->setQuery(sql, QSqlDatabase::database(conf->getConexionCommon()));
-  mapper.setModel(modeloTabla);
+  if (mapper) mapper->setModel(modeloTabla);
 }
 
 void Articulos::cargarCompras() {
-  modeloCompras.clear();
+  if (!modeloCompras) return;
+  modeloCompras->clear();
   QString codArticulo = ui->lineEditCod->text();
   QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
 
@@ -495,10 +549,10 @@ void Articulos::cargarCompras() {
         "WHERE `cod` = ? ORDER BY `pedidos`.`fechaPedido` DESC");
     query.addBindValue(codArticulo);
     query.exec();
-    modeloCompras.setQuery(query);
-    if (modeloCompras.lastError().isValid())
-      qDebug() << modeloCompras.lastError();
-    ui->tableViewCompras->setModel(&modeloCompras);
+    modeloCompras->setQuery(query);
+    if (modeloCompras->lastError().isValid())
+      qDebug() << modeloCompras->lastError();
+    ui->tableViewCompras->setModel(modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
   }
   if (ui->radioButtonMeses->isChecked()) {
@@ -512,10 +566,10 @@ void Articulos::cargarCompras() {
         "DESC");
     query.addBindValue(codArticulo);
     query.exec();
-    modeloCompras.setQuery(query);
-    if (modeloCompras.lastError().isValid())
-      qDebug() << modeloCompras.lastError();
-    ui->tableViewCompras->setModel(&modeloCompras);
+    modeloCompras->setQuery(query);
+    if (modeloCompras->lastError().isValid())
+      qDebug() << modeloCompras->lastError();
+    ui->tableViewCompras->setModel(modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
   }
   if (ui->radioButtonAnos->isChecked()) {
@@ -527,8 +581,8 @@ void Articulos::cargarCompras() {
         "GROUP BY YEAR(pedidos.fechaPedido) DESC");
     query.addBindValue(codArticulo);
     query.exec();
-    modeloCompras.setQuery(query);
-    ui->tableViewCompras->setModel(&modeloCompras);
+    modeloCompras->setQuery(query);
+    ui->tableViewCompras->setModel(modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
   }
   if (ui->radioButtonProveedores->isChecked()) {
@@ -552,14 +606,19 @@ void Articulos::cargarCompras() {
         "GROUP BY proveedores.idProveedor, proveedores.nombre");
     query.addBindValue(codArticulo);
     query.exec();
-    modeloCompras.setQuery(query);
-    ui->tableViewCompras->setModel(&modeloCompras);
+    modeloCompras->setQuery(query);
+    ui->tableViewCompras->setModel(modeloCompras);
     ui->tableViewCompras->hideColumn(0); // Ocultar ID del proveedor
     ui->tableViewCompras->resizeColumnsToContents();
   }
 }
 
 void Articulos::cargarCodAux() {
+  QString codSanitizado = escSQL(ui->lineEditCod->text());
+  if (modeloAux) {
+    delete modeloAux;
+    modeloAux = nullptr;
+  }
   modeloAux = new QSqlTableModel(
       this, QSqlDatabase::database(conf->getConexionLocal()));
   modeloAux->setTable("codaux");
@@ -567,7 +626,6 @@ void Articulos::cargarCodAux() {
 
   // Se sanitiza la entrada rodeándola con comillas simples y escapando comillas
   // y barras internas (evita inyección vía backslash)
-  QString codSanitizado = escSQL(ui->lineEditCod->text());
   modeloAux->setFilter(QString("cod = '%1'").arg(codSanitizado));
 
   modeloAux->select();
@@ -637,6 +695,8 @@ void Articulos::llenarStockRemoto(QString ean) {
     // Desglose de lotes de la tienda remota
     QSqlQuery lotes = base.lotesProducto(ean, conn);
     while (lotes.next()) {
+      double cVal = lotes.record().value("cantidad").toDouble();
+      if (cVal == 0) continue; // Evitar mostrar registros huérfanos con cantidad 0
       QTreeWidgetItem *lote = new QTreeWidgetItem(item);
       lote->setText(0, lotes.record().value("fecha").toString());
       lote->setText(1, lotes.record().value("cantidad").toString());
@@ -727,7 +787,8 @@ void Articulos::cargarDatosGrafico(DatosGrafico nuevosDatos) {
 }
 
 void Articulos::cargarVentas() {
-  modeloVentas.clear();
+  if (!modeloVentas) return;
+  modeloVentas->clear();
   QString codArticulo = ui->lineEditCod->text();
   QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
 
@@ -739,16 +800,16 @@ void Articulos::cargarVentas() {
         "GROUP BY YEAR(fecha) desc , MONTH(fecha) desc");
     query.addBindValue(codArticulo);
     query.exec();
-    modeloVentas.setQuery(query);
-    if (modeloVentas.lastError().isValid())
-      qDebug() << modeloVentas.lastError();
-    modeloVentas.setHeaderData(0, Qt::Horizontal, "Artículo");
-    modeloVentas.setHeaderData(1, Qt::Horizontal, "Fecha");
-    modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
+    modeloVentas->setQuery(query);
+    if (modeloVentas->lastError().isValid())
+      qDebug() << modeloVentas->lastError();
+    modeloVentas->setHeaderData(0, Qt::Horizontal, "Artículo");
+    modeloVentas->setHeaderData(1, Qt::Horizontal, "Fecha");
+    modeloVentas->setHeaderData(2, Qt::Horizontal, "Cantidad");
 
-    ui->tableViewVentas->setModel(&modeloVentas);
+    ui->tableViewVentas->setModel(modeloVentas);
     ui->tableViewVentas->resizeColumnsToContents();
-    DatosGrafico nuevosDatos = extraerVentasPorFechas(&modeloVentas);
+    DatosGrafico nuevosDatos = extraerVentasPorFechas(modeloVentas);
     cargarDatosGrafico(nuevosDatos);
   }
   if (ui->radioButtonVentasDia->isChecked()) {
@@ -758,37 +819,37 @@ void Articulos::cargarVentas() {
                   "lineasticket WHERE cod = ? group by fecha desc");
     query.addBindValue(codArticulo);
     query.exec();
-    modeloVentas.setQuery(query);
-    if (modeloVentas.lastError().isValid())
-      qDebug() << modeloVentas.lastError();
-    modeloVentas.setHeaderData(0, Qt::Horizontal, "Producto");
-    modeloVentas.setHeaderData(1, Qt::Horizontal, "Fecha");
-    modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
-    modeloVentas.setHeaderData(3, Qt::Horizontal, "Precio");
-    ui->tableViewVentas->setModel(&modeloVentas);
+    modeloVentas->setQuery(query);
+    if (modeloVentas->lastError().isValid())
+      qDebug() << modeloVentas->lastError();
+    modeloVentas->setHeaderData(0, Qt::Horizontal, "Producto");
+    modeloVentas->setHeaderData(1, Qt::Horizontal, "Fecha");
+    modeloVentas->setHeaderData(2, Qt::Horizontal, "Cantidad");
+    modeloVentas->setHeaderData(3, Qt::Horizontal, "Precio");
+    ui->tableViewVentas->setModel(modeloVentas);
     ui->tableViewVentas->resizeColumnsToContents();
-    DatosGrafico nuevosDatos = extraerVentasPorFechas(&modeloVentas);
+    DatosGrafico nuevosDatos = extraerVentasPorFechas(modeloVentas);
     cargarDatosGrafico(nuevosDatos);
   }
   if (ui->radioButtonVentasAno->isChecked()) {
-    modeloVentas.clear();
+    modeloVentas->clear();
     QSqlQuery query(db);
     query.prepare("SELECT descripcion , YEAR(fecha) , sum(cantidad) "
                   "from lineasticket WHERE cod = ? "
                   "GROUP BY YEAR(fecha) desc");
     query.addBindValue(codArticulo);
     query.exec();
-    modeloVentas.setQuery(query);
+    modeloVentas->setQuery(query);
 
-    if (modeloVentas.lastError().isValid())
-      qDebug() << modeloVentas.lastError();
-    modeloVentas.setHeaderData(0, Qt::Horizontal, "Artículo");
-    modeloVentas.setHeaderData(1, Qt::Horizontal, "Año");
-    modeloVentas.setHeaderData(2, Qt::Horizontal, "Cantidad");
+    if (modeloVentas->lastError().isValid())
+      qDebug() << modeloVentas->lastError();
+    modeloVentas->setHeaderData(0, Qt::Horizontal, "Artículo");
+    modeloVentas->setHeaderData(1, Qt::Horizontal, "Año");
+    modeloVentas->setHeaderData(2, Qt::Horizontal, "Cantidad");
 
-    ui->tableViewVentas->setModel(&modeloVentas);
+    ui->tableViewVentas->setModel(modeloVentas);
     ui->tableViewVentas->resizeColumnsToContents();
-    DatosGrafico nuevosDatos = extraerVentasPorFechas(&modeloVentas);
+    DatosGrafico nuevosDatos = extraerVentasPorFechas(modeloVentas);
     cargarDatosGrafico(nuevosDatos);
   }
 }
@@ -830,14 +891,18 @@ void Articulos::borrarFormulario() {
 
 void Articulos::on_pushButtonAnterior_clicked() {
   borrarFormulario();
-  mapper.toPrevious();
-  refrescarBotones(mapper.currentIndex());
+  if (mapper) {
+    mapper->toPrevious();
+    refrescarBotones(mapper->currentIndex());
+  }
 }
 
 void Articulos::on_pushButtonSiguiente_clicked() {
   borrarFormulario();
-  mapper.toNext();
-  refrescarBotones(mapper.currentIndex());
+  if (mapper) {
+    mapper->toNext();
+    refrescarBotones(mapper->currentIndex());
+  }
 }
 
 void Articulos::on_pushButtonModificar_clicked() {
@@ -851,7 +916,7 @@ void Articulos::on_pushButtonModificar_clicked() {
 
   QStringList datos = recogerDatosFormulario();
   QString cod = ui->lineEditCod->text().trimmed();
-  int idx = mapper.currentIndex();
+  int idx = mapper ? mapper->currentIndex() : 0;
 
   QMessageBox msgBox(this);
   msgBox.setWindowTitle("Confirmar Cambios");
@@ -909,13 +974,15 @@ void Articulos::on_pushButtonModificar_clicked() {
                             "No se pudieron guardar los cambios.");
     }
     recargarTabla();
-    mapper.setCurrentIndex(idx);
-    refrescarBotones(mapper.currentIndex());
+    if (mapper) {
+      mapper->setCurrentIndex(idx);
+      refrescarBotones(mapper->currentIndex());
+    }
   }
 }
 
 void Articulos::on_pushButtonBorrar_clicked() {
-  int i = mapper.currentIndex();
+  int i = mapper ? mapper->currentIndex() : 0;
 
   QMessageBox msgBox(this);
   msgBox.setWindowTitle("Confirmar Eliminación");
@@ -938,13 +1005,15 @@ void Articulos::on_pushButtonBorrar_clicked() {
       QMessageBox::critical(this, "Error", "No se pudo eliminar el artículo.");
     }
     recargarTabla();
-    mapper.setCurrentIndex(qMax(0, i - 1));
-    refrescarBotones(mapper.currentIndex());
+    if (mapper) {
+      mapper->setCurrentIndex(qMax(0, i - 1));
+      refrescarBotones(mapper->currentIndex());
+    }
   }
 }
 
 void Articulos::on_pushButtonPonerFoto_clicked() {
-  int curr = mapper.currentIndex();
+  int curr = mapper ? mapper->currentIndex() : 0;
   QString dir = base.devolverDirectorio("imagenes");
   QString absoluteDir = QDir(dir).absolutePath();
   QString fichero =
@@ -961,8 +1030,10 @@ void Articulos::on_pushButtonPonerFoto_clicked() {
   base.modificarFotoArticulo(relativeFichero, ui->lineEditCod->text());
   recargarTabla();
 
-  mapper.setCurrentIndex(curr);
-  refrescarBotones(mapper.currentIndex());
+  if (mapper) {
+    mapper->setCurrentIndex(curr);
+    refrescarBotones(mapper->currentIndex());
+  }
 }
 
 /**
@@ -977,7 +1048,7 @@ void Articulos::on_pushButtonBuscarFotoInternet_clicked() {
     return;
   }
 
-  int curr = mapper.currentIndex();
+  int curr = mapper ? mapper->currentIndex() : 0;
   QString fabricante = ui->labelFabricante->text().trimmed();
   QString cod = ui->lineEditCod->text();
 
@@ -990,21 +1061,27 @@ void Articulos::on_pushButtonBuscarFotoInternet_clicked() {
       base.modificarFotoArticulo(relativeFile, cod);
       ui->lineEditFoto->setText(relativeFile);
       recargarTabla();
-      mapper.setCurrentIndex(curr);
-      refrescarBotones(mapper.currentIndex());
+      if (mapper) {
+        mapper->setCurrentIndex(curr);
+        refrescarBotones(mapper->currentIndex());
+      }
     }
   }
 }
 
 void Articulos::on_pushButtonBorrarFoto_clicked() {
-  int curr = mapper.currentIndex();
+  int curr = mapper ? mapper->currentIndex() : 0;
   base.modificarFotoArticulo("", ui->lineEditCod->text());
   recargarTabla();
-  mapper.setCurrentIndex(curr);
-  refrescarBotones(mapper.currentIndex());
+  if (mapper) {
+    mapper->setCurrentIndex(curr);
+    refrescarBotones(mapper->currentIndex());
+  }
 }
 
-void Articulos::on_pushButtonRefrescar_clicked() { mapper.revert(); }
+void Articulos::on_pushButtonRefrescar_clicked() {
+  if (mapper) mapper->revert();
+}
 
 void Articulos::on_lineEditCodFamila_textChanged(const QString &arg1) {
   ui->labelFamilia->setText(base.nombreFamilia(arg1));
@@ -1024,7 +1101,7 @@ void Articulos::on_lineEditDesc_returnPressed() {
   if (buscar->exec() == QDialog::Accepted) {
     for (int i = 0; i < modeloTabla->rowCount(); i++) {
       if (modeloTabla->record(i).value("cod").toString() == buscar->resultado) {
-        mapper.setCurrentIndex(i);
+        if (mapper) mapper->setCurrentIndex(i);
         refrescarBotones(i);
         break;
       }
@@ -1045,7 +1122,7 @@ void Articulos::on_pushButtonBuscarNotas_clicked() {
     // Si el usuario selecciona un artículo, actualizar la posición del mapper al código retornado
     for (int i = 0; i < modeloTabla->rowCount(); i++) {
       if (modeloTabla->record(i).value("cod").toString() == buscarNotas->resultado) {
-        mapper.setCurrentIndex(i);
+        if (mapper) mapper->setCurrentIndex(i);
         refrescarBotones(i);
         break;
       }
@@ -1088,13 +1165,15 @@ void Articulos::on_pushButtonCatalogadorLote_clicked() {
 }
 
 void Articulos::on_pushButtonFotosLote_clicked() {
-  int curr = mapper.currentIndex();
+  int curr = mapper ? mapper->currentIndex() : 0;
   DialogFotosMasivo dlg(this);
   dlg.exec();
   recargarTabla();
-  if (curr >= 0 && curr < modeloTabla->rowCount()) {
-    mapper.setCurrentIndex(curr);
-    refrescarBotones(mapper.currentIndex());
+  if (curr >= 0 && modeloTabla && curr < modeloTabla->rowCount()) {
+    if (mapper) {
+      mapper->setCurrentIndex(curr);
+      refrescarBotones(mapper->currentIndex());
+    }
   }
 }
 
@@ -1102,7 +1181,7 @@ void Articulos::on_lineEditCod_returnPressed() {
   for (int i = 0; i < modeloTabla->rowCount(); i++) {
     if (modeloTabla->record(i).value("cod").toString() ==
         ui->lineEditCod->text()) {
-      mapper.setCurrentIndex(i);
+      if (mapper) mapper->setCurrentIndex(i);
       refrescarBotones(i);
       return;
     }
@@ -1333,7 +1412,7 @@ void Articulos::on_pushButtonCambiarCodigo_clicked() {
     // Buscar el nuevo registro para posicionar el cursor
     for (int i = 0; i < modeloTabla->rowCount(); ++i) {
       if (modeloTabla->record(i).value("cod").toString() == newCod) {
-        mapper.setCurrentIndex(i);
+        if (mapper) mapper->setCurrentIndex(i);
         refrescarBotones(i);
         break;
       }
@@ -1477,18 +1556,21 @@ void Articulos::on_pushButtonEliminar_clicked() {
 
 void Articulos::on_tableViewCompras_clicked(const QModelIndex &index) {
   // Si estamos viendo un listado de facturas (vista normal o detalle de un
+  if (!modeloCompras) return;
+
+  // Si estamos en la vista de Facturas (o en la vista resumen agrupada por
   // proveedor) En ambos casos, columna 0 es nDocumento y columna 1 es
   // idProveedor
   if (ui->radioButtonFacturas->isChecked() ||
       (ui->radioButtonProveedores->isChecked() &&
-       modeloCompras.columnCount() > 5)) {
-    QModelIndex indice = modeloCompras.index(index.row(), 1);
-    idProveedor = modeloCompras.data(indice, Qt::EditRole).toString();
+       modeloCompras->columnCount() > 5)) {
+    QModelIndex indice = modeloCompras->index(index.row(), 1);
+    idProveedor = modeloCompras->data(indice, Qt::EditRole).toString();
     ui->labelProveedor->setText(
         base.nombreProveedor(idProveedor, conf->getConexionLocal()));
 
-    indice = modeloCompras.index(index.row(), 0);
-    nFactura = modeloCompras.data(indice, Qt::EditRole).toString();
+    indice = modeloCompras->index(index.row(), 0);
+    nFactura = modeloCompras->data(indice, Qt::EditRole).toString();
 
     ui->pushButtonVerFactura->setEnabled(true);
     ui->pushButtonCambiarProveedor->setEnabled(true);
@@ -1498,11 +1580,11 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index) {
   // Si estamos en la vista de Proveedores (resumen), al pinchar mostramos el
   // detalle de ese proveedor
   if (ui->radioButtonProveedores->isChecked() &&
-      modeloCompras.columnCount() <= 5) {
-    QModelIndex indiceId = modeloCompras.index(index.row(), 0);
-    QString idProv = modeloCompras.data(indiceId, Qt::EditRole).toString();
+      modeloCompras->columnCount() <= 5) {
+    QModelIndex indiceId = modeloCompras->index(index.row(), 0);
+    QString idProv = modeloCompras->data(indiceId, Qt::EditRole).toString();
     QString nombreProv =
-        modeloCompras.data(modeloCompras.index(index.row(), 1), Qt::EditRole)
+        modeloCompras->data(modeloCompras->index(index.row(), 1), Qt::EditRole)
             .toString();
 
     ui->labelProveedor->setText("Detalle de compras: " + nombreProv);
@@ -1528,9 +1610,9 @@ void Articulos::on_tableViewCompras_clicked(const QModelIndex &index) {
     qCompras.bindValue(0, ui->lineEditCod->text().trimmed());
     qCompras.bindValue(1, idProv);
     qCompras.exec();
-    modeloCompras.setQuery(std::move(qCompras));
+    modeloCompras->setQuery(std::move(qCompras));
 
-    ui->tableViewCompras->setModel(&modeloCompras);
+    ui->tableViewCompras->setModel(modeloCompras);
     ui->tableViewCompras->resizeColumnsToContents();
     // En esta vista detalle, habilitamos ver la factura y cambiar proveedor
     ui->pushButtonVerFactura->setEnabled(true);
@@ -1594,14 +1676,8 @@ void Articulos::on_pushButtonCambiarProveedor_clicked() {
 }
 
 void Articulos::on_checkBoxRemoto_stateChanged(int arg1) {
-  if (remoto == false && arg1 == 2) {
-    // QSqlQuery consultaRemota =
-    // base.tiendas(QSqlDatabase::database(conf->getConexionLocal()));
-    // listaConexionesRemotas = crearConexionesRemotas(consultaRemota);
-    // qDebug() << listaConexionesRemotas;
-    // remoto = true;
-  }
-  refrescarBotones(mapper.currentIndex());
+  Q_UNUSED(arg1);
+  if (mapper) refrescarBotones(mapper->currentIndex());
 }
 
 void Articulos::on_treeWidgetStockTiendas_itemDoubleClicked(
@@ -1616,9 +1692,10 @@ void Articulos::on_treeWidgetStockTiendas_itemDoubleClicked(
     baseDatosRemota = item->parent()->text(0);
     idTienda = item->parent()->data(0, Qt::UserRole).toInt();
   }
-  comprasVentasRemoto *cvr = new comprasVentasRemoto(
+  comprasVentasRemoto *cvrWidget = new comprasVentasRemoto(
       QSqlDatabase::database(baseDatosRemota), ui->lineEditCod->text(), idTienda, baseDatosRemota);
-  cvr->show();
+  cvrWidget->setAttribute(Qt::WA_DeleteOnClose);
+  cvrWidget->show();
 }
 
 void Articulos::on_pushButtonHistorialPrecios_clicked() {
