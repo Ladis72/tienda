@@ -122,7 +122,10 @@ void DialogEstadisticasAfluencia::cargarTiendas() {
         ui->comboTienda->addItem("☁️ " + nomT + " [Nube]", dataRemota);
       }
     }
-  } else if (conf) {
+  }
+
+  // 4. Tiendas conectadas directamente
+  if (conf) {
     QStringList activas = conf->getNombreConexionesActivas();
     for (const QString &tienda : activas) {
       if (tienda != localConn && QSqlDatabase::database(tienda).isOpen()) {
@@ -131,7 +134,7 @@ void DialogEstadisticasAfluencia::cargarTiendas() {
         dataRemota["conn"] = tienda;
         dataRemota["nombre"] = tienda;
         dataRemota["idTienda"] = 0;
-        ui->comboTienda->addItem("🔗 " + tienda + " [Remoto]", dataRemota);
+        ui->comboTienda->addItem("🔗 " + tienda + " [Directo]", dataRemota);
       }
     }
   }

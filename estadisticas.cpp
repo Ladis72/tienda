@@ -112,22 +112,26 @@ void Estadisticas::keyPressEvent(QKeyEvent *event) {
  *  - 3º: Tiendas remotas individuales vía Nube (máxima velocidad).
  * Si la Nube no está disponible, añade las conexiones abiertas existentes como fallback.
  */
+QStringList Estadisticas::obtenerConexionesActivasDirectas() const {
+  QStringList lista;
+  QString local = conf ? conf->getConexionLocal() : "DB";
+  if (QSqlDatabase::database(local).isOpen()) {
+    lista << local;
+  }
+  if (conf) {
+    for (const QString &c : conf->getNombreConexionesActivas()) {
+      if (c != local && !lista.contains(c) && QSqlDatabase::database(c).isOpen()) {
+        lista << c;
+      }
+    }
+  }
+  return lista;
+}
+
 void Estadisticas::cargarTiendas() {
   ui->comboTienda->clear();
 
-  bool nubeDisponible = QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
-                        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen();
-
-  // 1. Si la Nube está activa, añadir opción global de toda la cadena
-  if (nubeDisponible) {
-    QVariantMap dataGlobal;
-    dataGlobal["tipo"] = static_cast<int>(TipoOrigenEstadisticas::NubeGlobal);
-    dataGlobal["idTienda"] = -1;
-    dataGlobal["nombre"] = "Todas las tiendas (Global)";
-    ui->comboTienda->addItem("🌐 Todas las tiendas (Global)", dataGlobal);
-  }
-
-  // 2. Tienda local
+  // 1. Tienda local
   QString local = conf->getConexionLocal();
   int idLocal = conf->getIdTienda();
   QString nombreLocal = "Tienda Local";
@@ -145,9 +149,40 @@ void Estadisticas::cargarTiendas() {
     ui->comboTienda->addItem("🏠 " + nombreLocal + " (Local)", dataLocal);
   }
 
-  // 3. Tiendas remotas individuales
+  // 2. Conexiones directas activas (conectadas mediante el botón 'Conectar')
+  QStringList connsDirectas = obtenerConexionesActivasDirectas();
+  if (connsDirectas.size() > 1) {
+    // Si hay varias tiendas conectadas en directo, permitir ver el consolidado en tiempo real
+    QVariantMap dataDirectoGlobal;
+    dataDirectoGlobal["tipo"] = static_cast<int>(TipoOrigenEstadisticas::RemotoGlobal);
+    dataDirectoGlobal["idTienda"] = -1;
+    dataDirectoGlobal["nombre"] = "Todas las tiendas conectadas [Directo]";
+    ui->comboTienda->addItem("🌐 Todas las tiendas conectadas [Directo]", dataDirectoGlobal);
+  }
+
+  // Añadir tiendas remotas directas individuales
+  for (const QString &tienda : connsDirectas) {
+    if (tienda != local) {
+      QVariantMap dataRemota;
+      dataRemota["tipo"] = static_cast<int>(TipoOrigenEstadisticas::RemotoDirecto);
+      dataRemota["conn"] = tienda;
+      dataRemota["nombre"] = tienda;
+      dataRemota["idTienda"] = 0;
+      ui->comboTienda->addItem("🔗 " + tienda + " [Directo]", dataRemota);
+    }
+  }
+
+  // 3. Tiendas Nube centralizadas (si hay conexión a la nube disponible)
+  bool nubeDisponible = QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+                        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen();
   if (nubeDisponible) {
-    // Consultar lista de tiendas en la nube
+    QVariantMap dataGlobal;
+    dataGlobal["tipo"] = static_cast<int>(TipoOrigenEstadisticas::NubeGlobal);
+    dataGlobal["idTienda"] = -1;
+    dataGlobal["nombre"] = "Todas las tiendas [Nube Central]";
+    ui->comboTienda->addItem("☁️ Todas las tiendas [Nube Central]", dataGlobal);
+
+    // Tiendas individuales en la nube
     QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
     QSqlQuery qTiendas(dbNube);
     if (qTiendas.exec(QString("SELECT id, nombre FROM tiendas WHERE id != %1 ORDER BY id").arg(idLocal))) {
@@ -159,19 +194,6 @@ void Estadisticas::cargarTiendas() {
         dataRemota["idTienda"] = idT;
         dataRemota["nombre"] = nomT;
         ui->comboTienda->addItem("☁️ " + nomT + " [Nube]", dataRemota);
-      }
-    }
-  } else {
-    // Fallback cuando no hay nube: conexiones directas activas
-    QStringList activas = conf->getNombreConexionesActivas();
-    for (const QString &tienda : activas) {
-      if (tienda != local && QSqlDatabase::database(tienda).isOpen()) {
-        QVariantMap dataRemota;
-        dataRemota["tipo"] = static_cast<int>(TipoOrigenEstadisticas::RemotoDirecto);
-        dataRemota["conn"] = tienda;
-        dataRemota["nombre"] = tienda;
-        dataRemota["idTienda"] = 0;
-        ui->comboTienda->addItem("🔗 " + tienda + " [Remoto]", dataRemota);
       }
     }
   }
@@ -211,8 +233,11 @@ void Estadisticas::actualizarEstadoUI() {
 
   QString textoOrigen;
   switch (origen.tipo) {
+  case TipoOrigenEstadisticas::RemotoGlobal:
+    textoOrigen = "Fuente: 🌐 Todas las tiendas conectadas en directo (Consolidado Real)";
+    break;
   case TipoOrigenEstadisticas::NubeGlobal:
-    textoOrigen = "Fuente: 🌐 Nube Central (Consolidado Global - Toda la cadena)";
+    textoOrigen = "Fuente: ☁️ Nube Central (Consolidado Global - Toda la cadena)";
     break;
   case TipoOrigenEstadisticas::NubeTienda:
     textoOrigen = QString("Fuente: ☁️ Nube Central (%1)").arg(origen.nombreTienda);
@@ -221,7 +246,7 @@ void Estadisticas::actualizarEstadoUI() {
     textoOrigen = QString("Fuente: 🏠 Base de Datos Local (%1)").arg(origen.nombreTienda);
     break;
   case TipoOrigenEstadisticas::RemotoDirecto:
-    textoOrigen = QString("Fuente: 🔗 Conexión Remota Directa (%1)").arg(origen.nombreTienda);
+    textoOrigen = QString("Fuente: 🔗 Conexión Directa (%1)").arg(origen.nombreTienda);
     break;
   }
 
@@ -259,9 +284,6 @@ void Estadisticas::on_tabWidgetEstadisticas_currentChanged(int index) {
 
 /**
  * @brief Carga las estadísticas principales (KPIs) y la pestaña activa actual.
- *
- * Implementa lazy-loading: marca las demás pestañas como pendientes de actualización
- * para optimizar la respuesta y evitar consultas SQL masivas innecesarias.
  */
 void Estadisticas::cargarEstadisticas() {
   InfoOrigenEstadisticas origen = obtenerOrigenActual();
@@ -275,10 +297,10 @@ void Estadisticas::cargarEstadisticas() {
     if (!dbNube.isValid() || !dbNube.isOpen()) {
       QMessageBox::warning(this, "Aviso Nube",
                            "La conexión central en la nube no está abierta actualmente.\n"
-                           "Por favor, verifique la conexión a Internet o seleccione la Tienda Local.");
+                           "Por favor, verifique la conexión a Internet o seleccione la Tienda Local o Conexiones Directas.");
       return;
     }
-  } else {
+  } else if (origen.tipo == TipoOrigenEstadisticas::RemotoDirecto) {
     if (!QSqlDatabase::database(origen.nombreConexion).isOpen()) {
       QMessageBox::warning(this, "Error de Conexión",
                            QString("La conexión a '%1' no está abierta.").arg(origen.nombreTienda));
@@ -293,7 +315,7 @@ void Estadisticas::cargarEstadisticas() {
   // Actualizar indicadores visuales de estado y modo
   actualizarEstadoUI();
 
-  // 1. Cargar KPIs del panel superior (siempre visible e inmediato)
+  // 1. Cargar KPIs del panel superior
   cargarKPIs(origen, desde, hasta);
 
   // 2. Marcar todas las pestañas como pendientes
@@ -352,8 +374,18 @@ void Estadisticas::cargarKPIs(const InfoOrigenEstadisticas &origen, const QDate 
   int clientesAct = 0;
   int totalArticulosStock = 0;
 
-  if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
-      origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
+  if (origen.tipo == TipoOrigenEstadisticas::RemotoGlobal) {
+    // Suma consolidada en directo de todas las tiendas conectadas
+    QStringList conns = obtenerConexionesActivasDirectas();
+    for (const QString &c : conns) {
+      totalVentas += base.estadisticasTotalVentas(c, desde, hasta, modoConsolidado);
+      numTickets += base.estadisticasNumeroTickets(c, desde, hasta, modoConsolidado);
+      totalCompras += base.estadisticasTotalCompras(c, desde, hasta);
+      clientesAct += base.estadisticasClientesActivos(c, desde, hasta, modoConsolidado);
+      totalArticulosStock += base.estadisticasTotalArticulosStock(c);
+    }
+  } else if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
+             origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
     // Consultas directas y optimizadas a la Nube
     totalVentas = base.estadisticasTotalVentasNube(desde, hasta, origen.idTienda);
     numTickets = base.estadisticasNumeroTicketsNube(desde, hasta, origen.idTienda);
@@ -386,22 +418,39 @@ void Estadisticas::cargarKPIs(const InfoOrigenEstadisticas &origen, const QDate 
  */
 void Estadisticas::cargarGraficoVentas(const InfoOrigenEstadisticas &origen, const QDate &desde,
                                        const QDate &hasta) {
-  QSqlQuery query;
-  if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
-      origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
-    query = base.estadisticasVentasPorPeriodoNube(desde, hasta, "dia", origen.idTienda);
-  } else {
-    query = base.estadisticasVentasPorPeriodo(origen.nombreConexion, desde, hasta, "dia", modoConsolidado);
-  }
-
   QStringList categorias;
   QList<double> valoresTotales;
 
-  while (query.next()) {
-    categorias.append(query.value(0).toString());
-    valoresTotales.append(query.value(1).toDouble());
+  if (origen.tipo == TipoOrigenEstadisticas::RemotoGlobal) {
+    QStringList conns = obtenerConexionesActivasDirectas();
+    QMap<QString, double> mapaPeriodos;
+    for (const QString &c : conns) {
+      QSqlQuery q = base.estadisticasVentasPorPeriodo(c, desde, hasta, "dia", modoConsolidado);
+      while (q.next()) {
+        mapaPeriodos[q.value(0).toString()] += q.value(1).toDouble();
+      }
+      q.finish();
+    }
+    categorias = mapaPeriodos.keys();
+    categorias.sort();
+    for (const QString &cat : categorias) {
+      valoresTotales.append(mapaPeriodos.value(cat));
+    }
+  } else {
+    QSqlQuery query;
+    if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
+        origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
+      query = base.estadisticasVentasPorPeriodoNube(desde, hasta, "dia", origen.idTienda);
+    } else {
+      query = base.estadisticasVentasPorPeriodo(origen.nombreConexion, desde, hasta, "dia", modoConsolidado);
+    }
+
+    while (query.next()) {
+      categorias.append(query.value(0).toString());
+      valoresTotales.append(query.value(1).toDouble());
+    }
+    query.finish();
   }
-  query.finish();
 
   QList<QList<double>> seriesData;
   seriesData.append(valoresTotales);
@@ -423,28 +472,64 @@ void Estadisticas::cargarTablasProductos(const InfoOrigenEstadisticas &origen, c
   modeloTopVendidos = new QStandardItemModel(this);
   modeloTopVendidos->setHorizontalHeaderLabels({"Cód", "Descripción", "Cant"});
 
-  QSqlQuery queryMasVendidos;
-  if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
-      origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
-    queryMasVendidos = base.estadisticasTopArticulosVendidosNube(desde, hasta, 100, origen.idTienda);
+  if (origen.tipo == TipoOrigenEstadisticas::RemotoGlobal) {
+    QStringList conns = obtenerConexionesActivasDirectas();
+    QMap<QString, QPair<QString, double>> mapaVendidos; // cod -> (desc, cant)
+    for (const QString &c : conns) {
+      QSqlQuery q = base.estadisticasTopArticulosVendidos(c, desde, hasta, 100, modoConsolidado);
+      while (q.next()) {
+        QString cod = q.value(0).toString();
+        QString desc = q.value(1).toString();
+        double cant = q.value(2).toDouble();
+        mapaVendidos[cod].first = desc;
+        mapaVendidos[cod].second += cant;
+      }
+      q.finish();
+    }
+    QList<QPair<QString, QPair<QString, double>>> listaOrd;
+    for (auto it = mapaVendidos.begin(); it != mapaVendidos.end(); ++it) {
+      listaOrd.append(qMakePair(it.key(), it.value()));
+    }
+    std::sort(listaOrd.begin(), listaOrd.end(), [](const auto &a, const auto &b) {
+      return a.second.second > b.second.second;
+    });
+    int filaV = 0;
+    for (int i = 0; i < qMin(100, listaOrd.size()); ++i) {
+      const auto &elem = listaOrd.at(i);
+      QStandardItem *itCod = new QStandardItem(elem.first);
+      QStandardItem *itDesc = new QStandardItem(elem.second.first);
+      QStandardItem *itCant = new QStandardItem();
+      itCant->setData(elem.second.second, Qt::EditRole);
+      itCant->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+      modeloTopVendidos->setItem(filaV, 0, itCod);
+      modeloTopVendidos->setItem(filaV, 1, itDesc);
+      modeloTopVendidos->setItem(filaV, 2, itCant);
+      filaV++;
+    }
   } else {
-    queryMasVendidos = base.estadisticasTopArticulosVendidos(origen.nombreConexion, desde, hasta, 100, modoConsolidado);
-  }
+    QSqlQuery queryMasVendidos;
+    if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
+        origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
+      queryMasVendidos = base.estadisticasTopArticulosVendidosNube(desde, hasta, 100, origen.idTienda);
+    } else {
+      queryMasVendidos = base.estadisticasTopArticulosVendidos(origen.nombreConexion, desde, hasta, 100, modoConsolidado);
+    }
 
-  int filaV = 0;
-  while (queryMasVendidos.next()) {
-    QStandardItem *itCod = new QStandardItem(queryMasVendidos.value(0).toString());
-    QStandardItem *itDesc = new QStandardItem(queryMasVendidos.value(1).toString());
-    QStandardItem *itCant = new QStandardItem();
-    itCant->setData(queryMasVendidos.value(2).toDouble(), Qt::EditRole);
-    itCant->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    int filaV = 0;
+    while (queryMasVendidos.next()) {
+      QStandardItem *itCod = new QStandardItem(queryMasVendidos.value(0).toString());
+      QStandardItem *itDesc = new QStandardItem(queryMasVendidos.value(1).toString());
+      QStandardItem *itCant = new QStandardItem();
+      itCant->setData(queryMasVendidos.value(2).toDouble(), Qt::EditRole);
+      itCant->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-    modeloTopVendidos->setItem(filaV, 0, itCod);
-    modeloTopVendidos->setItem(filaV, 1, itDesc);
-    modeloTopVendidos->setItem(filaV, 2, itCant);
-    filaV++;
+      modeloTopVendidos->setItem(filaV, 0, itCod);
+      modeloTopVendidos->setItem(filaV, 1, itDesc);
+      modeloTopVendidos->setItem(filaV, 2, itCant);
+      filaV++;
+    }
+    queryMasVendidos.finish();
   }
-  queryMasVendidos.finish();
 
   ui->tablaTopVendidos->setModel(modeloTopVendidos);
   ui->tablaTopVendidos->hideColumn(0);
@@ -455,28 +540,64 @@ void Estadisticas::cargarTablasProductos(const InfoOrigenEstadisticas &origen, c
   modeloTopRentables = new QStandardItemModel(this);
   modeloTopRentables->setHorizontalHeaderLabels({"Cód", "Descripción", "Margen €"});
 
-  QSqlQuery queryRentables;
-  if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
-      origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
-    queryRentables = base.estadisticasTopArticulosRentablesNube(desde, hasta, 100, origen.idTienda);
+  if (origen.tipo == TipoOrigenEstadisticas::RemotoGlobal) {
+    QStringList conns = obtenerConexionesActivasDirectas();
+    QMap<QString, QPair<QString, double>> mapaRentables; // cod -> (desc, margen)
+    for (const QString &c : conns) {
+      QSqlQuery q = base.estadisticasTopArticulosRentables(c, desde, hasta, 100, modoConsolidado);
+      while (q.next()) {
+        QString cod = q.value(0).toString();
+        QString desc = q.value(1).toString();
+        double margen = q.value(2).toDouble();
+        mapaRentables[cod].first = desc;
+        mapaRentables[cod].second += margen;
+      }
+      q.finish();
+    }
+    QList<QPair<QString, QPair<QString, double>>> listaOrdR;
+    for (auto it = mapaRentables.begin(); it != mapaRentables.end(); ++it) {
+      listaOrdR.append(qMakePair(it.key(), it.value()));
+    }
+    std::sort(listaOrdR.begin(), listaOrdR.end(), [](const auto &a, const auto &b) {
+      return a.second.second > b.second.second;
+    });
+    int filaR = 0;
+    for (int i = 0; i < qMin(100, listaOrdR.size()); ++i) {
+      const auto &elem = listaOrdR.at(i);
+      QStandardItem *itCod = new QStandardItem(elem.first);
+      QStandardItem *itDesc = new QStandardItem(elem.second.first);
+      QStandardItem *itMargen = new QStandardItem();
+      itMargen->setData(elem.second.second, Qt::EditRole);
+      itMargen->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+      modeloTopRentables->setItem(filaR, 0, itCod);
+      modeloTopRentables->setItem(filaR, 1, itDesc);
+      modeloTopRentables->setItem(filaR, 2, itMargen);
+      filaR++;
+    }
   } else {
-    queryRentables = base.estadisticasTopArticulosRentables(origen.nombreConexion, desde, hasta, 100, modoConsolidado);
-  }
+    QSqlQuery queryRentables;
+    if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
+        origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
+      queryRentables = base.estadisticasTopArticulosRentablesNube(desde, hasta, 100, origen.idTienda);
+    } else {
+      queryRentables = base.estadisticasTopArticulosRentables(origen.nombreConexion, desde, hasta, 100, modoConsolidado);
+    }
 
-  int filaR = 0;
-  while (queryRentables.next()) {
-    QStandardItem *itCod = new QStandardItem(queryRentables.value(0).toString());
-    QStandardItem *itDesc = new QStandardItem(queryRentables.value(1).toString());
-    QStandardItem *itMargen = new QStandardItem();
-    itMargen->setData(queryRentables.value(2).toDouble(), Qt::EditRole);
-    itMargen->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    int filaR = 0;
+    while (queryRentables.next()) {
+      QStandardItem *itCod = new QStandardItem(queryRentables.value(0).toString());
+      QStandardItem *itDesc = new QStandardItem(queryRentables.value(1).toString());
+      QStandardItem *itMargen = new QStandardItem();
+      itMargen->setData(queryRentables.value(2).toDouble(), Qt::EditRole);
+      itMargen->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-    modeloTopRentables->setItem(filaR, 0, itCod);
-    modeloTopRentables->setItem(filaR, 1, itDesc);
-    modeloTopRentables->setItem(filaR, 2, itMargen);
-    filaR++;
+      modeloTopRentables->setItem(filaR, 0, itCod);
+      modeloTopRentables->setItem(filaR, 1, itDesc);
+      modeloTopRentables->setItem(filaR, 2, itMargen);
+      filaR++;
+    }
+    queryRentables.finish();
   }
-  queryRentables.finish();
 
   ui->tablaTopRentables->setModel(modeloTopRentables);
   ui->tablaTopRentables->hideColumn(0);
@@ -492,28 +613,64 @@ void Estadisticas::cargarTablaClientes(const InfoOrigenEstadisticas &origen, con
   modeloMejoresClientes = new QStandardItemModel(this);
   modeloMejoresClientes->setHorizontalHeaderLabels({"DNI/NIF", "Nombre", "Ventas €"});
 
-  QSqlQuery query;
-  if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
-      origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
-    query = base.estadisticasMejoresClientesNube(desde, hasta, 50, origen.idTienda);
+  if (origen.tipo == TipoOrigenEstadisticas::RemotoGlobal) {
+    QStringList conns = obtenerConexionesActivasDirectas();
+    QMap<QString, QPair<QString, double>> mapaClientes; // nif -> (nombre, total)
+    for (const QString &c : conns) {
+      QSqlQuery q = base.estadisticasMejoresClientes(c, desde, hasta, 50, modoConsolidado);
+      while (q.next()) {
+        QString nif = q.value(0).toString();
+        QString nom = q.value(1).toString();
+        double total = q.value(2).toDouble();
+        mapaClientes[nif].first = nom;
+        mapaClientes[nif].second += total;
+      }
+      q.finish();
+    }
+    QList<QPair<QString, QPair<QString, double>>> listaCli;
+    for (auto it = mapaClientes.begin(); it != mapaClientes.end(); ++it) {
+      listaCli.append(qMakePair(it.key(), it.value()));
+    }
+    std::sort(listaCli.begin(), listaCli.end(), [](const auto &a, const auto &b) {
+      return a.second.second > b.second.second;
+    });
+    int fila = 0;
+    for (int i = 0; i < qMin(50, listaCli.size()); ++i) {
+      const auto &elem = listaCli.at(i);
+      QStandardItem *itNif = new QStandardItem(elem.first);
+      QStandardItem *itNom = new QStandardItem(elem.second.first);
+      QStandardItem *itTotal = new QStandardItem();
+      itTotal->setData(elem.second.second, Qt::EditRole);
+      itTotal->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+      modeloMejoresClientes->setItem(fila, 0, itNif);
+      modeloMejoresClientes->setItem(fila, 1, itNom);
+      modeloMejoresClientes->setItem(fila, 2, itTotal);
+      fila++;
+    }
   } else {
-    query = base.estadisticasMejoresClientes(origen.nombreConexion, desde, hasta, 50, modoConsolidado);
-  }
+    QSqlQuery query;
+    if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
+        origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
+      query = base.estadisticasMejoresClientesNube(desde, hasta, 50, origen.idTienda);
+    } else {
+      query = base.estadisticasMejoresClientes(origen.nombreConexion, desde, hasta, 50, modoConsolidado);
+    }
 
-  int fila = 0;
-  while (query.next()) {
-    QStandardItem *itNif = new QStandardItem(query.value(0).toString());
-    QStandardItem *itNom = new QStandardItem(query.value(1).toString());
-    QStandardItem *itTotal = new QStandardItem();
-    itTotal->setData(query.value(2).toDouble(), Qt::EditRole);
-    itTotal->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    int fila = 0;
+    while (query.next()) {
+      QStandardItem *itNif = new QStandardItem(query.value(0).toString());
+      QStandardItem *itNom = new QStandardItem(query.value(1).toString());
+      QStandardItem *itTotal = new QStandardItem();
+      itTotal->setData(query.value(2).toDouble(), Qt::EditRole);
+      itTotal->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-    modeloMejoresClientes->setItem(fila, 0, itNif);
-    modeloMejoresClientes->setItem(fila, 1, itNom);
-    modeloMejoresClientes->setItem(fila, 2, itTotal);
-    fila++;
+      modeloMejoresClientes->setItem(fila, 0, itNif);
+      modeloMejoresClientes->setItem(fila, 1, itNom);
+      modeloMejoresClientes->setItem(fila, 2, itTotal);
+      fila++;
+    }
+    query.finish();
   }
-  query.finish();
 
   ui->tablaMejoresClientes->setModel(modeloMejoresClientes);
   ui->tablaMejoresClientes->resizeColumnsToContents();
@@ -528,26 +685,48 @@ void Estadisticas::cargarTablaVendedores(const InfoOrigenEstadisticas &origen, c
   modeloVendedores = new QStandardItemModel(this);
   modeloVendedores->setHorizontalHeaderLabels({"Usuario", "Total €"});
 
-  QSqlQuery query;
-  if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
-      origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
-    query = base.estadisticasVentasPorUsuarioNube(desde, hasta, origen.idTienda);
+  if (origen.tipo == TipoOrigenEstadisticas::RemotoGlobal) {
+    QStringList conns = obtenerConexionesActivasDirectas();
+    QMap<QString, double> mapaVendedores;
+    for (const QString &c : conns) {
+      QSqlQuery q = base.estadisticasVentasPorUsuario(c, desde, hasta, modoConsolidado);
+      while (q.next()) {
+        mapaVendedores[q.value(0).toString()] += q.value(1).toDouble();
+      }
+      q.finish();
+    }
+    int fila = 0;
+    for (auto it = mapaVendedores.begin(); it != mapaVendedores.end(); ++it) {
+      QStandardItem *itUsuario = new QStandardItem(it.key());
+      QStandardItem *itTotal = new QStandardItem();
+      itTotal->setData(it.value(), Qt::EditRole);
+      itTotal->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+      modeloVendedores->setItem(fila, 0, itUsuario);
+      modeloVendedores->setItem(fila, 1, itTotal);
+      fila++;
+    }
   } else {
-    query = base.estadisticasVentasPorUsuario(origen.nombreConexion, desde, hasta, modoConsolidado);
-  }
+    QSqlQuery query;
+    if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
+        origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
+      query = base.estadisticasVentasPorUsuarioNube(desde, hasta, origen.idTienda);
+    } else {
+      query = base.estadisticasVentasPorUsuario(origen.nombreConexion, desde, hasta, modoConsolidado);
+    }
 
-  int fila = 0;
-  while (query.next()) {
-    QStandardItem *itUsuario = new QStandardItem(query.value(0).toString());
-    QStandardItem *itTotal = new QStandardItem();
-    itTotal->setData(query.value(1).toDouble(), Qt::EditRole);
-    itTotal->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    int fila = 0;
+    while (query.next()) {
+      QStandardItem *itUsuario = new QStandardItem(query.value(0).toString());
+      QStandardItem *itTotal = new QStandardItem();
+      itTotal->setData(query.value(1).toDouble(), Qt::EditRole);
+      itTotal->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-    modeloVendedores->setItem(fila, 0, itUsuario);
-    modeloVendedores->setItem(fila, 1, itTotal);
-    fila++;
+      modeloVendedores->setItem(fila, 0, itUsuario);
+      modeloVendedores->setItem(fila, 1, itTotal);
+      fila++;
+    }
+    query.finish();
   }
-  query.finish();
 
   ui->tablaVendedores->setModel(modeloVendedores);
   ui->tablaVendedores->resizeColumnsToContents();
@@ -562,28 +741,56 @@ void Estadisticas::cargarTablaFormaPago(const InfoOrigenEstadisticas &origen, co
   modeloFormaPago = new QStandardItemModel(this);
   modeloFormaPago->setHorizontalHeaderLabels({"Id", "F. Pago", "Total €"});
 
-  QSqlQuery query;
-  if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
-      origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
-    query = base.estadisticasVentasPorFormaPagoNube(desde, hasta, origen.idTienda);
+  if (origen.tipo == TipoOrigenEstadisticas::RemotoGlobal) {
+    QStringList conns = obtenerConexionesActivasDirectas();
+    QMap<QString, QPair<QString, double>> mapaPagos; // tipo -> (id, total)
+    for (const QString &c : conns) {
+      QSqlQuery q = base.estadisticasVentasPorFormaPago(c, desde, hasta, modoConsolidado);
+      while (q.next()) {
+        QString id = q.value(0).toString();
+        QString tipo = q.value(1).toString();
+        double total = q.value(2).toDouble();
+        mapaPagos[tipo].first = id;
+        mapaPagos[tipo].second += total;
+      }
+      q.finish();
+    }
+    int fila = 0;
+    for (auto it = mapaPagos.begin(); it != mapaPagos.end(); ++it) {
+      QStandardItem *itId = new QStandardItem(it.value().first);
+      QStandardItem *itTipo = new QStandardItem(it.key());
+      QStandardItem *itTotal = new QStandardItem();
+      itTotal->setData(it.value().second, Qt::EditRole);
+      itTotal->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+      modeloFormaPago->setItem(fila, 0, itId);
+      modeloFormaPago->setItem(fila, 1, itTipo);
+      modeloFormaPago->setItem(fila, 2, itTotal);
+      fila++;
+    }
   } else {
-    query = base.estadisticasVentasPorFormaPago(origen.nombreConexion, desde, hasta, modoConsolidado);
-  }
+    QSqlQuery query;
+    if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
+        origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
+      query = base.estadisticasVentasPorFormaPagoNube(desde, hasta, origen.idTienda);
+    } else {
+      query = base.estadisticasVentasPorFormaPago(origen.nombreConexion, desde, hasta, modoConsolidado);
+    }
 
-  int fila = 0;
-  while (query.next()) {
-    QStandardItem *itId = new QStandardItem(query.value(0).toString());
-    QStandardItem *itTipo = new QStandardItem(query.value(1).toString());
-    QStandardItem *itTotal = new QStandardItem();
-    itTotal->setData(query.value(2).toDouble(), Qt::EditRole);
-    itTotal->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    int fila = 0;
+    while (query.next()) {
+      QStandardItem *itId = new QStandardItem(query.value(0).toString());
+      QStandardItem *itTipo = new QStandardItem(query.value(1).toString());
+      QStandardItem *itTotal = new QStandardItem();
+      itTotal->setData(query.value(2).toDouble(), Qt::EditRole);
+      itTotal->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-    modeloFormaPago->setItem(fila, 0, itId);
-    modeloFormaPago->setItem(fila, 1, itTipo);
-    modeloFormaPago->setItem(fila, 2, itTotal);
-    fila++;
+      modeloFormaPago->setItem(fila, 0, itId);
+      modeloFormaPago->setItem(fila, 1, itTipo);
+      modeloFormaPago->setItem(fila, 2, itTotal);
+      fila++;
+    }
+    query.finish();
   }
-  query.finish();
 
   ui->tablaFormaPago->setModel(modeloFormaPago);
   ui->tablaFormaPago->hideColumn(0);
@@ -599,28 +806,56 @@ void Estadisticas::cargarTablaFamilias(const InfoOrigenEstadisticas &origen, con
   modeloFamilias = new QStandardItemModel(this);
   modeloFamilias->setHorizontalHeaderLabels({"Id", "Familia", "Ventas €"});
 
-  QSqlQuery query;
-  if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
-      origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
-    query = base.estadisticasVentasPorFamiliaNube(desde, hasta, origen.idTienda);
+  if (origen.tipo == TipoOrigenEstadisticas::RemotoGlobal) {
+    QStringList conns = obtenerConexionesActivasDirectas();
+    QMap<QString, QPair<QString, double>> mapaFamilias; // nombre -> (id, total)
+    for (const QString &c : conns) {
+      QSqlQuery q = base.estadisticasVentasPorFamilia(c, desde, hasta, modoConsolidado);
+      while (q.next()) {
+        QString id = q.value(0).toString();
+        QString fam = q.value(1).toString();
+        double total = q.value(2).toDouble();
+        mapaFamilias[fam].first = id;
+        mapaFamilias[fam].second += total;
+      }
+      q.finish();
+    }
+    int fila = 0;
+    for (auto it = mapaFamilias.begin(); it != mapaFamilias.end(); ++it) {
+      QStandardItem *itId = new QStandardItem(it.value().first);
+      QStandardItem *itFam = new QStandardItem(it.key());
+      QStandardItem *itTotal = new QStandardItem();
+      itTotal->setData(it.value().second, Qt::EditRole);
+      itTotal->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+      modeloFamilias->setItem(fila, 0, itId);
+      modeloFamilias->setItem(fila, 1, itFam);
+      modeloFamilias->setItem(fila, 2, itTotal);
+      fila++;
+    }
   } else {
-    query = base.estadisticasVentasPorFamilia(origen.nombreConexion, desde, hasta, modoConsolidado);
-  }
+    QSqlQuery query;
+    if (origen.tipo == TipoOrigenEstadisticas::NubeGlobal ||
+        origen.tipo == TipoOrigenEstadisticas::NubeTienda) {
+      query = base.estadisticasVentasPorFamiliaNube(desde, hasta, origen.idTienda);
+    } else {
+      query = base.estadisticasVentasPorFamilia(origen.nombreConexion, desde, hasta, modoConsolidado);
+    }
 
-  int fila = 0;
-  while (query.next()) {
-    QStandardItem *itId = new QStandardItem(query.value(0).toString());
-    QStandardItem *itFam = new QStandardItem(query.value(1).toString());
-    QStandardItem *itTotal = new QStandardItem();
-    itTotal->setData(query.value(2).toDouble(), Qt::EditRole);
-    itTotal->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    int fila = 0;
+    while (query.next()) {
+      QStandardItem *itId = new QStandardItem(query.value(0).toString());
+      QStandardItem *itFam = new QStandardItem(query.value(1).toString());
+      QStandardItem *itTotal = new QStandardItem();
+      itTotal->setData(query.value(2).toDouble(), Qt::EditRole);
+      itTotal->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-    modeloFamilias->setItem(fila, 0, itId);
-    modeloFamilias->setItem(fila, 1, itFam);
-    modeloFamilias->setItem(fila, 2, itTotal);
-    fila++;
+      modeloFamilias->setItem(fila, 0, itId);
+      modeloFamilias->setItem(fila, 1, itFam);
+      modeloFamilias->setItem(fila, 2, itTotal);
+      fila++;
+    }
+    query.finish();
   }
-  query.finish();
 
   ui->tablaFamilias->setModel(modeloFamilias);
 }

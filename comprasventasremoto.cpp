@@ -71,20 +71,21 @@ void comprasVentasRemoto::on_radioButtonVentasDia_clicked()
     modeloVentas->clear();
 
     QSqlQuery q;
-    // Priorizar consulta a la Nube centralizada si está disponible
-    if (m_idTienda > 0 && QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
-        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    // Si la conexión directa a la tienda está abierta, consultar directamente sus datos en vivo
+    if (db.isValid() && db.isOpen()) {
+        q = QSqlQuery(db);
+        q.prepare("SELECT descripcion , fecha , sum(cantidad) FROM lineasticket "
+                  "WHERE cod = ? GROUP BY fecha DESC");
+        q.bindValue(0, codigo);
+    } else if (m_idTienda > 0 && QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+               QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        // Fallback a la Nube centralizada si la tienda remota no está conectada directamente
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
         q = QSqlQuery(dbNube);
         q.prepare("SELECT descripcion, fecha, SUM(cantidad) FROM lineasticket_nube "
                   "WHERE cod = :cod AND id_tienda = :idTienda GROUP BY fecha DESC");
         q.bindValue(":cod", codigo);
         q.bindValue(":idTienda", m_idTienda);
-    } else {
-        q = QSqlQuery(db);
-        q.prepare("SELECT descripcion , fecha , sum(cantidad) FROM lineasticket "
-                  "WHERE cod = ? GROUP BY fecha DESC");
-        q.bindValue(0, codigo);
     }
 
     if (!q.exec()) qDebug() << "comprasVentasRemoto::VentasDia:" << q.lastError().text();
@@ -102,9 +103,16 @@ void comprasVentasRemoto::on_radioButtonVentaMes_clicked()
     modeloVentas->clear();
 
     QSqlQuery q;
-    // Priorizar consulta a la Nube centralizada si está disponible
-    if (m_idTienda > 0 && QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
-        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    // Si la conexión directa a la tienda está abierta, consultar directamente sus datos en vivo
+    if (db.isValid() && db.isOpen()) {
+        q = QSqlQuery(db);
+        q.prepare("SELECT descripcion , YEAR(fecha) , MONTH(fecha) , sum(cantidad) "
+                  "from lineasticket WHERE cod = ? GROUP BY YEAR(fecha) desc , "
+                  "MONTH(fecha) desc");
+        q.bindValue(0, codigo);
+    } else if (m_idTienda > 0 && QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+               QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        // Fallback a la Nube centralizada
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
         q = QSqlQuery(dbNube);
         q.prepare("SELECT descripcion, YEAR(fecha), MONTH(fecha), SUM(cantidad) "
@@ -112,12 +120,6 @@ void comprasVentasRemoto::on_radioButtonVentaMes_clicked()
                   "GROUP BY YEAR(fecha) DESC, MONTH(fecha) DESC");
         q.bindValue(":cod", codigo);
         q.bindValue(":idTienda", m_idTienda);
-    } else {
-        q = QSqlQuery(db);
-        q.prepare("SELECT descripcion , YEAR(fecha) , MONTH(fecha) , sum(cantidad) "
-                  "from lineasticket WHERE cod = ? GROUP BY YEAR(fecha) desc , "
-                  "MONTH(fecha) desc");
-        q.bindValue(0, codigo);
     }
 
     if (!q.exec()) qDebug() << "comprasVentasRemoto::VentaMes:" << q.lastError().text();
@@ -136,9 +138,15 @@ void comprasVentasRemoto::on_radioButtonVentasAno_clicked()
     modeloVentas->clear();
 
     QSqlQuery q;
-    // Priorizar consulta a la Nube centralizada si está disponible
-    if (m_idTienda > 0 && QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
-        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    // Si la conexión directa a la tienda está abierta, consultar directamente sus datos en vivo
+    if (db.isValid() && db.isOpen()) {
+        q = QSqlQuery(db);
+        q.prepare("SELECT descripcion , YEAR(fecha) , sum(cantidad) from "
+                  "lineasticket WHERE cod = ? GROUP BY YEAR(fecha) desc");
+        q.bindValue(0, codigo);
+    } else if (m_idTienda > 0 && QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+               QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        // Fallback a la Nube centralizada
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
         q = QSqlQuery(dbNube);
         q.prepare("SELECT descripcion, YEAR(fecha), SUM(cantidad) "
@@ -146,11 +154,6 @@ void comprasVentasRemoto::on_radioButtonVentasAno_clicked()
                   "GROUP BY YEAR(fecha) DESC");
         q.bindValue(":cod", codigo);
         q.bindValue(":idTienda", m_idTienda);
-    } else {
-        q = QSqlQuery(db);
-        q.prepare("SELECT descripcion , YEAR(fecha) , sum(cantidad) from "
-                  "lineasticket WHERE cod = ? GROUP BY YEAR(fecha) desc");
-        q.bindValue(0, codigo);
     }
 
     if (!q.exec()) qDebug() << "comprasVentasRemoto::VentasAno:" << q.lastError().text();
@@ -169,9 +172,18 @@ void comprasVentasRemoto::on_radioButtonComprasDia_clicked()
     modeloCompras->clear();
 
     QSqlQuery q;
-    // Priorizar consulta a la Nube centralizada si está disponible
-    if (m_idTienda > 0 && QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
-        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    // Si la conexión directa a la tienda está abierta, consultar directamente sus datos en vivo
+    if (db.isValid() && db.isOpen()) {
+        q = QSqlQuery(db);
+        q.prepare("SELECT `nDocumento` , `pedidos`.`idProveedor` , `cantidad` , "
+                  "`bonificacion` , `costo` , `descuento1`, `pedidos`.`fechaPedido` "
+                  "FROM `lineaspedido` JOIN `pedidos` on `nDocumento` = "
+                  "`pedidos`.`npedido` WHERE `cod` = ? ORDER BY "
+                  "`pedidos`.`fechaPedido` DESC");
+        q.bindValue(0, codigo);
+    } else if (m_idTienda > 0 && QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+               QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        // Fallback a la Nube centralizada
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
         q = QSqlQuery(dbNube);
         q.prepare("SELECT l.nDocumento, p.idProveedor, l.cantidad, l.bonificacion, l.costo, l.descuento1, p.fechaPedido "
@@ -181,14 +193,6 @@ void comprasVentasRemoto::on_radioButtonComprasDia_clicked()
                   "ORDER BY p.fechaPedido DESC");
         q.bindValue(":cod", codigo);
         q.bindValue(":idTienda", m_idTienda);
-    } else {
-        q = QSqlQuery(db);
-        q.prepare("SELECT `nDocumento` , `pedidos`.`idProveedor` , `cantidad` , "
-                  "`bonificacion` , `costo` , `descuento1`, `pedidos`.`fechaPedido` "
-                  "FROM `lineaspedido` JOIN `pedidos` on `nDocumento` = "
-                  "`pedidos`.`npedido` WHERE `cod` = ? ORDER BY "
-                  "`pedidos`.`fechaPedido` DESC");
-        q.bindValue(0, codigo);
     }
 
     if (!q.exec()) qDebug() << "comprasVentasRemoto::ComprasDia:" << q.lastError().text();
@@ -203,9 +207,17 @@ void comprasVentasRemoto::on_radioButtonComprasMes_clicked()
     modeloCompras->clear();
 
     QSqlQuery q;
-    // Priorizar consulta a la Nube centralizada si está disponible
-    if (m_idTienda > 0 && QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
-        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    // Si la conexión directa a la tienda está abierta, consultar directamente sus datos en vivo
+    if (db.isValid() && db.isOpen()) {
+        q = QSqlQuery(db);
+        q.prepare("SELECT YEAR(pedidos.fechaPedido) , MONTH(pedidos.fechaPedido) , "
+                  "sum(cantidad) , sum(bonificacion) FROM lineaspedido JOIN "
+                  "pedidos ON nDocumento = pedidos.npedido WHERE cod = ? GROUP BY "
+                  "YEAR(pedidos.fechaPedido) DESC , MONTH(pedidos.fechaPedido) DESC");
+        q.bindValue(0, codigo);
+    } else if (m_idTienda > 0 && QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+               QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        // Fallback a la Nube centralizada
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
         q = QSqlQuery(dbNube);
         q.prepare("SELECT YEAR(p.fechaPedido), MONTH(p.fechaPedido), "
@@ -216,13 +228,6 @@ void comprasVentasRemoto::on_radioButtonComprasMes_clicked()
                   "GROUP BY YEAR(p.fechaPedido) DESC, MONTH(p.fechaPedido) DESC");
         q.bindValue(":cod", codigo);
         q.bindValue(":idTienda", m_idTienda);
-    } else {
-        q = QSqlQuery(db);
-        q.prepare("SELECT YEAR(pedidos.fechaPedido) , MONTH(pedidos.fechaPedido) , "
-                  "sum(cantidad) , sum(bonificacion) FROM lineaspedido JOIN "
-                  "pedidos ON nDocumento = pedidos.npedido WHERE cod = ? GROUP BY "
-                  "YEAR(pedidos.fechaPedido) DESC , MONTH(pedidos.fechaPedido) DESC");
-        q.bindValue(0, codigo);
     }
 
     if (!q.exec()) qDebug() << "comprasVentasRemoto::ComprasMes:" << q.lastError().text();
@@ -237,9 +242,17 @@ void comprasVentasRemoto::on_radioButtonComprasano_clicked()
     modeloCompras->clear();
 
     QSqlQuery q;
-    // Priorizar consulta a la Nube centralizada si está disponible
-    if (m_idTienda > 0 && QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
-        QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+    // Si la conexión directa a la tienda está abierta, consultar directamente sus datos en vivo
+    if (db.isValid() && db.isOpen()) {
+        q = QSqlQuery(db);
+        q.prepare("SELECT YEAR(pedidos.fechaPedido) , sum(cantidad) , "
+                  "sum(bonificacion) FROM lineaspedido JOIN pedidos ON nDocumento = "
+                  "pedidos.npedido WHERE cod = ? GROUP BY "
+                  "YEAR(pedidos.fechaPedido) DESC");
+        q.bindValue(0, codigo);
+    } else if (m_idTienda > 0 && QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
+               QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        // Fallback a la Nube centralizada
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
         q = QSqlQuery(dbNube);
         q.prepare("SELECT YEAR(p.fechaPedido), SUM(l.cantidad), SUM(l.bonificacion) "
@@ -249,13 +262,6 @@ void comprasVentasRemoto::on_radioButtonComprasano_clicked()
                   "GROUP BY YEAR(p.fechaPedido) DESC");
         q.bindValue(":cod", codigo);
         q.bindValue(":idTienda", m_idTienda);
-    } else {
-        q = QSqlQuery(db);
-        q.prepare("SELECT YEAR(pedidos.fechaPedido) , sum(cantidad) , "
-                  "sum(bonificacion) FROM lineaspedido JOIN pedidos ON nDocumento = "
-                  "pedidos.npedido WHERE cod = ? GROUP BY "
-                  "YEAR(pedidos.fechaPedido) DESC");
-        q.bindValue(0, codigo);
     }
 
     if (!q.exec()) qDebug() << "comprasVentasRemoto::ComprasAno:" << q.lastError().text();

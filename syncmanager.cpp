@@ -339,6 +339,9 @@ bool SyncManager::conectarNube() {
   // Asegurar que las tablas de la nube estén inicializadas
   baseDatos::inicializarEsquemaNube();
 
+  // Marcar flag de conexión activa para evitar desconexiones periódicas por heartbeat
+  m_hayConexion = true;
+
   return true;
 }
 
@@ -379,16 +382,20 @@ void SyncManager::comprobarConexion() {
     }
     if (!ok) {
       // Sigue sin haber conexión o el puerto está cerrado, no bloqueamos la UI
+      m_hayConexion = false;
       return;
     }
     socket.disconnectFromHost();
 
     desconectarNube();
     if (conectarNube()) {
+      m_hayConexion = true;
       prepararTablasRemotas();
       emit conexionRecuperada();
       // Ejecutamos la primera sincronizacion despues de recuperar
       sincronizar();
+    } else {
+      m_hayConexion = false;
     }
   } else {
     // Ya estabamos conectados; hacer ping rápido a la BD a través de la
@@ -399,15 +406,21 @@ void SyncManager::comprobarConexion() {
       if (!qPing.exec("SELECT 1")) {
         desconectarNube();
         if (!conectarNube()) {
+          m_hayConexion = false;
           emit conexionPerdida();
         } else {
+          m_hayConexion = true;
           prepararTablasRemotas();
         }
+      } else {
+        m_hayConexion = true;
       }
     } else {
       if (!conectarNube()) {
+        m_hayConexion = false;
         emit conexionPerdida();
       } else {
+        m_hayConexion = true;
         prepararTablasRemotas();
       }
     }

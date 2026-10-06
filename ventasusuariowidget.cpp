@@ -167,20 +167,20 @@ void ventasUsuarioWidget::actualizarFechas(const QString &agrupacion,
         }
     }
 
-    // Si se activó modo global y la Nube está disponible, agregar las ventas de las demás tiendas desde tickets_nube
-    if (ui->chkGlobal->isChecked() &&
+    // Si se activó modo global y NO hay conexiones directas remotas pero la Nube está disponible, agregar desde tickets_nube
+    if (ui->chkGlobal->isChecked() && conexiones.size() <= 1 &&
         QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
         QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
         int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        QString condTiendaNube = (idTiendaLocal == 1) ? "id_tienda NOT IN (0, 1)" : QString("id_tienda != %1").arg(idTiendaLocal);
         QSqlQuery qNube(dbNube);
         qNube.prepare(QString("SELECT DATE_FORMAT(fecha, '%1') as mes, SUM(total) as t1, 0 as t2 FROM tickets_nube "
-                              "WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta AND id_tienda != :idLocal "
-                              "GROUP BY mes ORDER BY mes DESC").arg(formatoFechaSQL));
+                              "WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta AND %2 "
+                              "GROUP BY mes ORDER BY mes DESC").arg(formatoFechaSQL, condTiendaNube));
         qNube.bindValue(":usuario", usuario);
         qNube.bindValue(":desde", desde);
         qNube.bindValue(":hasta", hasta);
-        qNube.bindValue(":idLocal", idTiendaLocal);
         if (qNube.exec()) {
             while (qNube.next()) {
                 QString periodo = qNube.value(0).toString();
@@ -273,20 +273,20 @@ void ventasUsuarioWidget::actualizarHoras(const QDate &desde, const QDate &hasta
         }
     }
 
-    // Si se activó modo global y la Nube está disponible, agregar ventas por hora de las demás tiendas desde tickets_nube
-    if (ui->chkGlobal->isChecked() &&
+    // Si se activó modo global y NO hay conexiones directas remotas pero la Nube está disponible, agregar ventas por hora desde tickets_nube
+    if (ui->chkGlobal->isChecked() && conexiones.size() <= 1 &&
         QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
         QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
         int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        QString condTiendaNube = (idTiendaLocal == 1) ? "id_tienda NOT IN (0, 1)" : QString("id_tienda != %1").arg(idTiendaLocal);
         QSqlQuery qNube(dbNube);
-        qNube.prepare("SELECT HOUR(hora) as h, SUM(total) as t1, 0 as t2 FROM tickets_nube "
-                      "WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta AND id_tienda != :idLocal "
-                      "GROUP BY h");
+        qNube.prepare(QString("SELECT HOUR(hora) as h, SUM(total) as t1, 0 as t2 FROM tickets_nube "
+                              "WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta AND %1 "
+                              "GROUP BY h").arg(condTiendaNube));
         qNube.bindValue(":usuario", usuario);
         qNube.bindValue(":desde", desde);
         qNube.bindValue(":hasta", hasta);
-        qNube.bindValue(":idLocal", idTiendaLocal);
         if (qNube.exec()) {
             while (qNube.next()) {
                 int h = qNube.value(0).toInt();
@@ -354,20 +354,20 @@ void ventasUsuarioWidget::actualizarSemana(const QDate &desde, const QDate &hast
         }
     }
 
-    // Si se activó modo global y la Nube está disponible, agregar ventas por día de semana desde tickets_nube
-    if (ui->chkGlobal->isChecked() &&
+    // Si se activó modo global y NO hay conexiones directas remotas pero la Nube está disponible, agregar desde tickets_nube
+    if (ui->chkGlobal->isChecked() && conexiones.size() <= 1 &&
         QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
         QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
         int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        QString condTiendaNube = (idTiendaLocal == 1) ? "id_tienda NOT IN (0, 1)" : QString("id_tienda != %1").arg(idTiendaLocal);
         QSqlQuery qNube(dbNube);
-        qNube.prepare("SELECT DAYOFWEEK(fecha) as d, SUM(total) as t1, 0 as t2 FROM tickets_nube "
-                      "WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta AND id_tienda != :idLocal "
-                      "GROUP BY d");
+        qNube.prepare(QString("SELECT DAYOFWEEK(fecha) as d, SUM(total) as t1, 0 as t2 FROM tickets_nube "
+                              "WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta AND %1 "
+                              "GROUP BY d").arg(condTiendaNube));
         qNube.bindValue(":usuario", usuario);
         qNube.bindValue(":desde", desde);
         qNube.bindValue(":hasta", hasta);
-        qNube.bindValue(":idLocal", idTiendaLocal);
         if (qNube.exec()) {
             while (qNube.next()) {
                 int d = qNube.value(0).toInt();
@@ -461,23 +461,23 @@ void ventasUsuarioWidget::actualizarTickets(const QDate &desde, const QDate &has
         }
     }
 
-    // Si se activó modo global y la Nube está disponible, agregar tickets de las demás tiendas desde tickets_nube
-    if (ui->chkGlobal->isChecked() &&
+    // Si se activó modo global y NO hay conexiones directas remotas pero la Nube está disponible, agregar tickets desde tickets_nube
+    if (ui->chkGlobal->isChecked() && conexiones.size() <= 1 &&
         QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
         QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
         int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        QString condTiendaNube = (idTiendaLocal == 1) ? "t.id_tienda NOT IN (0, 1)" : QString("t.id_tienda != %1").arg(idTiendaLocal);
         QSqlQuery qNube(dbNube);
-        qNube.prepare("SELECT COALESCE(ti.nombre, CONCAT('Tienda ', t.id_tienda)) AS tienda, "
-                      "t.ticket, DATE_FORMAT(t.fecha, '%Y-%m-%d') AS fecha_str, t.hora, t.total "
-                      "FROM tickets_nube t "
-                      "LEFT JOIN tiendas ti ON t.id_tienda = ti.id "
-                      "WHERE t.usuario = :usuario AND t.fecha BETWEEN :desde AND :hasta AND t.id_tienda != :idLocal "
-                      "ORDER BY fecha_str DESC, hora DESC LIMIT 200");
+        qNube.prepare(QString("SELECT COALESCE(ti.nombre, CONCAT('Tienda ', t.id_tienda)) AS tienda, "
+                              "t.ticket, DATE_FORMAT(t.fecha, '%Y-%m-%d') AS fecha_str, t.hora, t.total "
+                              "FROM tickets_nube t "
+                              "LEFT JOIN tiendas ti ON t.id_tienda = ti.id "
+                              "WHERE t.usuario = :usuario AND t.fecha BETWEEN :desde AND :hasta AND %1 "
+                              "ORDER BY fecha_str DESC, hora DESC LIMIT 200").arg(condTiendaNube));
         qNube.bindValue(":usuario", usuario);
         qNube.bindValue(":desde", desde);
         qNube.bindValue(":hasta", hasta);
-        qNube.bindValue(":idLocal", idTiendaLocal);
         if (qNube.exec()) {
             while (qNube.next()) {
                 modelo->setItem(row, 0, new QStandardItem(qNube.value(0).toString()));
@@ -639,19 +639,19 @@ void ventasUsuarioWidget::actualizarEstadisticas(const QDate &desde, const QDate
         }
     }
 
-    // Si se activó modo global y la Nube está disponible, agregar estadísticas de las demás tiendas desde tickets_nube
-    if (ui->chkGlobal->isChecked() &&
+    // Si se activó modo global y NO hay conexiones directas remotas pero la Nube está disponible, agregar estadísticas desde tickets_nube
+    if (ui->chkGlobal->isChecked() && conexiones.size() <= 1 &&
         QSqlDatabase::contains(SyncManager::CONEXION_NUBE) &&
         QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
         int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+        QString condTiendaNube = (idTiendaLocal == 1) ? "id_tienda NOT IN (0, 1)" : QString("id_tienda != %1").arg(idTiendaLocal);
         QSqlQuery qNube(dbNube);
-        qNube.prepare("SELECT COUNT(*), COALESCE(SUM(total), 0) FROM tickets_nube "
-                      "WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta AND id_tienda != :idLocal");
+        qNube.prepare(QString("SELECT COUNT(*), COALESCE(SUM(total), 0) FROM tickets_nube "
+                              "WHERE usuario = :usuario AND fecha BETWEEN :desde AND :hasta AND %1").arg(condTiendaNube));
         qNube.bindValue(":usuario", usuario);
         qNube.bindValue(":desde", desde);
         qNube.bindValue(":hasta", hasta);
-        qNube.bindValue(":idLocal", idTiendaLocal);
         if (qNube.exec() && qNube.next()) {
             totalTickets += qNube.value(0).toInt();
             totalVentas += qNube.value(1).toDouble();

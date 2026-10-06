@@ -20,7 +20,8 @@ enum class TipoOrigenEstadisticas {
   NubeGlobal,     ///< Consolidado de todas las tiendas en la Nube
   NubeTienda,     ///< Tienda remota específica consultada a través de la Nube
   Local,          ///< Base de datos de la tienda local
-  RemotoDirecto   ///< Conexión directa TCP/MySQL a tienda remota (fallback si no hay nube)
+  RemotoDirecto,  ///< Conexión directa TCP/MySQL a tienda remota
+  RemotoGlobal    ///< Consolidado en tiempo real de todas las tiendas conectadas directamente (Local + Remotas)
 };
 
 /// @brief Metadatos descriptivos de la fuente de datos seleccionada
@@ -100,6 +101,9 @@ private:
                             const QDate &hasta);
   void cargarTablaFamilias(const InfoOrigenEstadisticas &origen, const QDate &desde,
                            const QDate &hasta);
+
+  /// @brief Retorna la lista de conexiones abiertas en directo (local + remotas conectadas)
+  QStringList obtenerConexionesActivasDirectas() const;
 };
 
 #endif // ESTADISTICAS_H

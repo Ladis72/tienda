@@ -303,10 +303,14 @@ void Clientes::cargarCompras() {
   }
 
   QStringList conexionesConsultar;
+  conexionesConsultar << nombreConexionLocal;
   if (ui->checkBoxTiendasConectadas->isChecked() && !usarNubeParaRemotas) {
-    conexionesConsultar = listaConexionesRemotas;
-  } else {
-    conexionesConsultar << nombreConexionLocal;
+    QStringList activas = conf ? conf->getNombreConexionesActivas() : listaConexionesRemotas;
+    for (const QString &c : activas) {
+      if (c != nombreConexionLocal && !conexionesConsultar.contains(c)) {
+        conexionesConsultar << c;
+      }
+    }
   }
 
   QDate desde = ui->dateEditDesde->date();
@@ -403,17 +407,17 @@ void Clientes::cargarCompras() {
   // Si la Nube está disponible y se seleccionó ver todas las tiendas, consultar las demás tiendas desde la Nube
   if (usarNubeParaRemotas) {
     QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    QSqlQuery qNube(dbNube);
     int idTiendaLocal = conf ? conf->getIdTienda() : 1;
 
-    QSqlQuery qNube(dbNube);
-    qNube.prepare("SELECT COALESCE(ti.nombre, CONCAT('Tienda ', t.id_tienda)) AS tienda_nombre, "
-                  "DATE_FORMAT(t.fecha, '%Y-%m-%d') as fecha_str, t.total "
-                  "FROM tickets_nube t "
-                  "LEFT JOIN tiendas ti ON t.id_tienda = ti.id "
-                  "WHERE t.cliente = :cliente AND t.id_tienda != :idLocal "
-                  "AND t.fecha BETWEEN :desde AND :hasta");
+    QString condTiendaNube = (idTiendaLocal == 1) ? "t.id_tienda NOT IN (0, 1)" : QString("t.id_tienda != %1").arg(idTiendaLocal);
+    qNube.prepare(QString("SELECT COALESCE(ti.nombre, CONCAT('Tienda ', t.id_tienda)) AS tienda_nombre, "
+                          "DATE_FORMAT(t.fecha, '%Y-%m-%d') as fecha_str, t.total "
+                          "FROM tickets_nube t "
+                          "LEFT JOIN tiendas ti ON t.id_tienda = ti.id "
+                          "WHERE t.cliente = :cliente AND %1 "
+                          "AND t.fecha BETWEEN :desde AND :hasta").arg(condTiendaNube));
     qNube.bindValue(":cliente", codigoCliente);
-    qNube.bindValue(":idLocal", idTiendaLocal);
     qNube.bindValue(":desde", desde.toString("yyyy-MM-dd"));
     qNube.bindValue(":hasta", hasta.toString("yyyy-MM-dd"));
 
@@ -1003,10 +1007,15 @@ void Clientes::on_radioButtonCantidad_clicked() {
   }
 
   QStringList conexiones;
-  if (ui->checkBoxTiendasConectadas->isChecked() && !usarNubeParaRemotas)
-    conexiones = listaConexionesRemotas;
-  else
-    conexiones << nombreConexionLocal;
+  conexiones << nombreConexionLocal;
+  if (ui->checkBoxTiendasConectadas->isChecked() && !usarNubeParaRemotas) {
+    QStringList activas = conf ? conf->getNombreConexionesActivas() : listaConexionesRemotas;
+    for (const QString &c : activas) {
+      if (c != nombreConexionLocal && !conexiones.contains(c)) {
+        conexiones << c;
+      }
+    }
+  }
 
   QMap<QString, QPair<QString, double>> totales; // cod -> (desc, cant)
 
@@ -1037,17 +1046,17 @@ void Clientes::on_radioButtonCantidad_clicked() {
   // Si usamos la nube para las remotas, consultar lineasticket_nube
   if (usarNubeParaRemotas) {
     QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    QSqlQuery qNube(dbNube);
     int idTiendaLocal = conf ? conf->getIdTienda() : 1;
 
-    QSqlQuery qNube(dbNube);
-    qNube.prepare("SELECT l.cod, l.descripcion, SUM(l.cantidad) as cant "
-                  "FROM lineasticket_nube l "
-                  "JOIN tickets_nube t ON l.id_tienda = t.id_tienda AND l.nticket = t.ticket "
-                  "WHERE t.cliente = :cliente AND l.id_tienda != :idLocal "
-                  "AND t.fecha BETWEEN :desde AND :hasta "
-                  "GROUP BY l.cod, l.descripcion");
+    QString condTiendaNube = (idTiendaLocal == 1) ? "l.id_tienda NOT IN (0, 1)" : QString("l.id_tienda != %1").arg(idTiendaLocal);
+    qNube.prepare(QString("SELECT l.cod, l.descripcion, SUM(l.cantidad) as cant "
+                          "FROM lineasticket_nube l "
+                          "JOIN tickets_nube t ON l.id_tienda = t.id_tienda AND l.nticket = t.ticket "
+                          "WHERE t.cliente = :cliente AND %1 "
+                          "AND t.fecha BETWEEN :desde AND :hasta "
+                          "GROUP BY l.cod, l.descripcion").arg(condTiendaNube));
     qNube.bindValue(":cliente", codigoCliente);
-    qNube.bindValue(":idLocal", idTiendaLocal);
     qNube.bindValue(":desde", ui->dateEditDesde_2->date().toString("yyyy-MM-dd"));
     qNube.bindValue(":hasta", ui->dateEditHasta_2->date().toString("yyyy-MM-dd"));
 
@@ -1114,10 +1123,15 @@ void Clientes::on_radioButtonFecha_clicked() {
   }
 
   QStringList conexiones;
-  if (ui->checkBoxTiendasConectadas->isChecked() && !usarNubeParaRemotas)
-    conexiones = listaConexionesRemotas;
-  else
-    conexiones << nombreConexionLocal;
+  conexiones << nombreConexionLocal;
+  if (ui->checkBoxTiendasConectadas->isChecked() && !usarNubeParaRemotas) {
+    QStringList activas = conf ? conf->getNombreConexionesActivas() : listaConexionesRemotas;
+    for (const QString &c : activas) {
+      if (c != nombreConexionLocal && !conexiones.contains(c)) {
+        conexiones << c;
+      }
+    }
+  }
 
   QString filtro = ui->lineEditBuscarProducto->text().toLower();
 
@@ -1166,17 +1180,17 @@ void Clientes::on_radioButtonFecha_clicked() {
   // Si usamos la nube para las remotas, consultar lineasticket_nube ordenado por fecha descendente
   if (usarNubeParaRemotas) {
     QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    QSqlQuery qNube(dbNube);
     int idTiendaLocal = conf ? conf->getIdTienda() : 1;
 
-    QSqlQuery qNube(dbNube);
-    qNube.prepare("SELECT l.cod, l.descripcion, l.cantidad, DATE_FORMAT(t.fecha, '%Y-%m-%d') as fecha_str "
-                  "FROM lineasticket_nube l "
-                  "JOIN tickets_nube t ON l.id_tienda = t.id_tienda AND l.nticket = t.ticket "
-                  "WHERE t.cliente = :cliente AND l.id_tienda != :idLocal "
-                  "AND t.fecha BETWEEN :desde AND :hasta "
-                  "ORDER BY t.fecha DESC");
+    QString condTiendaNube = (idTiendaLocal == 1) ? "l.id_tienda NOT IN (0, 1)" : QString("l.id_tienda != %1").arg(idTiendaLocal);
+    qNube.prepare(QString("SELECT l.cod, l.descripcion, l.cantidad, DATE_FORMAT(t.fecha, '%Y-%m-%d') as fecha_str "
+                          "FROM lineasticket_nube l "
+                          "JOIN tickets_nube t ON l.id_tienda = t.id_tienda AND l.nticket = t.ticket "
+                          "WHERE t.cliente = :cliente AND %1 "
+                          "AND t.fecha BETWEEN :desde AND :hasta "
+                          "ORDER BY t.fecha DESC").arg(condTiendaNube));
     qNube.bindValue(":cliente", codigoCliente);
-    qNube.bindValue(":idLocal", idTiendaLocal);
     qNube.bindValue(":desde", ui->dateEditDesde_2->date().toString("yyyy-MM-dd"));
     qNube.bindValue(":hasta", ui->dateEditHasta_2->date().toString("yyyy-MM-dd"));
 

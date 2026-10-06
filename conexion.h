@@ -132,12 +132,29 @@
         portInt = 3306;
     }
 
-    // Comprobación rápida por socket TCP (timeout 600ms).
+    // Comprobación rápida por socket TCP (timeout 1500ms).
     // Si la máquina está apagada o fuera de red, abortamos inmediatamente sin esperar
     // los timeouts del driver MySQL ni congelar la interfaz.
     QTcpSocket sockTest;
     sockTest.connectToHost(host, portInt);
-    bool socketOk = sockTest.waitForConnected(600);
+    bool socketOk = sockTest.waitForConnected(1500);
+
+    // Fallback inteligente a IPs de Tailscale si el host DDNS o DNS tarda o falla
+    if (!socketOk) {
+        if (nombreConexion.compare("Casablanca", Qt::CaseInsensitive) == 0 || host.contains("casablanca", Qt::CaseInsensitive)) {
+            sockTest.connectToHost("100.107.42.78", portInt);
+            if (sockTest.waitForConnected(1500)) {
+                host = "100.107.42.78";
+                socketOk = true;
+            }
+        } else if (nombreConexion.compare("Cervantes", Qt::CaseInsensitive) == 0 || host.contains("cervantes", Qt::CaseInsensitive)) {
+            sockTest.connectToHost("100.89.11.2", portInt);
+            if (sockTest.waitForConnected(1500)) {
+                host = "100.89.11.2";
+                socketOk = true;
+            }
+        }
+    }
     sockTest.disconnectFromHost();
 
     if (!socketOk) {

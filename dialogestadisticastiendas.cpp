@@ -45,6 +45,12 @@ void DialogEstadisticasTiendas::showEvent(QShowEvent *event) {
 void DialogEstadisticasTiendas::cargarEstadisticas() {
   QSqlDatabase dbNube = base.obtenerConexionNube();
   if (!dbNube.isValid() || !dbNube.isOpen()) {
+    if (SyncManager::instance()) {
+      SyncManager::instance()->conectarNube();
+      dbNube = base.obtenerConexionNube();
+    }
+  }
+  if (!dbNube.isValid() || !dbNube.isOpen()) {
     QMessageBox::warning(
         this, "Aviso Conexión Nube",
         "La base de datos central en la nube no está disponible.\n"

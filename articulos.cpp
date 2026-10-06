@@ -74,9 +74,10 @@ Articulos::Articulos(QWidget *parent) : QDialog(parent), ui(new Ui::Articulos) {
   modeloTabla = new QSqlQueryModel(this);
   modeloVentas = new QSqlQueryModel(this);
   modeloCompras = new QSqlQueryModel(this);
+  mapper = new QDataWidgetMapper(this);
+  mapper->setModel(modeloTabla);
   recargarTabla();
 
-  mapper = new QDataWidgetMapper(this);
   mapper->setCurrentIndex(0);
   mapper->addMapping(ui->lineEditCod, 0);
   mapper->addMapping(ui->lineEditDesc, 1);
