@@ -487,9 +487,10 @@ QJsonObject AsistenteIA::construirMensajeSistema()
         "16. Movimientos de Dinero y Caja Chica -> 'consultar_movimientos_caja' (tienda: 'todas', fecha_inicio, fecha_fin, tipo: 'entradas'/'salidas', concepto: 'porte').\n"
         "17. Auditoría de Descuadres de Caja -> 'auditoria_descuadres_caja' (tienda: 'todas', fecha_inicio, fecha_fin, solo_con_descuadre: true).\n"
         "18. Arqueos Diarios -> 'ultimos_arqueos' (tienda: 'todas', limite: 10).\n"
-        "19. Horas Pico o Mejor Día de la Semana -> 'facturacion_por_horas' (agrupar_por: 'dia_semana' o 'horas', fecha_inicio, fecha_fin, tienda).\n"
+        "19. Horas Pico, Mejor Día o Tickets Medios -> 'facturacion_por_horas' (agrupar_por: 'dia_semana', 'mes' o 'horas', fecha_inicio, fecha_fin, tienda). Úsalo cuando pregunten por 'número medio de tickets por día', 'tickets de cada mes', horas con más facturación o evolución mensual.\n"
         "20. Usuarios y Rendimiento -> 'consultar_usuarios', 'ventas_por_usuario' (usuario: 'nombre' o 'todos', agrupar_por: 'ranking'/'dia'/'mes'), 'actividad_usuario'.\n"
-        "21. Consultas SQL Especiales a Medida -> 'ejecutar_consulta_sql' (SELECT sobre vistas o tablas. NOTA: 'articulos' usa 'cod' y 'descripcion', 'lineaspedido' usa 'nDocumento', 'cod', 'descripcion', 'idProveedor'. En 'articulos', 'familia' y 'fabricante' son IDs numéricos que enlazan con 'familias' y 'fabricantes').\n\n"
+        "21. Vales y Saldos Pendientes de Clientes -> 'consultar_vales_clientes' (cliente: 'nombre', estado: 'pendientes', tienda: 'todas'). Úsalo SIEMPRE que pregunten por 'qué clientes tienen vales', 'vales pendientes de canjear', o saldos a favor de clientes.\n"
+        "22. Consultas SQL Especiales a Medida -> 'ejecutar_consulta_sql' (SELECT sobre vistas o tablas. NOTA: 'articulos' usa 'cod' y 'descripcion', 'lineaspedido' usa 'nDocumento', 'cod', 'descripcion', 'idProveedor'. En 'articulos', 'familia' y 'fabricante' son IDs numéricos que enlazan con 'familias' y 'fabricantes').\n\n"
         "REGLAS CRÍTICAS DE CONVERSACIÓN Y FORMATO:\n"
         "- Responde siempre en español, de forma concisa, educada y profesional.\n"
         "- Fechas siempre en formato 'yyyy-MM-dd'.\n"
@@ -546,7 +547,9 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas(const QString &peticionU
                         txt.contains("movimiento") || txt.contains("apertura");
 
         bool pideClientes = txt.contains("cliente") || txt.contains("comprador") || txt.contains("telefono") ||
-                            txt.contains("dni") || txt.contains("nif") || txt.contains("compras de");
+                            txt.contains("dni") || txt.contains("nif") || txt.contains("compras de") ||
+                            txt.contains("vale") || txt.contains("vales") || txt.contains("saldo") ||
+                            txt.contains("saldos") || txt.contains("canjear");
 
         bool pideCompras = txt.contains("proveedor") || txt.contains("compra") || txt.contains("pedido") ||
                            txt.contains("albaran") || txt.contains("factura de compra") || txt.contains("facturas compra") ||
@@ -604,6 +607,7 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas(const QString &peticionU
         if (pideClientes) {
             herramientasPermitidas.insert("buscar_clientes");
             herramientasPermitidas.insert("ultimas_compras_cliente");
+            herramientasPermitidas.insert("consultar_vales_clientes");
             herramientasPermitidas.insert("resumen_ventas");
         }
         if (pideCompras) {
@@ -1691,6 +1695,44 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas(const QString &peticionU
         tools.append(tool);
     }
 
+    // 23. Tool: consultar_vales_clientes
+    {
+        QJsonObject func;
+        func["name"] = "consultar_vales_clientes";
+        func["description"] = "Consulta los vales de descuento o saldos a favor pendientes de canjear de los clientes (importe, cliente, teléfono, fecha de emisión y estado). Permite listar todos los clientes con vales pendientes de canjear o filtrar por cliente concreto.";
+
+        QJsonObject props;
+
+        QJsonObject propCli;
+        propCli["type"] = "string";
+        propCli["description"] = "Nombre, teléfono, DNI o ID del cliente para consultar sus vales (opcional, si se omite devuelve todos los clientes con vales).";
+        props["cliente"] = propCli;
+
+        QJsonObject propEst;
+        propEst["type"] = "string";
+        propEst["description"] = "Estado del vale: 'pendientes' (por defecto, activos pendientes de canjear), 'usados' o 'todos'.";
+        props["estado"] = propEst;
+
+        QJsonObject propTienda;
+        propTienda["type"] = "string";
+        propTienda["description"] = "Tienda a consultar ('todas', 'local', o específica). Por defecto 'todas'.";
+        props["tienda"] = propTienda;
+
+        QJsonObject propLim;
+        propLim["type"] = "integer";
+        propLim["description"] = "Número máximo de vales a listar (por defecto 30).";
+        props["limite"] = propLim;
+
+        QJsonObject params;
+        params["type"] = "object";
+        params["properties"] = props;
+
+        QJsonObject tool;
+        tool["type"] = "function";
+        tool["function"] = func;
+        tools.append(tool);
+    }
+
     // 1. Filtrar las herramientas según los permisos del usuario activo
     QJsonArray toolsAutorizadas;
     for (const QJsonValue &tv : tools) {
@@ -2356,7 +2398,9 @@ bool AsistenteIA::tienePermisoParaTool(const QString &nombreTool) const
     }
 
     // 4. Clientes y PII protegida (GDPR / LOPD)
-    if (nombreTool == "buscar_clientes" || nombreTool == "ultimas_compras_cliente") {
+    if (nombreTool == "buscar_clientes" || nombreTool == "ultimas_compras_cliente" ||
+        nombreTool == "consultar_vales_clientes" || nombreTool == "vales_pendientes" ||
+        nombreTool == "consultar_vales" || nombreTool == "saldos_clientes" || nombreTool == "vales_clientes") {
         return conf->permisos()->tiene("clientes");
     }
 
@@ -2491,6 +2535,8 @@ QJsonObject AsistenteIA::ejecutarHerramienta(const QString &nombre, const QJsonO
         return toolConsultarTraspasosIntertiendas(argumentos);
     } else if (nombre == "buscar_facturas_compra_articulo" || nombre == "facturas_compra" || nombre == "buscar_facturas" || nombre == "lineas_factura_compra" || nombre == "compras_articulo" || nombre == "buscar_albaranes_compra") {
         return toolBuscarFacturasCompraArticulo(argumentos);
+    } else if (nombre == "consultar_vales_clientes" || nombre == "vales_pendientes" || nombre == "consultar_vales" || nombre == "saldos_clientes" || nombre == "vales_clientes") {
+        return toolConsultarValesClientes(argumentos);
     } else if (nombre == "ejecutar_consulta_sql") {
         return toolEjecutarConsultaSql(argumentos);
     }
@@ -2808,7 +2854,12 @@ QJsonObject AsistenteIA::toolConsultarStock(const QJsonObject &args)
         "economico", "económico", "economicos", "económicos",
         "cual", "cuál", "cuales", "cuáles", "es", "son", "cuanto", "cuánto", "cuanta", "cuánta",
         "cuantos", "cuántos", "cuantas", "cuántas", "busca", "buscar", "buscame", "búscame",
-        "dime", "dame", "mostrar", "ver", "listar", "tener", "tenemos", "disponemos", "existe", "existen"
+        "dime", "dame", "mostrar", "ver", "listar", "tener", "tenemos", "disponemos", "existe", "existen",
+        "lleva", "llevan", "lleve", "lleven", "contiene", "contienen", "contenga", "contengan",
+        "tienen", "tiene", "tenga", "tengan", "ingrediente", "ingredientes", "composicion", "composición",
+        "principio", "principios", "activo", "activos", "marca", "marcas", "fabricante", "fabricantes",
+        "laboratorio", "laboratorios", "tipo", "tipos", "clase", "clases", "familia", "familias",
+        "stock", "existencia", "existencias", "disponible", "disponibles"
     };
 
     if (!termino.isEmpty()) {
@@ -6839,8 +6890,68 @@ QJsonObject AsistenteIA::toolFacturacionPorHoras(const QJsonObject &args)
     if (agruparPor.isEmpty()) agruparPor = args.value("tipo").toString().trimmed().toLower();
     if (agruparPor.isEmpty()) agruparPor = args.value("criterio").toString().trimmed().toLower();
     
-    bool esDiasSemana = agruparPor.contains("dia") || agruparPor.contains("semana");
+    bool esMensual = agruparPor.contains("mes") || agruparPor.contains("mensual");
+    bool esDiasSemana = !esMensual && (agruparPor.contains("dia") || agruparPor.contains("semana"));
 
+    // Rama 1: Agrupación Mensual (Evolución de tickets, medias diarias y facturación por mes)
+    if (esMensual) {
+        QJsonArray mesesArray;
+        QSqlQuery q(db);
+        QString sql;
+        if (esNube) {
+            sql = "SELECT DATE_FORMAT(fecha, '%Y-%m') AS periodo_mes, "
+                  "COUNT(DISTINCT CONCAT(id_tienda, '_', ticket)) AS total_tickets, "
+                  "COUNT(DISTINCT fecha) AS dias_con_ventas, "
+                  "ROUND(COUNT(DISTINCT CONCAT(id_tienda, '_', ticket)) / NULLIF(COUNT(DISTINCT fecha), 0), 1) AS promedio_tickets_dia, "
+                  "ROUND(SUM(total), 2) AS total_facturado, "
+                  "ROUND(AVG(total), 2) AS ticket_medio "
+                  "FROM tickets_nube "
+                  "WHERE 1=1 ";
+            if (idTiendaFiltro > 0) sql += QString("AND id_tienda = %1 ").arg(idTiendaFiltro);
+            if (!fechaI.isEmpty()) sql += "AND fecha >= :f1 ";
+            if (!fechaF.isEmpty()) sql += "AND fecha <= :f2 ";
+            sql += "GROUP BY DATE_FORMAT(fecha, '%Y-%m') ORDER BY periodo_mes DESC LIMIT :limite";
+        } else {
+            sql = "SELECT DATE_FORMAT(fecha, '%Y-%m') AS periodo_mes, "
+                  "COUNT(DISTINCT ticket) AS total_tickets, "
+                  "COUNT(DISTINCT fecha) AS dias_con_ventas, "
+                  "ROUND(COUNT(DISTINCT ticket) / NULLIF(COUNT(DISTINCT fecha), 0), 1) AS promedio_tickets_dia, "
+                  "ROUND(SUM(total), 2) AS total_facturado, "
+                  "ROUND(AVG(total), 2) AS ticket_medio "
+                  "FROM tickets "
+                  "WHERE 1=1 ";
+            if (!fechaI.isEmpty()) sql += "AND fecha >= :f1 ";
+            if (!fechaF.isEmpty()) sql += "AND fecha <= :f2 ";
+            sql += "GROUP BY DATE_FORMAT(fecha, '%Y-%m') ORDER BY periodo_mes DESC LIMIT :limite";
+        }
+        q.prepare(sql);
+        if (!fechaI.isEmpty()) q.bindValue(":f1", fechaI);
+        if (!fechaF.isEmpty()) q.bindValue(":f2", fechaF);
+        q.bindValue(":limite", limite);
+
+        if (q.exec()) {
+            int pos = 1;
+            while (q.next()) {
+                QJsonObject mObj;
+                mObj["posicion"] = pos++;
+                mObj["mes"] = q.value("periodo_mes").toString();
+                mObj["total_facturado"] = QString::number(q.value("total_facturado").toDouble(), 'f', 2) + " €";
+                mObj["total_tickets"] = q.value("total_tickets").toInt();
+                mObj["dias_con_ventas"] = q.value("dias_con_ventas").toInt();
+                mObj["promedio_tickets_por_dia"] = q.value("promedio_tickets_dia").toDouble();
+                mObj["importe_medio_ticket"] = QString::number(q.value("ticket_medio").toDouble(), 'f', 2) + " €";
+                mesesArray.append(mObj);
+            }
+        }
+        res["tipo_resultado"] = "evolucion_mensual_tickets_y_ventas";
+        res["tienda_consultada"] = tiendaFiltro;
+        res["periodo"] = QString("Del %1 al %2").arg(!fechaI.isEmpty() ? fechaI : "inicio", !fechaF.isEmpty() ? fechaF : "fin");
+        res["total_meses_devueltos"] = mesesArray.size();
+        res["meses"] = mesesArray;
+        return res;
+    }
+
+    // Rama 2: Agrupación por Día de la Semana
     if (esDiasSemana) {
         QJsonArray diasArray;
         QSqlQuery q(db);
@@ -6857,7 +6968,10 @@ QJsonObject AsistenteIA::toolFacturacionPorHoras(const QJsonObject &args)
                   "  WHEN 7 THEN 'Sábado' "
                   "END AS dia_semana, "
                   "COUNT(DISTINCT CONCAT(id_tienda, '_', ticket)) AS total_tickets, "
+                  "COUNT(DISTINCT fecha) AS dias_con_ventas, "
+                  "ROUND(COUNT(DISTINCT CONCAT(id_tienda, '_', ticket)) / NULLIF(COUNT(DISTINCT fecha), 0), 1) AS promedio_tickets_dia, "
                   "ROUND(SUM(total), 2) AS total_facturado, "
+                  "ROUND(SUM(total) / NULLIF(COUNT(DISTINCT fecha), 0), 2) AS promedio_facturado_dia, "
                   "ROUND(AVG(total), 2) AS ticket_medio "
                   "FROM tickets_nube "
                   "WHERE 1=1 ";
@@ -6877,7 +6991,10 @@ QJsonObject AsistenteIA::toolFacturacionPorHoras(const QJsonObject &args)
                   "  WHEN 7 THEN 'Sábado' "
                   "END AS dia_semana, "
                   "COUNT(DISTINCT ticket) AS total_tickets, "
+                  "COUNT(DISTINCT fecha) AS dias_con_ventas, "
+                  "ROUND(COUNT(DISTINCT ticket) / NULLIF(COUNT(DISTINCT fecha), 0), 1) AS promedio_tickets_dia, "
                   "ROUND(SUM(total), 2) AS total_facturado, "
+                  "ROUND(SUM(total) / NULLIF(COUNT(DISTINCT fecha), 0), 2) AS promedio_facturado_dia, "
                   "ROUND(AVG(total), 2) AS ticket_medio "
                   "FROM tickets "
                   "WHERE 1=1 ";
@@ -6897,6 +7014,9 @@ QJsonObject AsistenteIA::toolFacturacionPorHoras(const QJsonObject &args)
                 dObj["dia_semana"] = q.value("dia_semana").toString();
                 dObj["total_facturado"] = QString::number(q.value("total_facturado").toDouble(), 'f', 2) + " €";
                 dObj["total_tickets"] = q.value("total_tickets").toInt();
+                dObj["dias_analizados"] = q.value("dias_con_ventas").toInt();
+                dObj["promedio_tickets_por_dia"] = q.value("promedio_tickets_dia").toDouble();
+                dObj["promedio_facturado_por_dia"] = QString::number(q.value("promedio_facturado_dia").toDouble(), 'f', 2) + " €";
                 dObj["ticket_medio"] = QString::number(q.value("ticket_medio").toDouble(), 'f', 2) + " €";
                 diasArray.append(dObj);
             }
@@ -8019,13 +8139,10 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
                                            "costo AS precioCosto, descuento1 AS descuento, base AS baseProducto, "
                                            "tipoIva, totalbase AS baseLinea, iva, re, pvp "
                                            "FROM lineaspedido WHERE (nDocumento = :doc";
-                            if (!nFact.trimmed().isEmpty()) {
+                            if (!nFact.trimmed().isEmpty() && nFact != numPed) {
                                 sqlL += " OR nDocumento = :nFact";
                             }
-                            if (!idPedidoFiltro.trimmed().isEmpty() && idPedidoFiltro != numPed && idPedidoFiltro != nFact) {
-                                sqlL += " OR nDocumento = :filtro";
-                            }
-                            sqlL += ") ";
+                            sqlL += " OR nDocumento = :idPedStr) ";
                             if (idProv > 0) {
                                 sqlL += "AND idProveedor = :prov ";
                             }
@@ -8034,12 +8151,10 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
                             QSqlQuery qLineas(db);
                             qLineas.prepare(sqlL);
                             qLineas.bindValue(":doc", numPed);
-                            if (!nFact.trimmed().isEmpty()) {
+                            if (!nFact.trimmed().isEmpty() && nFact != numPed) {
                                 qLineas.bindValue(":nFact", nFact);
                             }
-                            if (!idPedidoFiltro.trimmed().isEmpty() && idPedidoFiltro != numPed && idPedidoFiltro != nFact) {
-                                qLineas.bindValue(":filtro", idPedidoFiltro);
-                            }
+                            qLineas.bindValue(":idPedStr", QString::number(idPed));
                             if (idProv > 0) {
                                 qLineas.bindValue(":prov", idProv);
                             }
@@ -8111,6 +8226,28 @@ QJsonObject AsistenteIA::toolConsultarPedidos(const QJsonObject &args)
                     qDebug() << "toolConsultarPedidos pedidos error en" << connName << ":" << q.lastError().text();
                 }
             }
+        }
+    }
+
+    // Reordenar globalmente por fecha descendente e id descendente para que el pedido más reciente de TODAS las tiendas aparezca primero
+    if (arrayAceptados.size() > 1) {
+        QList<QJsonObject> listaOrdenada;
+        listaOrdenada.reserve(arrayAceptados.size());
+        for (const QJsonValue &v : arrayAceptados) {
+            listaOrdenada.append(v.toObject());
+        }
+        std::sort(listaOrdenada.begin(), listaOrdenada.end(), [](const QJsonObject &o1, const QJsonObject &o2) {
+            QString f1 = o1.value("fecha").toString();
+            QString f2 = o2.value("fecha").toString();
+            if (f1 != f2) return f1 > f2; // Fecha más reciente primero
+            return o1.value("id_interno").toInt() > o2.value("id_interno").toInt();
+        });
+        if (esPeticionDeUnSoloRegistro(userText, args) && !listaOrdenada.isEmpty()) {
+            listaOrdenada = { listaOrdenada.first() };
+        }
+        arrayAceptados = QJsonArray();
+        for (const QJsonObject &obj : listaOrdenada) {
+            arrayAceptados.append(obj);
         }
     }
 
@@ -10159,6 +10296,141 @@ QJsonObject AsistenteIA::toolBuscarFacturasCompraArticulo(const QJsonObject &arg
     }
 
     res["lineas_factura"] = arrayLineas;
+    return res;
+}
+
+/**
+ * @brief Consulta los vales de descuento y saldos pendientes de canjear de los clientes.
+ * 
+ * Permite listar los vales activos (estado = 1 por defecto) o canjeados (estado = 2) tanto en la base de datos
+ * local como en la nube, informando del cliente asociado, teléfono, importe, fecha de emisión y total acumulado.
+ * 
+ * Cumple con el formato de fechas "yyyy-MM-dd" y el estilo global del proyecto.
+ * 
+ * @param args Filtros de búsqueda (cliente, estado, tienda, limite)
+ * @return QJsonObject con el listado de vales, clientes y totales
+ */
+QJsonObject AsistenteIA::toolConsultarValesClientes(const QJsonObject &args)
+{
+    QJsonObject res;
+
+    // Validación de permisos de acceso a datos de clientes (GDPR / LOPD)
+    if (conf && conf->permisos() && !conf->permisos()->tiene("clientes")) {
+        res["error"] = "Permiso denegado: El usuario activo no tiene autorización para acceder a los datos de vales y saldos de clientes.";
+        return res;
+    }
+
+    QString clienteFiltro = args.value("cliente").toString().trimmed();
+    if (clienteFiltro.isEmpty()) clienteFiltro = args.value("termino").toString().trimmed();
+    if (clienteFiltro.isEmpty()) clienteFiltro = args.value("nombre").toString().trimmed();
+
+    QString estadoFiltro = args.value("estado").toString().trimmed().toLower();
+    // Por defecto 'pendientes' (estado = 1)
+    int estadoVal = 1;
+    if (estadoFiltro.contains("usad") || estadoFiltro.contains("canje")) {
+        estadoVal = 2;
+    } else if (estadoFiltro.contains("caduc")) {
+        estadoVal = 0;
+    } else if (estadoFiltro.contains("toda") || estadoFiltro.contains("todo")) {
+        estadoVal = -1; // Todos los estados
+    }
+
+    QString tiendaFiltro = args.value("tienda").toString().trimmed();
+    int idTiendaFiltro = 0;
+    QString tNorm = tiendaFiltro.toLower();
+    if (tNorm.contains("emeic")) idTiendaFiltro = 1;
+    else if (tNorm.contains("casa")) idTiendaFiltro = 2;
+    else if (tNorm.contains("cerv")) idTiendaFiltro = 3;
+
+    int limite = args.value("limite").toInt(30);
+    if (limite <= 0 || limite > 100) limite = 30;
+
+    QSqlDatabase db;
+    if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
+        db = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
+    } else {
+        db = obtenerBaseDatos();
+    }
+
+    if (!db.isOpen()) {
+        res["error"] = "Base de datos no disponible para consultar vales.";
+        return res;
+    }
+
+    QString sql = "SELECT v.idvales, v.idCliente, COALESCE(c.nombre, '') AS nombre, "
+                  "COALESCE(c.apellidos, '') AS apellidos, COALESCE(c.telefono, '') AS telefono, "
+                  "v.cantidad, DATE_FORMAT(v.fechaEmision, '%Y-%m-%d') AS fecha_emision, "
+                  "DATE_FORMAT(v.fechaUso, '%Y-%m-%d') AS fecha_uso, v.estado, v.id_tienda_origen, "
+                  "COALESCE(t.nombre, CONCAT('Tienda ', v.id_tienda_origen)) AS nombre_tienda "
+                  "FROM vales v "
+                  "LEFT JOIN clientes c ON v.idCliente = c.idCliente "
+                  "LEFT JOIN tiendas t ON v.id_tienda_origen = t.id "
+                  "WHERE 1=1 ";
+
+    if (estadoVal >= 0) {
+        sql += QString("AND v.estado = %1 ").arg(estadoVal);
+    }
+    if (idTiendaFiltro > 0) {
+        sql += QString("AND v.id_tienda_origen = %1 ").arg(idTiendaFiltro);
+    }
+    if (!clienteFiltro.isEmpty()) {
+        sql += "AND (c.nombre LIKE :cli OR c.apellidos LIKE :cli OR c.telefono LIKE :cli OR v.idCliente = :cliId) ";
+    }
+
+    sql += QString("ORDER BY v.fechaEmision DESC, v.idvales DESC LIMIT %1").arg(limite);
+
+    QSqlQuery q(db);
+    q.prepare(sql);
+    if (!clienteFiltro.isEmpty()) {
+        q.bindValue(":cli", "%" + clienteFiltro + "%");
+        q.bindValue(":cliId", clienteFiltro.toInt());
+    }
+
+    QJsonArray valesArray;
+    double importeTotal = 0.0;
+
+    if (q.exec()) {
+        while (q.next()) {
+            QJsonObject item;
+            int idV = q.value("idvales").toInt();
+            int idC = q.value("idCliente").toInt();
+            QString nom = (q.value("nombre").toString() + " " + q.value("apellidos").toString()).trimmed();
+            if (nom.isEmpty()) nom = QString("Cliente #%1").arg(idC);
+            double cant = q.value("cantidad").toDouble();
+            int st = q.value("estado").toInt();
+
+            QString estadoStr = "Pendiente / Activo";
+            if (st == 2) estadoStr = "Usado / Canjeado";
+            else if (st == 0) estadoStr = "Caducado";
+
+            item["id_vale"] = idV;
+            item["id_cliente"] = idC;
+            item["cliente"] = nom;
+            QString tel = q.value("telefono").toString().trimmed();
+            if (!tel.isEmpty()) item["telefono"] = tel;
+            item["importe"] = QString::number(cant, 'f', 2) + " €";
+            item["fecha_emision"] = q.value("fecha_emision").toString();
+            QString fUso = q.value("fecha_uso").toString();
+            if (!fUso.isEmpty()) item["fecha_uso"] = fUso;
+            item["estado"] = estadoStr;
+            item["tienda"] = q.value("nombre_tienda").toString();
+
+            importeTotal += cant;
+            valesArray.append(item);
+        }
+    } else {
+        qDebug() << "toolConsultarValesClientes SQL Error:" << q.lastError().text();
+        res["error"] = "Error al consultar la base de datos de vales: " + q.lastError().text();
+        return res;
+    }
+
+    res["tipo_resultado"] = "vales_clientes";
+    res["filtro_estado"] = (estadoVal == 1) ? "pendientes_de_canje" : (estadoVal == 2 ? "usados" : "todos");
+    if (!clienteFiltro.isEmpty()) res["filtro_cliente"] = clienteFiltro;
+    res["total_vales_encontrados"] = valesArray.size();
+    res["importe_total_acumulado"] = QString::number(importeTotal, 'f', 2) + " €";
+    res["vales"] = valesArray;
+
     return res;
 }
 

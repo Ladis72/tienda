@@ -63,6 +63,7 @@
 #include "prepararpedidos.h"
 
 extern Configuracion *conf;
+class DialogInventario;
 namespace Ui {
 class Tienda;
 }
@@ -99,6 +100,7 @@ private slots:
     void on_pushButtonEntradaSalida_clicked();
     void on_movimientosButton_clicked();
     void on_pushButtonEstadisticas_clicked();
+    void on_pushButtonEstadisticasInventario_clicked();
     void on_pushButtonTickets_clicked();
     void on_pushButtonFacturas_clicked();
     void on_listadoVentasButton_clicked();
@@ -201,6 +203,7 @@ private:
     DialogEstadisticasStockMuerto *estadisticasStockMuertoDialog;
     DialogEstadisticasClientes *estadisticasClientesDialog;
     DialogEstadisticasMermas *estadisticasMermasDialog;
+    DialogInventario *inventarioDialog;
 
     // Métodos para cambiar estilos de cabecera
     void setupHeaderStyles();

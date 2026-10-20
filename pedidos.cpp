@@ -162,11 +162,27 @@ QString pedidos::calcularTotalLinea()
  * @param idPedido ID del pedido a mostrar.
  */
 void pedidos::llenarTablaPedido(QString idPedido) {
-  // Configuración del modelo principal formateando explícitamente la fecha de caducidad como texto yyyy-MM-dd
+  // Comprobar el régimen de Recargo de Equivalencia configurado en el sistema para calcular el margen
+  bool esRE = base.leerConfiguracion().value("recargoeq").toBool();
+
+  // Expresión SQL calculada para obtener el margen del producto (%) sin modificar la estructura de la base de datos:
+  // - En Régimen de Recargo de Equivalencia: el coste incluye Total Base + IVA + RE
+  // - En Régimen General: el coste para el cálculo del margen comercial incluye Total Base + IVA
+  // En ambos casos, las ventas estimadas brutas son (cantidad + bonificación) * PVP
+  QString formulaMargen = esRE
+      ? "ROUND(IF((cantidad + IFNULL(bonificacion, 0)) * IFNULL(pvp, 0) > 0, "
+        "(((cantidad + IFNULL(bonificacion, 0)) * pvp - (totalbase + iva + re)) / ((cantidad + IFNULL(bonificacion, 0)) * pvp)) * 100.0, 0.0), 2)"
+      : "ROUND(IF((cantidad + IFNULL(bonificacion, 0)) * IFNULL(pvp, 0) > 0, "
+        "(((cantidad + IFNULL(bonificacion, 0)) * pvp - (totalbase + iva)) / ((cantidad + IFNULL(bonificacion, 0)) * pvp)) * 100.0, 0.0), 2)";
+
+  // Configuración del modelo principal formateando la fecha de caducidad como texto yyyy-MM-dd
+  // e incorporando la columna virtual 'margen'
   QSqlQuery qPedido(QSqlDatabase::database(conf->getConexionLocal()));
-  qPedido.prepare("SELECT id, idPedido, cod, descripcion, cantidad, bonificacion, lote, "
-                  "DATE_FORMAT(fc, '%Y-%m-%d') AS fc, costo, descuento1, base, tipoIva, "
-                  "totalbase, iva, re, pvp FROM lineaspedido_tmp WHERE idPedido = ?");
+  QString sql = QString("SELECT id, idPedido, cod, descripcion, cantidad, bonificacion, lote, "
+                        "DATE_FORMAT(fc, '%Y-%m-%d') AS fc, costo, descuento1, base, tipoIva, "
+                        "totalbase, iva, re, pvp, %1 AS margen "
+                        "FROM lineaspedido_tmp WHERE idPedido = ?").arg(formulaMargen);
+  qPedido.prepare(sql);
   qPedido.bindValue(0, idPedido);
   qPedido.exec();
   modeloPedido->setQuery(qPedido);
@@ -183,6 +199,7 @@ void pedidos::llenarTablaPedido(QString idPedido) {
   modeloPedido->setHeaderData(11, Qt::Horizontal, "IVA %");
   modeloPedido->setHeaderData(12, Qt::Horizontal, "TOTAL BASE");
   modeloPedido->setHeaderData(15, Qt::Horizontal, "PVP");
+  modeloPedido->setHeaderData(16, Qt::Horizontal, "MARGEN %");
 
   ui->tableView->setModel(modeloPedido);
   
@@ -248,6 +265,17 @@ void pedidos::llenarTablaPedido(QString idPedido) {
   ui->lineEditIVA->setText(QString::number(totalIva, 'f', 2));
   ui->lineEditRecargo->setText(QString::number(totalRe, 'f', 2));
   ui->lineEditTotal->setText(QString::number(totalGeneral, 'f', 2));
+
+  // Calcular el importe estimado resultante de la venta de todos los productos a PVP (incluyendo bonificaciones)
+  QSqlQuery qTotalPvp(QSqlDatabase::database(conf->getConexionLocal()));
+  qTotalPvp.prepare("SELECT SUM((cantidad + IFNULL(bonificacion, 0)) * IFNULL(pvp, 0)) AS totalPvp "
+                    "FROM lineaspedido_tmp WHERE idPedido = ?");
+  qTotalPvp.bindValue(0, idPedido);
+  double totalPvp = 0.0;
+  if (qTotalPvp.exec() && qTotalPvp.next()) {
+    totalPvp = qTotalPvp.value("totalPvp").toDouble();
+  }
+  ui->lineEditTotalPvp->setText(QString::number(totalPvp, 'f', 2));
   
   contarArticulos();
   contarLineas();
@@ -330,9 +358,13 @@ void pedidos::on_pushButtonAnadir_clicked() {
     query.prepare("SELECT porcentaje, recargo FROM impuestos WHERE porcentaje = :porcentaje");
     query.bindValue(":porcentaje", tipoIvaStr);
     
+    // Comprobar si la tienda está acogida al Régimen de Recargo de Equivalencia
+    bool esRE = base.leerConfiguracion().value("recargoeq").toBool();
+
     if (query.exec() && query.first()) {
         iva = baseTotal * query.value(0).toDouble() / 100.0;
-        re = baseTotal * query.value(1).toDouble() / 100.0;
+        // Solo se calcula y aplica el recargo si la tienda tiene activada la opción de recargo de equivalencia
+        re = esRE ? (baseTotal * query.value(1).toDouble() / 100.0) : 0.0;
     } else {
         QMessageBox::warning(this, "IVA no válido", "Debe introducir un porcentaje de IVA válido de la configuración.");
         ui->leIva->setFocus();

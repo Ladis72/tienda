@@ -534,8 +534,7 @@ void DialogEstadisticasProductos::cargarTablaBajaRotacion(const QDate &desde, co
   while (query.next()) {
     QString cod = query.value("cod").toString();
     QString desc = query.value("descripcion").toString();
-    QString fam = query.value("famil").toString();
-    if (fam.isEmpty()) fam = query.value("familia").toString();
+    QString fam = query.value("familia").toString();
     double pvp = query.value("pvp").toDouble();
     double coste = query.value("coste").toDouble();
     double stock = query.value("stock_actual").toDouble();

@@ -1,0 +1,628 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DialogInventario</class>
+ <widget class="QDialog" name="DialogInventario">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1160</width>
+    <height>760</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Listado de Inventario y Valoración de Stock</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayoutMain">
+   <item>
+    <widget class="QGroupBox" name="groupBoxFiltros">
+     <property name="title">
+      <string>Parámetros y Filtros de Inventario</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayoutFiltros">
+      <item>
+       <layout class="QHBoxLayout" name="layoutFiltros">
+        <item>
+         <widget class="QLabel" name="labelTienda">
+          <property name="text">
+           <string>Tienda / Ámbito:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboTienda">
+          <property name="minimumSize">
+           <size>
+            <width>180</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelFamilia">
+          <property name="text">
+           <string>Familia:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboFamilia">
+          <property name="minimumSize">
+           <size>
+            <width>160</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelFiltroStock">
+          <property name="text">
+           <string>Existencias:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboFiltroStock">
+          <property name="minimumSize">
+           <size>
+            <width>150</width>
+            <height>0</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelBuscar">
+          <property name="text">
+           <string>Buscar:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="txtBuscar">
+          <property name="placeholderText">
+           <string>Código o nombre...</string>
+          </property>
+          <property name="clearButtonEnabled">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnActualizar">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Actualizar</string>
+          </property>
+          <property name="icon">
+           <iconset theme="view-refresh"/>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="layoutInfoOrigen">
+        <item>
+         <widget class="QLabel" name="lblInfoOrigen">
+          <property name="font">
+           <font>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Origen: Cargando...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacerFiltros">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblFechaInventario">
+          <property name="styleSheet">
+           <string>color: #666666; font-style: italic;</string>
+          </property>
+          <property name="text">
+           <string>Fecha: --</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBoxResumen">
+     <property name="title">
+      <string>Resumen de Existencias y Valoración</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayoutKPIs">
+      <item>
+       <widget class="QFrame" name="frameKpiRef">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <layout class="QVBoxLayout" name="vLayoutKPI1">
+         <item>
+          <widget class="QLabel" name="kpiRefTitulo">
+           <property name="text">
+            <string>REFERENCIAS</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblTotalReferencias">
+           <property name="font">
+            <font>
+             <pointsize>13</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>0</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="kpiRefSub">
+           <property name="styleSheet">
+            <string>color: #777777; font-size: 10px;</string>
+           </property>
+           <property name="text">
+            <string>Artículos distintos</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="frameKpiUds">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <layout class="QVBoxLayout" name="vLayoutKPI2">
+         <item>
+          <widget class="QLabel" name="kpiUdsTitulo">
+           <property name="text">
+            <string>UNIDADES EN STOCK</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblTotalUnidades">
+           <property name="font">
+            <font>
+             <pointsize>13</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string>color: #1565C0;</string>
+           </property>
+           <property name="text">
+            <string>0</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="kpiUdsSub">
+           <property name="styleSheet">
+            <string>color: #777777; font-size: 10px;</string>
+           </property>
+           <property name="text">
+            <string>Unidades físicas totales</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="frameKpiCoste">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <layout class="QVBoxLayout" name="vLayoutKPI3">
+         <item>
+          <widget class="QLabel" name="kpiCosteTitulo">
+           <property name="text">
+            <string>VALOR A COSTE</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblValorCoste">
+           <property name="font">
+            <font>
+             <pointsize>13</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string>color: #C62828;</string>
+           </property>
+           <property name="text">
+            <string>0,00 €</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="kpiCosteSub">
+           <property name="styleSheet">
+            <string>color: #777777; font-size: 10px;</string>
+           </property>
+           <property name="text">
+            <string>Capital invertido</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="frameKpiPvp">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <layout class="QVBoxLayout" name="vLayoutKPI4">
+         <item>
+          <widget class="QLabel" name="kpiPvpTitulo">
+           <property name="text">
+            <string>VALOR A PVP</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblValorPVP">
+           <property name="font">
+            <font>
+             <pointsize>13</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string>color: #2E7D32;</string>
+           </property>
+           <property name="text">
+            <string>0,00 €</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="kpiPvpSub">
+           <property name="styleSheet">
+            <string>color: #777777; font-size: 10px;</string>
+           </property>
+           <property name="text">
+            <string>Valoración a venta</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="frameKpiMargen">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <layout class="QVBoxLayout" name="vLayoutKPI5">
+         <item>
+          <widget class="QLabel" name="kpiMargenTitulo">
+           <property name="text">
+            <string>MARGEN BRUTO</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblMargenPotencial">
+           <property name="font">
+            <font>
+             <pointsize>13</pointsize>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string>color: #EF6C00;</string>
+           </property>
+           <property name="text">
+            <string>0,00 € (0,0%)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="kpiMargenSub">
+           <property name="styleSheet">
+            <string>color: #777777; font-size: 10px;</string>
+           </property>
+           <property name="text">
+            <string>Beneficio potencial estimado</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="tabWidgetInventario">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tabArticulos">
+      <attribute name="title">
+       <string>📦 Por Artículos (Resumido)</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutTabArticulos">
+       <item>
+        <widget class="QTableView" name="tablaArticulos">
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
+         </property>
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+         <property name="selectionBehavior">
+          <set>QAbstractItemView::SelectRows</set>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabLotes">
+      <attribute name="title">
+       <string>🏷️ Desglose por Lotes y Caducidades</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutTabLotes">
+       <item>
+        <widget class="QTableView" name="tablaLotes">
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
+         </property>
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+         <property name="selectionBehavior">
+          <set>QAbstractItemView::SelectRows</set>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabArbol">
+      <attribute name="title">
+       <string>🌳 Desglose en Árbol Jerárquico</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutTabArbol">
+       <item>
+        <layout class="QHBoxLayout" name="layoutControlesArbol">
+         <item>
+          <widget class="QPushButton" name="btnExpandirTodo">
+           <property name="text">
+            <string>➕ Expandir Todo</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnContraerTodo">
+           <property name="text">
+            <string>➖ Contraer Todo</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnExpandirFamilias">
+           <property name="text">
+            <string>📂 Solo Familias y Productos</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacerArbol">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="lblAyudaArbol">
+           <property name="styleSheet">
+            <string>color: #666666; font-style: italic;</string>
+           </property>
+           <property name="text">
+            <string>💡 Estructura: Familia ➔ Artículo ➔ Lotes</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QTreeWidget" name="treeInventario">
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
+         </property>
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+         <property name="selectionBehavior">
+          <set>QAbstractItemView::SelectRows</set>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+         <column>
+          <property name="text">
+           <string>Concepto / Detalle</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Familia</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Caducidad</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Stock / Uds</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Coste Unit.</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>PVP</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Valor Coste</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Valor PVP</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabFamilias">
+      <attribute name="title">
+       <string>📊 Desglose por Familias</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayoutTabFamilias">
+       <item>
+        <widget class="QTableView" name="tablaFamilias">
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
+         </property>
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+         <property name="selectionBehavior">
+          <set>QAbstractItemView::SelectRows</set>
+         </property>
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="layoutAccionesInferiores">
+     <item>
+      <widget class="QPushButton" name="btnExportarCSV">
+       <property name="text">
+        <string>📄 Exportar CSV</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnCopiar">
+       <property name="text">
+        <string>📋 Copiar Tabla</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnImprimir">
+       <property name="text">
+        <string>🖨️ Imprimir / PDF</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacerAcciones">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnCerrar">
+       <property name="minimumSize">
+        <size>
+         <width>90</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Cerrar</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>btnCerrar</sender>
+   <signal>clicked()</signal>
+   <receiver>DialogInventario</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1110</x>
+     <y>730</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>580</x>
+     <y>380</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

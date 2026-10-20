@@ -193,6 +193,7 @@ private:
     QJsonObject toolResumenComprasProveedores(const QJsonObject &args);
     QJsonObject toolConsultarTraspasosIntertiendas(const QJsonObject &args);
     QJsonObject toolBuscarFacturasCompraArticulo(const QJsonObject &args);
+    QJsonObject toolConsultarValesClientes(const QJsonObject &args);
 };
 
 #endif // ASISTENTEIA_H

@@ -13,6 +13,7 @@
 #include "gestorpermisos.h"
 #include "dialogenriquecimientomasivo.h"
 #include "dialogfotosmasivo.h"
+#include "dialoginventario.h"
 #include <QDebug>
 #include <QEvent>
 #include <QFileDialog>
@@ -87,6 +88,7 @@ Tienda::Tienda(QWidget *parent) : QMainWindow(parent), ui(new Ui::Tienda) {
   estadisticasStockMuertoDialog = nullptr;
   estadisticasClientesDialog = nullptr;
   estadisticasMermasDialog = nullptr;
+  inventarioDialog = nullptr;
   Director = nullptr;
   Sucursal = nullptr;
 
@@ -632,6 +634,7 @@ void Tienda::permisos(int rol) {
       {"estadisticas", ui->pushButtonEstadisticasStockMuerto},
       {"estadisticas", ui->pushButtonEstadisticasClientes},
       {"estadisticas", ui->pushButtonEstadisticasMermas},
+      {"estadisticas", ui->pushButtonEstadisticasInventario},
       {"config_ticket", ui->pushButtonTicket},
       {"configuracion", ui->pushButtonConfiguracion},
       {"informes", ui->pushButtonInformes},
@@ -1302,6 +1305,18 @@ void Tienda::on_pushButtonEstadisticasMermas_clicked() {
     estadisticasMermasDialog = new DialogEstadisticasMermas(this);
   }
   estadisticasMermasDialog->exec();
+}
+
+void Tienda::on_pushButtonEstadisticasInventario_clicked() {
+  if (!inventarioDialog) {
+    InfoOrigenEstadisticas origen;
+    origen.tipo = TipoOrigenEstadisticas::Local;
+    origen.idTienda = conf ? conf->getIdTienda() : 1;
+    origen.nombreConexion = conf ? conf->getConexionLocal() : "DB";
+    origen.nombreTienda = "Tienda Local";
+    inventarioDialog = new DialogInventario(origen, this);
+  }
+  inventarioDialog->exec();
 }
 
 void Tienda::on_pushButtonVentaArticulos_clicked() {
