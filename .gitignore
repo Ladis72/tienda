@@ -87,3 +87,4 @@ schema_diff.txt
 
 # Informes de auditoría interna
 revision_tienda.*
+tienda.code-workspace

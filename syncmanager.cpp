@@ -45,7 +45,7 @@ const QStringList SyncManager::TABLAS_MAESTRAS = {
 /// Tablas transaccionales locales que se consolidan en la nube (tickets,
 /// pedidos, arqueos, etc.)
 const QStringList SyncManager::TABLAS_TRANSACCIONALES = {
-    "tickets",      "lineasticket", "arqueos",         "pedidos",
+    "tickets",      "ticketss",     "lineasticket", "arqueos",         "pedidos",
     "lineaspedido", "salidaGenero", "entradasSalidas", "lotes",
     "ia_logs_peticiones", "historico_stock"};
 
@@ -576,6 +576,11 @@ int SyncManager::subirCambios(const QString &connLocal, const QString &connNube,
                       "`ticket` = ?");
           del.addBindValue(m_idTiendaLocal);
           del.addBindValue(idReg);
+        } else if (tabla == "ticketss") {
+          del.prepare("DELETE FROM `ticketss_nube` WHERE `id_tienda` = ? AND "
+                      "`ticket` = ?");
+          del.addBindValue(m_idTiendaLocal);
+          del.addBindValue(idReg);
         } else if (tabla == "lineasticket") {
           del.prepare("DELETE FROM `lineasticket_nube` WHERE `id_tienda` = ? "
                       "AND `id_local` = ?");
@@ -634,6 +639,35 @@ int SyncManager::subirCambios(const QString &connLocal, const QString &connNube,
           if (tabla == "tickets") {
             ins.prepare(
                 "INSERT INTO `tickets_nube` (id_tienda, ticket, usuario, "
+                "cliente, fecha, hora, base, iva, descuento, total, fpago, "
+                "cobrado, entrega, cambio) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON DUPLICATE KEY UPDATE usuario=VALUES(usuario), "
+                "cliente=VALUES(cliente), fecha=VALUES(fecha), "
+                "hora=VALUES(hora), base=VALUES(base), iva=VALUES(iva), "
+                "descuento=VALUES(descuento), total=VALUES(total), "
+                "fpago=VALUES(fpago), cobrado=VALUES(cobrado), "
+                "entrega=VALUES(entrega), cambio=VALUES(cambio)");
+            ins.addBindValue(m_idTiendaLocal);
+            ins.addBindValue(rec.value("ticket"));
+            ins.addBindValue(
+                rec.value("usuario").toInt() > 0 ? rec.value("usuario") : 1);
+            ins.addBindValue(
+                rec.value("cliente").toInt() > 0 ? rec.value("cliente") : 1);
+            ins.addBindValue(rec.value("fecha"));
+            ins.addBindValue(rec.value("hora"));
+            ins.addBindValue(rec.value("base"));
+            ins.addBindValue(rec.value("iva"));
+            ins.addBindValue(rec.value("descuento"));
+            ins.addBindValue(rec.value("total"));
+            ins.addBindValue(rec.value("fpago"));
+            ins.addBindValue(rec.value("cobrado"));
+            ins.addBindValue(rec.value("entrega"));
+            ins.addBindValue(rec.value("cambio"));
+            ok = ins.exec();
+          } else if (tabla == "ticketss") {
+            ins.prepare(
+                "INSERT INTO `ticketss_nube` (id_tienda, ticket, usuario, "
                 "cliente, fecha, hora, base, iva, descuento, total, fpago, "
                 "cobrado, entrega, cambio) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
@@ -1664,6 +1698,7 @@ QString SyncManager::getPkTabla(const QString &tabla) const {
       {"permisos", "id"},
       {"vales", "vale_uuid"},
       {"tickets", "ticket"},
+      {"ticketss", "ticket"},
       {"lineasticket", "id"},
       {"arqueos", "id"},
       {"pedidos", "id"},

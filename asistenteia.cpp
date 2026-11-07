@@ -443,7 +443,8 @@ QJsonObject AsistenteIA::construirMensajeSistema()
         "  2. Tu respuesta debe mostrar EXCLUSIVAMENTE ese único registro más reciente (solo 1). Queda TERMINANTEMENTE PROHIBIDO mostrar 5, 10 o 20 registros cuando te piden 'el último'. Solo se quiere ver el último.\n\n"
         "REGLA OBLIGATORIA PARA CONSULTAS DE VENTAS Y FACTURACIÓN:\n"
         "- Para CUALQUIER pregunta sobre cuánto se ha vendido (hoy, ayer, mes pasado, año, periodo entre fechas, ventas por tienda o producto), DEBES invocar SIEMPRE 'resumen_ventas'.\n"
-        "- NUNCA uses 'ultimos_arqueos' para responder sobre ventas o facturación. 'ultimos_arqueos' y 'auditoria_descuadres_caja' se usan ÚNICAMENTE si te preguntan explícitamente por arqueos, cierres de caja o descuadres de dinero en efectivo.\n\n"
+        "- NUNCA uses 'ultimos_arqueos' para responder sobre ventas o facturación. 'ultimos_arqueos' y 'auditoria_descuadres_caja' se usan ÚNICAMENTE si te preguntan explícitamente por arqueos, cierres de caja o descuadres de dinero en efectivo.\n"
+        "- VENTAS OFICIALES (POR DEFECTO): Responde SIEMPRE con las cifras oficiales de ventas fiscales (deja 'incluir_serie_b: false'). Solo si el usuario solicita de forma expresa ventas especiales, serie B o consolidado, pasa 'incluir_serie_b: true' y aclara explícitamente en la respuesta que se trata de datos consolidados (incluyendo ventas especiales serie B).\n\n"
         "REGLA DE INTERPRETACIÓN DE TOTALES CONSOLIDADOS:\n"
         "- Los campos globales de 'resumen_ventas' ('total_facturado', 'total_efectivo', 'total_tarjeta', 'total_tickets') ya son la SUMA TOTAL CONSOLIDADA de todas las tiendas de la red.\n"
         "- NO los vuelvas a sumar con las cifras individuales de cada tienda ni inventes supuestas discrepancias matemáticas en tus respuestas.\n\n"
@@ -474,7 +475,7 @@ QJsonObject AsistenteIA::construirMensajeSistema()
         "   - PRINCIPIOS ACTIVOS Y COMPOSICIÓN: Si el usuario pregunta qué productos llevan o contienen un principio activo (ej. 'monacolina', 'harpagósidos', 'curcumina', 'silimarina', 'isoflavonas', 'melatonina', 'berberina', 'ginsenósidos'), invoca SIEMPRE 'buscar_por_indicacion' con ese ingrediente o con su planta medicinal habitual (ej. monacolina -> levadura de arroz rojo). Esta herramienta busca en la composición profunda (notas técnicas) y en las relaciones de fitoterapia del herbolario.\n"
         "4. Ventas y Facturación -> 'resumen_ventas' (fecha_inicio, fecha_fin, tienda: 'todas', desglosar_por_dia: true, familia, fabricante, producto).\n"
         "5. Ranking de Productos Más Vendidos y Top Ventas -> 'productos_mas_vendidos' (fecha_inicio: '2026-08-01', fecha_fin: '2026-08-31', limite: 10, familia: 'no alimentacion', fabricante: 'Kenoi'). SIEMPRE que pidan 'productos más vendidos', 'top ventas' o un ranking de artículos (incluso si filtran por familia como 'alimentación', por marca o por mes/año), usa OBLIGATORIAMENTE 'productos_mas_vendidos', NUNCA 'resumen_ventas' ni 'ejecutar_consulta_sql'.\n"
-        "6. Comparativas Temporales (vs año pasado) -> 'comparativa_ventas' (calcula periodo homólogo exacto).\n"
+        "6. Comparativas Temporales (vs año pasado) -> 'comparativa_ventas' (fecha_inicio, fecha_fin, comparar_con: 'ano_anterior'/'mes_anterior', tienda: 'todas', incluir_serie_b: false/true). Si el usuario pregunta expresamente 'con el B?', 'incluyendo B' o 'consolidado', pasa 'incluir_serie_b: true'.\n"
         "7. Clientes y Compras -> 'ultimas_compras_cliente' (cliente: 'Sonsoles', producto: 'Lecidol', fabricante: 'Kenoi', cliente: 'top').\n"
         "8. Previsión, Cobertura y Venta Media Mensual -> 'prevision_cobertura_stock' (producto: 'Deneurome').\n"
         "9. Caducidades y Lotes Consolidados -> 'consultar_caducidades' (producto: 'nombre', dias_limite: 365, tienda: 'todas').\n"
@@ -758,6 +759,11 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas(const QString &peticionU
         propDia["description"] = "Si es true o si se pide ventas por días / día a día, devuelve la tabla diaria de ventas de cada fecha del periodo.";
         props["desglosar_por_dia"] = propDia;
 
+        QJsonObject propSerieB;
+        propSerieB["type"] = "boolean";
+        propSerieB["description"] = "Por defecto es FALSE (solo ventas oficiales). Poner TRUE ÚNICAMENTE si el usuario pide explícitamente ventas consolidadas, serie B o ventas especiales.";
+        props["incluir_serie_b"] = propSerieB;
+
         QJsonObject params;
         params["type"] = "object";
         params["properties"] = props;
@@ -987,6 +993,11 @@ QJsonArray AsistenteIA::construirDefinicionHerramientas(const QString &peticionU
         propTienda["type"] = "string";
         propTienda["description"] = "Tienda a consultar: 'todas', 'local', o específica (ej. 'Casablanca', 'Cervantes', 'Emeicjac'). Por defecto 'todas'.";
         props["tienda"] = propTienda;
+
+        QJsonObject propSerieB;
+        propSerieB["type"] = "boolean";
+        propSerieB["description"] = "Si es true, incluye las ventas especiales de Serie B además de las ventas oficiales (Serie A) en la comparativa de ambos periodos. Por defecto false.";
+        props["incluir_serie_b"] = propSerieB;
 
         QJsonObject params;
         params["type"] = "object";
@@ -1851,14 +1862,21 @@ void AsistenteIA::enviarPeticionChat()
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     request.setTransferTimeout(180000); // 180 segundos de timeout máximo para modelos locales en CPU/GPU
 
+    // Refrescar siempre el mensaje de sistema inicial con la fecha y hora en vivo (formato yyyy-MM-dd)
+    // Esto evita que la IA asuma fechas antiguas si el TPV se mantiene abierto de un día para otro
+    QJsonObject sysMsg = construirMensajeSistema();
+    if (!m_historial.isEmpty() && m_historial.first().toObject().value("role").toString() == "system") {
+        m_historial[0] = sysMsg;
+    } else {
+        m_historial.prepend(sysMsg);
+    }
+
     // Sanear historial:
     // 1. Conservar siempre el mensaje de sistema inicial (índice 0).
     // 2. Mantener una ventana móvil de los últimos 10 mensajes para evitar saturación de memoria.
     // 3. Filtrar respuestas genéricas repetitivas para que no contaminen los siguientes turnos.
     QJsonArray historialSano;
-    if (!m_historial.isEmpty()) {
-        historialSano.append(m_historial.first()); // Mensaje de sistema
-    }
+    historialSano.append(m_historial.first()); // Mensaje de sistema en vivo
 
     int totalMsgs = m_historial.size();
     int inicioVentana = qMax(1, totalMsgs - 10); // Últimos 10 mensajes
@@ -2328,6 +2346,116 @@ void AsistenteIA::onChatReplyFinished(QNetworkReply *reply)
                             md += fo.value(k).toVariant().toString() + " | ";
                         }
                         md += "\n";
+                    }
+                    content = md.trimmed();
+                }
+                break;
+            } else if (resTool.contains("total_facturado") && (resTool.contains("desglose_por_tienda") || resTool.contains("total_efectivo"))) {
+                // Síntesis directa de emergencia para resumen_ventas (evita respuestas vacías o "Consulta completada.")
+                QString fIni = resTool.value("fecha_inicio").toString();
+                QString fFin = resTool.value("fecha_fin").toString();
+                QString rango = (fIni == fFin) ? fIni : QString("%1 al %2").arg(fIni, fFin);
+                QString md = QString("### 💰 Resumen de Ventas (%1):\n\n").arg(rango);
+                md += QString("- **Total facturado:** %1\n").arg(resTool.value("total_facturado").toString());
+                md += QString("- **Efectivo:** %1\n").arg(resTool.value("total_efectivo").toString());
+                md += QString("- **Tarjeta:** %1\n").arg(resTool.value("total_tarjeta").toString());
+                md += QString("- **Tickets:** %1 | **Unidades vendidas:** %2\n\n")
+                      .arg(resTool.value("total_tickets").toInt())
+                      .arg(resTool.value("total_unidades_vendidas").toDouble());
+
+                QJsonArray desTiendas = resTool.value("desglose_por_tienda").toArray();
+                if (!desTiendas.isEmpty()) {
+                    md += "#### Desglose por Tienda:\n";
+                    md += "| Tienda | Tickets | Unidades | Efectivo | Tarjeta | Total Ventas |\n";
+                    md += "| :--- | :---: | :---: | :---: | :---: | :---: |\n";
+                    for (const QJsonValue &tv : desTiendas) {
+                        QJsonObject t = tv.toObject();
+                        md += QString("| **%1** | %2 | %3 | %4 | %5 | %6 |\n")
+                              .arg(t.value("tienda").toString())
+                              .arg(t.value("numero_tickets").toInt())
+                              .arg(t.value("unidades_vendidas").toDouble())
+                              .arg(t.value("total_efectivo").toString())
+                              .arg(t.value("total_tarjeta").toString())
+                              .arg(t.value("total_ventas").toString());
+                    }
+                    md += "\n";
+                }
+
+                QJsonArray topP = resTool.value("top_productos_vendidos").toArray();
+                if (!topP.isEmpty()) {
+                    md += "#### Top Productos Vendidos:\n";
+                    md += "| # | Producto | Unidades | Total |\n";
+                    md += "| :---: | :--- | :---: | :---: |\n";
+                    int maxP = qMin(topP.size(), 10);
+                    for (int pIdx = 0; pIdx < maxP; ++pIdx) {
+                        QJsonObject p = topP[pIdx].toObject();
+                        md += QString("| %1 | %2 | %3 | %4 |\n")
+                              .arg(p.value("posicion").toInt())
+                              .arg(p.value("producto").toString())
+                              .arg(p.value("unidades_vendidas").toDouble())
+                              .arg(p.value("total_facturado").toString());
+                    }
+                }
+                content = md.trimmed();
+                break;
+            } else if (resTool.contains("periodo_actual") && resTool.contains("desglose_por_tienda") && resTool.contains("total_global_actual")) {
+                // Síntesis directa para comparativa_ventas
+                QString md = QString("### 📈 Comparativa de Ventas (%1 vs %2):\n\n")
+                             .arg(resTool.value("periodo_actual").toString(), resTool.value("periodo_anterior_homologo").toString());
+                md += QString("- **Periodo Actual:** %1 (%2 tickets)\n")
+                      .arg(resTool.value("total_global_actual").toString())
+                      .arg(resTool.value("tickets_global_actual").toInt());
+                md += QString("- **Periodo Anterior:** %1 (%2 tickets)\n")
+                      .arg(resTool.value("total_global_anterior").toString())
+                      .arg(resTool.value("tickets_global_anterior").toInt());
+                md += QString("- **Variación Global:** %1 (%2) - **%3**\n\n")
+                      .arg(resTool.value("diferencia_global_euros").toString())
+                      .arg(resTool.value("porcentaje_variacion_global").toString())
+                      .arg(resTool.value("tendencia_global").toString());
+
+                QJsonArray desTiendas = resTool.value("desglose_por_tienda").toArray();
+                if (!desTiendas.isEmpty()) {
+                    md += "| Tienda | Actual | Anterior | Diferencia | Variación | Tendencia |\n";
+                    md += "| :--- | :---: | :---: | :---: | :---: | :---: |\n";
+                    for (const QJsonValue &tv : desTiendas) {
+                        QJsonObject t = tv.toObject();
+                        md += QString("| **%1** | %2 | %3 | %4 | %5 | %6 |\n")
+                              .arg(t.value("tienda").toString())
+                              .arg(t.value("ventas_periodo_actual").toString())
+                              .arg(t.value("ventas_periodo_anterior_homologo").toString())
+                              .arg(t.value("diferencia_euros").toString())
+                              .arg(t.value("porcentaje_variacion").toString())
+                              .arg(t.value("tendencia").toString());
+                    }
+                }
+                content = md.trimmed();
+                break;
+            } else if (resTool.contains("articulos") && (resTool.contains("total_coincidencias") || resTool.contains("termino_buscado"))) {
+                // Síntesis directa para consultar_stock
+                QJsonArray arts = resTool.value("articulos").toArray();
+                QString term = resTool.value("termino_buscado").toString();
+                if (term.isEmpty()) term = resTool.value("termino").toString();
+                QString tSol = resTool.value("tienda_solicitada").toString();
+                if (tSol.isEmpty()) tSol = resTool.value("tienda").toString();
+
+                if (arts.isEmpty()) {
+                    if (!tSol.isEmpty() && tSol.toLower() != "todas" && tSol.toLower() != "all") {
+                        content = QString("ℹ️ No se encontraron artículos que coincidan con '%1' en la tienda **%2** ni en el catálogo.").arg(term.isEmpty() ? "la búsqueda" : term, tSol);
+                    } else if (!term.isEmpty()) {
+                        content = QString("ℹ️ No se encontraron artículos que coincidan con la búsqueda '%1' en el catálogo.").arg(term);
+                    } else {
+                        content = "ℹ️ No se encontraron artículos que coincidan con los criterios solicitados.";
+                    }
+                } else {
+                    QString md = QString("### 📦 Artículos Encontrados (%1 resultados):\n\n").arg(resTool.value("total_coincidencias").toInt(arts.size()));
+                    md += "| Código | Producto | Marca | Familia | Stock | PVP |\n";
+                    md += "| :--- | :--- | :--- | :--- | :---: | :---: |\n";
+                    for (const QJsonValue &av : arts) {
+                        QJsonObject a = av.toObject();
+                        md += QString("| `%1` | %2 | %3 | %4 | %5 | %6 |\n")
+                              .arg(a.value("codigo").toString(), a.value("nombre").toString(), a.value("fabricante").toString(),
+                                   a.value("familia").toString(), QString::number(a.value("stock_total").toDouble(), 'f', 1),
+                                   a.value("pvp").toString());
                     }
                     content = md.trimmed();
                 }
@@ -3485,6 +3613,12 @@ QJsonObject AsistenteIA::toolResumenVentas(const QJsonObject &args)
 
     bool hayFiltrosDetalle = (!familia.isEmpty() || !fabricante.isEmpty() || !producto.isEmpty());
 
+    // Control de ventas oficiales vs serie B (por defecto SOLO datos oficiales)
+    bool incluirSerieB = args.value("incluir_serie_b").toBool(false);
+    if (!incluirSerieB) incluirSerieB = args.value("consolidado").toBool(false);
+    if (!incluirSerieB) incluirSerieB = args.value("modo_consolidado").toBool(false);
+    if (!incluirSerieB) incluirSerieB = args.value("serie_b").toBool(false);
+
     int totalGlobalTickets = 0;
     double totalGlobalVentas = 0.0;
     double totalGlobalUnidades = 0.0;
@@ -3501,6 +3635,9 @@ QJsonObject AsistenteIA::toolResumenVentas(const QJsonObject &args)
 
         // Cláusula WHERE común
         QString whereSql = "WHERE v.fecha >= :f1 AND v.fecha <= :f2 ";
+        if (!incluirSerieB) {
+            whereSql += "AND (v.es_serie_b = 0 AND v.ticket NOT LIKE 'B%') ";
+        }
         if (!idsTiendas.isEmpty()) {
             QStringList strIds;
             for (int idT : idsTiendas) strIds.append(QString::number(idT));
@@ -3544,7 +3681,7 @@ QJsonObject AsistenteIA::toolResumenVentas(const QJsonObject &args)
                        "COALESCE(SUM(v.cantidad), 0) as total_unidades, "
                        "COALESCE(SUM(v.total), 0) as total_ventas, "
                        "COALESCE(SUM(CASE WHEN v.id_forma_pago = 1 THEN v.total ELSE 0 END), 0) as total_efectivo, "
-                       "COALESCE(SUM(CASE WHEN v.id_forma_pago != 1 THEN v.total ELSE 0 END), 0) as total_tarjeta "
+                       "COALESCE(SUM(CASE WHEN COALESCE(v.id_forma_pago, 0) != 1 THEN v.total ELSE 0 END), 0) as total_tarjeta "
                        "FROM vista_ventas_detalladas v " + whereSql +
                        "GROUP BY v.id_tienda, CASE WHEN v.id_tienda IN (0, 1) THEN 'Emeicjac' ELSE v.tienda END ORDER BY total_ventas DESC";
         qT.prepare(sqlT);
@@ -3636,7 +3773,7 @@ QJsonObject AsistenteIA::toolResumenVentas(const QJsonObject &args)
                            "COALESCE(SUM(v.cantidad), 0) as total_unidades, "
                            "COALESCE(SUM(v.total), 0) as total_ventas, "
                            "COALESCE(SUM(CASE WHEN v.id_forma_pago = 1 THEN v.total ELSE 0 END), 0) as total_efectivo, "
-                           "COALESCE(SUM(CASE WHEN v.id_forma_pago != 1 THEN v.total ELSE 0 END), 0) as total_tarjeta "
+                           "COALESCE(SUM(CASE WHEN COALESCE(v.id_forma_pago, 0) != 1 THEN v.total ELSE 0 END), 0) as total_tarjeta "
                            "FROM vista_ventas_detalladas v " + whereSql +
                            "GROUP BY v.fecha ORDER BY v.fecha ASC";
             qD.prepare(sqlD);
@@ -3683,6 +3820,7 @@ QJsonObject AsistenteIA::toolResumenVentas(const QJsonObject &args)
                                    "LEFT JOIN fabricantes b ON a.fabricante = b.id "
                                    "LEFT JOIN familias f ON a.familia = f.id "
                                    "WHERE l.fecha >= :f1 AND l.fecha <= :f2 ";
+                if (!incluirSerieB) sqlLocal += "AND l.nticket NOT LIKE 'B%' ";
                 if (!fabricante.isEmpty()) sqlLocal += "AND (b.nombre LIKE :fab OR l.descripcion LIKE :fab2) ";
                 if (!familia.isEmpty()) {
                     if (familiaNegativa) {
@@ -3735,13 +3873,26 @@ QJsonObject AsistenteIA::toolResumenVentas(const QJsonObject &args)
                     if (!QSqlDatabase::contains(connName) || !QSqlDatabase::database(connName).isOpen()) continue;
                     QSqlDatabase db = QSqlDatabase::database(connName);
                     QSqlQuery q(db);
-                    q.prepare("SELECT COUNT(*) as num_tickets, "
-                              "COALESCE(SUM(t.total), 0) as total_ventas, "
-                              "COALESCE(SUM(CASE WHEN f.efectivo = 1 THEN t.total ELSE 0 END), 0) as total_efectivo, "
-                              "COALESCE(SUM(CASE WHEN f.efectivo = 0 OR f.efectivo IS NULL THEN t.total ELSE 0 END), 0) as total_tarjeta "
-                              "FROM tickets t "
-                              "LEFT JOIN fpago f ON t.fpago = f.id "
-                              "WHERE t.fecha >= :f1 AND t.fecha <= :f2");
+                    QString sqlHeader = incluirSerieB ?
+                        "SELECT COUNT(*) as num_tickets, "
+                        "COALESCE(SUM(t.total), 0) as total_ventas, "
+                        "COALESCE(SUM(CASE WHEN f.efectivo = 1 THEN t.total ELSE 0 END), 0) as total_efectivo, "
+                        "COALESCE(SUM(CASE WHEN f.efectivo = 0 OR f.efectivo IS NULL THEN t.total ELSE 0 END), 0) as total_tarjeta "
+                        "FROM ("
+                        "  SELECT ticket, fpago, total, fecha FROM tickets "
+                        "  UNION ALL "
+                        "  SELECT ticket, fpago, total, fecha FROM ticketss"
+                        ") t "
+                        "LEFT JOIN fpago f ON t.fpago = f.id "
+                        "WHERE t.fecha >= :f1 AND t.fecha <= :f2" :
+                        "SELECT COUNT(*) as num_tickets, "
+                        "COALESCE(SUM(t.total), 0) as total_ventas, "
+                        "COALESCE(SUM(CASE WHEN f.efectivo = 1 THEN t.total ELSE 0 END), 0) as total_efectivo, "
+                        "COALESCE(SUM(CASE WHEN f.efectivo = 0 OR f.efectivo IS NULL THEN t.total ELSE 0 END), 0) as total_tarjeta "
+                        "FROM tickets t "
+                        "LEFT JOIN fpago f ON t.fpago = f.id "
+                        "WHERE t.fecha >= :f1 AND t.fecha <= :f2";
+                    q.prepare(sqlHeader);
                     q.bindValue(":f1", fechaI);
                     q.bindValue(":f2", fechaF);
                     if (q.exec() && q.next()) {
@@ -3810,7 +3961,10 @@ QJsonObject AsistenteIA::toolResumenVentas(const QJsonObject &args)
     if (!topProductosArray.isEmpty()) res["top_productos_vendidos"] = topProductosArray;
     if (!desgloseDiasArray.isEmpty()) res["desglose_por_dias"] = desgloseDiasArray;
     res["desglose_por_tienda"] = desgloseTiendas;
-    res["nota_totales"] = "Los campos 'total_facturado', 'total_efectivo' y 'total_tarjeta' son la suma total consolidada del periodo.";
+    res["tipo_datos"] = incluirSerieB ? "CONSOLIDADO (Oficial + Serie B)" : "OFICIAL (Serie A / Ventas Fiscales)";
+    res["nota_totales"] = incluirSerieB ?
+        "Los importes corresponden a ventas consolidadas (incluyendo tickets oficiales y ventas especiales de serie B)." :
+        "Los importes corresponden estrictamente a ventas oficiales (Serie A / tickets fiscales).";
     return res;
 }
 
@@ -5458,6 +5612,12 @@ QJsonObject AsistenteIA::toolComparativaVentas(const QJsonObject &args)
     else if (tNorm.contains("cerv")) idTiendaFiltro = 3;
     else if (tNorm == "local" || tNorm.contains("sucursal")) idTiendaFiltro = (conf ? conf->getIdTienda() : 4);
 
+    // Soporte para incluir ventas especiales de serie B / consolidado
+    bool incluirSerieB = args.value("incluir_serie_b").toBool(false);
+    if (!incluirSerieB) incluirSerieB = args.value("serie_b").toBool(false);
+    if (!incluirSerieB) incluirSerieB = args.value("consolidado").toBool(false);
+    if (!incluirSerieB) incluirSerieB = args.value("modo_consolidado").toBool(false);
+
     struct DatosPeriodo {
         QString nombreTienda;
         int tickets = 0;
@@ -5479,6 +5639,19 @@ QJsonObject AsistenteIA::toolComparativaVentas(const QJsonObject &args)
     if (QSqlDatabase::contains(SyncManager::CONEXION_NUBE) && QSqlDatabase::database(SyncManager::CONEXION_NUBE).isOpen()) {
         QSqlDatabase dbNube = QSqlDatabase::database(SyncManager::CONEXION_NUBE);
         
+        // Tabla de ventas: tickets_nube o unión con ticketss_nube si se solicita serie B
+        QString fromVentasAct = incluirSerieB ?
+            "(SELECT id_tienda, ticket, fecha, total, fpago FROM tickets_nube WHERE fecha >= :f1 AND fecha <= :f2 "
+            " UNION ALL "
+            " SELECT id_tienda, ticket, fecha, total, fpago FROM ticketss_nube WHERE fecha >= :f1 AND fecha <= :f2) t "
+            : "tickets_nube t ";
+
+        QString fromVentasAnt = incluirSerieB ?
+            "(SELECT id_tienda, ticket, fecha, total, fpago FROM tickets_nube WHERE fecha >= :f1 AND fecha <= :f2 "
+            " UNION ALL "
+            " SELECT id_tienda, ticket, fecha, total, fpago FROM ticketss_nube WHERE fecha >= :f1 AND fecha <= :f2) t "
+            : "tickets_nube t ";
+
         // Consulta periodo actual
         {
             QSqlQuery q(dbNube);
@@ -5486,7 +5659,7 @@ QJsonObject AsistenteIA::toolComparativaVentas(const QJsonObject &args)
                           "COUNT(*) as num_tickets, COALESCE(SUM(t.total), 0) as total_ventas, "
                           "COALESCE(SUM(CASE WHEN t.fpago = 1 THEN t.total ELSE 0 END), 0) as total_efectivo, "
                           "COALESCE(SUM(CASE WHEN t.fpago != 1 THEN t.total ELSE 0 END), 0) as total_tarjeta "
-                          "FROM tickets_nube t "
+                          "FROM " + fromVentasAct +
                           "LEFT JOIN tiendas ti ON t.id_tienda = ti.id "
                           "WHERE t.fecha >= :f1 AND t.fecha <= :f2 ";
             if (idTiendaFiltro > 0) sql += QString("AND t.id_tienda = %1 ").arg(idTiendaFiltro);
@@ -5516,7 +5689,7 @@ QJsonObject AsistenteIA::toolComparativaVentas(const QJsonObject &args)
                           "COUNT(*) as num_tickets, COALESCE(SUM(t.total), 0) as total_ventas, "
                           "COALESCE(SUM(CASE WHEN t.fpago = 1 THEN t.total ELSE 0 END), 0) as total_efectivo, "
                           "COALESCE(SUM(CASE WHEN t.fpago != 1 THEN t.total ELSE 0 END), 0) as total_tarjeta "
-                          "FROM tickets_nube t "
+                          "FROM " + fromVentasAnt +
                           "LEFT JOIN tiendas ti ON t.id_tienda = ti.id "
                           "WHERE t.fecha >= :f1 AND t.fecha <= :f2 ";
             if (idTiendaFiltro > 0) sql += QString("AND t.id_tienda = %1 ").arg(idTiendaFiltro);
@@ -5537,6 +5710,48 @@ QJsonObject AsistenteIA::toolComparativaVentas(const QJsonObject &args)
                     nombresTiendas[idT] = dp.nombreTienda;
                 }
             }
+        }
+    } else {
+        // Fallback a base de datos local si no hay conexión a la nube
+        QSqlDatabase dbLocal = obtenerBaseDatos();
+        if (dbLocal.isOpen()) {
+            int idLocal = conf ? conf->getIdTienda() : 1;
+            QString nomLocal = nombresTiendas.value(idLocal, "Tienda Local");
+            nombresTiendas[idLocal] = nomLocal;
+
+            auto consultarPeriodoLocal = [&](const QString &f1, const QString &f2, DatosPeriodo &dp) {
+                QSqlQuery q(dbLocal);
+                QString sqlLocal = incluirSerieB ?
+                    "SELECT COUNT(*) as num_tickets, COALESCE(SUM(t.total), 0) as total_ventas, "
+                    "COALESCE(SUM(CASE WHEN t.fpago = 1 THEN t.total ELSE 0 END), 0) as total_efectivo, "
+                    "COALESCE(SUM(CASE WHEN t.fpago != 1 THEN t.total ELSE 0 END), 0) as total_tarjeta "
+                    "FROM (SELECT ticket, fecha, total, fpago FROM tickets WHERE fecha >= :f1 AND fecha <= :f2 "
+                    "      UNION ALL "
+                    "      SELECT ticket, fecha, total, fpago FROM ticketss WHERE fecha >= :f1 AND fecha <= :f2) t"
+                    :
+                    "SELECT COUNT(*) as num_tickets, COALESCE(SUM(t.total), 0) as total_ventas, "
+                    "COALESCE(SUM(CASE WHEN t.fpago = 1 THEN t.total ELSE 0 END), 0) as total_efectivo, "
+                    "COALESCE(SUM(CASE WHEN t.fpago != 1 THEN t.total ELSE 0 END), 0) as total_tarjeta "
+                    "FROM tickets t WHERE t.fecha >= :f1 AND t.fecha <= :f2";
+                q.prepare(sqlLocal);
+                q.bindValue(":f1", f1);
+                q.bindValue(":f2", f2);
+                if (q.exec() && q.next()) {
+                    dp.nombreTienda = nomLocal;
+                    dp.tickets = q.value("num_tickets").toInt();
+                    dp.ventas = q.value("total_ventas").toDouble();
+                    dp.efectivo = q.value("total_efectivo").toDouble();
+                    dp.tarjeta = q.value("total_tarjeta").toDouble();
+                }
+            };
+
+            DatosPeriodo dpAct;
+            consultarPeriodoLocal(fechaI_act, fechaF_act, dpAct);
+            datosActual[idLocal] = dpAct;
+
+            DatosPeriodo dpAnt;
+            consultarPeriodoLocal(fechaI_ant, fechaF_ant, dpAnt);
+            datosAnterior[idLocal] = dpAnt;
         }
     }
 
@@ -5594,6 +5809,10 @@ QJsonObject AsistenteIA::toolComparativaVentas(const QJsonObject &args)
     res["porcentaje_variacion_global"] = (pctGlobalVar >= 0 ? "+" : "") + QString::number(pctGlobalVar, 'f', 1) + " %";
     res["tendencia_global"] = (difGlobalEuros > 0 ? "CRECIMIENTO" : (difGlobalEuros < 0 ? "DESCENSO" : "IGUAL"));
     res["desglose_por_tienda"] = desgloseArray;
+    res["tipo_datos"] = incluirSerieB ? "CONSOLIDADO (Oficial + Serie B)" : "OFICIAL (Serie A / Ventas Fiscales)";
+    res["nota_totales"] = incluirSerieB ?
+        "La comparativa incluye ventas oficiales (Serie A) y ventas especiales de Serie B en ambos periodos." :
+        "La comparativa considera estrictamente ventas oficiales (Serie A / tickets fiscales).";
 
     return res;
 }

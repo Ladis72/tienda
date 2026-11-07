@@ -6011,6 +6011,30 @@ bool baseDatos::inicializarEsquemaNube() {
          "  INDEX `idx_cliente` (`cliente`)"
          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+  // 1b. Tickets serie B (ventas especiales) nube
+  q.exec("CREATE TABLE IF NOT EXISTS `ticketss_nube` ("
+         "  `id_tienda` INT NOT NULL,"
+         "  `ticket` INT UNSIGNED NOT NULL,"
+         "  `usuario` INT NOT NULL DEFAULT 1,"
+         "  `cliente` INT NOT NULL DEFAULT 1,"
+         "  `fecha` DATE NOT NULL,"
+         "  `hora` TIME NOT NULL,"
+         "  `base` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `iva` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `descuento` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `total` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+         "  `fpago` TINYINT UNSIGNED NOT NULL DEFAULT 0,"
+         "  `cobrado` TINYINT(1) NULL,"
+         "  `entrega` DECIMAL(10,2) NULL,"
+         "  `cambio` DECIMAL(10,2) NULL,"
+         "  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+         "  PRIMARY KEY (`id_tienda`, `ticket`),"
+         "  INDEX `idx_fecha` (`fecha`),"
+         "  INDEX `idx_tienda_fecha` (`id_tienda`, `fecha`),"
+         "  INDEX `idx_cliente` (`cliente`)"
+         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  q.exec("ALTER TABLE `ticketss_nube` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
   // 2. Líneas de ticket nube
   q.exec("CREATE TABLE IF NOT EXISTS `lineasticket_nube` ("
          "  `id_tienda` INT NOT NULL,"
@@ -6171,21 +6195,27 @@ bool baseDatos::inicializarEsquemaNube() {
   // 9. Vistas analíticas y de integración
   q.exec("CREATE OR REPLACE VIEW vista_ventas_detalladas AS "
          "SELECT l.id_tienda, COALESCE(ti.nombre, CONCAT('Tienda ', l.id_tienda)) AS tienda, "
-         "l.nticket AS ticket, l.fecha, t.hora, t.cliente AS id_cliente, "
-         "CASE WHEN t.cliente = 1 OR c.nombre LIKE '%contado%' THEN 'Cliente contado' "
+         "l.nticket AS ticket, l.fecha, "
+         "COALESCE(t.hora, ts.hora) AS hora, "
+         "COALESCE(t.cliente, ts.cliente, 1) AS id_cliente, "
+         "CASE WHEN COALESCE(t.cliente, ts.cliente, 1) = 1 OR c.nombre LIKE '%contado%' THEN 'Cliente contado' "
          "ELSE TRIM(CONCAT(COALESCE(c.nombre, ''), ' ', COALESCE(c.apellidos, ''))) END AS cliente, "
          "COALESCE(c.telefono, '') AS telefono_cliente, l.cod AS codigo_articulo, l.descripcion AS producto, "
          "l.cantidad, l.precio AS pvp_unitario, l.descuento AS descuento_linea, l.totallinea AS total, l.iva, "
-         "t.fpago AS id_forma_pago, CASE WHEN t.fpago = 1 THEN 'Efectivo' ELSE 'Tarjeta' END AS forma_pago, "
+         "COALESCE(t.fpago, ts.fpago, 1) AS id_forma_pago, "
+         "CASE WHEN COALESCE(t.fpago, ts.fpago, 1) = 1 THEN 'Efectivo' ELSE 'Tarjeta' END AS forma_pago, "
          "COALESCE(b.id, 0) AS id_fabricante, COALESCE(b.nombre, 'Sin Marca') AS fabricante, "
-         "COALESCE(f.id, 0) AS id_familia, COALESCE(f.descripcion, 'Sin Familia') AS familia, t.usuario AS usuario_caja "
+         "COALESCE(f.id, 0) AS id_familia, COALESCE(f.descripcion, 'Sin Familia') AS familia, "
+         "COALESCE(t.usuario, ts.usuario, 1) AS usuario_caja, "
+         "CASE WHEN l.nticket LIKE 'B%' OR ts.ticket IS NOT NULL THEN 1 ELSE 0 END AS es_serie_b "
          "FROM lineasticket_nube l "
-         "LEFT JOIN tickets_nube t ON l.id_tienda = t.id_tienda AND l.nticket = t.ticket "
+         "LEFT JOIN tickets_nube t ON l.id_tienda = t.id_tienda AND l.nticket = CAST(t.ticket AS CHAR) AND l.nticket NOT LIKE 'B%' "
+         "LEFT JOIN ticketss_nube ts ON l.id_tienda = ts.id_tienda AND l.nticket = CONCAT('B', ts.ticket) "
          "LEFT JOIN articulos a ON l.cod = a.cod "
          "LEFT JOIN fabricantes b ON a.fabricante = b.id "
          "LEFT JOIN familias f ON a.familia = f.id "
          "LEFT JOIN tiendas ti ON l.id_tienda = ti.id "
-         "LEFT JOIN clientes c ON t.cliente = c.idCliente");
+         "LEFT JOIN clientes c ON COALESCE(t.cliente, ts.cliente, 1) = c.idCliente");
 
   q.exec("CREATE OR REPLACE VIEW vista_stock_tiendas AS "
          "SELECT s.id_tienda, COALESCE(t.nombre, CONCAT('Tienda ', s.id_tienda)) AS tienda, "
