@@ -194,6 +194,7 @@ public:
     void aumentarLote(QString base, QString idLote, int uds);
     void disminuirLote(QString cod, QString fecha, int uds);
     void crearLote(QString base, QString ean, QString lote, QString fecha, QString uds);
+    int compensarStockNegativo(QString base, QString cod, int udsPositivas);
     QSqlQuery lotesProducto(QString cod, QString nombreConnexion);
     QString sumarStockArticulo(QString id, QString nombreConnexion);
     int unidadesLote(QString base, QString idLote);

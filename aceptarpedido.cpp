@@ -177,37 +177,34 @@ bool AceptarPedido::procesarPedido(QSqlQueryModel *modelo)
 
         // Gestión de lotes y stock
         int udsPorProcesar = uds;
-        
-        // 1. Si las unidades a procesar son POSITIVAS, intentar compensar stock negativo genérico previo (lote vacío, fecha "2000-01-01")
+
+        // 1. Si las unidades a procesar son POSITIVAS, compensar cualquier lote negativo previo (tanto "2000-01-01" como otras fechas)
         if (udsPorProcesar > 0) {
-            QString idLoteGeneric = base.idLote(conf->getConexionLocal(), ean, "", "2000-01-01");
-            if (idLoteGeneric != "0") {
-                int pendientes = base.unidadesLote(conf->getConexionLocal(), idLoteGeneric);
-                if (pendientes < 0) {
-                    qDebug() << "Compensando stock genérico negativo: " << pendientes << " uds";
-                    int absPendientes = qAbs(pendientes);
-                    if (absPendientes > udsPorProcesar) {
-                        base.aumentarLote(conf->getConexionLocal(), idLoteGeneric, udsPorProcesar);
-                        udsPorProcesar = 0;
-                    } else if (absPendientes == udsPorProcesar) {
-                        QSqlQuery delQuery(QSqlDatabase::database(conf->getConexionLocal()));
-                        delQuery.prepare("DELETE FROM lotes WHERE id = ?");
-                        delQuery.bindValue(0, idLoteGeneric);
-                        delQuery.exec();
-                        udsPorProcesar = 0;
-                    } else {
-                        QSqlQuery delQuery(QSqlDatabase::database(conf->getConexionLocal()));
-                        delQuery.prepare("DELETE FROM lotes WHERE id = ?");
-                        delQuery.bindValue(0, idLoteGeneric);
-                        delQuery.exec();
-                        udsPorProcesar += pendientes; // pendientes es negativo, ej: 10 + (-4) = 6
-                    }
-                }
-            }
+            udsPorProcesar = base.compensarStockNegativo(conf->getConexionLocal(), ean, udsPorProcesar);
         }
 
         // 2. Procesar las unidades restantes (tanto positivas como negativas) en el lote real del pedido
         if (udsPorProcesar != 0) {
+            if (udsPorProcesar < 0) {
+                QMessageBox warnNeg(this);
+                warnNeg.setIcon(QMessageBox::Warning);
+                warnNeg.setWindowTitle(tr("Confirmar línea negativa en pedido"));
+                warnNeg.setText(tr("La línea del producto '%1' (%2) tiene una cantidad negativa (%3 uds).")
+                                    .arg(descripcion, ean)
+                                    .arg(udsPorProcesar));
+                warnNeg.setInformativeText(tr("Fecha de caducidad indicada: %1\nLote: %2\n\n"
+                                              "¿Desea CONFIRMAR el descuento de stock o RECHAZAR la operación?")
+                                               .arg(fechaCaducidad, lote.isEmpty() ? tr("(sin lote)") : lote));
+                QPushButton *btnConfirmar = warnNeg.addButton(tr("Confirmar operación"), QMessageBox::AcceptRole);
+                QPushButton *btnRechazar = warnNeg.addButton(tr("Rechazar"), QMessageBox::RejectRole);
+                warnNeg.setDefaultButton(btnRechazar);
+                warnNeg.exec();
+                if (warnNeg.clickedButton() != btnConfirmar) {
+                    db.rollback();
+                    return false;
+                }
+            }
+
             QString idLoteReal = base.idLote(conf->getConexionLocal(), ean, lote, fechaCaducidad);
             if (idLoteReal == "0" && udsPorProcesar < 0) {
                 // Al descontar unidades, si la fecha no coincide con ninguna fecha existente en el almacén, consultar al usuario

@@ -334,10 +334,13 @@ void DialogCompararTraspaso::on_btnAjustarCantidades_clicked()
     }
 
     int ajustadas = 0;
-    QSqlQuery qUpdate(dbLocal);
-    QString sql = QString("UPDATE %1 SET cantidad = ?, pvp = ?, fechaCaducidad = ? WHERE cod = ? AND idTienda = ?")
-                      .arg(m_tablaLocal);
-    qUpdate.prepare(sql);
+    QSqlQuery qDelete(dbLocal);
+    qDelete.prepare(QString("DELETE FROM %1 WHERE cod = ? AND idTienda = ?").arg(m_tablaLocal));
+
+    QSqlQuery qInsert(dbLocal);
+    qInsert.prepare(QString("INSERT INTO %1 (cod, fechaEntrada, descripcion, cantidad, fechaCaducidad, pvp, idTienda) "
+                            "VALUES (?, ?, ?, ?, ?, ?, ?)")
+                        .arg(m_tablaLocal));
 
     for (auto it = m_remotas.begin(); it != m_remotas.end(); ++it) {
         const QString &cod = it.key();
@@ -349,17 +352,24 @@ void DialogCompararTraspaso::on_btnAjustarCantidades_clicked()
             bool difPvp = qAbs(loc.pvp - rem.pvp) >= 0.001;
             bool difCad = (loc.fechaCaducidad != rem.fechaCaducidad);
 
-            // Si hay alguna discrepancia en cantidad, precio o fecha de caducidad, actualizar en local
+            // Si hay alguna discrepancia en cantidad, precio o fecha de caducidad,
+            // reemplazar las líneas locales de ese código para evitar duplicar cantidades si había varios lotes.
             if (difCant || difPvp || difCad) {
-                qUpdate.bindValue(0, rem.cantidad);
-                qUpdate.bindValue(1, rem.pvp);
-                qUpdate.bindValue(2, rem.fechaCaducidad.isEmpty() ? QDate::currentDate().toString("yyyy-MM-dd") : rem.fechaCaducidad);
-                qUpdate.bindValue(3, cod);
-                qUpdate.bindValue(4, m_idTiendaRemotaEnLocal);
-                if (qUpdate.exec()) {
+                qDelete.bindValue(0, cod);
+                qDelete.bindValue(1, m_idTiendaRemotaEnLocal);
+                qDelete.exec();
+
+                qInsert.bindValue(0, cod);
+                qInsert.bindValue(1, rem.fechaEntrada.isEmpty() ? QDate::currentDate().toString("yyyy-MM-dd") : rem.fechaEntrada);
+                qInsert.bindValue(2, rem.descripcion);
+                qInsert.bindValue(3, rem.cantidad);
+                qInsert.bindValue(4, rem.fechaCaducidad.isEmpty() ? QDate::currentDate().toString("yyyy-MM-dd") : rem.fechaCaducidad);
+                qInsert.bindValue(5, rem.pvp);
+                qInsert.bindValue(6, m_idTiendaRemotaEnLocal);
+                if (qInsert.exec()) {
                     ajustadas++;
                 } else {
-                    qWarning() << "Error al ajustar datos locales:" << qUpdate.lastError().text();
+                    qWarning() << "Error al ajustar datos locales:" << qInsert.lastError().text();
                 }
             }
         }

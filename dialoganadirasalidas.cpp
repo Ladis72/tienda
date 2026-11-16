@@ -81,7 +81,7 @@ void DialogAnadirASalidas::llenarComboLotes()
         QSqlQuery qFechas(QSqlDatabase::database(conf->getConexionLocal()));
         // Consultar fechas/lotes agrupadas con existencias positivas ordenadas por fecha
         qFechas.prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS f, sum(cantidad) AS cant "
-                        "FROM lotes WHERE ean = ? GROUP BY fecha HAVING cant > 0 ORDER BY f ASC");
+                        "FROM lotes WHERE ean = ? AND cantidad > 0 GROUP BY fecha HAVING cant > 0 ORDER BY f ASC");
         qFechas.bindValue(0, m_codArticulo);
 
         if (qFechas.exec()) {
@@ -95,6 +95,12 @@ void DialogAnadirASalidas::llenarComboLotes()
     }
 
     ui->comboBoxLotes->blockSignals(false);
+
+    // Si existen lotes con stock positivo, preseleccionar por defecto el primero (FIFO)
+    if (ui->comboBoxLotes->count() > 1) {
+        ui->comboBoxLotes->setCurrentIndex(1);
+        on_comboBoxLotes_currentIndexChanged(1);
+    }
 }
 
 /**

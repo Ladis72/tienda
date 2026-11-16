@@ -406,33 +406,54 @@ bool Tpv::grabarLineasTicket(const QString serie)
             throw std::runtime_error("Error grabando llinea de ticktes:");
             return false;
         }
-        if (lineaTicket.at(3).toInt() < 0) {
-            // Uso en la pila (RAII) para evitar fugas de memoria
-            DialogFecha fechaCaducidad(lineaTicket.at(2), this);
-            fechaCaducidad.exec();
-            QString fecha = fechaCaducidad.fecha.toString("yyyy-MM-dd");
-            QString lote = fechaCaducidad.lote;
-            QString idLote = base.idLote(conf->getConexionLocal(), lineaTicket.at(1), lote, fecha);
-            qDebug() << lote;
-            if (idLote != "0") {
-                base.aumentarLote(conf->getConexionLocal(), idLote, abs(lineaTicket.at(3).toInt()));
-                qDebug() << "Error al devolver el producto lote";
-            } else {
-                base.crearLote(conf->getConexionLocal(),
-                               lineaTicket.at(1),
-                               lote,
-                               fecha,
-                               QString::number(abs(lineaTicket.at(3).toInt())));
-                qDebug() << "Crear lote";
+        const QString codArticulo = lineaTicket.at(1);
+        const int cantLinea = lineaTicket.at(3).toInt();
+
+        if (cantLinea < 0) {
+            // Devolución en el ticket: primero compensar cualquier lote negativo existente
+            // (incluyendo negativos generados previamente o en una línea anterior del mismo ticket)
+            int udsDevueltas = qAbs(cantLinea);
+            int udsRestantes = base.compensarStockNegativo(conf->getConexionLocal(), codArticulo, udsDevueltas);
+
+            if (udsRestantes > 0) {
+                // Uso en la pila (RAII) para evitar fugas de memoria
+                DialogFecha fechaCaducidad(lineaTicket.at(2), this);
+                fechaCaducidad.exec();
+                QString fecha = (fechaCaducidad.fecha.isValid() && fechaCaducidad.fecha > QDate::currentDate())
+                                    ? fechaCaducidad.fecha.toString("yyyy-MM-dd")
+                                    : QDate::currentDate().addYears(1).toString("yyyy-MM-dd");
+                QString lote = fechaCaducidad.lote;
+                QString idLote = base.idLote(conf->getConexionLocal(), codArticulo, lote, fecha);
+
+                // Si no se especificó código de lote y existe ya un lote positivo en esa fecha, reutilizarlo
+                if (idLote == "0" && lote.isEmpty()) {
+                    QSqlQuery qCheck(QSqlDatabase::database(conf->getConexionLocal()));
+                    qCheck.prepare("SELECT id FROM lotes WHERE ean = ? AND fecha = ? AND cantidad > 0 LIMIT 1");
+                    qCheck.bindValue(0, codArticulo);
+                    qCheck.bindValue(1, fecha);
+                    if (qCheck.exec() && qCheck.next()) {
+                        idLote = qCheck.value(0).toString();
+                    }
+                }
+
+                if (idLote != "0") {
+                    base.aumentarLote(conf->getConexionLocal(), idLote, udsRestantes);
+                } else {
+                    base.crearLote(conf->getConexionLocal(),
+                                   codArticulo,
+                                   lote,
+                                   fecha,
+                                   QString::number(udsRestantes));
+                }
             }
-        } else {
-            base.descontarArticulo(conf->getConexionLocal(),
-                                   lineaTicket.at(1),
-                                   lineaTicket.at(3).toInt());
+        } else if (cantLinea > 0) {
+            if (!base.descontarArticulo(conf->getConexionLocal(), codArticulo, cantLinea)) {
+                throw std::runtime_error("Error descontando stock del artículo");
+            }
+            base.actualizarFechaVentaArticulo(conf->getConexionLocal(),
+                                              codArticulo,
+                                              QDate::currentDate().toString("yyyy-MM-dd"));
         }
-        base.actualizarFechaVentaArticulo(conf->getConexionLocal(),
-                                          lineaTicket.at(1),
-                                          QDate::currentDate().toString("yyyy-MM-dd"));
     }
     return true;
 }
@@ -922,33 +943,44 @@ void Tpv::on_btn_cobrar_clicked()
                                      + db.lastError().text().toStdString());
         }
 
-        // Subida asíncrona del ticket y sus líneas a la base de datos central en la nube (nubeCervantes)
-        int idTiendaLocal = conf ? conf->getIdTienda() : 1;
-        int nTicketCreado = totalTicket.at(0).toInt();
-        QString fechaTkt = totalTicket.at(3);
-        QString horaTkt = totalTicket.at(4);
-        double totalImporte = totalTicket.at(6).toDouble();
-        int fpagoTkt = totalTicket.at(7).toInt();
-        int clienteTkt = totalTicket.at(2).toInt();
-        int usuarioTkt = totalTicket.at(1).toInt();
+        // Subida asíncrona del ticket y sus líneas a la base de datos central en la nube (nubeCervantes).
+        // Solo se sube directamente a tickets_nube si pertenece a la serie oficial ("tickets").
+        if (tabla == "tickets") {
+            int idTiendaLocal = conf ? conf->getIdTienda() : 1;
+            int nTicketCreado = totalTicket.at(0).toInt();
+            QString fechaTkt = totalTicket.at(3);
+            QString horaTkt = totalTicket.at(4);
+            // Índices reales en totalTicket: 5=Base, 6=IVA, 7=Descuento, 8=Total, 9=FormaPago
+            double totalImporte = totalTicket.at(8).toDouble();
+            int fpagoTkt = totalTicket.at(9).toInt();
+            int clienteTkt = totalTicket.at(2).toInt();
+            int usuarioTkt = totalTicket.at(1).toInt();
 
-        QList<QVariantMap> lineasSubir;
-        for (int i = 0; i < modeloTicket->rowCount(); ++i) {
-            QVariantMap lm;
-            lm["cod"] = modeloTicket->record(i).value("cod").toString();
-            lm["descripcion"] = modeloTicket->record(i).value("descripcion").toString();
-            lm["cantidad"] = modeloTicket->record(i).value("cantidad").toDouble();
-            // Corrección: La columna en lineasticket_tmp se llama 'precio', no 'pvp'
-            lm["precio"] = modeloTicket->record(i).value("precio").toDouble();
-            lm["iva"] = modeloTicket->record(i).value("iva").toDouble();
-            lm["descuento"] = modeloTicket->record(i).value("descuento").toDouble();
-            lm["totallinea"] = modeloTicket->record(i).value("totallinea").toDouble();
-            lineasSubir.append(lm);
+            // Leer las líneas recién grabadas en lineasticket para disponer de su id_local real
+            QList<QVariantMap> lineasSubir;
+            QSqlQuery qLin(db);
+            qLin.prepare("SELECT id, cod, descripcion, cantidad, precio, iva, descuento, totallinea "
+                         "FROM lineasticket WHERE nticket = ?");
+            qLin.addBindValue(serie);
+            if (qLin.exec()) {
+                while (qLin.next()) {
+                    QVariantMap lm;
+                    lm["id_local"] = qLin.value("id").toInt();
+                    lm["cod"] = qLin.value("cod").toString();
+                    lm["descripcion"] = qLin.value("descripcion").toString();
+                    lm["cantidad"] = qLin.value("cantidad").toDouble();
+                    lm["precio"] = qLin.value("precio").toDouble();
+                    lm["iva"] = qLin.value("iva").toDouble();
+                    lm["descuento"] = qLin.value("descuento").toDouble();
+                    lm["totallinea"] = qLin.value("totallinea").toDouble();
+                    lineasSubir.append(lm);
+                }
+            }
+
+            QtConcurrent::run([idTiendaLocal, nTicketCreado, fechaTkt, horaTkt, totalImporte, fpagoTkt, clienteTkt, usuarioTkt, lineasSubir]() {
+                baseDatos::subirTicketNube(idTiendaLocal, nTicketCreado, fechaTkt, horaTkt, totalImporte, fpagoTkt, clienteTkt, usuarioTkt, lineasSubir);
+            });
         }
-
-        QtConcurrent::run([idTiendaLocal, nTicketCreado, fechaTkt, horaTkt, totalImporte, fpagoTkt, clienteTkt, usuarioTkt, lineasSubir]() {
-            baseDatos::subirTicketNube(idTiendaLocal, nTicketCreado, fechaTkt, horaTkt, totalImporte, fpagoTkt, clienteTkt, usuarioTkt, lineasSubir);
-        });
 
         // Si veníamos de cobrar un encargo, ahora que el ticket se ha grabado, lo marcamos como entregado y borramos su nota
         if (idEncargoPendiente > 0) {

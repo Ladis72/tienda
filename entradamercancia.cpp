@@ -288,41 +288,26 @@ void EntradaMercancia::procesarLineaEntrada(const QSqlRecord &registro)
         return;
     }
 
-    QString idLote = base->idLote(conf->getConexionLocal(), cod, "", "2000-01-01");
+    // 1. Compensar primero cualquier lote negativo existente (tanto "2000-01-01" como otras fechas)
+    int nuevasUnidades = base->compensarStockNegativo(conf->getConexionLocal(), cod, uds);
 
-    if (idLote != "0") {
-        int pendientes = base->unidadesLote(conf->getConexionLocal(), idLote);
-
-        if (abs(pendientes) > uds) {
-            base->aumentarLote(conf->getConexionLocal(), idLote, uds);
-        } else {
-            // Se parametriza la consulta de borrado de lote para garantizar la seguridad
-            QSqlQuery deleteLoteQuery(QSqlDatabase::database(conf->getConexionLocal()));
-            deleteLoteQuery.prepare("DELETE FROM lotes WHERE id = ?");
-            deleteLoteQuery.bindValue(0, idLote);
-            deleteLoteQuery.exec();
-            int nuevasUnidades = uds + pendientes;
-
-            // Solo creamos o aumentamos lote si efectivamente quedan unidades positivas (> 0)
-            if (nuevasUnidades > 0) {
-                idLote = base->idLote(conf->getConexionLocal(), cod, "", fechaCaducidad);
-                if (idLote == "0") {
-                    base->crearLote(conf->getConexionLocal(),
-                                    cod,
-                                    "",
-                                    fechaCaducidad,
-                                    QString::number(nuevasUnidades));
-                } else {
-                    base->aumentarLote(conf->getConexionLocal(), idLote, nuevasUnidades);
-                }
+    // 2. Si tras compensar siguen quedando unidades positivas, añadirlas al lote de su fecha de caducidad
+    if (nuevasUnidades > 0) {
+        QString idLote = base->idLote(conf->getConexionLocal(), cod, "", fechaCaducidad);
+        if (idLote == "0") {
+            QSqlQuery qCheck(QSqlDatabase::database(conf->getConexionLocal()));
+            qCheck.prepare("SELECT id FROM lotes WHERE ean = ? AND fecha = ? AND cantidad > 0 LIMIT 1");
+            qCheck.bindValue(0, cod);
+            qCheck.bindValue(1, fechaCaducidad);
+            if (qCheck.exec() && qCheck.next()) {
+                idLote = qCheck.value(0).toString();
             }
         }
-    } else {
-        idLote = base->idLote(conf->getConexionLocal(), cod, "", fechaCaducidad);
+
         if (idLote == "0") {
-            base->crearLote(conf->getConexionLocal(), cod, "", fechaCaducidad, QString::number(uds));
+            base->crearLote(conf->getConexionLocal(), cod, "", fechaCaducidad, QString::number(nuevasUnidades));
         } else {
-            base->aumentarLote(conf->getConexionLocal(), idLote, uds);
+            base->aumentarLote(conf->getConexionLocal(), idLote, nuevasUnidades);
         }
     }
 
@@ -608,15 +593,25 @@ bool EntradaMercancia::procesarSalidaRemota(const QString &connRemota, int idLoc
                 }
             }
 
-            // C. Si tras revisar todos los lotes aún faltan unidades (stock negativo pendiente de compensar)
+            // C. Si tras revisar todos los lotes positivos aún faltan unidades,
+            // acumular el déficit en el lote negativo genérico "2000-01-01"
             if (udsPorDescontar > 0) {
-                QString fReg = !fechaCad.isEmpty() ? fechaCad : "2000-01-01";
-                QSqlQuery qNeg(dbRem);
-                qNeg.prepare("INSERT INTO lotes (ean, lote, fecha, cantidad) VALUES (?, '', ?, ?)");
-                qNeg.bindValue(0, cod);
-                qNeg.bindValue(1, fReg);
-                qNeg.bindValue(2, -udsPorDescontar);
-                qNeg.exec();
+                QSqlQuery qCheckNeg(dbRem);
+                qCheckNeg.prepare("SELECT id FROM lotes WHERE ean = ? AND fecha = '2000-01-01' LIMIT 1");
+                qCheckNeg.bindValue(0, cod);
+                if (qCheckNeg.exec() && qCheckNeg.next()) {
+                    QSqlQuery qUpNeg(dbRem);
+                    qUpNeg.prepare("UPDATE lotes SET cantidad = cantidad - ? WHERE id = ?");
+                    qUpNeg.bindValue(0, udsPorDescontar);
+                    qUpNeg.bindValue(1, qCheckNeg.value(0));
+                    qUpNeg.exec();
+                } else {
+                    QSqlQuery qNeg(dbRem);
+                    qNeg.prepare("INSERT INTO lotes (ean, lote, fecha, cantidad) VALUES (?, '', '2000-01-01', ?)");
+                    qNeg.bindValue(0, cod);
+                    qNeg.bindValue(1, -udsPorDescontar);
+                    qNeg.exec();
+                }
             }
 
             // D. Limpieza preventiva del artículo en la BD remota
@@ -681,6 +676,44 @@ void EntradaMercancia::on_pushButtonAceptarAmbas_clicked()
                               tr("No es posible conectar con la tienda remota '%1' para procesar su salida.")
                                   .arg(m_nombreTiendaRemota));
         return;
+    }
+
+    // Comprobar si alguna de las tablas está vacía o si difieren las unidades entre ambas tiendas
+    // para mostrar un aviso de confirmación o rechazo sin bloquear la operativa de gestión.
+    int lineasLocal = mTablaEntradas->rowCount();
+    int lineasRemota = mTablaRemota->rowCount();
+    int udsLocal = 0;
+    int udsRemota = 0;
+    for (int i = 0; i < lineasLocal; ++i) {
+        udsLocal += mTablaEntradas->record(i).value("cantidad").toInt();
+    }
+    for (int i = 0; i < lineasRemota; ++i) {
+        udsRemota += mTablaRemota->record(i).value("cantidad").toInt();
+    }
+
+    if (lineasLocal == 0 || lineasRemota == 0 || lineasLocal != lineasRemota || udsLocal != udsRemota) {
+        QMessageBox warnBox(this);
+        warnBox.setIcon(QMessageBox::Warning);
+        warnBox.setWindowTitle(tr("Aviso de Discrepancia en Traspaso"));
+        warnBox.setText(tr("Las tablas de entrada local y salida remota NO coinciden."));
+        warnBox.setInformativeText(
+            tr("Estado actual del traspaso:\n"
+               "• Entrada Local (%1): %2 líneas (%3 unidades)\n"
+               "• Salida Remota (%4): %5 líneas (%6 unidades)\n\n"
+               "¿Desea CONFIRMAR igualmente la operación o RECHAZARLA?")
+                .arg(base->nombreConexionLocal())
+                .arg(lineasLocal)
+                .arg(udsLocal)
+                .arg(m_nombreTiendaRemota)
+                .arg(lineasRemota)
+                .arg(udsRemota));
+        QPushButton *btnConfirmar = warnBox.addButton(tr("Confirmar operación"), QMessageBox::AcceptRole);
+        QPushButton *btnRechazar = warnBox.addButton(tr("Rechazar"), QMessageBox::RejectRole);
+        warnBox.setDefaultButton(btnRechazar);
+        warnBox.exec();
+        if (warnBox.clickedButton() != btnConfirmar) {
+            return;
+        }
     }
 
     QMessageBox msgBox(this);

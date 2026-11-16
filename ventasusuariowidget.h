@@ -9,6 +9,7 @@
 #include <QtCharts/QBarSet>
 
 #include "configuracion.h"
+#include "base_datos.h"
 
 extern Configuracion *conf;
 
@@ -42,6 +43,7 @@ private:
     void keyPressEvent(QKeyEvent *event);
     QString usuario;
     bool m_primeraCarga;
+    baseDatos base;
 
 private slots:
     void mostrarTooltip(bool estado, int index);

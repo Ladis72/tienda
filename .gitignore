@@ -24,6 +24,8 @@ CMakeLists.txt.user.*
 # Qt build directories
 build/
 build-*/
+build_debug/
+build*/
 *-build-*
 *-build
 

@@ -579,20 +579,28 @@ bool baseDatos::insertarArticulo(QSqlDatabase db, QStringList datos) {
 }
 
 bool baseDatos::descontarArticulo(QString db, QString cod, int uds) {
-  QSqlQuery consulta(QSqlDatabase::database(db));
+  if (uds <= 0) {
+    return true;
+  }
+
+  QSqlDatabase mdb = QSqlDatabase::database(db);
+  QSqlQuery consulta(mdb);
 
   // No sincronizar cambios realizados desde el proceso de venta (TPV)
   // El guard RAII garantiza el reset de @skip_sync en todos los caminos.
   SkipSyncGuard guard(db);
 
-  consulta.prepare("SELECT id , cantidad FROM lotes WHERE ean = ? "
-                   "ORDER BY fecha ASC");
+  // Seleccionar únicamente lotes con existencias positivas (FIFO por fecha de caducidad)
+  // para evitar seleccionar o mezclar lotes negativos pendientes de compensar.
+  consulta.prepare("SELECT id, cantidad FROM lotes WHERE ean = ? AND cantidad > 0 "
+                   "ORDER BY fecha ASC, id ASC");
   consulta.bindValue(0, cod);
   consulta.exec();
-  consulta.first();
-  if (consulta.isValid()) {
-    if (consulta.value("cantidad").toInt() > uds) {
-      QString registro = consulta.value("id").toString();
+  if (consulta.first()) {
+    int cantActual = consulta.value("cantidad").toInt();
+    QString registro = consulta.value("id").toString();
+
+    if (cantActual > uds) {
       consulta.prepare("UPDATE lotes SET cantidad = cantidad - ? WHERE id = ?");
       consulta.bindValue(0, uds);
       consulta.bindValue(1, registro);
@@ -602,28 +610,40 @@ bool baseDatos::descontarArticulo(QString db, QString cod, int uds) {
         qDebug() << consulta.lastError().text();
         return false;
       }
-    } else if (consulta.value("cantidad").toInt() <= uds) {
-      QString registro = consulta.value("id").toString();
-      int resta = uds - consulta.value("cantidad").toInt();
+    } else {
+      int resta = uds - cantActual;
       consulta.prepare("DELETE FROM lotes WHERE id = ?");
       consulta.bindValue(0, registro);
-      if (resta == 0) {
-        consulta.exec();
+      if (!consulta.exec()) {
         qDebug() << consulta.lastError().text();
-        return true;
-      } else {
-        consulta.exec();
-        descontarArticulo(db, cod, resta);
-        qDebug() << consulta.lastError().text();
-        return true;
+        return false;
       }
+      if (resta > 0) {
+        return descontarArticulo(db, cod, resta);
+      }
+      return true;
     }
   } else {
-    qDebug() << "No hay lotes de ese artículo";
-    crearLote(conf->getConexionLocal(), cod, "", "2000-01-01",
-              QString::number(0 - uds));
+    // No quedan lotes positivos: acumular el déficit en el lote negativo genérico "2000-01-01"
+    qDebug() << "No hay lotes positivos de ese artículo, acumulando en 2000-01-01";
+    QSqlQuery qNeg(mdb);
+    qNeg.prepare("SELECT id FROM lotes WHERE ean = ? AND fecha = '2000-01-01' LIMIT 1");
+    qNeg.bindValue(0, cod);
+    if (qNeg.exec() && qNeg.next()) {
+      QString idLoteNeg = qNeg.value(0).toString();
+      QSqlQuery qUp(mdb);
+      qUp.prepare("UPDATE lotes SET cantidad = cantidad - ? WHERE id = ?");
+      qUp.bindValue(0, uds);
+      qUp.bindValue(1, idLoteNeg);
+      if (!qUp.exec()) {
+        qDebug() << qUp.lastError().text();
+        return false;
+      }
+    } else {
+      crearLote(db, cod, "", "2000-01-01", QString::number(0 - uds));
+    }
   }
-  
+
   return true;
 }
 
@@ -635,33 +655,19 @@ bool baseDatos::actualizarFechaVentaArticulo(QString nombreConexion,
   // El guard RAII garantiza el reset de @skip_sync en todos los caminos.
   SkipSyncGuard guard(nombreConexion);
 
-  // 2. Iniciar la transacción
-  if (!db.transaction()) {
-    qDebug() << "Error al iniciar la transacción:" << db.lastError().text();
-    return false;
-  }
-
+  // IMPORTANTE: No iniciar ni confirmar transacción aquí (db.transaction / db.commit),
+  // ya que este método se invoca dentro de la transacción global de Tpv::on_btn_cobrar_clicked()
+  // y hacer commit aquí rompería la atomicidad del cobro confirmando líneas parciales.
   QSqlQuery consulta(db);
-  consulta.prepare("UPDATE articulos SET ultima_venta = ? WHERE cod LIKE ?");
+  consulta.prepare("UPDATE articulos SET ultima_venta = ? WHERE cod = ?");
   consulta.bindValue(0, fecha);
   consulta.bindValue(1, cod);
 
   if (consulta.exec()) {
-    // 3. Si la consulta fue exitosa, confirmar los cambios
-    if (db.commit()) {
-      return true;
-    } else {
-      // Error al confirmar (ej. problemas de red, disco lleno, etc.)
-      qDebug() << "Error al confirmar la transacción:" << db.lastError().text();
-      // Intenta hacer un rollback si el commit falla
-      db.rollback();
-      return false;
-    }
+    return true;
   } else {
-    // 4. Si la consulta falló, mostrar el error y revertir
-    qDebug() << "Error al ejecutar la consulta UPDATE:"
+    qDebug() << "Error al ejecutar la consulta UPDATE ultima_venta:"
              << consulta.lastError().text();
-    db.rollback();
     return false;
   }
 }
@@ -989,37 +995,44 @@ QSqlQuery baseDatos::productosPorClienteCantidad(QString nombreConexion,
                                                  QDate fechaI, QDate fechaF, bool consolidado) {
   QSqlDatabase db = QSqlDatabase::database(nombreConexion);
   QSqlQuery consulta(db);
-  
-  QString queryStr;
-  if (consolidado && db.tables().contains("lineasticketss")) {
-      QString subQuery = "SELECT l.cod, l.descripcion, l.cantidad FROM lineasticket l "
-                         "JOIN tickets t ON l.nticket = t.ticket "
-                         "WHERE t.cliente = ? "
-                         "AND t.fecha BETWEEN ? AND ? "
-                         "UNION ALL SELECT l.cod, l.descripcion, l.cantidad FROM lineasticketss l "
-                         "JOIN ticketss t ON l.nticket = t.ticket "
-                         "WHERE t.cliente = ? "
-                         "AND t.fecha BETWEEN ? AND ?";
+  // Evitar caché intermedio de filas en el cliente para mejorar velocidad de lectura
+  consulta.setForwardOnly(true);
 
-      queryStr = "SELECT cod, descripcion, SUM(cantidad) as total FROM (" + subQuery + ") as sub "
-                 "GROUP BY cod, descripcion ORDER BY total DESC";
-      consulta.prepare(queryStr);
-      consulta.bindValue(0, idCliente);
-      consulta.bindValue(1, fechaI.toString("yyyy-MM-dd"));
-      consulta.bindValue(2, fechaF.toString("yyyy-MM-dd"));
-      consulta.bindValue(3, idCliente);
-      consulta.bindValue(4, fechaI.toString("yyyy-MM-dd"));
-      consulta.bindValue(5, fechaF.toString("yyyy-MM-dd"));
+  QString queryStr;
+  if (consolidado) {
+    // Unir tickets Serie A (nticket = CAST(t.ticket AS CHAR)) y Serie B (nticket = CONCAT('B', t.ticket))
+    // usando CAST explícito para aprovechar los índices idx_cliente_fecha y nticket
+    QString subQuery =
+        "SELECT l.cod, l.descripcion, l.cantidad "
+        "FROM tickets t "
+        "INNER JOIN lineasticket l ON l.nticket = CAST(t.ticket AS CHAR) "
+        "WHERE t.cliente = ? AND t.fecha BETWEEN ? AND ? "
+        "UNION ALL "
+        "SELECT l.cod, l.descripcion, l.cantidad "
+        "FROM ticketss t "
+        "INNER JOIN lineasticket l ON l.nticket = CONCAT('B', t.ticket) "
+        "WHERE t.cliente = ? AND t.fecha BETWEEN ? AND ?";
+
+    queryStr = "SELECT cod, descripcion, SUM(cantidad) AS total FROM (" + subQuery + ") AS sub "
+               "GROUP BY cod, descripcion ORDER BY total DESC";
+    consulta.prepare(queryStr);
+    consulta.bindValue(0, idCliente);
+    consulta.bindValue(1, fechaI.toString("yyyy-MM-dd"));
+    consulta.bindValue(2, fechaF.toString("yyyy-MM-dd"));
+    consulta.bindValue(3, idCliente);
+    consulta.bindValue(4, fechaI.toString("yyyy-MM-dd"));
+    consulta.bindValue(5, fechaF.toString("yyyy-MM-dd"));
   } else {
-      queryStr = "SELECT cod, descripcion, SUM(cantidad) as total FROM lineasticket l "
-                 "JOIN tickets t ON l.nticket = t.ticket "
-                 "WHERE t.cliente = ? "
-                 "AND t.fecha BETWEEN ? AND ? "
-                 "GROUP BY cod, descripcion ORDER BY total DESC";
-      consulta.prepare(queryStr);
-      consulta.bindValue(0, idCliente);
-      consulta.bindValue(1, fechaI.toString("yyyy-MM-dd"));
-      consulta.bindValue(2, fechaF.toString("yyyy-MM-dd"));
+    // Filtrar primero en tickets por (cliente, fecha) y cruzar con lineasticket por índice nticket
+    queryStr = "SELECT l.cod, l.descripcion, SUM(l.cantidad) AS total "
+               "FROM tickets t "
+               "INNER JOIN lineasticket l ON l.nticket = CAST(t.ticket AS CHAR) "
+               "WHERE t.cliente = ? AND t.fecha BETWEEN ? AND ? "
+               "GROUP BY l.cod, l.descripcion ORDER BY total DESC";
+    consulta.prepare(queryStr);
+    consulta.bindValue(0, idCliente);
+    consulta.bindValue(1, fechaI.toString("yyyy-MM-dd"));
+    consulta.bindValue(2, fechaF.toString("yyyy-MM-dd"));
   }
 
   if (!consulta.exec()) {
@@ -1033,37 +1046,43 @@ QSqlQuery baseDatos::productosPorClienteFecha(QString nombreConexion,
                                               QDate fechaF, bool consolidado) {
   QSqlDatabase db = QSqlDatabase::database(nombreConexion);
   QSqlQuery consulta(db);
-  
-  QString queryStr;
-  if (consolidado && db.tables().contains("lineasticketss")) {
-      QString subQuery = "SELECT l.cod, l.descripcion, l.cantidad, t.fecha FROM lineasticket l "
-                         "JOIN tickets t ON l.nticket = t.ticket "
-                         "WHERE t.cliente = ? "
-                         "AND t.fecha BETWEEN ? AND ? "
-                         "UNION ALL SELECT l.cod, l.descripcion, l.cantidad, t.fecha FROM lineasticketss l "
-                         "JOIN ticketss t ON l.nticket = t.ticket "
-                         "WHERE t.cliente = ? "
-                         "AND t.fecha BETWEEN ? AND ?";
+  // Activar modo forwardOnly para minimizar consumo de memoria y acelerar la iteración
+  consulta.setForwardOnly(true);
 
-      queryStr = "SELECT cod, descripcion, cantidad, fecha FROM (" + subQuery + ") as sub "
-                 "ORDER BY fecha DESC";
-      consulta.prepare(queryStr);
-      consulta.bindValue(0, idCliente);
-      consulta.bindValue(1, fechaI.toString("yyyy-MM-dd"));
-      consulta.bindValue(2, fechaF.toString("yyyy-MM-dd"));
-      consulta.bindValue(3, idCliente);
-      consulta.bindValue(4, fechaI.toString("yyyy-MM-dd"));
-      consulta.bindValue(5, fechaF.toString("yyyy-MM-dd"));
+  QString queryStr;
+  if (consolidado) {
+    // Unir tickets Serie A y Serie B aprovechando el índice de nticket y limitando a 1000 registros
+    QString subQuery =
+        "SELECT l.cod, l.descripcion, l.cantidad, DATE_FORMAT(t.fecha, '%Y-%m-%d') AS fecha "
+        "FROM tickets t "
+        "INNER JOIN lineasticket l ON l.nticket = CAST(t.ticket AS CHAR) "
+        "WHERE t.cliente = ? AND t.fecha BETWEEN ? AND ? "
+        "UNION ALL "
+        "SELECT l.cod, l.descripcion, l.cantidad, DATE_FORMAT(t.fecha, '%Y-%m-%d') AS fecha "
+        "FROM ticketss t "
+        "INNER JOIN lineasticket l ON l.nticket = CONCAT('B', t.ticket) "
+        "WHERE t.cliente = ? AND t.fecha BETWEEN ? AND ?";
+
+    queryStr = "SELECT cod, descripcion, cantidad, fecha FROM (" + subQuery + ") AS sub "
+               "ORDER BY fecha DESC LIMIT 1000";
+    consulta.prepare(queryStr);
+    consulta.bindValue(0, idCliente);
+    consulta.bindValue(1, fechaI.toString("yyyy-MM-dd"));
+    consulta.bindValue(2, fechaF.toString("yyyy-MM-dd"));
+    consulta.bindValue(3, idCliente);
+    consulta.bindValue(4, fechaI.toString("yyyy-MM-dd"));
+    consulta.bindValue(5, fechaF.toString("yyyy-MM-dd"));
   } else {
-      queryStr = "SELECT l.cod, l.descripcion, l.cantidad, t.fecha FROM lineasticket l "
-                 "JOIN tickets t ON l.nticket = t.ticket "
-                 "WHERE t.cliente = ? "
-                 "AND t.fecha BETWEEN ? AND ? "
-                 "ORDER BY t.fecha DESC";
-      consulta.prepare(queryStr);
-      consulta.bindValue(0, idCliente);
-      consulta.bindValue(1, fechaI.toString("yyyy-MM-dd"));
-      consulta.bindValue(2, fechaF.toString("yyyy-MM-dd"));
+    // Filtrar por cliente y fecha en tickets usando índice y limitar a 1000 líneas recientes
+    queryStr = "SELECT l.cod, l.descripcion, l.cantidad, DATE_FORMAT(t.fecha, '%Y-%m-%d') AS fecha "
+               "FROM tickets t "
+               "INNER JOIN lineasticket l ON l.nticket = CAST(t.ticket AS CHAR) "
+               "WHERE t.cliente = ? AND t.fecha BETWEEN ? AND ? "
+               "ORDER BY t.fecha DESC LIMIT 1000";
+    consulta.prepare(queryStr);
+    consulta.bindValue(0, idCliente);
+    consulta.bindValue(1, fechaI.toString("yyyy-MM-dd"));
+    consulta.bindValue(2, fechaF.toString("yyyy-MM-dd"));
   }
 
   if (!consulta.exec()) {
@@ -3006,20 +3025,26 @@ void baseDatos::aumentarLote(QString base, QString idLote, int uds) {
 }
 
 void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
-  QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
+  if (uds <= 0) {
+    return;
+  }
 
-  consulta.prepare("SELECT id , cantidad FROM lotes WHERE ean = ? "
-                   "AND fecha = ?");
+  QSqlDatabase db = QSqlDatabase::database(conf->getConexionLocal());
+  QSqlQuery consulta(db);
+
+  // Buscar primero un lote con existencias positivas en la fecha solicitada
+  consulta.prepare("SELECT id, cantidad FROM lotes WHERE ean = ? "
+                   "AND fecha = ? AND cantidad > 0 ORDER BY id ASC");
   consulta.bindValue(0, cod);
   consulta.bindValue(1, fecha);
   consulta.exec();
-  
+
   if (!consulta.first()) {
-    // La fecha a descontar no coincide con ningún lote existente de este producto.
-    // Consultar las fechas registradas con existencias para dar opción de elegir al usuario.
-    QSqlQuery qFechas(QSqlDatabase::database(conf->getConexionLocal()));
+    // La fecha a descontar no tiene lotes positivos para este producto.
+    // Consultar las fechas registradas con existencias positivas (FIFO).
+    QSqlQuery qFechas(db);
     qFechas.prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS f, sum(cantidad) AS cant "
-                    "FROM lotes WHERE ean = ? GROUP BY fecha HAVING cant > 0 ORDER BY f ASC");
+                    "FROM lotes WHERE ean = ? AND cantidad > 0 GROUP BY fecha HAVING cant > 0 ORDER BY f ASC");
     qFechas.bindValue(0, cod);
     QStringList opciones;
     if (qFechas.exec()) {
@@ -3028,32 +3053,52 @@ void baseDatos::disminuirLote(QString cod, QString fecha, int uds) {
       }
     }
 
-    if (!opciones.isEmpty() && QApplication::activeWindow()) {
-      bool ok = false;
-      QString selec = QInputDialog::getItem(
-          QApplication::activeWindow(),
-          "Seleccionar fecha a descontar",
-          "La fecha indicada no coincide con ninguna fecha registrada para este producto.\n"
-          "Seleccione la fecha de la que desea descontar:",
-          opciones, 0, false, &ok);
-      if (ok && !selec.isEmpty()) {
-        QString fechaElegida = selec.split(" ").first();
-        disminuirLote(cod, fechaElegida, uds);
-        return;
+    if (!opciones.isEmpty()) {
+      QString fechaElegida;
+      if (QApplication::activeWindow()) {
+        bool ok = false;
+        QString selec = QInputDialog::getItem(
+            QApplication::activeWindow(),
+            "Seleccionar fecha a descontar",
+            "La fecha indicada no coincide con ningún lote con existencias para este producto.\n"
+            "Seleccione la fecha de la que desea descontar:",
+            opciones, 0, false, &ok);
+        if (ok && !selec.isEmpty()) {
+          fechaElegida = selec.split(" ").first();
+        }
       }
+      // Si no hay ventana activa o se canceló el diálogo pero existen lotes positivos,
+      // descontar del lote más antiguo (FIFO) para no coexistir stock positivo y negativo.
+      if (fechaElegida.isEmpty()) {
+        fechaElegida = opciones.first().split(" ").first();
+      }
+      disminuirLote(cod, fechaElegida, uds);
+      return;
     }
 
-    qDebug() << "Creando registro genérico negativo de lote para fecha:" << fecha;
-    QString udsString = QString::number(uds);
-    consulta.prepare("INSERT INTO lotes (ean , lote ,fecha , cantidad) "
-                     "VALUES (?, '', ?, ?)");
-    consulta.bindValue(0, cod);
-    consulta.bindValue(1, fecha);
-    consulta.bindValue(2, "-" + udsString);
-    consulta.exec();
-    qDebug() << consulta.lastError() << "Sin lotes";
+    // No queda ningún lote positivo en ninguna fecha: acumular el déficit en "2000-01-01"
+    qDebug() << "Sin lotes positivos, acumulando stock negativo en 2000-01-01 para artículo:" << cod;
+    QSqlQuery qNeg(db);
+    qNeg.prepare("SELECT id FROM lotes WHERE ean = ? AND fecha = '2000-01-01' LIMIT 1");
+    qNeg.bindValue(0, cod);
+    if (qNeg.exec() && qNeg.next()) {
+      QString idLoteNeg = qNeg.value(0).toString();
+      QSqlQuery qUp(db);
+      qUp.prepare("UPDATE lotes SET cantidad = cantidad - ? WHERE id = ?");
+      qUp.bindValue(0, uds);
+      qUp.bindValue(1, idLoteNeg);
+      qUp.exec();
+    } else {
+      consulta.prepare("INSERT INTO lotes (ean, lote, fecha, cantidad) "
+                       "VALUES (?, '', '2000-01-01', ?)");
+      consulta.bindValue(0, cod);
+      consulta.bindValue(1, -uds);
+      consulta.exec();
+      qDebug() << consulta.lastError() << "Sin lotes";
+    }
     return;
   }
+
   QString id = consulta.record().value(0).toString();
   qDebug() << id;
   int cantActual = consulta.record().value(1).toInt();
@@ -3096,15 +3141,56 @@ void baseDatos::crearLote(QString base, QString ean, QString lote,
   qDebug() << consulta.lastError().text();
 }
 
+int baseDatos::compensarStockNegativo(QString base, QString cod, int udsPositivas) {
+  if (udsPositivas <= 0) {
+    return udsPositivas;
+  }
+
+  int udsRestantes = udsPositivas;
+  QSqlDatabase db = QSqlDatabase::database(base);
+  QSqlQuery qNeg(db);
+
+  // Buscar todos los lotes negativos del artículo ordenados por fecha (primero "2000-01-01" y luego cualquier otra fecha)
+  qNeg.prepare("SELECT id, cantidad FROM lotes WHERE ean = ? AND cantidad < 0 ORDER BY fecha ASC, id ASC");
+  qNeg.bindValue(0, cod);
+
+  if (qNeg.exec()) {
+    while (qNeg.next() && udsRestantes > 0) {
+      QString idLoteNeg = qNeg.value("id").toString();
+      int pendientes = qNeg.value("cantidad").toInt(); // Valor negativo
+      int absPendientes = qAbs(pendientes);
+
+      if (absPendientes > udsRestantes) {
+        // La entrada cubre parcialmente el lote negativo
+        QSqlQuery qUp(db);
+        qUp.prepare("UPDATE lotes SET cantidad = cantidad + ? WHERE id = ?");
+        qUp.bindValue(0, udsRestantes);
+        qUp.bindValue(1, idLoteNeg);
+        qUp.exec();
+        udsRestantes = 0;
+      } else {
+        // La entrada cubre totalmente este lote negativo: se elimina y se sigue con el resto
+        QSqlQuery qDel(db);
+        qDel.prepare("DELETE FROM lotes WHERE id = ?");
+        qDel.bindValue(0, idLoteNeg);
+        qDel.exec();
+        udsRestantes -= absPendientes;
+      }
+    }
+  }
+
+  return udsRestantes;
+}
+
 QSqlQuery baseDatos::lotesProducto(QString cod, QString nombreConnexion) {
   // Devuelve los diferentes lotes de un producto.
   // Usamos DATE_FORMAT para que la fecha llegue como QString "yyyy-MM-dd" y no
   // como QDate, evitando que Qt 6 la convierta con el locale del sistema al
   // llamar a toString() sin formato explícito.
-  // Excluimos lotes con cantidad 0 para no mostrar registros agotados.
+  // Sumamos las cantidades por fecha para no ocultar unidades si existen dos números de lote con igual caducidad.
   QSqlQuery consulta(QSqlDatabase::database(nombreConnexion));
-  consulta.prepare("SELECT id, ean, lote, DATE_FORMAT(fecha,'%Y-%m-%d') AS fecha, cantidad "
-                   "FROM lotes WHERE ean = ? AND cantidad != 0 GROUP BY fecha");
+  consulta.prepare("SELECT id, ean, lote, DATE_FORMAT(fecha,'%Y-%m-%d') AS fecha, SUM(cantidad) AS cantidad "
+                   "FROM lotes WHERE ean = ? AND cantidad != 0 GROUP BY fecha HAVING SUM(cantidad) != 0");
   consulta.bindValue(0, cod);
   if (!consulta.exec()) {
     qDebug() << consulta.lastError();
@@ -6008,8 +6094,10 @@ bool baseDatos::inicializarEsquemaNube() {
          "  PRIMARY KEY (`id_tienda`, `ticket`),"
          "  INDEX `idx_fecha` (`fecha`),"
          "  INDEX `idx_tienda_fecha` (`id_tienda`, `fecha`),"
-         "  INDEX `idx_cliente` (`cliente`)"
+         "  INDEX `idx_cliente` (`cliente`),"
+         "  INDEX `idx_cliente_fecha` (`cliente`, `fecha`)"
          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  q.exec("CREATE INDEX IF NOT EXISTS `idx_cliente_fecha` ON `tickets_nube` (`cliente`, `fecha`)");
 
   // 1b. Tickets serie B (ventas especiales) nube
   q.exec("CREATE TABLE IF NOT EXISTS `ticketss_nube` ("
@@ -6031,8 +6119,10 @@ bool baseDatos::inicializarEsquemaNube() {
          "  PRIMARY KEY (`id_tienda`, `ticket`),"
          "  INDEX `idx_fecha` (`fecha`),"
          "  INDEX `idx_tienda_fecha` (`id_tienda`, `fecha`),"
-         "  INDEX `idx_cliente` (`cliente`)"
+         "  INDEX `idx_cliente` (`cliente`),"
+         "  INDEX `idx_cliente_fecha` (`cliente`, `fecha`)"
          ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  q.exec("CREATE INDEX IF NOT EXISTS `idx_cliente_fecha` ON `ticketss_nube` (`cliente`, `fecha`)");
   q.exec("ALTER TABLE `ticketss_nube` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 
   // 2. Líneas de ticket nube
@@ -6476,28 +6566,36 @@ bool baseDatos::subirTicketNube(int idTienda, int nTicket, const QString &fecha,
     if (!q.exec()) {
       qDebug() << "baseDatos::subirTicketNube error cabecera:" << q.lastError().text();
       exito = false;
-    } else {
-      // Eliminar líneas anteriores si existieran y reinsertar
-      QSqlQuery qDel(dbNube);
-      qDel.prepare("DELETE FROM lineasticket_nube WHERE id_tienda = ? AND nticket = ?");
-      qDel.bindValue(0, idTienda);
-      qDel.bindValue(1, nTicket);
-      qDel.exec();
-
+    } else if (!lineas.isEmpty()) {
+      // Insertar o actualizar cada línea en lineasticket_nube incluyendo id_local, fecha y hora (obligatorios en el esquema)
       for (const QVariantMap &l : lineas) {
+        int idLocal = l.value("id_local").toInt();
+        if (idLocal <= 0) {
+          continue; // Si no hay id_local válido, SyncManager lo subirá desde sync_cola con su PK real
+        }
         QSqlQuery qL(dbNube);
-        qL.prepare("INSERT INTO lineasticket_nube (id_tienda, nticket, cod, descripcion, cantidad, precio, iva, descuento, totallinea) "
-                   "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        qL.prepare("INSERT INTO lineasticket_nube (id_tienda, id_local, nticket, cod, descripcion, "
+                   "cantidad, precio, iva, descuento, totallinea, fecha, hora) "
+                   "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                   "ON DUPLICATE KEY UPDATE nticket=VALUES(nticket), cod=VALUES(cod), "
+                   "descripcion=VALUES(descripcion), cantidad=VALUES(cantidad), precio=VALUES(precio), "
+                   "iva=VALUES(iva), descuento=VALUES(descuento), totallinea=VALUES(totallinea), "
+                   "fecha=VALUES(fecha), hora=VALUES(hora)");
         qL.bindValue(0, idTienda);
-        qL.bindValue(1, nTicket);
-        qL.bindValue(2, l.value("cod").toString());
-        qL.bindValue(3, l.value("descripcion").toString());
-        qL.bindValue(4, l.value("cantidad").toDouble());
-        qL.bindValue(5, l.value("precio").toDouble());
-        qL.bindValue(6, l.value("iva").toDouble());
-        qL.bindValue(7, l.value("descuento").toDouble());
-        qL.bindValue(8, l.value("totallinea").toDouble());
-        qL.exec();
+        qL.bindValue(1, idLocal);
+        qL.bindValue(2, QString::number(nTicket));
+        qL.bindValue(3, l.value("cod").toString());
+        qL.bindValue(4, l.value("descripcion").toString());
+        qL.bindValue(5, l.value("cantidad").toDouble());
+        qL.bindValue(6, l.value("precio").toDouble());
+        qL.bindValue(7, l.value("iva").toDouble());
+        qL.bindValue(8, l.value("descuento").toDouble());
+        qL.bindValue(9, l.value("totallinea").toDouble());
+        qL.bindValue(10, fecha);
+        qL.bindValue(11, hora);
+        if (!qL.exec()) {
+          qDebug() << "baseDatos::subirTicketNube error línea:" << qL.lastError().text();
+        }
       }
     }
   }
@@ -6659,16 +6757,18 @@ bool baseDatos::volcarHistoricoLocalANube(int idTienda, const QString &fechaDesd
   int arqueosSubidos = 0;
   int lotesSubidos = 0;
 
-  // 1. Precargar todas las líneas de tickets en bloque para eliminar el problema de N+1 consultas
+  // 1. Precargar todas las líneas de tickets en bloque incluyendo id (id_local) para evitar N+1 consultas
   QHash<int, QList<QVariantMap>> lineasPorTicket;
   QSqlQuery qLineasAll(dbLocal);
-  qLineasAll.prepare("SELECT nticket, cod, descripcion, cantidad, precio, iva, descuento, totallinea "
-                     "FROM lineasticket WHERE nticket IN (SELECT ticket FROM tickets WHERE fecha >= ?)");
+  qLineasAll.prepare("SELECT id, nticket, cod, descripcion, cantidad, precio, iva, descuento, totallinea "
+                     "FROM lineasticket WHERE fecha >= ? AND nticket NOT LIKE 'B%'");
   qLineasAll.bindValue(0, fechaDesde);
   if (qLineasAll.exec()) {
     while (qLineasAll.next()) {
       int tktId = qLineasAll.value("nticket").toInt();
+      if (tktId <= 0) continue;
       QVariantMap lm;
+      lm["id_local"] = qLineasAll.value("id").toInt();
       lm["cod"] = qLineasAll.value("cod").toString();
       lm["descripcion"] = qLineasAll.value("descripcion").toString();
       lm["cantidad"] = qLineasAll.value("cantidad").toDouble();

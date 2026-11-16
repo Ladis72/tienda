@@ -114,9 +114,23 @@ void Salidas::on_lineEditCod_returnPressed()
 
     // 3. Si hay producto válido
     if (!registro.isEmpty()) {
-        ui->lineEditCod->setText(registro.value("cod").toString());
+        QString codValidado = registro.value("cod").toString();
+        ui->lineEditCod->setText(codValidado);
         ui->lineEditDesc->setText(registro.value("descripcion").toString());
         ui->lineEditPrecio->setText(registro.value("pvp").toString());
+
+        // Preseleccionar automáticamente la fecha del lote más próximo a caducar con existencias positivas (FIFO)
+        QSqlQuery qLoteIni(QSqlDatabase::database(conf->getConexionLocal()));
+        qLoteIni.prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS f FROM lotes "
+                         "WHERE ean = ? AND cantidad > 0 ORDER BY fecha ASC LIMIT 1");
+        qLoteIni.bindValue(0, codValidado);
+        if (qLoteIni.exec() && qLoteIni.next()) {
+            QDate fechaIni = QDate::fromString(qLoteIni.value("f").toString(), "yyyy-MM-dd");
+            if (fechaIni.isValid()) {
+                ui->dateEditFC->setDate(fechaIni);
+            }
+        }
+
         ui->lineEditCantidad->setFocus();
         return;
     }
@@ -191,15 +205,21 @@ void Salidas::on_pushButtonAgregar_clicked()
     QString codProducto = ui->lineEditCod->text().trimmed();
     QString fechaFC = ui->dateEditFC->text();
 
-    QString idLote = base.idLote(conf->getConexionLocal(),
-                                  codProducto,
-                                  "",
-                                  fechaFC);
+    // Comprobar si existe algún lote positivo en esa fecha (con o sin código de lote)
+    QString idLote = "0";
+    QSqlQuery qCheckFecha(QSqlDatabase::database(conf->getConexionLocal()));
+    qCheckFecha.prepare("SELECT id FROM lotes WHERE ean = ? AND fecha = ? AND cantidad > 0 LIMIT 1");
+    qCheckFecha.bindValue(0, codProducto);
+    qCheckFecha.bindValue(1, fechaFC);
+    if (qCheckFecha.exec() && qCheckFecha.next()) {
+        idLote = qCheckFecha.value(0).toString();
+    }
+
     if (idLote == "0") {
         // Consultar fechas/lotes existentes con stock para este producto
         QSqlQuery qFechas(QSqlDatabase::database(conf->getConexionLocal()));
         qFechas.prepare("SELECT DATE_FORMAT(fecha, '%Y-%m-%d') AS f, sum(cantidad) AS cant "
-                        "FROM lotes WHERE ean = ? GROUP BY fecha HAVING cant > 0 ORDER BY f ASC");
+                        "FROM lotes WHERE ean = ? AND cantidad > 0 GROUP BY fecha HAVING cant > 0 ORDER BY f ASC");
         qFechas.bindValue(0, codProducto);
         QStringList opcionesFechas;
         if (qFechas.exec()) {
@@ -559,15 +579,21 @@ bool Salidas::procesarEntradaRemota(const QString &connRemota, int idLocalEnRemo
                 continue;
             }
 
-            // Buscar lote existente
+            // 1.1 Compensar primero cualquier lote negativo existente en la tienda remota (tanto "2000-01-01" como otras fechas)
+            int nuevasUnidades = base.compensarStockNegativo(connRemota, cod, uds);
+            if (nuevasUnidades <= 0) {
+                continue;
+            }
+
+            // 1.2 Buscar lote positivo existente en la fecha de caducidad o crear uno nuevo
             QSqlQuery qCheck(dbRem);
-            qCheck.prepare("SELECT id FROM lotes WHERE ean = ? AND fecha = ? LIMIT 1");
+            qCheck.prepare("SELECT id FROM lotes WHERE ean = ? AND fecha = ? AND cantidad > 0 LIMIT 1");
             qCheck.bindValue(0, cod);
             qCheck.bindValue(1, fechaCad);
             if (qCheck.exec() && qCheck.next()) {
                 QSqlQuery qUp(dbRem);
                 qUp.prepare("UPDATE lotes SET cantidad = cantidad + ? WHERE id = ?");
-                qUp.bindValue(0, uds);
+                qUp.bindValue(0, nuevasUnidades);
                 qUp.bindValue(1, qCheck.value(0));
                 qUp.exec();
             } else {
@@ -575,7 +601,7 @@ bool Salidas::procesarEntradaRemota(const QString &connRemota, int idLocalEnRemo
                 qIns.prepare("INSERT INTO lotes (ean, lote, fecha, cantidad) VALUES (?, '', ?, ?)");
                 qIns.bindValue(0, cod);
                 qIns.bindValue(1, fechaCad);
-                qIns.bindValue(2, uds);
+                qIns.bindValue(2, nuevasUnidades);
                 qIns.exec();
             }
         }
@@ -635,6 +661,44 @@ void Salidas::on_pushButtonAceptarAmbas_clicked()
                               tr("No es posible conectar con la tienda remota '%1' para procesar su entrada.")
                                   .arg(m_nombreTiendaRemota));
         return;
+    }
+
+    // Comprobar si alguna de las tablas está vacía o si difieren las unidades entre ambas tiendas
+    // para mostrar un aviso de confirmación o rechazo sin bloquear la operativa de gestión.
+    int lineasLocal = mTablaSalidas->rowCount();
+    int lineasRemota = mTablaRemota->rowCount();
+    int udsLocal = 0;
+    int udsRemota = 0;
+    for (int i = 0; i < lineasLocal; ++i) {
+        udsLocal += mTablaSalidas->record(i).value("cantidad").toInt();
+    }
+    for (int i = 0; i < lineasRemota; ++i) {
+        udsRemota += mTablaRemota->record(i).value("cantidad").toInt();
+    }
+
+    if (lineasLocal == 0 || lineasRemota == 0 || lineasLocal != lineasRemota || udsLocal != udsRemota) {
+        QMessageBox warnBox(this);
+        warnBox.setIcon(QMessageBox::Warning);
+        warnBox.setWindowTitle(tr("Aviso de Discrepancia en Traspaso"));
+        warnBox.setText(tr("Las tablas de salida local y entrada remota NO coinciden."));
+        warnBox.setInformativeText(
+            tr("Estado actual del traspaso:\n"
+               "• Salida Local (%1): %2 líneas (%3 unidades)\n"
+               "• Entrada Remota (%4): %5 líneas (%6 unidades)\n\n"
+               "¿Desea CONFIRMAR igualmente la operación o RECHAZARLA?")
+                .arg(base.nombreConexionLocal())
+                .arg(lineasLocal)
+                .arg(udsLocal)
+                .arg(m_nombreTiendaRemota)
+                .arg(lineasRemota)
+                .arg(udsRemota));
+        QPushButton *btnConfirmar = warnBox.addButton(tr("Confirmar operación"), QMessageBox::AcceptRole);
+        QPushButton *btnRechazar = warnBox.addButton(tr("Rechazar"), QMessageBox::RejectRole);
+        warnBox.setDefaultButton(btnRechazar);
+        warnBox.exec();
+        if (warnBox.clickedButton() != btnConfirmar) {
+            return;
+        }
     }
 
     QMessageBox msgBox(this);
