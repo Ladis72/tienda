@@ -46,6 +46,24 @@ public:
   /// @code conf->permisos()->tiene("articulos.borrar") @endcode
   GestorPermisos *permisos();
 
+  /// @brief Devuelve el directorio raíz común de la aplicación (p. ej. "/opt/tienda" o applicationDirPath()).
+  /// Allí residen de forma compartida las carpetas 'imagenes', 'documentos', 'ia_embeddings.cache' y 'tienda.ini' global.
+  static QString rutaDirectorioBase();
+
+  /// @brief Devuelve la ruta absoluta al archivo tienda.ini global compartido (p. ej. "/opt/tienda/tienda.ini").
+  static QString rutaIniGlobal();
+
+  /// @brief Devuelve la ruta absoluta al archivo tienda.ini específico del usuario actual de Linux (~/.config/Ladis/tienda.ini).
+  static QString rutaIniUsuario();
+
+  /// @brief Comprueba si el usuario actual del sistema operativo tiene una conexión [BaseDatos] propia en su tienda.ini.
+  static bool tieneConexionPorUsuario();
+
+  /// @brief Devuelve la ruta del archivo tienda.ini activo para leer la conexión [BaseDatos] y [Local]:
+  /// Si el usuario tiene su propia conexión en ~/.config/Ladis/tienda.ini, devuelve rutaIniUsuario();
+  /// en caso contrario, devuelve rutaIniGlobal() (/opt/tienda/tienda.ini).
+  static QString rutaIniConexion();
+
 private:
   QStringList nombreconexiones;
   QStringList nombreconexionesActivas;

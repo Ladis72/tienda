@@ -1,4 +1,5 @@
 #include "verifactudialog.h"
+#include "configuracion.h"
 #include "ui_verifactudialog.h"
 #include "verifactuclass.h"
 #include <QCoreApplication>
@@ -34,8 +35,8 @@ VerifactuDialog::VerifactuDialog(QWidget *parent)
     ui->dateEditDesde->setDate(QDate::currentDate());
     ui->dateEditHasta->setDate(QDate::currentDate());
 
-    // Cargar los parámetros guardados de VeriFactu desde tienda.ini (SEC-01)
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    // Cargar los parámetros guardados de VeriFactu desde tienda.ini global (SEC-01)
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("VeriFactu");
     ui->comboBoxModo->setCurrentIndex(settings.value("modo", 0).toInt());
@@ -249,8 +250,8 @@ void VerifactuDialog::on_pushButtonCertificado_clicked()
  */
 void VerifactuDialog::accept()
 {
-    // Guardar datos en el archivo de configuración tienda.ini (SEC-01)
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    // Guardar datos en el archivo de configuración tienda.ini global (SEC-01)
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("VeriFactu");
     settings.setValue("modo", ui->comboBoxModo->currentIndex());

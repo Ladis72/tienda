@@ -1,4 +1,5 @@
 #include "dialogfotosmasivo.h"
+#include "dialogsyncimagenes.h"
 #include "ui_dialogfotosmasivo.h"
 #include "base_datos.h"
 #include "configuracion.h"
@@ -960,4 +961,10 @@ void DialogFotosMasivo::on_pushButtonCerrar_clicked()
 {
     m_ejecutando = false;
     close();
+}
+
+void DialogFotosMasivo::on_pushButtonSincronizarEquipos_clicked()
+{
+    DialogSyncImagenes dlg(this);
+    dlg.exec();
 }

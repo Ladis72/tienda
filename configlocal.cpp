@@ -1,6 +1,8 @@
 #include "configlocal.h"
+#include "configuracion.h"
 #include "ui_configlocal.h"
 #include <QCoreApplication>
+#include <QFileInfo>
 #include <QMessageBox>
 #include <QSettings>
 #include <QSqlDatabase>
@@ -17,7 +19,7 @@ ConfigLocal::ConfigLocal(QWidget *parent)
 {
     ui->setupUi(this);
 
-    // Cargar los datos actuales desde tienda.ini
+    // Cargar los datos actuales desde tienda.ini (por usuario o global)
     cargarDatos();
 }
 
@@ -34,8 +36,16 @@ ConfigLocal::~ConfigLocal()
  */
 void ConfigLocal::cargarDatos()
 {
-    // SEC-01: Leer la ruta del archivo tienda.ini junto al ejecutable
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    // Determinar si el usuario actual de Linux ya tiene una conexión personalizada
+    const bool usaPorUsuario = Configuracion::tieneConexionPorUsuario();
+    const QString iniPath = Configuracion::rutaIniConexion();
+
+    ui->checkBoxPorUsuario->setChecked(usaPorUsuario);
+    ui->labelRutaActiva->setText(
+        usaPorUsuario
+            ? tr("Archivo activo (Usuario): %1").arg(iniPath)
+            : tr("Archivo activo (Global): %1").arg(iniPath));
+
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("BaseDatos");
 
@@ -114,21 +124,58 @@ void ConfigLocal::on_pushButtonGuardar_clicked()
     );
 
     if (res == QMessageBox::Yes) {
-        // SEC-01: Utilizar QSettings para reescribir de forma limpia tienda.ini
-        QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
-        QSettings settings(iniPath, QSettings::IniFormat);
-        settings.beginGroup("BaseDatos");
-        settings.setValue("host", host);
-        settings.setValue("puerto", puerto.toInt());
-        settings.setValue("baseDatos", bd);
-        settings.setValue("usuario", usuario);
-        settings.setValue("clave", clave);
-        settings.endGroup();
-        settings.sync(); // Forzar sincronización con el disco físico
+        const bool porUsuario = ui->checkBoxPorUsuario->isChecked();
+        const QString userIni = Configuracion::rutaIniUsuario();
+        const QString globalIni = Configuracion::rutaIniGlobal();
 
-        QMessageBox::information(this, tr("Guardado con éxito"),
-                                 tr("Configuración guardada en tienda.ini correctamente.\n"
-                                    "Los cambios surtirán efecto al reiniciar la aplicación."));
+        if (porUsuario) {
+            // Guardar exclusivamente en el archivo del usuario (~/.config/Ladis/tienda.ini)
+            QSettings settings(userIni, QSettings::IniFormat);
+            settings.beginGroup("BaseDatos");
+            settings.setValue("host", host);
+            settings.setValue("puerto", puerto.toInt());
+            settings.setValue("baseDatos", bd);
+            settings.setValue("usuario", usuario);
+            settings.setValue("clave", clave);
+            settings.endGroup();
+            settings.sync();
+
+            QMessageBox::information(this, tr("Guardado con éxito"),
+                                     tr("Configuración guardada para este usuario en:\n%1\n\n"
+                                        "Los cambios surtirán efecto al reiniciar la aplicación.")
+                                         .arg(userIni));
+        } else {
+            // Eliminar sobreescritura por usuario si existía para que herede la global
+            if (QFile::exists(userIni)) {
+                QSettings settingsUser(userIni, QSettings::IniFormat);
+                settingsUser.remove("BaseDatos");
+                settingsUser.sync();
+            }
+
+            // Guardar en el archivo global (/opt/tienda/tienda.ini)
+            QSettings settingsGlobal(globalIni, QSettings::IniFormat);
+            settingsGlobal.beginGroup("BaseDatos");
+            settingsGlobal.setValue("host", host);
+            settingsGlobal.setValue("puerto", puerto.toInt());
+            settingsGlobal.setValue("baseDatos", bd);
+            settingsGlobal.setValue("usuario", usuario);
+            settingsGlobal.setValue("clave", clave);
+            settingsGlobal.endGroup();
+            settingsGlobal.sync();
+
+            if (settingsGlobal.status() != QSettings::NoError) {
+                QMessageBox::warning(this, tr("Permisos en archivo global"),
+                                     tr("Se ha restablecido este usuario para usar la conexión global (%1),\n"
+                                        "pero el usuario actual de Linux no tiene permisos de escritura sobre ese archivo.\n"
+                                        "Si deseas una conexión propia para este usuario, marca la casilla de configuración por usuario.")
+                                         .arg(globalIni));
+            } else {
+                QMessageBox::information(this, tr("Guardado con éxito"),
+                                         tr("Configuración global guardada en:\n%1\n\n"
+                                            "Los cambios surtirán efecto al reiniciar la aplicación.")
+                                             .arg(globalIni));
+            }
+        }
         accept();
     }
 }

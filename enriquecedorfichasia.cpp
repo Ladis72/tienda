@@ -1,5 +1,6 @@
 #include "enriquecedorfichasia.h"
 #include "asistenteia.h"
+#include "configuracion.h"
 
 #include <QCoreApplication>
 #include <QSettings>
@@ -36,8 +37,8 @@ EnriquecedorFichasIA::EnriquecedorFichasIA(QObject *parent)
       m_serperPendientes(0),
       m_paginasPendientes(0)
 {
-    // Cargar configuración de Ollama desde tienda.ini
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    // Cargar configuración de Ollama desde tienda.ini global
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("Ollama");
     m_baseUrlOllama = settings.value("url", "http://localhost:11434").toString().trimmed();
@@ -67,7 +68,7 @@ EnriquecedorFichasIA::~EnriquecedorFichasIA()
  */
 QString EnriquecedorFichasIA::obtenerClaveSerper()
 {
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
 
     // Intentar primero en sección [Serper]
@@ -95,7 +96,7 @@ QString EnriquecedorFichasIA::obtenerClaveSerper()
  */
 void EnriquecedorFichasIA::guardarClaveSerper(const QString &apiKey)
 {
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("Serper");
     settings.setValue("apiKey", apiKey.trimmed());
@@ -108,7 +109,7 @@ void EnriquecedorFichasIA::guardarClaveSerper(const QString &apiKey)
  */
 QString EnriquecedorFichasIA::obtenerClaveTavily()
 {
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
 
     // Intentar primero en sección [Tavily]
@@ -136,7 +137,7 @@ QString EnriquecedorFichasIA::obtenerClaveTavily()
  */
 void EnriquecedorFichasIA::guardarClaveTavily(const QString &apiKey)
 {
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("Tavily");
     settings.setValue("apiKey", apiKey.trimmed());

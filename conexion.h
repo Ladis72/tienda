@@ -1,6 +1,7 @@
 #ifndef CONEXION_H
 #define CONEXION_H
 
+#include "configuracion.h"
 #include <QCoreApplication>
 #include <QMessageBox>
 #include <QSettings>
@@ -17,7 +18,8 @@
 /**
  * @brief Crea la conexión por defecto leyendo credenciales de tienda.ini.
  *
- * El fichero tienda.ini debe estar junto al ejecutable con el formato:
+ * Prioriza el fichero del usuario (~/.config/Ladis/tienda.ini) si tiene una conexión propia;
+ * en caso contrario utiliza el fichero global compartido (/opt/tienda/tienda.ini).
  * @code
  *   [BaseDatos]
  *   host=localhost
@@ -31,8 +33,8 @@
  */
 [[maybe_unused]] static bool createConnection()
 {
-    // SEC-01: Leer credenciales desde fichero externo (no hardcodeadas)
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    // SEC-01: Leer credenciales desde el archivo de conexión activo (por usuario o global)
+    QString iniPath = Configuracion::rutaIniConexion();
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("BaseDatos");
 

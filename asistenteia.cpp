@@ -32,8 +32,8 @@ AsistenteIA::AsistenteIA(QObject *parent)
     : QObject(parent), m_netManager(new QNetworkAccessManager(this)),
       m_procesando(false), m_profundidadToolCalls(0), m_tiempoInicioMs(0),
       m_ultimoLogId(0) {
-  // Cargar configuración de Ollama desde tienda.ini
-  QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+  // Cargar configuración de Ollama desde tienda.ini global
+  QString iniPath = Configuracion::rutaIniGlobal();
   QSettings settings(iniPath, QSettings::IniFormat);
   settings.beginGroup("Ollama");
   m_baseUrl =
@@ -170,9 +170,9 @@ QString AsistenteIA::obtenerModeloCentralizado() {
     }
   }
 
-  // 2. Si no se halló registro en BD, leer de tienda.ini como respaldo
+  // 2. Si no se halló registro en BD, leer de tienda.ini global como respaldo
   if (modelo.isEmpty()) {
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("Ollama");
     modelo = settings.value("modelo", "qwen3:14b-64k").toString().trimmed();
@@ -228,8 +228,8 @@ bool AsistenteIA::guardarModeloCentralizado(const QString &nuevoModelo) {
     }
   }
 
-  // Guardar también en tienda.ini local como respaldo
-  QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+  // Guardar también en tienda.ini global como respaldo
+  QString iniPath = Configuracion::rutaIniGlobal();
   QSettings settings(iniPath, QSettings::IniFormat);
   settings.beginGroup("Ollama");
   settings.setValue("modelo", mod);
@@ -266,9 +266,9 @@ int AsistenteIA::obtenerNumCtxCentralizado() {
     }
   }
 
-  // 2. Si no está en BD, consultar tienda.ini
+  // 2. Si no está en BD, consultar tienda.ini global
   if (numCtx <= 0) {
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("Ollama");
     numCtx = settings.value("num_ctx", 32768).toInt();
@@ -325,8 +325,8 @@ bool AsistenteIA::guardarNumCtxCentralizado(int nuevoNumCtx) {
     }
   }
 
-  // Guardar también en tienda.ini local
-  QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+  // Guardar también en tienda.ini global
+  QString iniPath = Configuracion::rutaIniGlobal();
   QSettings settings(iniPath, QSettings::IniFormat);
   settings.beginGroup("Ollama");
   settings.setValue("num_ctx", nuevoNumCtx);

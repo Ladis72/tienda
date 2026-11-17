@@ -63,6 +63,9 @@ private slots:
     /// @brief Cierra el diálogo
     void on_pushButtonCerrar_clicked();
 
+    /// @brief Abre el diálogo de sincronización de imágenes entre equipos TPV
+    void on_pushButtonSincronizarEquipos_clicked();
+
     /// @brief Acepta y asigna la foto seleccionada para el artículo actual
     void on_pushButtonAceptarFoto_clicked();
 

@@ -13,6 +13,7 @@
 #include "gestorpermisos.h"
 #include "dialogenriquecimientomasivo.h"
 #include "dialogfotosmasivo.h"
+#include "dialogsyncimagenes.h"
 #include "dialoginventario.h"
 #include <QDebug>
 #include <QEvent>
@@ -757,6 +758,11 @@ void Tienda::on_pushButtonFotosMasivo_clicked() {
   dlg.exec();
 }
 
+void Tienda::on_pushButtonSyncImagenes_clicked() {
+  DialogSyncImagenes dlg(this);
+  dlg.exec();
+}
+
 void Tienda::on_pushButtonFamilias_clicked() {
   if (!F) {
     F = new Familias(this);
@@ -956,8 +962,12 @@ void Tienda::refrescarConexiones() {
       return;
   }
 
-  // Cargar configuración guardada desde tienda.ini
-  QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+  // Cargar configuración guardada desde el archivo de conexión activo (por usuario o global)
+  QString iniPath = Configuracion::rutaIniConexion();
+  QSettings settingsUser(Configuracion::rutaIniUsuario(), QSettings::IniFormat);
+  if (settingsUser.contains("TiendasRemotas/tiendas_seleccionadas")) {
+      iniPath = Configuracion::rutaIniUsuario();
+  }
   QSettings settings(iniPath, QSettings::IniFormat);
   bool autoConectar = settings.value("TiendasRemotas/conectar_automatico", false).toBool();
   QStringList tiendasGuardadas = settings.value("TiendasRemotas/tiendas_seleccionadas").toStringList();
@@ -1053,9 +1063,18 @@ void Tienda::refrescarConexiones() {
           return;
       }
 
-      // Guardar la nueva configuración en tienda.ini
-      settings.setValue("TiendasRemotas/conectar_automatico", chkAuto->isChecked());
-      settings.setValue("TiendasRemotas/tiendas_seleccionadas", tiendasSeleccionadas);
+      // Guardar la nueva configuración en el archivo activo (o en el del usuario si el global no es escribible)
+      QString writePath = Configuracion::tieneConexionPorUsuario()
+                              ? Configuracion::rutaIniUsuario()
+                              : Configuracion::rutaIniGlobal();
+      QSettings settingsWrite(writePath, QSettings::IniFormat);
+      if (!settingsWrite.isWritable()) {
+          writePath = Configuracion::rutaIniUsuario();
+      }
+      QSettings settingsSave(writePath, QSettings::IniFormat);
+      settingsSave.setValue("TiendasRemotas/conectar_automatico", chkAuto->isChecked());
+      settingsSave.setValue("TiendasRemotas/tiendas_seleccionadas", tiendasSeleccionadas);
+      settingsSave.sync();
   }
 
   // Conectar solo a las tiendas seleccionadas
@@ -1232,18 +1251,19 @@ bool Tienda::eventFilter(QObject *obj, QEvent *event) {
 
 void Tienda::cargarLogo() {
   QString rutaLogo = base.devolverDirectorio("logo");
+  const QString baseDir = Configuracion::rutaDirectorioBase();
 
   if (!QFile::exists(rutaLogo)) {
     // Try absolute path if it was relative
-    rutaLogo = QCoreApplication::applicationDirPath() + "/" + rutaLogo;
+    rutaLogo = baseDir + "/" + rutaLogo;
   }
 
   if (rutaLogo.isEmpty() || !QFile::exists(rutaLogo)) {
     // Fallback to default logos if not configured or not found
-    rutaLogo = QCoreApplication::applicationDirPath() + "/documentos/logo.png";
+    rutaLogo = baseDir + "/documentos/logo.png";
     if (!QFile::exists(rutaLogo)) {
-      // SEC-12: Usar ruta relativa al ejecutable, no ruta absoluta hardcodeada
-      rutaLogo = QCoreApplication::applicationDirPath() + "/documentos/logo.jpg";
+      // SEC-12: Usar ruta relativa al directorio base compartido, no ruta absoluta hardcodeada
+      rutaLogo = baseDir + "/documentos/logo.jpg";
     }
   }
 

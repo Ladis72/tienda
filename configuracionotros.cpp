@@ -53,8 +53,8 @@ ConfiguracionOtros::ConfiguracionOtros(QWidget *parent)
     ui->comboBoxF3->setCurrentIndex(ui->comboBoxF3->findData(config.value("vendedor_f3").toString()));
     ui->comboBoxF4->setCurrentIndex(ui->comboBoxF4->findData(config.value("vendedor_f4").toString()));
 
-    // Cargar configuración de Google Sheets desde tienda.ini
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    // Cargar configuración de Google Sheets desde tienda.ini global
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("GoogleSheets");
     ui->checkBoxGoogleSheets->setChecked(settings.value("enviarGoogleSheets", false).toBool());
@@ -119,8 +119,8 @@ void ConfiguracionOtros::on_pushButtonAceptar_clicked()
     base.GuardarConfiguracion(config);
     conf->setUsarPreciosLocales(ui->checkBoxNube->isChecked());
 
-    // Guardar configuración de Google Sheets y Ollama en tienda.ini
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    // Guardar configuración de Google Sheets y Ollama en tienda.ini global
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("GoogleSheets");
     settings.setValue("enviarGoogleSheets", ui->checkBoxGoogleSheets->isChecked());

@@ -2619,13 +2619,13 @@ QMap<double, int> baseDatos::recuperarDesgloseArqueo(int idArqueo, QString base)
 bool baseDatos::enviarArqueoGoogleSheets(const QStringList &datos,
                                         const QMap<double, int> &desglose,
                                         QObject *parent) {
-  // Leer configuración desde tienda.ini
-  QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
-  QSettings settings(iniPath, QSettings::IniFormat);
-  settings.beginGroup("GoogleSheets");
-  bool habilitado = settings.value("enviarGoogleSheets", false).toBool();
-  QString urlStr = settings.value("urlGoogleSheets", "").toString().trimmed();
-  settings.endGroup();
+  // Leer configuración de Google Sheets desde tienda.ini global
+  QString iniPathGlobal = Configuracion::rutaIniGlobal();
+  QSettings settingsGlobal(iniPathGlobal, QSettings::IniFormat);
+  settingsGlobal.beginGroup("GoogleSheets");
+  bool habilitado = settingsGlobal.value("enviarGoogleSheets", false).toBool();
+  QString urlStr = settingsGlobal.value("urlGoogleSheets", "").toString().trimmed();
+  settingsGlobal.endGroup();
 
   if (!habilitado || urlStr.isEmpty()) {
     qDebug() << "Envío a Google Sheets no configurado o deshabilitado.";
@@ -2638,7 +2638,8 @@ bool baseDatos::enviarArqueoGoogleSheets(const QStringList &datos,
     return false;
   }
 
-  // Obtener el nombre real de la tienda local
+  // Obtener el nombre real de la tienda local (desde el archivo de conexión activo o la BD)
+  QSettings settings(Configuracion::rutaIniConexion(), QSettings::IniFormat);
   // 1. Intentar desde tienda.ini [Local] nombreTienda
   settings.beginGroup("Local");
   QString nombreTienda = settings.value("nombreTienda", "").toString().trimmed();
@@ -3411,25 +3412,34 @@ QMap<QString, QString> baseDatos::cargarDirectorios(QString base) {
 }
 
 QString baseDatos::devolverDirectorio(QString tipo) {
+  QString dir;
   QSqlQuery consulta(QSqlDatabase::database(conf->getConexionLocal()));
   consulta.prepare("SELECT directorio FROM directorios WHERE nombre = ?");
   consulta.bindValue(0, tipo);
   consulta.exec();
   if (consulta.first()) {
-    QString dir = consulta.record().value(0).toString().trimmed();
-    if (!dir.isEmpty()) {
-      return dir;
-    }
+    dir = consulta.record().value(0).toString().trimmed();
   }
   // Valores predeterminados si no está configurado en la base de datos
-  if (tipo == "imagenes") {
-    return "./imagenes";
-  } else if (tipo == "documentos") {
-    return "./documentos";
-  } else if (tipo == "cseg") {
-    return "./documentos/copiaSeg";
+  if (dir.isEmpty()) {
+    if (tipo == "imagenes") {
+      dir = "./imagenes";
+    } else if (tipo == "documentos") {
+      dir = "./documentos";
+    } else if (tipo == "cseg") {
+      dir = "./documentos/copiaSeg";
+    }
   }
-  return "";
+  // Si es una ruta relativa y no existe en el directorio de trabajo actual pero sí en el directorio base (/opt/tienda),
+  // resolverla respecto al directorio base compartido
+  if (!dir.isEmpty() && QFileInfo(dir).isRelative() && !QFileInfo::exists(dir)) {
+    QString cleanRel = dir.startsWith("./") ? dir.mid(2) : dir;
+    QString candidate = QDir(Configuracion::rutaDirectorioBase()).filePath(cleanRel);
+    if (QFileInfo::exists(candidate)) {
+      return candidate;
+    }
+  }
+  return dir;
 }
 
 QString baseDatos::resolverRutaImagen(QString nombreFoto) {
@@ -3457,8 +3467,11 @@ QString baseDatos::resolverRutaImagen(QString nombreFoto) {
         return path;
     }
     
-    // 4. Búsqueda en rutas relativas y absolutas habituales
+    // 4. Búsqueda en rutas relativas y absolutas habituales (incluyendo /opt/tienda)
+    const QString rootBase = Configuracion::rutaDirectorioBase();
     QStringList rutasFallback = {
+        QDir(rootBase).absoluteFilePath("imagenes/" + nombreFoto),
+        QDir(rootBase).absoluteFilePath(nombreFoto),
         QDir::current().absoluteFilePath("imagenes/" + nombreFoto),
         QDir::current().absoluteFilePath("../imagenes/" + nombreFoto),
         QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("imagenes/" + nombreFoto),

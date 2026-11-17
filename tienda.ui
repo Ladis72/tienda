@@ -255,6 +255,19 @@
           </property>
          </widget>
         </item>
+        <item row="1" column="4">
+         <widget class="QPushButton" name="pushButtonSyncImagenes">
+          <property name="toolTip">
+           <string>Sincroniza las imágenes del catálogo entre todos los equipos TPV mediante SSH y rsync</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">background-color: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; font-weight: bold;</string>
+          </property>
+          <property name="text">
+           <string>🔄 Sincronizar Imágenes</string>
+          </property>
+         </widget>
+        </item>
         <item row="1" column="5">
          <widget class="QPushButton" name="pushButtonCatalogadorIA">
           <property name="styleSheet">

@@ -1,4 +1,5 @@
 #include "dialogasistenteinstalacion.h"
+#include "configuracion.h"
 #include "ui_dialogasistenteinstalacion.h"
 #include <QCoreApplication>
 #include <QMessageBox>
@@ -164,7 +165,13 @@ void DialogAsistenteInstalacion::guardarConfiguracionIni(const QString &host, co
                                                          const QString &hostNube, const QString &bdNube,
                                                          const QString &userNube, const QString &passNube)
 {
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    // Intentar guardar en el archivo global; si no es escribible por permisos (p. ej. /opt/tienda),
+    // guardar en el archivo del usuario actual (~/.config/Ladis/tienda.ini)
+    QString iniPath = Configuracion::rutaIniGlobal();
+    QSettings testWrite(iniPath, QSettings::IniFormat);
+    if (!testWrite.isWritable()) {
+        iniPath = Configuracion::rutaIniUsuario();
+    }
     QSettings settings(iniPath, QSettings::IniFormat);
 
     settings.beginGroup("BaseDatos");

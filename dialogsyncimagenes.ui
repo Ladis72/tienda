@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DialogSyncImagenes</class>
+ <widget class="QDialog" name="DialogSyncImagenes">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>880</width>
+    <height>640</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Sincronizar Imágenes entre Equipos TPV</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QDialog { background-color: #f8f9fa; }</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayoutMain">
+   <property name="spacing">
+    <number>10</number>
+   </property>
+   <property name="leftMargin">
+    <number>14</number>
+   </property>
+   <property name="topMargin">
+    <number>12</number>
+   </property>
+   <property name="rightMargin">
+    <number>14</number>
+   </property>
+   <property name="bottomMargin">
+    <number>12</number>
+   </property>
+   <item>
+    <widget class="QFrame" name="frameCabecera">
+     <property name="styleSheet">
+      <string notr="true">QFrame#frameCabecera {
+    background-color: #e8f5e9;
+    border: 1px solid #c8e6c9;
+    border-radius: 8px;
+    padding: 6px;
+}</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayoutCabecera">
+      <item>
+       <widget class="QLabel" name="labelIcono">
+        <property name="maximumSize">
+         <size>
+          <width>40</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>22</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>🔄</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayoutTitulos">
+        <property name="spacing">
+         <number>2</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="labelTitulo">
+          <property name="font">
+           <font>
+            <pointsize>14</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: #2e7d32;</string>
+          </property>
+          <property name="text">
+           <string>Sincronización de Imágenes TPV (SSH / Rsync)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelSubtitulo">
+          <property name="styleSheet">
+           <string notr="true">color: #546e7a;</string>
+          </property>
+          <property name="text">
+           <string>Paso 1: Recoge imágenes nuevas o actualizadas de los demás equipos · Paso 2: Envía el catálogo unificado al resto</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="horizontalSpacerCabecera">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBoxLocal">
+     <property name="title">
+      <string>Punto de Unión Local (este equipo)</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayoutLocal">
+      <item>
+       <widget class="QLabel" name="labelHostLocal">
+        <property name="font">
+         <font>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Carpeta local:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lineEditDirLocal"/>
+      </item>
+      <item>
+       <widget class="QToolButton" name="toolButtonExaminarLocal">
+        <property name="text">
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelTotalLocal">
+        <property name="styleSheet">
+         <string notr="true">color: #0277bd; font-weight: bold;</string>
+        </property>
+        <property name="text">
+         <string>Archivos locales: 0</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBoxEquipos">
+     <property name="title">
+      <string>Equipos del Clúster TPV (doble clic en una celda para editar ruta o IP)</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayoutEquipos">
+      <item>
+       <widget class="QTableWidget" name="tableWidgetEquipos">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>165</height>
+         </size>
+        </property>
+        <property name="alternatingRowColors">
+         <bool>true</bool>
+        </property>
+        <property name="selectionBehavior">
+         <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+        </property>
+        <column>
+         <property name="text">
+          <string>Incluir</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Nombre Equipo</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Usuario@IP (Tailscale/SSH)</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Ruta Remota de Imágenes</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Estado</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayoutBotonesTabla">
+        <item>
+         <widget class="QPushButton" name="pushButtonAnadirEquipo">
+          <property name="text">
+           <string>➕ Añadir Equipo</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButtonQuitarEquipo">
+          <property name="text">
+           <string>🗑️ Quitar Seleccionado</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButtonRestaurarEquipos">
+          <property name="text">
+           <string>🔄 Restaurar Predeterminados</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacerTabla">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButtonGuardarEquipos">
+          <property name="text">
+           <string>💾 Guardar Equipos en tienda.ini</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayoutProgreso">
+     <item>
+      <widget class="QLabel" name="labelEstado">
+       <property name="text">
+        <string>Listo para sincronizar.</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QProgressBar" name="progressBar">
+       <property name="value">
+        <number>0</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QPlainTextEdit" name="plainTextEditLog">
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPlainTextEdit {
+    background-color: #1e293b;
+    color: #e2e8f0;
+    font-family: monospace;
+    font-size: 11px;
+    border-radius: 6px;
+    padding: 6px;
+}</string>
+     </property>
+     <property name="placeholderText">
+      <string>El registro detallado de SSH y rsync se mostrará aquí...</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayoutAcciones">
+     <item>
+      <widget class="QPushButton" name="pushButtonSincronizar">
+       <property name="minimumSize">
+        <size>
+         <width>220</width>
+         <height>38</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+    background-color: #2e7d32;
+    color: white;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 6px 16px;
+}
+QPushButton:hover {
+    background-color: #1b5e20;
+}</string>
+       </property>
+       <property name="text">
+        <string>▶️ Sincronizar Imágenes Ahora</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonDetener">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>120</width>
+         <height>38</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+    background-color: #c62828;
+    color: white;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 6px 14px;
+}
+QPushButton:hover {
+    background-color: #b71c1c;
+}</string>
+       </property>
+       <property name="text">
+        <string>⏹️ Detener</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacerAcciones">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonCerrar">
+       <property name="minimumSize">
+        <size>
+         <width>110</width>
+         <height>38</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Cerrar</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

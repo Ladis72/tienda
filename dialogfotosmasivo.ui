@@ -720,6 +720,28 @@ QPushButton:hover {
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="pushButtonSincronizarEquipos">
+       <property name="toolTip">
+        <string>Sincroniza las imágenes del catálogo con el resto de equipos TPV mediante SSH y rsync</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+    background-color: #1565c0;
+    color: white;
+    font-weight: bold;
+    border-radius: 4px;
+    padding: 6px 14px;
+}
+QPushButton:hover {
+    background-color: #1976d2;
+}</string>
+       </property>
+       <property name="text">
+        <string>🔄 Sincronizar Imágenes entre Tiendas</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="pushButtonCerrar">
        <property name="text">
         <string>Cerrar</string>

@@ -1,4 +1,5 @@
 #include "verifactuclass.h"
+#include "configuracion.h"
 #include <QCoreApplication>
 #include <QSettings>
 #include <QCryptographicHash>
@@ -33,7 +34,7 @@ verifactuClass::verifactuClass(QObject *parent)
 VeriFactuConfig verifactuClass::cargarConfiguracion()
 {
     VeriFactuConfig config;
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
     
     settings.beginGroup("VeriFactu");

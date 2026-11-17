@@ -131,7 +131,8 @@ SOURCES += main.cpp\
     dialogestadisticasmermas.cpp \
     dialognueva_nota.cpp \
     dialogreglasalud.cpp \
-    dialoginventario.cpp
+    dialoginventario.cpp \
+    dialogsyncimagenes.cpp
 
 HEADERS  += tienda.h \
     ClickableLabel.h \
@@ -248,7 +249,8 @@ HEADERS  += tienda.h \
     estadisticas_utils.h \
     dialognueva_nota.h \
     dialogreglasalud.h \
-    dialoginventario.h
+    dialoginventario.h \
+    dialogsyncimagenes.h
 
 FORMS    += tienda.ui \
     generarvales.ui \
@@ -339,7 +341,8 @@ FORMS    += tienda.ui \
     dialogestadisticasmermas.ui \
     dialognueva_nota.ui \
     dialogreglasalud.ui \
-    dialoginventario.ui
+    dialoginventario.ui \
+    dialogsyncimagenes.ui
 
 #include($$PWD/QtRptProject/QtRPT/QtRPT.pri)
 

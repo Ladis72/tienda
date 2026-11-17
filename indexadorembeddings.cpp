@@ -119,7 +119,7 @@ QString IndexadorEmbeddings::limpiarTextoParaEmbedding(const QString &texto, int
  */
 QString IndexadorEmbeddings::obtenerUrlOllama()
 {
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("Ollama");
     QString url = settings.value("url", "").toString().trimmed();
@@ -139,7 +139,7 @@ QString IndexadorEmbeddings::obtenerUrlOllama()
  */
 QString IndexadorEmbeddings::obtenerModeloEmbeddings()
 {
-    QString iniPath = QCoreApplication::applicationDirPath() + "/tienda.ini";
+    QString iniPath = Configuracion::rutaIniGlobal();
     QSettings settings(iniPath, QSettings::IniFormat);
     settings.beginGroup("Ollama");
     QString modelo = settings.value("modelo_embedding", "").toString().trimmed();
@@ -154,11 +154,11 @@ QString IndexadorEmbeddings::obtenerModeloEmbeddings()
 }
 
 /**
- * @brief Ruta local del archivo binario de caché.
+ * @brief Ruta compartida del archivo binario de caché (en el directorio base p. ej. /opt/tienda/ia_embeddings.cache).
  */
 QString IndexadorEmbeddings::rutaFicheroCache()
 {
-    return QCoreApplication::applicationDirPath() + "/ia_embeddings.cache";
+    return Configuracion::rutaDirectorioBase() + "/ia_embeddings.cache";
 }
 
 /* ========================================================================= */
